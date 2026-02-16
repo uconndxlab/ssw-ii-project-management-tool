@@ -28,6 +28,12 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ route('projects.index') }}">Projects</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('engagements.index') }}">Engagements</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('reports.engagements') }}">Reports</a>
+                    </li>
                     @if(auth()->user()->isAdmin())
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="dataDropdown" role="button" data-bs-toggle="dropdown">

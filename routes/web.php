@@ -5,6 +5,8 @@ use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\StateController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\EngagementController;
+use App\Http\Controllers\ReportController;
 use Illuminate\Support\Facades\Route;
 
 // Guest routes
@@ -27,6 +29,15 @@ Route::middleware('auth')->group(function () {
     // HTMX endpoints for project user management
     Route::post('/projects/{project}/assign-user', [ProjectController::class, 'assignUser'])->name('projects.assign-user');
     Route::delete('/projects/{project}/remove-user/{user}', [ProjectController::class, 'removeUser'])->name('projects.remove-user');
+    
+    // Engagements - visible to all authenticated users (with visibility filtering in controller)
+    Route::get('/engagements', [EngagementController::class, 'index'])->name('engagements.index');
+    Route::get('/engagements/create', [EngagementController::class, 'create'])->name('engagements.create');
+    Route::post('/engagements', [EngagementController::class, 'store'])->name('engagements.store');
+    Route::delete('/engagements/{engagement}', [EngagementController::class, 'destroy'])->name('engagements.destroy');
+    
+    // Reports
+    Route::get('/reports/engagements', [ReportController::class, 'engagements'])->name('reports.engagements');
     
     // Admin routes
     Route::middleware('role:admin')->group(function () {
