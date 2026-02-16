@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Engagement;
 use App\Models\Project;
+use App\Models\Program;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -21,11 +22,13 @@ class ReportController extends Controller
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'project_id' => ['nullable', 'exists:projects,id'],
+            'program_id' => ['nullable', 'exists:programs,id'],
         ]);
 
         $startDate = $validated['start_date'] ?? $defaultStart;
         $endDate = $validated['end_date'] ?? $defaultEnd;
         $projectId = $validated['project_id'] ?? null;
+        $programId = $validated['program_id'] ?? null;
 
         // Verify project access if provided
         if ($projectId) {
@@ -34,6 +37,9 @@ class ReportController extends Controller
 
         // Get visible projects for dropdown
         $visibleProjects = $this->getVisibleProjects();
+        
+        // Get active programs for dropdown
+        $programs = Program::where('active', true)->orderBy('name')->get();
 
         // Query engagements with filters and visibility
         $query = Engagement::with(['project.organization', 'user'])
@@ -42,6 +48,13 @@ class ReportController extends Controller
         // Project filter
         if ($projectId) {
             $query->where('project_id', $projectId);
+        }
+
+        // Program filter
+        if ($programId) {
+            $query->whereHas('programs', function ($q) use ($programId) {
+                $q->where('program_id', $programId);
+            });
         }
 
         // Visibility enforcement
@@ -80,9 +93,11 @@ class ReportController extends Controller
         return view('reports.engagements', compact(
             'projectData',
             'visibleProjects',
+            'programs',
             'startDate',
             'endDate',
-            'projectId'
+            'projectId',
+            'programId'
         ));
     }
 

@@ -41,6 +41,7 @@
                         </a>
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" href="{{ route('organizations.index') }}">Organizations</a></li>
+                            <li><a class="dropdown-item" href="{{ route('programs.index') }}">Programs</a></li>
                             <li><a class="dropdown-item" href="{{ route('states.index') }}">States</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{{ route('admin.users.index') }}">Users</a></li>

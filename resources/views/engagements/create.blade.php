@@ -113,6 +113,26 @@
                         @enderror
                     </div>
 
+                    <div class="mb-3">
+                        <label for="program_ids" class="form-label">Programs (Optional)</label>
+                        <select class="form-select @error('program_ids') is-invalid @enderror" 
+                                id="program_ids" 
+                                name="program_ids[]" 
+                                multiple 
+                                size="5">
+                            @foreach($programs as $program)
+                                <option value="{{ $program->id }}" 
+                                    {{ in_array($program->id, old('program_ids', [])) ? 'selected' : '' }}>
+                                    {{ $program->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('program_ids')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                        <small class="text-muted">Hold Ctrl/Cmd to select multiple programs</small>
+                    </div>
+
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">Log Engagement</button>
                         <a href="{{ route('engagements.index') }}" class="btn btn-secondary">Cancel</a>

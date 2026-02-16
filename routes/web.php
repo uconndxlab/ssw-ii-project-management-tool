@@ -7,6 +7,7 @@ use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\EngagementController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ProgramController;
 use Illuminate\Support\Facades\Route;
 
 // Guest routes
@@ -43,6 +44,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:admin')->group(function () {
         Route::resource('states', StateController::class)->except(['show']);
         Route::resource('organizations', OrganizationController::class)->except(['show']);
+        Route::resource('programs', ProgramController::class)->except(['show']);
     });
     
     // Admin user management

@@ -19,7 +19,7 @@
                       hx-swap="innerHTML">
                     
                     <div class="row g-3 align-items-end">
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label for="start_date" class="form-label">Start Date</label>
                             <input type="date" 
                                    class="form-control" 
@@ -29,7 +29,7 @@
                                    required>
                         </div>
 
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label for="end_date" class="form-label">End Date</label>
                             <input type="date" 
                                    class="form-control" 
@@ -39,13 +39,25 @@
                                    required>
                         </div>
 
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label for="project_id" class="form-label">Project</label>
                             <select class="form-select" id="project_id" name="project_id">
                                 <option value="">All Projects</option>
                                 @foreach($visibleProjects as $project)
                                     <option value="{{ $project->id }}" {{ $projectId == $project->id ? 'selected' : '' }}>
                                         {{ $project->name }} ({{ $project->organization->name }})
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label for="program_id" class="form-label">Program</label>
+                            <select class="form-select" id="program_id" name="program_id">
+                                <option value="">All Programs</option>
+                                @foreach($programs as $program)
+                                    <option value="{{ $program->id }}" {{ $programId == $program->id ? 'selected' : '' }}>
+                                        {{ $program->name }}
                                     </option>
                                 @endforeach
                             </select>

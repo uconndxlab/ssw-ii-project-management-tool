@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Engagement;
 use App\Models\Project;
+use App\Models\Program;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -28,8 +29,9 @@ class EngagementController extends Controller
     {
         // Get projects visible to current user
         $projects = $this->getVisibleProjects();
+        $programs = Program::where('active', true)->orderBy('name')->get();
         
-        return view('engagements.create', compact('projects'));
+        return view('engagements.create', compact('projects', 'programs'));
     }
 
     public function store(Request $request)
@@ -40,12 +42,14 @@ class EngagementController extends Controller
             'engagement_type' => ['required', 'in:' . implode(',', Engagement::TYPES)],
             'hours' => ['required', 'numeric', 'min:0.01', 'max:999.99'],
             'notes' => ['nullable', 'string', 'max:5000'],
+            'program_ids' => ['nullable', 'array'],
+            'program_ids.*' => ['exists:programs,id'],
         ]);
 
         // Verify user has access to this project
         $this->verifyProjectAccess($validated['project_id']);
 
-        Engagement::create([
+        $engagement = Engagement::create([
             'project_id' => $validated['project_id'],
             'user_id' => Auth::id(),
             'engagement_date' => $validated['engagement_date'],
@@ -53,6 +57,11 @@ class EngagementController extends Controller
             'hours' => $validated['hours'],
             'notes' => $validated['notes'],
         ]);
+
+        // Sync programs
+        if (!empty($validated['program_ids'])) {
+            $engagement->programs()->sync($validated['program_ids']);
+        }
 
         return redirect()
             ->route('engagements.index')
