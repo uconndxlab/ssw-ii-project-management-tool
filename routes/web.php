@@ -2,6 +2,9 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminUserController;
+use App\Http\Controllers\StateController;
+use App\Http\Controllers\OrganizationController;
+use App\Http\Controllers\ProjectController;
 use Illuminate\Support\Facades\Route;
 
 // Guest routes
@@ -18,7 +21,20 @@ Route::middleware('auth')->group(function () {
     
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     
+    // Projects - visible to all authenticated users (with visibility filtering in controller)
+    Route::resource('projects', ProjectController::class);
+    
+    // HTMX endpoints for project user management
+    Route::post('/projects/{project}/assign-user', [ProjectController::class, 'assignUser'])->name('projects.assign-user');
+    Route::delete('/projects/{project}/remove-user/{user}', [ProjectController::class, 'removeUser'])->name('projects.remove-user');
+    
     // Admin routes
+    Route::middleware('role:admin')->group(function () {
+        Route::resource('states', StateController::class)->except(['show']);
+        Route::resource('organizations', OrganizationController::class)->except(['show']);
+    });
+    
+    // Admin user management
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
         Route::get('/users/create', [AdminUserController::class, 'create'])->name('users.create');

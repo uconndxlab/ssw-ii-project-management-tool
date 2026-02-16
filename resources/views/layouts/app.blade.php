@@ -25,9 +25,20 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ route('dashboard') }}">Dashboard</a>
                     </li>
-                    @if(auth()->user()->role === 'admin')
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ route('admin.users.index') }}">Users</a>
+                        <a class="nav-link" href="{{ route('projects.index') }}">Projects</a>
+                    </li>
+                    @if(auth()->user()->isAdmin())
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="dataDropdown" role="button" data-bs-toggle="dropdown">
+                            Data
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ route('organizations.index') }}">Organizations</a></li>
+                            <li><a class="dropdown-item" href="{{ route('states.index') }}">States</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ route('admin.users.index') }}">Users</a></li>
+                        </ul>
                     </li>
                     @endif
                 </ul>
