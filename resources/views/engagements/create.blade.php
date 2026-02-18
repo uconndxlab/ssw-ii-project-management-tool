@@ -92,7 +92,7 @@
                                id="hours" 
                                name="hours" 
                                step="0.25"
-                               min="0.01"
+                               min="0.25"
                                max="999.99"
                                value="{{ old('hours') }}" 
                                required>
