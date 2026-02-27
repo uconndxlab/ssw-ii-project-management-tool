@@ -24,12 +24,16 @@ class ReportController extends Controller
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'project_id' => ['nullable', 'exists:projects,id'],
             'program_id' => ['nullable', 'exists:programs,id'],
+            'contact_family_id' => ['nullable', 'exists:contact_families,id'],
+            'activity_type_id' => ['nullable', 'exists:activity_types,id'],
         ]);
 
         $startDate = $validated['start_date'] ?? $defaultStart;
         $endDate = $validated['end_date'] ?? $defaultEnd;
         $projectId = $validated['project_id'] ?? null;
         $programId = $validated['program_id'] ?? null;
+        $contactFamilyId = $validated['contact_family_id'] ?? null;
+        $activityTypeId = $validated['activity_type_id'] ?? null;
 
         // Verify project access if provided
         if ($projectId) {
@@ -41,10 +45,20 @@ class ReportController extends Controller
         
         // Get active programs for dropdown
         $programs = Program::where('active', true)->orderBy('name')->get();
+        
+        // Get active contact families and activity types for dropdowns
+        $contactFamilies = \App\Models\ContactFamily::where('active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
+        $activityTypes = \App\Models\ActivityType::where('active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
 
         // Build base query with visibility enforcement
         $query = Engagement::query()
-            ->with(['project.organization', 'user'])
+            ->with(['project.organization', 'user', 'activityType.contactFamily'])
             ->whereBetween('engagement_date', [$startDate, $endDate]);
 
         // Visibility enforcement: non-admins only see their assigned projects
@@ -63,6 +77,18 @@ class ReportController extends Controller
             $query->whereHas('programs', function ($q) use ($programId) {
                 $q->where('program_id', $programId);
             });
+        }
+
+        // Contact Family filter
+        if ($contactFamilyId) {
+            $query->whereHas('activityType.contactFamily', function ($q) use ($contactFamilyId) {
+                $q->where('id', $contactFamilyId);
+            });
+        }
+
+        // Activity Type filter
+        if ($activityTypeId) {
+            $query->where('activity_type_id', $activityTypeId);
         }
 
         // Get engagements
@@ -103,7 +129,9 @@ class ReportController extends Controller
                 'startDate',
                 'endDate',
                 'projectId',
-                'programId'
+                'programId',
+                'contactFamilyId',
+                'activityTypeId'
             ));
         }
 
@@ -111,10 +139,14 @@ class ReportController extends Controller
             'projectData',
             'visibleProjects',
             'programs',
+            'contactFamilies',
+            'activityTypes',
             'startDate',
             'endDate',
             'projectId',
-            'programId'
+            'programId',
+            'contactFamilyId',
+            'activityTypeId'
         ));
     }
 

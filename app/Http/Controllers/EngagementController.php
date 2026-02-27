@@ -14,7 +14,7 @@ class EngagementController extends Controller
     public function index(Request $request)
     {
         $query = Engagement::query()
-            ->with(['project.organization', 'project.state', 'user']);
+            ->with(['project.organization', 'project.state', 'user', 'activityType']);
 
         if (!Auth::user()->isAdmin()) {
             $projectIds = Auth::user()->projects()->pluck('projects.id');
@@ -25,7 +25,7 @@ class EngagementController extends Controller
             'project_id' => ['nullable', 'integer', 'exists:projects,id'],
             'organization_id' => ['nullable', 'integer', 'exists:organizations,id'],
             'state_id' => ['nullable', 'integer', 'exists:states,id'],
-            'activity_type' => ['nullable', 'string', 'in:' . implode(',', Engagement::ACTIVITY_TYPES)],
+            'activity_type_id' => ['nullable', 'integer', 'exists:activity_types,id'],
         ]);
 
         if (!empty($filters['project_id'])) {
@@ -44,8 +44,8 @@ class EngagementController extends Controller
             });
         }
 
-        if (!empty($filters['activity_type'])) {
-            $query->where('activity_type', $filters['activity_type']);
+        if (!empty($filters['activity_type_id'])) {
+            $query->where('activity_type_id', $filters['activity_type_id']);
         }
 
         $projects = $this->getVisibleProjects()->load(['organization', 'state']);
@@ -55,6 +55,11 @@ class EngagementController extends Controller
 
         $stateIds = $projects->pluck('state_id')->filter()->unique()->values();
         $states = State::whereIn('id', $stateIds)->orderBy('name')->get();
+
+        $activityTypes = \App\Models\ActivityType::where('active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
 
         $engagements = $query
             ->orderBy('engagement_date', 'desc')
@@ -66,6 +71,7 @@ class EngagementController extends Controller
             'projects',
             'organizations',
             'states',
+            'activityTypes',
             'filters'
         ));
     }
@@ -74,11 +80,15 @@ class EngagementController extends Controller
     {
         $projects = $this->getVisibleProjects();
         $programs = Program::where('active', true)->orderBy('name')->get();
+        $contactFamilies = \App\Models\ContactFamily::where('active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
         
         // Pre-load users for each project for participant selection
         $projects->load('users');
         
-        return view('engagements.create', compact('projects', 'programs'));
+        return view('engagements.create', compact('projects', 'programs', 'contactFamilies'));
     }
 
     public function store(Request $request)
@@ -86,8 +96,7 @@ class EngagementController extends Controller
         $validated = $request->validate([
             'project_id' => ['required', 'exists:projects,id'],
             'engagement_date' => ['required', 'date'],
-            'activity_type' => ['required', 'in:' . implode(',', Engagement::ACTIVITY_TYPES)],
-            'deliverable_bucket' => ['required', 'in:' . implode(',', Engagement::DELIVERABLE_BUCKETS)],
+            'activity_type_id' => ['required', 'exists:activity_types,id'],
             'event_hours' => ['required', 'numeric', 'min:0', 'max:9999.99'],
             'prep_hours' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
             'followup_hours' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
@@ -114,8 +123,7 @@ class EngagementController extends Controller
             'project_id' => $validated['project_id'],
             'user_id' => Auth::id(),
             'engagement_date' => $validated['engagement_date'],
-            'activity_type' => $validated['activity_type'],
-            'deliverable_bucket' => $validated['deliverable_bucket'],
+            'activity_type_id' => $validated['activity_type_id'],
             'event_hours' => $validated['event_hours'],
             'prep_hours' => $validated['prep_hours'] ?? 0,
             'followup_hours' => $validated['followup_hours'] ?? 0,
@@ -151,7 +159,7 @@ class EngagementController extends Controller
             }
         }
 
-        $engagement->load(['project.organization', 'project.state', 'user', 'programs', 'participants']);
+        $engagement->load(['project.organization', 'project.state', 'user', 'programs', 'participants', 'activityType.contactFamily']);
 
         return view('engagements.show', compact('engagement'));
     }
@@ -163,12 +171,20 @@ class EngagementController extends Controller
 
         $projects = $this->getVisibleProjects();
         $programs = Program::where('active', true)->orderBy('name')->get();
-        $engagement->load(['programs', 'participants']);
+        $contactFamilies = \App\Models\ContactFamily::where('active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
+        $activityTypes = \App\Models\ActivityType::where('active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
+        $engagement->load(['programs', 'participants', 'activityType.contactFamily']);
         
         // Pre-load users for each project for participant selection
         $projects->load('users');
 
-        return view('engagements.edit', compact('engagement', 'projects', 'programs'));
+        return view('engagements.edit', compact('engagement', 'projects', 'programs', 'contactFamilies', 'activityTypes'));
     }
 
     public function update(Request $request, Engagement $engagement)
@@ -179,8 +195,7 @@ class EngagementController extends Controller
         $validated = $request->validate([
             'project_id' => ['required', 'exists:projects,id'],
             'engagement_date' => ['required', 'date'],
-            'activity_type' => ['required', 'in:' . implode(',', Engagement::ACTIVITY_TYPES)],
-            'deliverable_bucket' => ['required', 'in:' . implode(',', Engagement::DELIVERABLE_BUCKETS)],
+            'activity_type_id' => ['required', 'exists:activity_types,id'],
             'event_hours' => ['required', 'numeric', 'min:0', 'max:9999.99'],
             'prep_hours' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
             'followup_hours' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
@@ -206,8 +221,7 @@ class EngagementController extends Controller
         $engagement->update([
             'project_id' => $validated['project_id'],
             'engagement_date' => $validated['engagement_date'],
-            'activity_type' => $validated['activity_type'],
-            'deliverable_bucket' => $validated['deliverable_bucket'],
+            'activity_type_id' => $validated['activity_type_id'],
             'event_hours' => $validated['event_hours'],
             'prep_hours' => $validated['prep_hours'] ?? 0,
             'followup_hours' => $validated['followup_hours'] ?? 0,

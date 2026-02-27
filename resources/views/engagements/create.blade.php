@@ -62,19 +62,23 @@
 
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="activity_type" class="form-label">Activity Type <span class="text-danger">*</span></label>
-                                <select class="form-select @error('activity_type') is-invalid @enderror" 
-                                        id="activity_type" 
-                                        name="activity_type" 
+                                <label for="contact_family_id" class="form-label">Contact Family <span class="text-danger">*</span></label>
+                                <select class="form-select @error('contact_family_id') is-invalid @enderror" 
+                                        id="contact_family_id" 
+                                        name="contact_family_id" 
+                                        hx-get="{{ route('activity-types.by-family') }}"
+                                        hx-target="#activity_type_id"
+                                        hx-swap="innerHTML"
+                                        hx-include="this"
                                         required>
-                                    <option value="">Select type...</option>
-                                    @foreach(\App\Models\Engagement::ACTIVITY_TYPES as $type)
-                                        <option value="{{ $type }}" {{ old('activity_type') === $type ? 'selected' : '' }}>
-                                            {{ str_replace('_', ' ', ucwords($type, '_')) }}
+                                    <option value="">Select contact family...</option>
+                                    @foreach($contactFamilies as $family)
+                                        <option value="{{ $family->id }}" {{ old('contact_family_id') == $family->id ? 'selected' : '' }}>
+                                            {{ $family->name }}
                                         </option>
                                     @endforeach
                                 </select>
-                                @error('activity_type')
+                                @error('contact_family_id')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
@@ -82,19 +86,14 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="deliverable_bucket" class="form-label">Deliverable Bucket <span class="text-danger">*</span></label>
-                        <select class="form-select @error('deliverable_bucket') is-invalid @enderror" 
-                                id="deliverable_bucket" 
-                                name="deliverable_bucket" 
+                        <label for="activity_type_id" class="form-label">Activity Type <span class="text-danger">*</span></label>
+                        <select class="form-select @error('activity_type_id') is-invalid @enderror" 
+                                id="activity_type_id" 
+                                name="activity_type_id" 
                                 required>
-                            <option value="">Select bucket...</option>
-                            @foreach(\App\Models\Engagement::DELIVERABLE_BUCKETS as $bucket)
-                                <option value="{{ $bucket }}" {{ old('deliverable_bucket') === $bucket ? 'selected' : '' }}>
-                                    {{ str_replace('_', ' ', ucwords($bucket, '_')) }}
-                                </option>
-                            @endforeach
+                            <option value="">Select contact family first...</option>
                         </select>
-                        @error('deliverable_bucket')
+                        @error('activity_type_id')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>

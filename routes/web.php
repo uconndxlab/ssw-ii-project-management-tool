@@ -8,6 +8,8 @@ use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\EngagementController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ProgramController;
+use App\Http\Controllers\ContactFamilyController;
+use App\Http\Controllers\ActivityTypeController;
 use Illuminate\Support\Facades\Route;
 
 // Guest routes
@@ -40,11 +42,16 @@ Route::middleware('auth')->group(function () {
     Route::put('/engagements/{engagement}', [EngagementController::class, 'update'])->name('engagements.update');
     Route::delete('/engagements/{engagement}', [EngagementController::class, 'destroy'])->name('engagements.destroy');
     
+    // HTMX endpoint for filtering activity types by contact family
+    Route::get('/activity-types/by-family', [ActivityTypeController::class, 'getByFamily'])->name('activity-types.by-family');
+    
     // Reports
     Route::get('/reports/engagements', [ReportController::class, 'engagements'])->name('reports.engagements');
     
     // Admin routes
     Route::middleware('role:admin')->group(function () {
+        Route::resource('contact-families', ContactFamilyController::class)->except(['show']);
+        Route::resource('activity-types', ActivityTypeController::class)->except(['show']);
         Route::resource('states', StateController::class)->except(['show']);
         Route::resource('organizations', OrganizationController::class)->except(['show']);
         Route::resource('programs', ProgramController::class)->except(['show']);

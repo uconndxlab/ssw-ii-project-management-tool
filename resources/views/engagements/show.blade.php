@@ -54,19 +54,19 @@
 
                 <div class="row mb-3">
                     <div class="col-md-4">
-                        <strong>Activity Type:</strong>
+                        <strong>Contact Family:</strong>
                     </div>
                     <div class="col-md-8">
-                        <span class="badge bg-info">{{ str_replace('_', ' ', ucwords($engagement->activity_type, '_')) }}</span>
+                        <span class="badge bg-primary">{{ $engagement->activityType->contactFamily->name }}</span>
                     </div>
                 </div>
 
                 <div class="row mb-3">
                     <div class="col-md-4">
-                        <strong>Deliverable Bucket:</strong>
+                        <strong>Activity Type:</strong>
                     </div>
                     <div class="col-md-8">
-                        <span class="badge bg-secondary">{{ str_replace('_', ' ', ucwords($engagement->deliverable_bucket, '_')) }}</span>
+                        <span class="badge bg-info">{{ $engagement->activityType->name }}</span>
                     </div>
                 </div>
 

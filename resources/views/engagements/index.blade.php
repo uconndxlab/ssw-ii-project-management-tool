@@ -59,11 +59,11 @@
 
           <div class="col-12 col-md-2">
             <label class="form-label">Activity Type</label>
-            <select name="activity_type" class="form-select">
+            <select name="activity_type_id" class="form-select">
               <option value="">All</option>
-              @foreach(\App\Models\Engagement::ACTIVITY_TYPES as $type)
-                <option value="{{ $type }}" @selected(($filters['activity_type'] ?? null) == $type)>
-                  {{ str_replace('_', ' ', ucwords($type, '_')) }}
+              @foreach($activityTypes as $type)
+                <option value="{{ $type->id }}" @selected(($filters['activity_type_id'] ?? null) == $type->id)>
+                  {{ $type->name }}
                 </option>
               @endforeach
             </select>
@@ -103,7 +103,7 @@
                                 <td>{{ $engagement->project->name }}</td>
                                 <td>
                                     <span class="badge bg-info">
-                                        {{ str_replace('_', ' ', ucwords($engagement->activity_type, '_')) }}
+                                        {{ $engagement->activityType->name }}
                                     </span>
                                 </td>
                                 <td>{{ number_format($engagement->total_hours, 2) }}</td>

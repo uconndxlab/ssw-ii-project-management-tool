@@ -39,7 +39,7 @@
                                    required>
                         </div>
 
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label for="project_id" class="form-label">Project</label>
                             <select class="form-select" id="project_id" name="project_id">
                                 <option value="">All Projects</option>
@@ -51,7 +51,7 @@
                             </select>
                         </div>
 
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label for="program_id" class="form-label">Program</label>
                             <select class="form-select" id="program_id" name="program_id">
                                 <option value="">All Programs</option>
@@ -64,7 +64,33 @@
                         </div>
 
                         <div class="col-md-2">
-                            <button type="submit" class="btn btn-primary w-100">Generate Report</button>
+                            <label for="contact_family_id" class="form-label">Contact Family</label>
+                            <select class="form-select" id="contact_family_id" name="contact_family_id">
+                                <option value="">All Families</option>
+                                @foreach($contactFamilies as $family)
+                                    <option value="{{ $family->id }}" {{ $contactFamilyId == $family->id ? 'selected' : '' }}>
+                                        {{ $family->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="col-md-2">
+                            <label for="activity_type_id" class="form-label">Activity Type</label>
+                            <select class="form-select" id="activity_type_id" name="activity_type_id">
+                                <option value="">All Types</option>
+                                @foreach($activityTypes as $type)
+                                    <option value="{{ $type->id }}" {{ $activityTypeId == $type->id ? 'selected' : '' }}>
+                                        {{ $type->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row mt-2">
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">Generate Report</button>
                         </div>
                     </div>
                 </form>

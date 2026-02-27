@@ -8,29 +8,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Engagement extends Model
 {
-    public const ACTIVITY_TYPES = [
-        'technical_assistance',
-        'coaching',
-        'training',
-        'consultation',
-        'workshop',
-    ];
-
-    public const DELIVERABLE_BUCKETS = [
-        'strategic_planning',
-        'capacity_building',
-        'program_development',
-        'evaluation',
-        'community_engagement',
-        'other',
-    ];
-
     protected $fillable = [
         'project_id',
         'user_id',
         'engagement_date',
-        'activity_type',
-        'deliverable_bucket',
+        'activity_type_id',
         'event_hours',
         'prep_hours',
         'followup_hours',
@@ -70,6 +52,19 @@ class Engagement extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function activityType(): BelongsTo
+    {
+        return $this->belongsTo(ActivityType::class);
+    }
+
+    /**
+     * Convenience accessor to get contact family through activity type
+     */
+    public function contactFamily()
+    {
+        return $this->activityType?->contactFamily;
     }
 
     public function programs(): BelongsToMany
