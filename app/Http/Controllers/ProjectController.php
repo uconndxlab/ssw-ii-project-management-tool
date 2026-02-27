@@ -29,6 +29,9 @@ class ProjectController extends Controller
 
     public function create()
     {
+        // Admin-only authorization
+        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can create projects.');
+
         $states = State::orderBy('name')->get();
         $organizations = Organization::orderBy('name')->get();
         $users = User::orderBy('name')->get();
@@ -38,6 +41,8 @@ class ProjectController extends Controller
 
     public function store(Request $request)
     {
+        // Admin-only authorization
+        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can create projects.');
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'organization_id' => ['required', 'exists:organizations,id'],
@@ -79,6 +84,9 @@ class ProjectController extends Controller
 
     public function edit(Project $project)
     {
+        // Admin-only authorization
+        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can edit projects.');
+
         $states = State::orderBy('name')->get();
         $organizations = Organization::orderBy('name')->get();
         $users = User::orderBy('name')->get();
@@ -89,6 +97,8 @@ class ProjectController extends Controller
 
     public function update(Request $request, Project $project)
     {
+        // Admin-only authorization
+        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can update projects.');
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'organization_id' => ['required', 'exists:organizations,id'],
@@ -116,6 +126,9 @@ class ProjectController extends Controller
 
     public function destroy(Project $project)
     {
+        // Admin-only authorization
+        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can delete projects.');
+
         $project->delete();
 
         return redirect()

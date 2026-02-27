@@ -79,4 +79,9 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Project::class)->withTimestamps();
     }
+
+    public function engagements(): BelongsToMany
+    {
+        return $this->belongsToMany(Engagement::class, 'engagement_user')->withTimestamps();
+    }
 }

@@ -58,11 +58,11 @@
           </div>
 
           <div class="col-12 col-md-2">
-            <label class="form-label">Type</label>
-            <select name="engagement_type" class="form-select">
+            <label class="form-label">Activity Type</label>
+            <select name="activity_type" class="form-select">
               <option value="">All</option>
-              @foreach(\App\Models\Engagement::TYPES as $type)
-                <option value="{{ $type }}" @selected(($filters['engagement_type'] ?? null) == $type)>
+              @foreach(\App\Models\Engagement::ACTIVITY_TYPES as $type)
+                <option value="{{ $type }}" @selected(($filters['activity_type'] ?? null) == $type)>
                   {{ str_replace('_', ' ', ucwords($type, '_')) }}
                 </option>
               @endforeach
@@ -90,8 +90,8 @@
                             <tr>
                                 <th>Date</th>
                                 <th>Project</th>
-                                <th>Type</th>
-                                <th>Hours</th>
+                                <th>Activity Type</th>
+                                <th>Total Hours</th>
                                 <th>Logged By</th>
                                 <th>Actions</th>
                             </tr>
@@ -103,20 +103,24 @@
                                 <td>{{ $engagement->project->name }}</td>
                                 <td>
                                     <span class="badge bg-info">
-                                        {{ str_replace('_', ' ', ucwords($engagement->engagement_type, '_')) }}
+                                        {{ str_replace('_', ' ', ucwords($engagement->activity_type, '_')) }}
                                     </span>
                                 </td>
-                                <td>{{ number_format($engagement->hours, 2) }}</td>
+                                <td>{{ number_format($engagement->total_hours, 2) }}</td>
                                 <td>{{ $engagement->user->name }}</td>
                                 <td>
-                                    @if(auth()->user()->isAdmin() || $engagement->user_id === auth()->id())
-                                    <form method="POST" action="{{ route('engagements.destroy', $engagement) }}" class="d-inline" 
-                                          onsubmit="return confirm('Are you sure you want to delete this engagement?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-                                    </form>
-                                    @endif
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ route('engagements.show', $engagement) }}" class="btn btn-outline-secondary">View</a>
+                                        @if(auth()->user()->isAdmin() || $engagement->user_id === auth()->id())
+                                        <a href="{{ route('engagements.edit', $engagement) }}" class="btn btn-outline-primary">Edit</a>
+                                        <form method="POST" action="{{ route('engagements.destroy', $engagement) }}" class="d-inline" 
+                                              onsubmit="return confirm('Are you sure you want to delete this engagement?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-outline-danger">Delete</button>
+                                        </form>
+                                        @endif
+                                    </div>
                                 </td>
                             </tr>
                             @empty

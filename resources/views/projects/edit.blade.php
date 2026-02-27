@@ -131,11 +131,11 @@
                             </div>
                             @endforeach
                         </div>
-                        <small class="text-muted">Or use HTMX controls below for live updates</small>
+                        <small class="text-muted">Or use controls below for live updates</small>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Quick Add User (HTMX)</label>
+                        <label class="form-label">Quick Add User</label>
                         <div class="input-group mb-2">
                             <select class="form-select" id="htmx-user-select">
                                 <option value="">Select a user to add...</option>

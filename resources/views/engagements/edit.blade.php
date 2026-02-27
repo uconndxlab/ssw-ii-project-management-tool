@@ -1,11 +1,11 @@
 @extends('layouts.app')
 
-@section('title', 'Log Engagement')
+@section('title', 'Edit Engagement')
 
 @section('content')
 <div class="row mb-4">
     <div class="col-12">
-        <h1>Log Engagement</h1>
+        <h1>Edit Engagement</h1>
     </div>
 </div>
 
@@ -23,8 +23,9 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('engagements.store') }}">
+                <form method="POST" action="{{ route('engagements.update', $engagement) }}">
                     @csrf
+                    @method('PUT')
 
                     <div class="mb-3">
                         <label for="project_id" class="form-label">Project <span class="text-danger">*</span></label>
@@ -34,7 +35,7 @@
                                 required>
                             <option value="">Select project...</option>
                             @foreach($projects as $project)
-                                <option value="{{ $project->id }}" {{ old('project_id') == $project->id ? 'selected' : '' }}>
+                                <option value="{{ $project->id }}" {{ old('project_id', $engagement->project_id) == $project->id ? 'selected' : '' }}>
                                     {{ $project->name }} ({{ $project->organization->name }})
                                 </option>
                             @endforeach
@@ -52,7 +53,7 @@
                                        class="form-control @error('engagement_date') is-invalid @enderror" 
                                        id="engagement_date" 
                                        name="engagement_date" 
-                                       value="{{ old('engagement_date', now()->format('Y-m-d')) }}" 
+                                       value="{{ old('engagement_date', $engagement->engagement_date->format('Y-m-d')) }}" 
                                        required>
                                 @error('engagement_date')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -69,7 +70,7 @@
                                         required>
                                     <option value="">Select type...</option>
                                     @foreach(\App\Models\Engagement::ACTIVITY_TYPES as $type)
-                                        <option value="{{ $type }}" {{ old('activity_type') === $type ? 'selected' : '' }}>
+                                        <option value="{{ $type }}" {{ old('activity_type', $engagement->activity_type) === $type ? 'selected' : '' }}>
                                             {{ str_replace('_', ' ', ucwords($type, '_')) }}
                                         </option>
                                     @endforeach
@@ -89,7 +90,7 @@
                                 required>
                             <option value="">Select bucket...</option>
                             @foreach(\App\Models\Engagement::DELIVERABLE_BUCKETS as $bucket)
-                                <option value="{{ $bucket }}" {{ old('deliverable_bucket') === $bucket ? 'selected' : '' }}>
+                                <option value="{{ $bucket }}" {{ old('deliverable_bucket', $engagement->deliverable_bucket) === $bucket ? 'selected' : '' }}>
                                     {{ str_replace('_', ' ', ucwords($bucket, '_')) }}
                                 </option>
                             @endforeach
@@ -110,7 +111,7 @@
                                        step="0.25"
                                        min="0"
                                        max="9999.99"
-                                       value="{{ old('event_hours') }}" 
+                                       value="{{ old('event_hours', $engagement->event_hours) }}" 
                                        required>
                                 @error('event_hours')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -128,7 +129,7 @@
                                        step="0.25"
                                        min="0"
                                        max="9999.99"
-                                       value="{{ old('prep_hours', 0) }}">
+                                       value="{{ old('prep_hours', $engagement->prep_hours ?? 0) }}">
                                 @error('prep_hours')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -145,7 +146,7 @@
                                        step="0.25"
                                        min="0"
                                        max="9999.99"
-                                       value="{{ old('followup_hours', 0) }}">
+                                       value="{{ old('followup_hours', $engagement->followup_hours ?? 0) }}">
                                 @error('followup_hours')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -160,7 +161,7 @@
                                id="participant_count" 
                                name="participant_count" 
                                min="0"
-                               value="{{ old('participant_count') }}">
+                               value="{{ old('participant_count', $engagement->participant_count) }}">
                         @error('participant_count')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
@@ -175,7 +176,7 @@
                                 size="5">
                             @foreach($programs as $program)
                                 <option value="{{ $program->id }}" 
-                                    {{ in_array($program->id, old('program_ids', [])) ? 'selected' : '' }}>
+                                    {{ in_array($program->id, old('program_ids', $engagement->programs->pluck('id')->toArray())) ? 'selected' : '' }}>
                                     {{ $program->name }}
                                 </option>
                             @endforeach
@@ -189,7 +190,7 @@
                     <div class="mb-3">
                         <label class="form-label">Internal Participants</label>
                         <div id="participants-container">
-                            <small class="text-muted">Select a project first to see team members</small>
+                            <!-- Will be populated by JavaScript -->
                         </div>
                         @error('participant_user_ids')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
@@ -202,7 +203,7 @@
                         <textarea class="form-control @error('summary') is-invalid @enderror" 
                                   id="summary" 
                                   name="summary" 
-                                  rows="3">{{ old('summary') }}</textarea>
+                                  rows="3">{{ old('summary', $engagement->summary) }}</textarea>
                         @error('summary')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
@@ -213,7 +214,7 @@
                         <textarea class="form-control @error('follow_up') is-invalid @enderror" 
                                   id="follow_up" 
                                   name="follow_up" 
-                                  rows="3">{{ old('follow_up') }}</textarea>
+                                  rows="3">{{ old('follow_up', $engagement->follow_up) }}</textarea>
                         @error('follow_up')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
@@ -224,7 +225,7 @@
                         <textarea class="form-control @error('strengths') is-invalid @enderror" 
                                   id="strengths" 
                                   name="strengths" 
-                                  rows="3">{{ old('strengths') }}</textarea>
+                                  rows="3">{{ old('strengths', $engagement->strengths) }}</textarea>
                         @error('strengths')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
@@ -235,14 +236,14 @@
                         <textarea class="form-control @error('recommendations') is-invalid @enderror" 
                                   id="recommendations" 
                                   name="recommendations" 
-                                  rows="3">{{ old('recommendations') }}</textarea>
+                                  rows="3">{{ old('recommendations', $engagement->recommendations) }}</textarea>
                         @error('recommendations')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
 
                     <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">Log Engagement</button>
+                        <button type="submit" class="btn btn-primary">Update Engagement</button>
                         <a href="{{ route('engagements.index') }}" class="btn btn-secondary">Cancel</a>
                     </div>
                 </form>
@@ -257,9 +258,12 @@ const projectParticipants = @json($projects->mapWithKeys(fn($p) => [
     $p->id => $p->users->map(fn($u) => ['id' => $u->id, 'name' => $u->name])
 ]));
 
+// Current engagement participants
+const currentParticipants = @json($engagement->participants->pluck('id'));
+
 // Update participants when project changes
-document.getElementById('project_id').addEventListener('change', function() {
-    const projectId = this.value;
+function updateParticipants() {
+    const projectId = document.getElementById('project_id').value;
     const container = document.getElementById('participants-container');
     
     if (!projectId || !projectParticipants[projectId]) {
@@ -274,18 +278,28 @@ document.getElementById('project_id').addEventListener('change', function() {
         return;
     }
     
-    container.innerHTML = users.map(user => `
-        <div class="form-check">
-            <input class="form-check-input" 
-                   type="checkbox" 
-                   name="participant_user_ids[]" 
-                   value="${user.id}" 
-                   id="participant_${user.id}">
-            <label class="form-check-label" for="participant_${user.id}">
-                ${user.name}
-            </label>
-        </div>
-    `).join('');
-});
+    container.innerHTML = users.map(user => {
+        const checked = currentParticipants.includes(user.id) ? 'checked' : '';
+        return `
+            <div class="form-check">
+                <input class="form-check-input" 
+                       type="checkbox" 
+                       name="participant_user_ids[]" 
+                       value="${user.id}" 
+                       id="participant_${user.id}"
+                       ${checked}>
+                <label class="form-check-label" for="participant_${user.id}">
+                    ${user.name}
+                </label>
+            </div>
+        `;
+    }).join('');
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', updateParticipants);
+
+// Update when project changes
+document.getElementById('project_id').addEventListener('change', updateParticipants);
 </script>
 @endsection

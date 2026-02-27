@@ -8,6 +8,7 @@ use App\Models\Program;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class ReportController extends Controller
 {
@@ -41,9 +42,16 @@ class ReportController extends Controller
         // Get active programs for dropdown
         $programs = Program::where('active', true)->orderBy('name')->get();
 
-        // Query engagements with filters and visibility
-        $query = Engagement::with(['project.organization', 'user'])
+        // Build base query with visibility enforcement
+        $query = Engagement::query()
+            ->with(['project.organization', 'user'])
             ->whereBetween('engagement_date', [$startDate, $endDate]);
+
+        // Visibility enforcement: non-admins only see their assigned projects
+        if (!Auth::user()->isAdmin()) {
+            $projectIds = Auth::user()->projects()->pluck('projects.id');
+            $query->whereIn('project_id', $projectIds);
+        }
 
         // Project filter
         if ($projectId) {
@@ -57,16 +65,10 @@ class ReportController extends Controller
             });
         }
 
-        // Visibility enforcement
-        if (!Auth::user()->isAdmin()) {
-            $projectIds = Auth::user()->projects()->pluck('projects.id');
-            $query->whereIn('project_id', $projectIds);
-        }
-
         // Get engagements
         $engagements = $query->get();
 
-        // Group by project and compute totals
+        // Aggregate data by project
         $projectData = [];
         foreach ($engagements as $engagement) {
             $pid = $engagement->project_id;
@@ -74,17 +76,21 @@ class ReportController extends Controller
             if (!isset($projectData[$pid])) {
                 $projectData[$pid] = [
                     'project' => $engagement->project,
-                    'technical_assistance' => 0,
-                    'coaching' => 0,
-                    'training' => 0,
-                    'total' => 0,
-                    'count' => 0,
+                    'event_hours' => 0,
+                    'prep_hours' => 0,
+                    'followup_hours' => 0,
+                    'total_hours' => 0,
+                    'participant_count' => 0,
+                    'engagement_count' => 0,
                 ];
             }
 
-            $projectData[$pid][$engagement->engagement_type] += $engagement->hours;
-            $projectData[$pid]['total'] += $engagement->hours;
-            $projectData[$pid]['count']++;
+            $projectData[$pid]['event_hours'] += $engagement->event_hours;
+            $projectData[$pid]['prep_hours'] += $engagement->prep_hours ?? 0;
+            $projectData[$pid]['followup_hours'] += $engagement->followup_hours ?? 0;
+            $projectData[$pid]['total_hours'] += ($engagement->event_hours + ($engagement->prep_hours ?? 0) + ($engagement->followup_hours ?? 0));
+            $projectData[$pid]['participant_count'] += $engagement->participant_count ?? 0;
+            $projectData[$pid]['engagement_count']++;
         }
 
         // Sort by project name

@@ -90,48 +90,53 @@
                                 <tr>
                                     <th>Project</th>
                                     <th>Organization</th>
-                                    <th class="text-end">TA Hours</th>
-                                    <th class="text-end">Coaching Hours</th>
-                                    <th class="text-end">Training Hours</th>
+                                    <th class="text-end">Event Hours</th>
+                                    <th class="text-end">Prep Hours</th>
+                                    <th class="text-end">Follow-Up Hours</th>
                                     <th class="text-end"><strong>Total Hours</strong></th>
-                                    <th class="text-center">Engagement Count</th>
+                                    <th class="text-end">Participants</th>
+                                    <th class="text-center">Engagements</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @php
-                                    $totalTA = 0;
-                                    $totalCoaching = 0;
-                                    $totalTraining = 0;
+                                    $totalEvent = 0;
+                                    $totalPrep = 0;
+                                    $totalFollowup = 0;
                                     $grandTotal = 0;
-                                    $totalCount = 0;
+                                    $totalParticipants = 0;
+                                    $totalEngagements = 0;
                                 @endphp
 
                                 @foreach($projectData as $data)
                                 @php
-                                    $totalTA += $data['technical_assistance'];
-                                    $totalCoaching += $data['coaching'];
-                                    $totalTraining += $data['training'];
-                                    $grandTotal += $data['total'];
-                                    $totalCount += $data['count'];
+                                    $totalEvent += $data['event_hours'];
+                                    $totalPrep += $data['prep_hours'];
+                                    $totalFollowup += $data['followup_hours'];
+                                    $grandTotal += $data['total_hours'];
+                                    $totalParticipants += $data['participant_count'];
+                                    $totalEngagements += $data['engagement_count'];
                                 @endphp
                                 <tr>
                                     <td>{{ $data['project']->name }}</td>
                                     <td>{{ $data['project']->organization->name }}</td>
-                                    <td class="text-end">{{ number_format($data['technical_assistance'], 2) }}</td>
-                                    <td class="text-end">{{ number_format($data['coaching'], 2) }}</td>
-                                    <td class="text-end">{{ number_format($data['training'], 2) }}</td>
-                                    <td class="text-end"><strong>{{ number_format($data['total'], 2) }}</strong></td>
-                                    <td class="text-center">{{ $data['count'] }}</td>
+                                    <td class="text-end">{{ number_format($data['event_hours'], 2) }}</td>
+                                    <td class="text-end">{{ number_format($data['prep_hours'], 2) }}</td>
+                                    <td class="text-end">{{ number_format($data['followup_hours'], 2) }}</td>
+                                    <td class="text-end"><strong>{{ number_format($data['total_hours'], 2) }}</strong></td>
+                                    <td class="text-end">{{ number_format($data['participant_count']) }}</td>
+                                    <td class="text-center">{{ $data['engagement_count'] }}</td>
                                 </tr>
                                 @endforeach
 
                                 <tr class="table-secondary">
                                     <td colspan="2"><strong>TOTAL</strong></td>
-                                    <td class="text-end"><strong>{{ number_format($totalTA, 2) }}</strong></td>
-                                    <td class="text-end"><strong>{{ number_format($totalCoaching, 2) }}</strong></td>
-                                    <td class="text-end"><strong>{{ number_format($totalTraining, 2) }}</strong></td>
+                                    <td class="text-end"><strong>{{ number_format($totalEvent, 2) }}</strong></td>
+                                    <td class="text-end"><strong>{{ number_format($totalPrep, 2) }}</strong></td>
+                                    <td class="text-end"><strong>{{ number_format($totalFollowup, 2) }}</strong></td>
                                     <td class="text-end"><strong>{{ number_format($grandTotal, 2) }}</strong></td>
-                                    <td class="text-center"><strong>{{ $totalCount }}</strong></td>
+                                    <td class="text-end"><strong>{{ number_format($totalParticipants) }}</strong></td>
+                                    <td class="text-center"><strong>{{ $totalEngagements }}</strong></td>
                                 </tr>
                             </tbody>
                         </table>

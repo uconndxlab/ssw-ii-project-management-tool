@@ -35,6 +35,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/engagements', [EngagementController::class, 'index'])->name('engagements.index');
     Route::get('/engagements/create', [EngagementController::class, 'create'])->name('engagements.create');
     Route::post('/engagements', [EngagementController::class, 'store'])->name('engagements.store');
+    Route::get('/engagements/{engagement}', [EngagementController::class, 'show'])->name('engagements.show');
+    Route::get('/engagements/{engagement}/edit', [EngagementController::class, 'edit'])->name('engagements.edit');
+    Route::put('/engagements/{engagement}', [EngagementController::class, 'update'])->name('engagements.update');
     Route::delete('/engagements/{engagement}', [EngagementController::class, 'destroy'])->name('engagements.destroy');
     
     // Reports
