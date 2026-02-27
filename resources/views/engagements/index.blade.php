@@ -12,6 +12,74 @@
     </div>
 </div>
 
+<div class="row mb-3">
+  <div class="col-12">
+    <form method="GET" action="{{ route('engagements.index') }}" class="card">
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12 col-md-3">
+            <label class="form-label">Organization</label>
+            <select name="organization_id" class="form-select">
+              <option value="">All</option>
+              @foreach($organizations as $org)
+                <option value="{{ $org->id }}" @selected(($filters['organization_id'] ?? null) == $org->id)>
+                  {{ $org->name }}
+                </option>
+              @endforeach
+            </select>
+          </div>
+
+          <div class="col-12 col-md-3">
+            <label class="form-label">Project</label>
+            <select name="project_id" class="form-select">
+              <option value="">All</option>
+              @foreach($projects as $project)
+                <option value="{{ $project->id }}" @selected(($filters['project_id'] ?? null) == $project->id)>
+                  {{ $project->name }}
+                  @if($project->organization?->name)
+                    — {{ $project->organization->name }}
+                  @endif
+                </option>
+              @endforeach
+            </select>
+          </div>
+
+          <div class="col-12 col-md-2">
+            <label class="form-label">State</label>
+            <select name="state_id" class="form-select">
+              <option value="">All</option>
+              @foreach($states as $state)
+                <option value="{{ $state->id }}" @selected(($filters['state_id'] ?? null) == $state->id)>
+                  {{ $state->name }}
+                </option>
+              @endforeach
+            </select>
+          </div>
+
+          <div class="col-12 col-md-2">
+            <label class="form-label">Type</label>
+            <select name="engagement_type" class="form-select">
+              <option value="">All</option>
+              @foreach(\App\Models\Engagement::TYPES as $type)
+                <option value="{{ $type }}" @selected(($filters['engagement_type'] ?? null) == $type)>
+                  {{ str_replace('_', ' ', ucwords($type, '_')) }}
+                </option>
+              @endforeach
+            </select>
+          </div>
+
+          <div class="col-12 col-md-2 d-flex align-items-end gap-2">
+            <button type="submit" class="btn btn-primary w-100">Filter</button>
+            <a href="{{ route('engagements.index') }}" class="btn btn-outline-secondary w-100">Reset</a>
+          </div>
+
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div class="row">
     <div class="col-12">
         <div class="card">

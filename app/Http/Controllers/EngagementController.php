@@ -5,24 +5,69 @@ namespace App\Http\Controllers;
 use App\Models\Engagement;
 use App\Models\Project;
 use App\Models\Program;
+use App\Models\State;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class EngagementController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $query = Engagement::with(['project', 'user']);
+        $query = Engagement::query()
+            ->with(['project.organization', 'project.state', 'user']);
 
-        // Visibility enforcement: non-admins only see engagements for assigned projects
         if (!Auth::user()->isAdmin()) {
             $projectIds = Auth::user()->projects()->pluck('projects.id');
             $query->whereIn('project_id', $projectIds);
         }
 
-        $engagements = $query->orderBy('engagement_date', 'desc')->paginate(50);
-        
-        return view('engagements.index', compact('engagements'));
+        $filters = $request->validate([
+            'project_id' => ['nullable', 'integer', 'exists:projects,id'],
+            'organization_id' => ['nullable', 'integer', 'exists:organizations,id'],
+            'state_id' => ['nullable', 'integer', 'exists:states,id'],
+            'engagement_type' => ['nullable', 'string', 'in:' . implode(',', Engagement::TYPES)],
+        ]);
+
+        if (!empty($filters['project_id'])) {
+            $query->where('project_id', $filters['project_id']);
+        }
+
+        if (!empty($filters['organization_id'])) {
+            $query->whereHas('project', function ($q) use ($filters) {
+                $q->where('organization_id', $filters['organization_id']);
+            });
+        }
+
+        if (!empty($filters['state_id'])) {
+            $query->whereHas('project', function ($q) use ($filters) {
+                $q->where('state_id', $filters['state_id']);
+            });
+        }
+
+        if (!empty($filters['engagement_type'])) {
+            $query->where('engagement_type', $filters['engagement_type']);
+        }
+
+        $projects = $this->getVisibleProjects()->load(['organization', 'state']);
+
+        $orgIds = $projects->pluck('organization_id')->filter()->unique()->values();
+        $organizations = \App\Models\Organization::whereIn('id', $orgIds)->orderBy('name')->get();
+
+        $stateIds = $projects->pluck('state_id')->filter()->unique()->values();
+        $states = State::whereIn('id', $stateIds)->orderBy('name')->get();
+
+        $engagements = $query
+            ->orderBy('engagement_date', 'desc')
+            ->paginate(50)
+            ->withQueryString();
+
+        return view('engagements.index', compact(
+            'engagements',
+            'projects',
+            'organizations',
+            'states',
+            'filters'
+        ));
     }
 
     public function create()
