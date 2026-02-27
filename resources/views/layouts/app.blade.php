@@ -29,21 +29,19 @@
                         <a class="nav-link" href="{{ route('projects.index') }}">Projects</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ route('engagements.index') }}">Engagements</a>
+                        <a class="nav-link" href="{{ route('organizations.index') }}">Organizations</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ route('reports.engagements') }}">Reports</a>
+                        <a class="nav-link" href="{{ route('reports.engagements') }}">Reporting</a>
                     </li>
                     @if(auth()->user()->isAdmin())
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="dataDropdown" role="button" data-bs-toggle="dropdown">
-                            Data
+                        <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown">
+                            Admin
                         </a>
                         <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ route('organizations.index') }}">Organizations</a></li>
-                            <li><a class="dropdown-item" href="{{ route('programs.index') }}">Programs</a></li>
                             <li><a class="dropdown-item" href="{{ route('states.index') }}">States</a></li>
-                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ route('programs.index') }}">Programs</a></li>
                             <li><a class="dropdown-item" href="{{ route('contact-families.index') }}">Contact Families</a></li>
                             <li><a class="dropdown-item" href="{{ route('activity-types.index') }}">Activity Types</a></li>
                             <li><hr class="dropdown-divider"></li>

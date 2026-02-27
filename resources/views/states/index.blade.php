@@ -20,33 +20,44 @@
                     <table class="table table-hover">
                         <thead>
                             <tr>
-                                <th>ID</th>
                                 <th>Name</th>
+                                <th>Organizations</th>
+                                <th>Projects</th>
                                 <th>Created</th>
-                                <th>Actions</th>
+                                <th style="width: 50px;"></th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($states as $state)
                             <tr>
-                                <td>{{ $state->id }}</td>
-                                <td>{{ $state->name }}</td>
+                                <td><strong>{{ $state->name }}</strong></td>
+                                <td>{{ $state->organizations_count }}</td>
+                                <td>{{ $state->projects_count }}</td>
                                 <td>{{ $state->created_at->format('M d, Y') }}</td>
-                                <td>
-                                    <div class="btn-group btn-group-sm">
-                                        <a href="{{ route('states.edit', $state) }}" class="btn btn-outline-primary">Edit</a>
-                                        <form method="POST" action="{{ route('states.destroy', $state) }}" class="d-inline" 
-                                              onsubmit="return confirm('Are you sure you want to delete this state?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-outline-danger">Delete</button>
-                                        </form>
+                                <td onclick="event.stopPropagation()">
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-link text-secondary" type="button" data-bs-toggle="dropdown">
+                                            ⋯
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li>
+                                                <a class="dropdown-item" href="{{ route('states.edit', $state) }}">Edit</a>
+                                            </li>
+                                            <li>
+                                                <form method="POST" action="{{ route('states.destroy', $state) }}" 
+                                                      onsubmit="return confirm('Are you sure you want to delete this state?');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="dropdown-item text-danger">Delete</button>
+                                                </form>
+                                            </li>
+                                        </ul>
                                     </div>
                                 </td>
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="4" class="text-center text-muted">No states found</td>
+                                <td colspan="5" class="text-center text-muted">No states found</td>
                             </tr>
                             @endforelse
                         </tbody>

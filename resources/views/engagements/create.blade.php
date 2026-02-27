@@ -34,7 +34,7 @@
                                 required>
                             <option value="">Select project...</option>
                             @foreach($projects as $project)
-                                <option value="{{ $project->id }}" {{ old('project_id') == $project->id ? 'selected' : '' }}>
+                                <option value="{{ $project->id }}" {{ (old('project_id') ?? $preselectedProjectId) == $project->id ? 'selected' : '' }}>
                                     {{ $project->name }} ({{ $project->organization->name }})
                                 </option>
                             @endforeach
@@ -256,9 +256,12 @@ const projectParticipants = @json($projects->mapWithKeys(fn($p) => [
     $p->id => $p->users->map(fn($u) => ['id' => $u->id, 'name' => $u->name])
 ]));
 
+// Old participant selections for validation errors
+const oldParticipants = @json(old('participant_user_ids', []));
+
 // Update participants when project changes
-document.getElementById('project_id').addEventListener('change', function() {
-    const projectId = this.value;
+function updateParticipants() {
+    const projectId = document.getElementById('project_id').value;
     const container = document.getElementById('participants-container');
     
     if (!projectId || !projectParticipants[projectId]) {
@@ -273,18 +276,29 @@ document.getElementById('project_id').addEventListener('change', function() {
         return;
     }
     
-    container.innerHTML = users.map(user => `
-        <div class="form-check">
-            <input class="form-check-input" 
-                   type="checkbox" 
-                   name="participant_user_ids[]" 
-                   value="${user.id}" 
-                   id="participant_${user.id}">
-            <label class="form-check-label" for="participant_${user.id}">
-                ${user.name}
-            </label>
-        </div>
-    `).join('');
-});
+    container.innerHTML = users.map(user => {
+        const isChecked = oldParticipants.includes(user.id.toString()) || oldParticipants.includes(user.id);
+        return `
+            <div class="form-check">
+                <input class="form-check-input" 
+                       type="checkbox" 
+                       name="participant_user_ids[]" 
+                       value="${user.id}" 
+                       id="participant_${user.id}"
+                       ${isChecked ? 'checked' : ''}>
+                <label class="form-check-label" for="participant_${user.id}">
+                    ${user.name}
+                </label>
+            </div>
+        `;
+    }).join('');
+}
+
+document.getElementById('project_id').addEventListener('change', updateParticipants);
+
+// Trigger on page load if project is pre-selected
+if (document.getElementById('project_id').value) {
+    updateParticipants();
+}
 </script>
 @endsection

@@ -76,7 +76,7 @@ class EngagementController extends Controller
         ));
     }
 
-    public function create()
+    public function create(Request $request)
     {
         $projects = $this->getVisibleProjects();
         $programs = Program::where('active', true)->orderBy('name')->get();
@@ -88,7 +88,10 @@ class EngagementController extends Controller
         // Pre-load users for each project for participant selection
         $projects->load('users');
         
-        return view('engagements.create', compact('projects', 'programs', 'contactFamilies'));
+        // Get pre-selected project if provided
+        $preselectedProjectId = $request->query('project_id');
+        
+        return view('engagements.create', compact('projects', 'programs', 'contactFamilies', 'preselectedProjectId'));
     }
 
     public function store(Request $request)

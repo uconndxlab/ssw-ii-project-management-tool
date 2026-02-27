@@ -9,7 +9,7 @@ class StateController extends Controller
 {
     public function index()
     {
-        $states = State::orderBy('name')->paginate(20);
+        $states = State::withCount(['organizations', 'projects'])->orderBy('name')->paginate(20);
         
         return view('states.index', compact('states'));
     }

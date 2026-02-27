@@ -20,18 +20,16 @@
                     <table class="table table-hover">
                         <thead>
                             <tr>
-                                <th>ID</th>
                                 <th>Name</th>
                                 <th>Status</th>
                                 <th>Created</th>
-                                <th>Actions</th>
+                                <th style="width: 50px;"></th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($programs as $program)
                             <tr>
-                                <td>{{ $program->id }}</td>
-                                <td>{{ $program->name }}</td>
+                                <td><strong>{{ $program->name }}</strong></td>
                                 <td>
                                     @if($program->active)
                                         <span class="badge bg-success">Active</span>
@@ -40,21 +38,30 @@
                                     @endif
                                 </td>
                                 <td>{{ $program->created_at->format('M d, Y') }}</td>
-                                <td>
-                                    <div class="btn-group btn-group-sm">
-                                        <a href="{{ route('programs.edit', $program) }}" class="btn btn-outline-primary">Edit</a>
-                                        <form method="POST" action="{{ route('programs.destroy', $program) }}" class="d-inline" 
-                                              onsubmit="return confirm('Are you sure you want to delete this program?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-outline-danger">Delete</button>
-                                        </form>
+                                <td onclick="event.stopPropagation()">
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-link text-secondary" type="button" data-bs-toggle="dropdown">
+                                            ⋯
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li>
+                                                <a class="dropdown-item" href="{{ route('programs.edit', $program) }}">Edit</a>
+                                            </li>
+                                            <li>
+                                                <form method="POST" action="{{ route('programs.destroy', $program) }}" 
+                                                      onsubmit="return confirm('Are you sure you want to delete this program?');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="dropdown-item text-danger">Delete</button>
+                                                </form>
+                                            </li>
+                                        </ul>
                                     </div>
                                 </td>
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="5" class="text-center text-muted">No programs found</td>
+                                <td colspan="4" class="text-center text-muted">No programs found</td>
                             </tr>
                             @endforelse
                         </tbody>

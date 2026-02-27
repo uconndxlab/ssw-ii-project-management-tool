@@ -79,7 +79,40 @@ class ProjectController extends Controller
 
         $project->load(['organization', 'state', 'users']);
         
-        return view('projects.show', compact('project'));
+        // Get engagements for this project
+        $engagements = $project->engagements()
+            ->with(['activityType.contactFamily', 'user', 'participants'])
+            ->orderBy('engagement_date', 'desc')
+            ->get();
+        
+        // Recent engagements (last 10)
+        $recentEngagements = $engagements->take(10);
+        
+        // Programs represented in engagements
+        $programs = $project->engagements()
+            ->with('programs')
+            ->get()
+            ->pluck('programs')
+            ->flatten()
+            ->unique('id')
+            ->sortBy('name');
+        
+        // Lifetime totals
+        $lifetimeTotals = [
+            'engagements' => $engagements->count(),
+            'hours' => $engagements->sum(fn($e) => $e->event_hours + ($e->prep_hours ?? 0) + ($e->followup_hours ?? 0)),
+            'participants' => $engagements->sum('participant_count'),
+        ];
+        
+        // YTD totals (current year)
+        $ytdEngagements = $engagements->filter(fn($e) => $e->engagement_date->year === now()->year);
+        $ytdTotals = [
+            'engagements' => $ytdEngagements->count(),
+            'hours' => $ytdEngagements->sum(fn($e) => $e->event_hours + ($e->prep_hours ?? 0) + ($e->followup_hours ?? 0)),
+            'participants' => $ytdEngagements->sum('participant_count'),
+        ];
+        
+        return view('projects.show', compact('project', 'recentEngagements', 'programs', 'lifetimeTotals', 'ytdTotals'));
     }
 
     public function edit(Project $project)

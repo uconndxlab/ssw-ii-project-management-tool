@@ -20,35 +20,48 @@
                     <table class="table table-hover">
                         <thead>
                             <tr>
-                                <th>ID</th>
                                 <th>Name</th>
                                 <th>State</th>
+                                <th>Projects</th>
                                 <th>Created</th>
-                                <th>Actions</th>
+                                @if(auth()->user()->isAdmin())
+                                <th style="width: 50px;"></th>
+                                @endif
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($organizations as $organization)
-                            <tr>
-                                <td>{{ $organization->id }}</td>
-                                <td>{{ $organization->name }}</td>
+                            <tr style="cursor: pointer;" onclick="window.location='{{ route('organizations.show', $organization) }}'">
+                                <td><strong>{{ $organization->name }}</strong></td>
                                 <td>{{ $organization->state->name }}</td>
+                                <td>{{ $organization->projects->count() }}</td>
                                 <td>{{ $organization->created_at->format('M d, Y') }}</td>
-                                <td>
-                                    <div class="btn-group btn-group-sm">
-                                        <a href="{{ route('organizations.edit', $organization) }}" class="btn btn-outline-primary">Edit</a>
-                                        <form method="POST" action="{{ route('organizations.destroy', $organization) }}" class="d-inline" 
-                                              onsubmit="return confirm('Are you sure you want to delete this organization?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-outline-danger">Delete</button>
-                                        </form>
+                                @if(auth()->user()->isAdmin())
+                                <td onclick="event.stopPropagation()">
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-link text-secondary" type="button" data-bs-toggle="dropdown">
+                                            ⋯
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li>
+                                                <a class="dropdown-item" href="{{ route('organizations.edit', $organization) }}">Edit</a>
+                                            </li>
+                                            <li>
+                                                <form method="POST" action="{{ route('organizations.destroy', $organization) }}" 
+                                                      onsubmit="return confirm('Are you sure you want to delete this organization?');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="dropdown-item text-danger">Delete</button>
+                                                </form>
+                                            </li>
+                                        </ul>
                                     </div>
                                 </td>
+                                @endif
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="5" class="text-center text-muted">No organizations found</td>
+                                <td colspan="{{ auth()->user()->isAdmin() ? 5 : 4 }}" class="text-center text-muted">No organizations found</td>
                             </tr>
                             @endforelse
                         </tbody>

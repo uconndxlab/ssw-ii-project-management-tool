@@ -10,6 +10,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ProgramController;
 use App\Http\Controllers\ContactFamilyController;
 use App\Http\Controllers\ActivityTypeController;
+use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
 
 // Guest routes
@@ -20,9 +21,7 @@ Route::middleware('guest')->group(function () {
 
 // Authenticated routes
 Route::middleware('auth')->group(function () {
-    Route::get('/', function () {
-        return view('dashboard');
-    })->name('dashboard');
+    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     
@@ -48,13 +47,17 @@ Route::middleware('auth')->group(function () {
     // Reports
     Route::get('/reports/engagements', [ReportController::class, 'engagements'])->name('reports.engagements');
     
+    // Organizations - viewable by all, admin-only for create/edit/delete
+    Route::get('/organizations', [OrganizationController::class, 'index'])->name('organizations.index');
+    Route::get('/organizations/{organization}', [OrganizationController::class, 'show'])->name('organizations.show');
+    
     // Admin routes
     Route::middleware('role:admin')->group(function () {
         Route::resource('contact-families', ContactFamilyController::class)->except(['show']);
         Route::resource('activity-types', ActivityTypeController::class)->except(['show']);
-        Route::resource('states', StateController::class)->except(['show']);
-        Route::resource('organizations', OrganizationController::class)->except(['show']);
-        Route::resource('programs', ProgramController::class)->except(['show']);
+        Route::resource('states', StateController::class);
+        Route::resource('organizations', OrganizationController::class)->except(['index', 'show']);
+        Route::resource('programs', ProgramController::class);
     });
     
     // Admin user management
