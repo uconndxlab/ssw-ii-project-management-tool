@@ -96,6 +96,17 @@ class ReportController extends Controller
         // Sort by project name
         usort($projectData, fn($a, $b) => strcmp($a['project']->name, $b['project']->name));
 
+        // If HTMX request, return only the results partial
+        if ($request->header('HX-Request')) {
+            return view('reports._engagements_results', compact(
+                'projectData',
+                'startDate',
+                'endDate',
+                'projectId',
+                'programId'
+            ));
+        }
+
         return view('reports.engagements', compact(
             'projectData',
             'visibleProjects',
