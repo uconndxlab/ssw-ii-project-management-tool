@@ -10,47 +10,47 @@ class OrganizationController extends Controller
 {
     public function index()
     {
-        $organizations = Organization::with(['state', 'projects'])->orderBy('name')->paginate(20);
+        $organizations = Organization::with(['state', 'agreements'])->orderBy('name')->paginate(20);
         
         return view('organizations.index', compact('organizations'));
     }
 
     public function show(Organization $organization)
     {
-        // Load projects with relationships
-        $projects = $organization->projects()->with(['state', 'users'])->get();
+        // Load agreements with relationships
+        $agreements = $organization->agreements()->with(['state', 'users'])->get();
         
-        // Get all engagements for this organization's projects
-        $allEngagements = \App\Models\Engagement::whereIn('project_id', $projects->pluck('id'))
-            ->with(['activityType.contactFamily', 'user', 'project'])
+        // Get all activities for this organization's agreements
+        $allActivities = \App\Models\Activity::whereIn('agreement_id', $agreements->pluck('id'))
+            ->with(['activityType.contactFamily', 'user', 'agreement'])
             ->orderByDesc('engagement_date')
             ->get();
         
-        // Recent engagements (last 5)
-        $recentEngagements = $allEngagements->take(5);
+        // Recent activities (last 5)
+        $recentActivities = $allActivities->take(5);
         
-        // Unique team members across all projects
-        $teamMembers = $projects->pluck('users')->flatten()->unique('id')->sortBy('name');
+        // Unique team members across all agreements
+        $teamMembers = $agreements->pluck('users')->flatten()->unique('id')->sortBy('name');
         
-        // YTD engagements
-        $ytdEngagements = $allEngagements->filter(fn($e) => $e->engagement_date->year === now()->year);
+        // YTD activities
+        $ytdActivities = $allActivities->filter(fn($e) => $e->engagement_date->year === now()->year);
         
         // YTD totals
         $ytdTotals = [
-            'engagements' => $ytdEngagements->count(),
-            'hours' => $ytdEngagements->sum(fn($e) => $e->event_hours + ($e->prep_hours ?? 0) + ($e->followup_hours ?? 0)),
-            'participants' => $ytdEngagements->sum('participant_count'),
+            'activities' => $ytdActivities->count(),
+            'hours' => $ytdActivities->sum(fn($e) => $e->event_hours + ($e->prep_hours ?? 0) + ($e->followup_hours ?? 0)),
+            'participants' => $ytdActivities->sum('participant_count'),
         ];
         
         // Breakdown by contact family
-        $contactFamilyBreakdown = $ytdEngagements->groupBy(fn($e) => $e->activityType->contactFamily->name)
+        $contactFamilyBreakdown = $ytdActivities->groupBy(fn($e) => $e->activityType->contactFamily->name)
             ->map(fn($group) => $group->count())
             ->sortDesc();
         
         return view('organizations.show', compact(
             'organization',
-            'projects',
-            'recentEngagements',
+            'agreements',
+            'recentActivities',
             'teamMembers',
             'ytdTotals',
             'contactFamilyBreakdown'

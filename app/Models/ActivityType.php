@@ -29,9 +29,9 @@ class ActivityType extends Model
         return $this->belongsTo(ContactFamily::class);
     }
 
-    public function engagements(): HasMany
+    public function activities(): HasMany
     {
-        return $this->hasMany(Engagement::class);
+        return $this->hasMany(Activity::class);
     }
 
     /**

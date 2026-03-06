@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Project extends Model
+class Agreement extends Model
 {
     protected $fillable = [
         'name',
@@ -37,11 +37,11 @@ class Project extends Model
 
     public function users(): BelongsToMany
     {
-        return $this->belongsToMany(User::class)->withTimestamps();
+        return $this->belongsToMany(User::class, 'agreement_user')->withTimestamps();
     }
 
-    public function engagements(): HasMany
+    public function activities(): HasMany
     {
-        return $this->hasMany(Engagement::class);
+        return $this->hasMany(Activity::class);
     }
 }

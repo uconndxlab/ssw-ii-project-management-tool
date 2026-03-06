@@ -49,7 +49,7 @@
                                             </li>
                                             <li>
                                                 <form method="POST" action="{{ route('programs.destroy', $program) }}" 
-                                                      onsubmit="return confirm('Are you sure you want to delete this program?');">
+                                                      hx-confirm="Are you sure you want to delete this program?">
                                                     @csrf
                                                     @method('DELETE')
                                                     <button type="submit" class="dropdown-item text-danger">Delete</button>

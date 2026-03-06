@@ -1,20 +1,20 @@
 @extends('layouts.app')
 
-@section('title', 'Engagements')
+@section('title', 'Activities')
 
 @section('content')
 <div class="row mb-4">
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center">
-            <h1>Engagements</h1>
-            <a href="{{ route('engagements.create') }}" class="btn btn-primary">Log Engagement</a>
+            <h1>Activities</h1>
+            <a href="{{ route('activities.create') }}" class="btn btn-primary">Log Activity</a>
         </div>
     </div>
 </div>
 
 <div class="row mb-3">
   <div class="col-12">
-    <form method="GET" action="{{ route('engagements.index') }}" class="card">
+    <form method="GET" action="{{ route('activities.index') }}" class="card">
       <div class="card-body">
         <div class="row g-3">
 
@@ -31,14 +31,14 @@
           </div>
 
           <div class="col-12 col-md-3">
-            <label class="form-label">Project</label>
-            <select name="project_id" class="form-select">
+            <label class="form-label">Agreement</label>
+            <select name="agreement_id" class="form-select">
               <option value="">All</option>
-              @foreach($projects as $project)
-                <option value="{{ $project->id }}" @selected(($filters['project_id'] ?? null) == $project->id)>
-                  {{ $project->name }}
-                  @if($project->organization?->name)
-                    — {{ $project->organization->name }}
+              @foreach($agreements as $agreement)
+                <option value="{{ $agreement->id }}" @selected(($filters['agreement_id'] ?? null) == $agreement->id)>
+                  {{ $agreement->name }}
+                  @if($agreement->organization?->name)
+                    — {{ $agreement->organization->name }}
                   @endif
                 </option>
               @endforeach
@@ -71,7 +71,7 @@
 
           <div class="col-12 col-md-2 d-flex align-items-end gap-2">
             <button type="submit" class="btn btn-primary w-100">Filter</button>
-            <a href="{{ route('engagements.index') }}" class="btn btn-outline-secondary w-100">Reset</a>
+            <a href="{{ route('activities.index') }}" class="btn btn-outline-secondary w-100">Reset</a>
           </div>
 
         </div>
@@ -89,7 +89,7 @@
                         <thead>
                             <tr>
                                 <th>Date</th>
-                                <th>Project</th>
+                                <th>Agreement</th>
                                 <th>Activity Type</th>
                                 <th>Total Hours</th>
                                 <th>Logged By</th>
@@ -97,24 +97,24 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse($engagements as $engagement)
+                            @forelse($activities as $activity)
                             <tr>
-                                <td>{{ $engagement->engagement_date->format('M d, Y') }}</td>
-                                <td>{{ $engagement->project->name }}</td>
+                                <td>{{ $activity->engagement_date->format('M d, Y') }}</td>
+                                <td>{{ $activity->agreement->name }}</td>
                                 <td>
                                     <span class="badge bg-info">
-                                        {{ $engagement->activityType->name }}
+                                        {{ $activity->activityType->name }}
                                     </span>
                                 </td>
-                                <td>{{ number_format($engagement->total_hours, 2) }}</td>
-                                <td>{{ $engagement->user->name }}</td>
+                                <td>{{ number_format($activity->total_hours, 2) }}</td>
+                                <td>{{ $activity->user->name }}</td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        <a href="{{ route('engagements.show', $engagement) }}" class="btn btn-outline-secondary">View</a>
-                                        @if(auth()->user()->isAdmin() || $engagement->user_id === auth()->id())
-                                        <a href="{{ route('engagements.edit', $engagement) }}" class="btn btn-outline-primary">Edit</a>
-                                        <form method="POST" action="{{ route('engagements.destroy', $engagement) }}" class="d-inline" 
-                                              onsubmit="return confirm('Are you sure you want to delete this engagement?');">
+                                        <a href="{{ route('activities.show', $activity) }}" class="btn btn-outline-secondary">View</a>
+                                        @if(auth()->user()->isAdmin() || $activity->user_id === auth()->id())
+                                        <a href="{{ route('activities.edit', $activity) }}" class="btn btn-outline-primary">Edit</a>
+                                        <form method="POST" action="{{ route('activities.destroy', $activity) }}" class="d-inline" 
+                                              hx-confirm="Are you sure you want to delete this activity?">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-outline-danger">Delete</button>
@@ -127,9 +127,9 @@
                             <tr>
                                 <td colspan="6" class="text-center text-muted">
                                     @if(auth()->user()->isAdmin())
-                                        No engagements logged yet
+                                        No activities logged yet
                                     @else
-                                        No engagements found for your assigned projects
+                                        No activities found for your assigned agreements
                                     @endif
                                 </td>
                             </tr>
@@ -139,7 +139,7 @@
                 </div>
 
                 <div class="mt-3">
-                    {{ $engagements->links() }}
+                    {{ $activities->links() }}
                 </div>
             </div>
         </div>

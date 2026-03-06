@@ -1,11 +1,11 @@
 @extends('layouts.app')
 
-@section('title', 'Log Engagement')
+@section('title', 'Edit Activity')
 
 @section('content')
 <div class="row mb-4">
     <div class="col-12">
-        <h1>Log Engagement</h1>
+        <h1>Edit Activity</h1>
     </div>
 </div>
 
@@ -23,23 +23,28 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('engagements.store') }}">
+                <form method="POST" action="{{ route('activities.update', $activity) }}">
                     @csrf
+                    @method('PUT')
 
                     <div class="mb-3">
-                        <label for="project_id" class="form-label">Project <span class="text-danger">*</span></label>
-                        <select class="form-select @error('project_id') is-invalid @enderror" 
-                                id="project_id" 
-                                name="project_id" 
+                        <label for="agreement_id" class="form-label">Agreement <span class="text-danger">*</span></label>
+                        <select class="form-select @error('agreement_id') is-invalid @enderror" 
+                                id="agreement_id" 
+                                name="agreement_id"
+                                hx-get="{{ route('activities.participants-for-agreement') }}"
+                                hx-target="#participants-container"
+                                hx-include="[name='participant_user_ids[]']"
+                                hx-swap="innerHTML"
                                 required>
                             <option value="">Select project...</option>
-                            @foreach($projects as $project)
-                                <option value="{{ $project->id }}" {{ (old('project_id') ?? $preselectedProjectId) == $project->id ? 'selected' : '' }}>
-                                    {{ $project->name }} ({{ $project->organization->name }})
+                            @foreach($agreements as $agreement)
+                                <option value="{{ $agreement->id }}" {{ old('agreement_id', $activity->agreement_id) == $agreement->id ? 'selected' : '' }}>
+                                    {{ $agreement->name }} ({{ $agreement->organization->name }})
                                 </option>
                             @endforeach
                         </select>
-                        @error('project_id')
+                        @error('agreement_id')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
@@ -52,7 +57,7 @@
                                        class="form-control @error('engagement_date') is-invalid @enderror" 
                                        id="engagement_date" 
                                        name="engagement_date" 
-                                       value="{{ old('engagement_date', now()->format('Y-m-d')) }}" 
+                                       value="{{ old('engagement_date', $activity->engagement_date->format('Y-m-d')) }}" 
                                        required>
                                 @error('engagement_date')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -73,7 +78,7 @@
                                         required>
                                     <option value="">Select contact family...</option>
                                     @foreach($contactFamilies as $family)
-                                        <option value="{{ $family->id }}" {{ old('contact_family_id') == $family->id ? 'selected' : '' }}>
+                                        <option value="{{ $family->id }}" {{ old('contact_family_id', $activity->activityType->contact_family_id ?? '') == $family->id ? 'selected' : '' }}>
                                             {{ $family->name }}
                                         </option>
                                     @endforeach
@@ -91,11 +96,17 @@
                                 id="activity_type_id" 
                                 name="activity_type_id" 
                                 required>
-                            <option value="">Select contact family first...</option>
+                            <option value="">Select activity type...</option>
+                            @foreach($activityTypes as $type)
+                                <option value="{{ $type->id }}" {{ old('activity_type_id', $activity->activity_type_id) == $type->id ? 'selected' : '' }}>
+                                    {{ $type->name }}
+                                </option>
+                            @endforeach
                         </select>
                         @error('activity_type_id')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
+                    </div>
                     </div>
 
                     <div class="row">
@@ -109,7 +120,7 @@
                                        step="0.25"
                                        min="0"
                                        max="9999.99"
-                                       value="{{ old('event_hours') }}" 
+                                       value="{{ old('event_hours', $activity->event_hours) }}" 
                                        required>
                                 @error('event_hours')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -127,7 +138,7 @@
                                        step="0.25"
                                        min="0"
                                        max="9999.99"
-                                       value="{{ old('prep_hours', 0) }}">
+                                       value="{{ old('prep_hours', $activity->prep_hours ?? 0) }}">
                                 @error('prep_hours')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -144,7 +155,7 @@
                                        step="0.25"
                                        min="0"
                                        max="9999.99"
-                                       value="{{ old('followup_hours', 0) }}">
+                                       value="{{ old('followup_hours', $activity->followup_hours ?? 0) }}">
                                 @error('followup_hours')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -159,7 +170,7 @@
                                id="participant_count" 
                                name="participant_count" 
                                min="0"
-                               value="{{ old('participant_count') }}">
+                               value="{{ old('participant_count', $activity->participant_count) }}">
                         @error('participant_count')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
@@ -174,7 +185,7 @@
                                 size="5">
                             @foreach($programs as $program)
                                 <option value="{{ $program->id }}" 
-                                    {{ in_array($program->id, old('program_ids', [])) ? 'selected' : '' }}>
+                                    {{ in_array($program->id, old('program_ids', $activity->programs->pluck('id')->toArray())) ? 'selected' : '' }}>
                                     {{ $program->name }}
                                 </option>
                             @endforeach
@@ -188,12 +199,28 @@
                     <div class="mb-3">
                         <label class="form-label">Internal Participants</label>
                         <div id="participants-container">
-                            <small class="text-muted">Select a project first to see team members</small>
+                            @if($activity->agreement->users->isNotEmpty())
+                                @foreach($activity->agreement->users as $user)
+                                    <div class="form-check">
+                                        <input class="form-check-input" 
+                                               type="checkbox" 
+                                               name="participant_user_ids[]" 
+                                               value="{{ $user->id }}" 
+                                               id="participant_{{ $user->id }}"
+                                               {{ in_array($user->id, old('participant_user_ids', $activity->participants->pluck('id')->toArray())) ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="participant_{{ $user->id }}">
+                                            {{ $user->name }}
+                                        </label>
+                                    </div>
+                                @endforeach
+                            @else
+                                <small class="text-muted">No team members assigned to this agreement</small>
+                            @endif
                         </div>
                         @error('participant_user_ids')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
-                        <small class="text-muted">Check team members who participated in delivering this engagement</small>
+                        <small class="text-muted">Check team members who participated in delivering this activity</small>
                     </div>
 
                     <div class="mb-3">
@@ -201,7 +228,7 @@
                         <textarea class="form-control @error('summary') is-invalid @enderror" 
                                   id="summary" 
                                   name="summary" 
-                                  rows="3">{{ old('summary') }}</textarea>
+                                  rows="3">{{ old('summary', $activity->summary) }}</textarea>
                         @error('summary')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
@@ -212,7 +239,7 @@
                         <textarea class="form-control @error('follow_up') is-invalid @enderror" 
                                   id="follow_up" 
                                   name="follow_up" 
-                                  rows="3">{{ old('follow_up') }}</textarea>
+                                  rows="3">{{ old('follow_up', $activity->follow_up) }}</textarea>
                         @error('follow_up')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
@@ -223,7 +250,7 @@
                         <textarea class="form-control @error('strengths') is-invalid @enderror" 
                                   id="strengths" 
                                   name="strengths" 
-                                  rows="3">{{ old('strengths') }}</textarea>
+                                  rows="3">{{ old('strengths', $activity->strengths) }}</textarea>
                         @error('strengths')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
@@ -234,71 +261,19 @@
                         <textarea class="form-control @error('recommendations') is-invalid @enderror" 
                                   id="recommendations" 
                                   name="recommendations" 
-                                  rows="3">{{ old('recommendations') }}</textarea>
+                                  rows="3">{{ old('recommendations', $activity->recommendations) }}</textarea>
                         @error('recommendations')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
 
                     <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">Log Engagement</button>
-                        <a href="{{ route('engagements.index') }}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Update Activity</button>
+                        <a href="{{ route('activities.index') }}" class="btn btn-secondary">Cancel</a>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
-
-<script>
-// Project-to-participants mapping from server
-const projectParticipants = @json($projects->mapWithKeys(fn($p) => [
-    $p->id => $p->users->map(fn($u) => ['id' => $u->id, 'name' => $u->name])
-]));
-
-// Old participant selections for validation errors
-const oldParticipants = @json(old('participant_user_ids', []));
-
-// Update participants when project changes
-function updateParticipants() {
-    const projectId = document.getElementById('project_id').value;
-    const container = document.getElementById('participants-container');
-    
-    if (!projectId || !projectParticipants[projectId]) {
-        container.innerHTML = '<small class="text-muted">Select a project first to see team members</small>';
-        return;
-    }
-    
-    const users = projectParticipants[projectId];
-    
-    if (users.length === 0) {
-        container.innerHTML = '<small class="text-muted">No team members assigned to this project</small>';
-        return;
-    }
-    
-    container.innerHTML = users.map(user => {
-        const isChecked = oldParticipants.includes(user.id.toString()) || oldParticipants.includes(user.id);
-        return `
-            <div class="form-check">
-                <input class="form-check-input" 
-                       type="checkbox" 
-                       name="participant_user_ids[]" 
-                       value="${user.id}" 
-                       id="participant_${user.id}"
-                       ${isChecked ? 'checked' : ''}>
-                <label class="form-check-label" for="participant_${user.id}">
-                    ${user.name}
-                </label>
-            </div>
-        `;
-    }).join('');
-}
-
-document.getElementById('project_id').addEventListener('change', updateParticipants);
-
-// Trigger on page load if project is pre-selected
-if (document.getElementById('project_id').value) {
-    updateParticipants();
-}
-</script>
 @endsection

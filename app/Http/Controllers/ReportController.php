@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Engagement;
-use App\Models\Project;
+use App\Models\Activity;
+use App\Models\Agreement;
 use App\Models\Program;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 
 class ReportController extends Controller
 {
-    public function engagements(Request $request)
+    public function activities(Request $request)
     {
         // Default dates
         $defaultStart = now()->startOfMonth()->format('Y-m-d');
@@ -22,7 +22,7 @@ class ReportController extends Controller
         $validated = $request->validate([
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
-            'project_id' => ['nullable', 'exists:projects,id'],
+            'agreement_id' => ['nullable', 'exists:agreements,id'],
             'program_id' => ['nullable', 'exists:programs,id'],
             'contact_family_id' => ['nullable', 'exists:contact_families,id'],
             'activity_type_id' => ['nullable', 'exists:activity_types,id'],
@@ -30,18 +30,18 @@ class ReportController extends Controller
 
         $startDate = $validated['start_date'] ?? $defaultStart;
         $endDate = $validated['end_date'] ?? $defaultEnd;
-        $projectId = $validated['project_id'] ?? null;
+        $agreementId = $validated['agreement_id'] ?? null;
         $programId = $validated['program_id'] ?? null;
         $contactFamilyId = $validated['contact_family_id'] ?? null;
         $activityTypeId = $validated['activity_type_id'] ?? null;
 
-        // Verify project access if provided
-        if ($projectId) {
-            $this->verifyProjectAccess($projectId);
+        // Verify agreement access if provided
+        if ($agreementId) {
+            $this->verifyAgreementAccess($agreementId);
         }
 
-        // Get visible projects for dropdown
-        $visibleProjects = $this->getVisibleProjects();
+        // Get visible agreements for dropdown
+        $visibleAgreements = $this->getVisibleAgreements();
         
         // Get active programs for dropdown
         $programs = Program::where('active', true)->orderBy('name')->get();
@@ -57,19 +57,19 @@ class ReportController extends Controller
             ->get();
 
         // Build base query with visibility enforcement
-        $query = Engagement::query()
-            ->with(['project.organization', 'user', 'activityType.contactFamily'])
-            ->whereBetween('engagement_date', [$startDate, $endDate]);
+        $query = Activity::query()
+            ->with(['agreement.organization', 'user', 'activityType.contactFamily'])
+            ->whereBetween('activity_date', [$startDate, $endDate]);
 
-        // Visibility enforcement: non-admins only see their assigned projects
+        // Visibility enforcement: non-admins only see their assigned agreements
         if (!Auth::user()->isAdmin()) {
-            $projectIds = Auth::user()->projects()->pluck('projects.id');
-            $query->whereIn('project_id', $projectIds);
+            $agreementIds = Auth::user()->agreements()->pluck('agreements.id');
+            $query->whereIn('agreement_id', $agreementIds);
         }
 
-        // Project filter
-        if ($projectId) {
-            $query->where('project_id', $projectId);
+        // Agreement filter
+        if ($agreementId) {
+            $query->where('agreement_id', $agreementId);
         }
 
         // Program filter
@@ -91,84 +91,84 @@ class ReportController extends Controller
             $query->where('activity_type_id', $activityTypeId);
         }
 
-        // Get engagements
-        $engagements = $query->get();
+        // Get activities
+        $activities = $query->get();
 
-        // Aggregate data by project
-        $projectData = [];
-        foreach ($engagements as $engagement) {
-            $pid = $engagement->project_id;
+        // Aggregate data by agreement
+        $agreementData = [];
+        foreach ($activities as $activity) {
+            $aid = $activity->agreement_id;
             
-            if (!isset($projectData[$pid])) {
-                $projectData[$pid] = [
-                    'project' => $engagement->project,
+            if (!isset($agreementData[$aid])) {
+                $agreementData[$aid] = [
+                    'agreement' => $activity->agreement,
                     'event_hours' => 0,
                     'prep_hours' => 0,
                     'followup_hours' => 0,
                     'total_hours' => 0,
                     'participant_count' => 0,
-                    'engagement_count' => 0,
+                    'activity_count' => 0,
                 ];
             }
 
-            $projectData[$pid]['event_hours'] += $engagement->event_hours;
-            $projectData[$pid]['prep_hours'] += $engagement->prep_hours ?? 0;
-            $projectData[$pid]['followup_hours'] += $engagement->followup_hours ?? 0;
-            $projectData[$pid]['total_hours'] += ($engagement->event_hours + ($engagement->prep_hours ?? 0) + ($engagement->followup_hours ?? 0));
-            $projectData[$pid]['participant_count'] += $engagement->participant_count ?? 0;
-            $projectData[$pid]['engagement_count']++;
+            $agreementData[$aid]['event_hours'] += $activity->event_hours;
+            $agreementData[$aid]['prep_hours'] += $activity->prep_hours ?? 0;
+            $agreementData[$aid]['followup_hours'] += $activity->followup_hours ?? 0;
+            $agreementData[$aid]['total_hours'] += ($activity->event_hours + ($activity->prep_hours ?? 0) + ($activity->followup_hours ?? 0));
+            $agreementData[$aid]['participant_count'] += $activity->participant_count ?? 0;
+            $agreementData[$aid]['activity_count']++;
         }
 
-        // Sort by project name
-        usort($projectData, fn($a, $b) => strcmp($a['project']->name, $b['project']->name));
+        // Sort by agreement name
+        usort($agreementData, fn($a, $b) => strcmp($a['agreement']->name, $b['agreement']->name));
 
         // If HTMX request, return only the results partial
         if ($request->header('HX-Request')) {
-            return view('reports._engagements_results', compact(
-                'projectData',
+            return view('reports.partials.results-table', compact(
+                'agreementData',
                 'startDate',
                 'endDate',
-                'projectId',
+                'agreementId',
                 'programId',
                 'contactFamilyId',
                 'activityTypeId'
             ));
         }
 
-        return view('reports.engagements', compact(
-            'projectData',
-            'visibleProjects',
+        return view('reports.activities', compact(
+            'agreementData',
+            'visibleAgreements',
             'programs',
             'contactFamilies',
             'activityTypes',
             'startDate',
             'endDate',
-            'projectId',
+            'agreementId',
             'programId',
             'contactFamilyId',
             'activityTypeId'
         ));
     }
 
-    private function getVisibleProjects()
+    private function getVisibleAgreements()
     {
         if (Auth::user()->isAdmin()) {
-            return Project::with('organization')->orderBy('name')->get();
+            return Agreement::with('organization')->orderBy('name')->get();
         }
 
-        return Auth::user()->projects()->with('organization')->orderBy('name')->get();
+        return Auth::user()->agreements()->with('organization')->orderBy('name')->get();
     }
 
-    private function verifyProjectAccess(int $projectId): void
+    private function verifyAgreementAccess(int $agreementId): void
     {
         if (Auth::user()->isAdmin()) {
             return;
         }
 
-        $hasAccess = Auth::user()->projects()->where('projects.id', $projectId)->exists();
+        $hasAccess = Auth::user()->agreements()->where('agreements.id', $agreementId)->exists();
 
         if (!$hasAccess) {
-            abort(403, 'You do not have access to this project.');
+            abort(403, 'You do not have access to this agreement.');
         }
     }
 }

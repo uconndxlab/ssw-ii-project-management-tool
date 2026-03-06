@@ -5,7 +5,7 @@
 @section('content')
 <div class="row mb-4">
     <div class="col-12">
-        <h1>Quarterly Engagement Report</h1>
+        <h1>Quarterly Activity Report</h1>
     </div>
 </div>
 
@@ -62,7 +62,7 @@
             <div class="card">
                 <div class="card-header">
                     <h5 class="mb-0">
-                        Q{{ $selectedQuarter }} {{ $selectedYear }} Engagement Summary
+                        Q{{ $selectedQuarter }} {{ $selectedYear }} Activity Summary
                     </h5>
                 </div>
                 <div class="card-body">
@@ -71,7 +71,7 @@
                         <table class="table table-bordered table-hover">
                             <thead class="table-light">
                                 <tr>
-                                    <th>Project</th>
+                                    <th>Agreement</th>
                                     <th>Organization</th>
                                     <th class="text-end">TA Hours</th>
                                     <th class="text-end">Coaching Hours</th>
@@ -119,16 +119,16 @@
                         <p class="text-muted mb-0">
                             <small>
                                 @if(!auth()->user()->isAdmin())
-                                    Report shows only projects you are assigned to.
+                                    Report shows only agreements you are assigned to.
                                 @else
-                                    Report shows all projects.
+                                    Report shows all agreements.
                                 @endif
                             </small>
                         </p>
                     </div>
                     @else
                     <p class="text-muted text-center py-4 mb-0">
-                        No engagements found for Q{{ $selectedQuarter }} {{ $selectedYear }}
+                        No activities found for Q{{ $selectedQuarter }} {{ $selectedYear }}
                     </p>
                     @endif
                 </div>

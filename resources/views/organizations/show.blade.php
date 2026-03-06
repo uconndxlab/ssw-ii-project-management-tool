@@ -11,7 +11,7 @@
                 <p class="text-muted mb-0">{{ $organization->state->name }}</p>
             </div>
             <div>
-                <a href="{{ route('engagements.create') }}" class="btn btn-success">Log Engagement</a>
+                <a href="{{ route('activities.create') }}" class="btn btn-success">Log Activity</a>
                 @if(auth()->user()->isAdmin())
                 <a href="{{ route('organizations.edit', $organization) }}" class="btn btn-outline-primary">Edit Organization</a>
                 @endif
@@ -27,8 +27,8 @@
             <div class="card-body">
                 <h6 class="text-muted small mb-3">Overview</h6>
                 <div class="mb-3">
-                    <h3 class="mb-0">{{ $projects->count() }}</h3>
-                    <small class="text-muted">Active Projects</small>
+                    <h3 class="mb-0">{{ $agreements->count() }}</h3>
+                    <small class="text-muted">Active Agreements</small>
                 </div>
                 <div>
                     <h3 class="mb-0">{{ $teamMembers->count() }}</h3>
@@ -42,8 +42,8 @@
             <div class="card-body">
                 <h6 class="text-muted small mb-3">Year-to-Date ({{ now()->year }})</h6>
                 <div class="mb-3">
-                    <h3 class="mb-0">{{ $ytdTotals['engagements'] }}</h3>
-                    <small class="text-muted">Engagements</small>
+                    <h3 class="mb-0">{{ $ytdTotals['activities'] }}</h3>
+                    <small class="text-muted">Activities</small>
                 </div>
                 <div class="mb-3">
                     <h3 class="mb-0">{{ number_format($ytdTotals['hours'], 1) }}</h3>
@@ -70,7 +70,7 @@
                         <thead>
                             <tr>
                                 <th>Contact Family</th>
-                                <th class="text-end">Engagements</th>
+                                <th class="text-end">Activities</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -95,51 +95,51 @@
                 <h5 class="mb-0">Recent Activity</h5>
             </div>
             <div class="card-body">
-                @if($recentEngagements->isNotEmpty())
+                @if($recentActivities->isNotEmpty())
                 <div class="table-responsive">
                     <table class="table table-sm table-hover">
                         <thead>
                             <tr>
                                 <th>Date</th>
-                                <th>Project</th>
+                                <th>Agreement</th>
                                 <th>Activity Type</th>
                                 <th>Hours</th>
                                 <th>Logged By</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($recentEngagements as $engagement)
-                            <tr style="cursor: pointer;" onclick="window.location='{{ route('engagements.show', $engagement) }}'">
-                                <td>{{ $engagement->engagement_date->format('M d, Y') }}</td>
-                                <td>{{ $engagement->project->name }}</td>
-                                <td>{{ $engagement->activityType->name }}</td>
-                                <td>{{ number_format($engagement->total_hours, 2) }}</td>
-                                <td>{{ $engagement->user->name }}</td>
+                            @foreach($recentActivities as $activity)
+                            <tr>
+                                <td><a href="{{ route('activities.show', $activity) }}" class="text-decoration-none text-dark d-block">{{ $activity->engagement_date->format('M d, Y') }}</a></td>
+                                <td>{{ $activity->agreement->name }}</td>
+                                <td>{{ $activity->activityType->name }}</td>
+                                <td>{{ number_format($activity->total_hours, 2) }}</td>
+                                <td>{{ $activity->user->name }}</td>
                             </tr>
                             @endforeach
                         </tbody>
                     </table>
                 </div>
                 @else
-                <p class="text-muted mb-0">No engagements logged yet</p>
+                <p class="text-muted mb-0">No activities logged yet</p>
                 @endif
             </div>
         </div>
     </div>
 </div>
 
-<!-- Projects List -->
+<!-- Agreements List -->
 <div class="row">
     <div class="col-12">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Projects ({{ $projects->count() }})</h5>
+                <h5 class="mb-0">Agreements ({{ $agreements->count() }})</h5>
                 @if(auth()->user()->isAdmin())
-                <a href="{{ route('projects.create') }}" class="btn btn-sm btn-primary">Create Project</a>
+                <a href="{{ route('agreements.create') }}" class="btn btn-sm btn-primary">Create Agreement</a>
                 @endif
             </div>
             <div class="card-body">
-                @if($projects->isNotEmpty())
+                @if($agreements->isNotEmpty())
                 <div class="table-responsive">
                     <table class="table table-hover">
                         <thead>
@@ -151,12 +151,12 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($projects as $project)
-                            <tr style="cursor: pointer;" onclick="window.location='{{ route('projects.show', $project) }}'">
-                                <td><strong>{{ $project->name }}</strong></td>
-                                <td>{{ $project->users->count() }}</td>
-                                <td>{{ $project->start_date?->format('M d, Y') ?? '—' }}</td>
-                                <td>{{ $project->end_date?->format('M d, Y') ?? '—' }}</td>
+                            @foreach($agreements as $agreement)
+                            <tr>
+                                <td><a href="{{ route('agreements.show', $agreement) }}" class="text-decoration-none text-dark d-block"><strong>{{ $agreement->name }}</strong></a></td>
+                                <td>{{ $agreement->users->count() }}</td>
+                                <td>{{ $agreement->start_date?->format('M d, Y') ?? '—' }}</td>
+                                <td>{{ $agreement->end_date?->format('M d, Y') ?? '—' }}</td>
                             </tr>
                             @endforeach
                         </tbody>
@@ -164,9 +164,9 @@
                 </div>
                 @else
                 <div class="text-center py-4 text-muted">
-                    <p class="mb-3">No projects under this organization yet.</p>
+                    <p class="mb-3">No agreements under this organization yet.</p>
                     @if(auth()->user()->isAdmin())
-                    <a href="{{ route('projects.create') }}" class="btn btn-primary">Create First Project</a>
+                    <a href="{{ route('agreements.create') }}" class="btn btn-primary">Create First Agreement</a>
                     @endif
                 </div>
                 @endif

@@ -1,17 +1,17 @@
 @extends('layouts.app')
 
-@section('title', 'Engagement Details')
+@section('title', 'Activity Details')
 
 @section('content')
 <div class="row mb-4">
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center">
-            <h1>Engagement Details</h1>
+            <h1>Activity Details</h1>
             <div>
-                @if(auth()->user()->isAdmin() || $engagement->user_id === auth()->id())
-                <a href="{{ route('engagements.edit', $engagement) }}" class="btn btn-primary">Edit</a>
+                @if(auth()->user()->isAdmin() || $activity->user_id === auth()->id())
+                <a href="{{ route('activities.edit', $activity) }}" class="btn btn-primary">Edit</a>
                 @endif
-                <a href="{{ route('engagements.index') }}" class="btn btn-secondary">Back to List</a>
+                <a href="{{ route('activities.index') }}" class="btn btn-secondary">Back to Activities</a>
             </div>
         </div>
     </div>
@@ -29,7 +29,7 @@
                         <strong>Date:</strong>
                     </div>
                     <div class="col-md-8">
-                        {{ $engagement->engagement_date->format('F d, Y') }}
+                        {{ $activity->engagement_date->format('F d, Y') }}
                     </div>
                 </div>
 
@@ -38,8 +38,8 @@
                         <strong>Project:</strong>
                     </div>
                     <div class="col-md-8">
-                        {{ $engagement->project->name }}<br>
-                        <small class="text-muted">{{ $engagement->project->organization->name }} ({{ $engagement->project->state->name }})</small>
+                        {{ $activity->agreement->name }}<br>
+                        <small class="text-muted">{{ $activity->agreement->organization->name }} ({{ $activity->agreement->state->name }})</small>
                     </div>
                 </div>
 
@@ -48,7 +48,7 @@
                         <strong>Logged By:</strong>
                     </div>
                     <div class="col-md-8">
-                        {{ $engagement->user->name }}
+                        {{ $activity->user->name }}
                     </div>
                 </div>
 
@@ -57,7 +57,7 @@
                         <strong>Contact Family:</strong>
                     </div>
                     <div class="col-md-8">
-                        <span class="badge bg-primary">{{ $engagement->activityType->contactFamily->name }}</span>
+                        <span class="badge bg-primary">{{ $activity->activityType->contactFamily->name }}</span>
                     </div>
                 </div>
 
@@ -66,17 +66,17 @@
                         <strong>Activity Type:</strong>
                     </div>
                     <div class="col-md-8">
-                        <span class="badge bg-info">{{ $engagement->activityType->name }}</span>
+                        <span class="badge bg-info">{{ $activity->activityType->name }}</span>
                     </div>
                 </div>
 
-                @if($engagement->programs->isNotEmpty())
+                @if($activity->programs->isNotEmpty())
                 <div class="row mb-3">
                     <div class="col-md-4">
                         <strong>Programs:</strong>
                     </div>
                     <div class="col-md-8">
-                        @foreach($engagement->programs as $program)
+                        @foreach($activity->programs as $program)
                             <span class="badge bg-success me-1">{{ $program->name }}</span>
                         @endforeach
                     </div>
@@ -95,16 +95,16 @@
                         <strong>Logged By:</strong>
                     </div>
                     <div class="col-md-8">
-                        {{ $engagement->user->name }}
+                        {{ $activity->user->name }}
                     </div>
                 </div>
-                @if($engagement->participants->count() > 0)
+                @if($activity->participants->count() > 0)
                 <div class="row mt-2">
                     <div class="col-md-4">
                         <strong>Delivered By:</strong>
                     </div>
                     <div class="col-md-8">
-                        @foreach($engagement->participants as $participant)
+                        @foreach($activity->participants as $participant)
                             <span class="badge bg-primary me-1">{{ $participant->name }}</span>
                         @endforeach
                     </div>
@@ -129,53 +129,53 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td>{{ number_format($engagement->event_hours, 2) }}</td>
-                            <td>{{ number_format($engagement->prep_hours ?? 0, 2) }}</td>
-                            <td>{{ number_format($engagement->followup_hours ?? 0, 2) }}</td>
-                            <td><strong>{{ number_format($engagement->total_hours, 2) }}</strong></td>
+                            <td>{{ number_format($activity->event_hours, 2) }}</td>
+                            <td>{{ number_format($activity->prep_hours ?? 0, 2) }}</td>
+                            <td>{{ number_format($activity->followup_hours ?? 0, 2) }}</td>
+                            <td><strong>{{ number_format($activity->total_hours, 2) }}</strong></td>
                         </tr>
                     </tbody>
                 </table>
 
-                @if($engagement->participant_count)
+                @if($activity->participant_count)
                 <div class="mt-3">
-                    <strong>Participants:</strong> {{ number_format($engagement->participant_count) }}
+                    <strong>Participants:</strong> {{ number_format($activity->participant_count) }}
                 </div>
                 @endif
             </div>
         </div>
 
-        @if($engagement->summary || $engagement->follow_up || $engagement->strengths || $engagement->recommendations)
+        @if($activity->summary || $activity->follow_up || $activity->strengths || $activity->recommendations)
         <div class="card mt-3">
             <div class="card-header">
                 <h5 class="mb-0">Narrative Details</h5>
             </div>
             <div class="card-body">
-                @if($engagement->summary)
+                @if($activity->summary)
                 <div class="mb-3">
                     <h6>Summary</h6>
-                    <p>{{ $engagement->summary }}</p>
+                    <p>{{ $activity->summary }}</p>
                 </div>
                 @endif
 
-                @if($engagement->follow_up)
+                @if($activity->follow_up)
                 <div class="mb-3">
                     <h6>Follow-Up</h6>
-                    <p>{{ $engagement->follow_up }}</p>
+                    <p>{{ $activity->follow_up }}</p>
                 </div>
                 @endif
 
-                @if($engagement->strengths)
+                @if($activity->strengths)
                 <div class="mb-3">
                     <h6>Strengths</h6>
-                    <p>{{ $engagement->strengths }}</p>
+                    <p>{{ $activity->strengths }}</p>
                 </div>
                 @endif
 
-                @if($engagement->recommendations)
+                @if($activity->recommendations)
                 <div class="mb-3">
                     <h6>Recommendations</h6>
-                    <p>{{ $engagement->recommendations }}</p>
+                    <p>{{ $activity->recommendations }}</p>
                 </div>
                 @endif
             </div>

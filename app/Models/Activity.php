@@ -6,10 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-class Engagement extends Model
+class Activity extends Model
 {
     protected $fillable = [
-        'project_id',
+        'agreement_id',
         'user_id',
         'engagement_date',
         'activity_type_id',
@@ -44,9 +44,9 @@ class Engagement extends Model
             + ($this->followup_hours ?? 0);
     }
 
-    public function project(): BelongsTo
+    public function agreement(): BelongsTo
     {
-        return $this->belongsTo(Project::class);
+        return $this->belongsTo(Agreement::class);
     }
 
     public function user(): BelongsTo
@@ -69,11 +69,11 @@ class Engagement extends Model
 
     public function programs(): BelongsToMany
     {
-        return $this->belongsToMany(Program::class)->withTimestamps();
+        return $this->belongsToMany(Program::class, 'activity_program')->withTimestamps();
     }
 
     public function participants(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'engagement_user')->withTimestamps();
+        return $this->belongsToMany(User::class, 'activity_user')->withTimestamps();
     }
 }

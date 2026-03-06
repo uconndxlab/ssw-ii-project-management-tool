@@ -1,11 +1,11 @@
 @extends('layouts.app')
 
-@section('title', 'Edit Project')
+@section('title', 'Edit Agreement')
 
 @section('content')
 <div class="row mb-4">
     <div class="col-12">
-        <h1>Edit Project</h1>
+        <h1>Edit Agreement</h1>
     </div>
 </div>
 
@@ -23,17 +23,17 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('projects.update', $project) }}">
+                <form method="POST" action="{{ route('agreements.update', $agreement) }}">
                     @csrf
                     @method('PUT')
 
                     <div class="mb-3">
-                        <label for="name" class="form-label">Project Name</label>
+                        <label for="name" class="form-label">Agreement Name</label>
                         <input type="text" 
                                class="form-control @error('name') is-invalid @enderror" 
                                id="name" 
                                name="name" 
-                               value="{{ old('name', $project->name) }}" 
+                               value="{{ old('name', $agreement->name) }}" 
                                required>
                         @error('name')
                             <div class="invalid-feedback">{{ $message }}</div>
@@ -51,7 +51,7 @@
                                     <option value="">Select organization...</option>
                                     @foreach($organizations as $organization)
                                         <option value="{{ $organization->id }}" 
-                                            {{ old('organization_id', $project->organization_id) == $organization->id ? 'selected' : '' }}>
+                                            {{ old('organization_id', $agreement->organization_id) == $organization->id ? 'selected' : '' }}>
                                             {{ $organization->name }}
                                         </option>
                                     @endforeach
@@ -72,7 +72,7 @@
                                     <option value="">Select state...</option>
                                     @foreach($states as $state)
                                         <option value="{{ $state->id }}" 
-                                            {{ old('state_id', $project->state_id) == $state->id ? 'selected' : '' }}>
+                                            {{ old('state_id', $agreement->state_id) == $state->id ? 'selected' : '' }}>
                                             {{ $state->name }}
                                         </option>
                                     @endforeach
@@ -92,7 +92,7 @@
                                        class="form-control @error('start_date') is-invalid @enderror" 
                                        id="start_date" 
                                        name="start_date" 
-                                       value="{{ old('start_date', $project->start_date?->format('Y-m-d')) }}">
+                                       value="{{ old('start_date', $agreement->start_date?->format('Y-m-d')) }}">
                                 @error('start_date')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -106,7 +106,7 @@
                                        class="form-control @error('end_date') is-invalid @enderror" 
                                        id="end_date" 
                                        name="end_date" 
-                                       value="{{ old('end_date', $project->end_date?->format('Y-m-d')) }}">
+                                       value="{{ old('end_date', $agreement->end_date?->format('Y-m-d')) }}">
                                 @error('end_date')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -124,7 +124,7 @@
                                        name="user_ids[]" 
                                        value="{{ $user->id }}" 
                                        id="user_{{ $user->id }}"
-                                       {{ in_array($user->id, old('user_ids', $project->users->pluck('id')->toArray())) ? 'checked' : '' }}>
+                                       {{ in_array($user->id, old('user_ids', $agreement->users->pluck('id')->toArray())) ? 'checked' : '' }}>
                                 <label class="form-check-label" for="user_{{ $user->id }}">
                                     {{ $user->name }} ({{ ucfirst($user->role) }})
                                 </label>
@@ -136,53 +136,31 @@
 
                     <div class="mb-3">
                         <label class="form-label">Quick Add User</label>
-                        <div class="input-group mb-2">
-                            <select class="form-select" id="htmx-user-select">
-                                <option value="">Select a user to add...</option>
-                                @foreach($users->whereNotIn('id', $project->users->pluck('id')) as $user)
-                                <option value="{{ $user->id }}">{{ $user->name }} ({{ ucfirst($user->role) }})</option>
-                                @endforeach
-                            </select>
-                            <button type="button" 
-                                    class="btn btn-outline-primary"
-                                    onclick="addUserHtmx()">
-                                Add User
-                            </button>
-                        </div>
+                        <form hx-post="{{ route('agreements.assign-user', $agreement) }}"
+                              hx-target="#user-list"
+                              hx-swap="innerHTML"
+                              class="mb-2">
+                            @csrf
+                            <div class="input-group">
+                                <select class="form-select" name="user_id" required>
+                                    <option value="">Select a user to add...</option>
+                                    @foreach($users->whereNotIn('id', $agreement->users->pluck('id')) as $user)
+                                    <option value="{{ $user->id }}">{{ $user->name }} ({{ ucfirst($user->role) }})</option>
+                                    @endforeach
+                                </select>
+                                <button type="submit" class="btn btn-outline-primary">
+                                    Add User
+                                </button>
+                            </div>
+                        </form>
                         <div id="user-list" class="list-group">
-                            @include('projects.partials.user-list', ['project' => $project])
+                            @include('agreements.partials.user-list', ['agreement' => $agreement])
                         </div>
                     </div>
 
-                    <script>
-                    function addUserHtmx() {
-                        const select = document.getElementById('htmx-user-select');
-                        const userId = select.value;
-                        if (!userId) return;
-                        
-                        fetch('{{ route("projects.assign-user", $project) }}', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                'Accept': 'text/html'
-                            },
-                            body: JSON.stringify({ user_id: userId })
-                        })
-                        .then(response => response.text())
-                        .then(html => {
-                            document.getElementById('user-list').innerHTML = html;
-                            select.value = '';
-                            // Remove added user from dropdown
-                            const option = select.querySelector(`option[value="${userId}"]`);
-                            if (option) option.remove();
-                        });
-                    }
-                    </script>
-
                     <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">Update Project</button>
-                        <a href="{{ route('projects.index') }}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Update Agreement</button>
+                        <a href="{{ route('agreements.index') }}" class="btn btn-secondary">Cancel</a>
                     </div>
                 </form>
             </div>

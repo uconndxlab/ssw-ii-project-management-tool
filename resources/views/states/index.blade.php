@@ -22,7 +22,7 @@
                             <tr>
                                 <th>Name</th>
                                 <th>Organizations</th>
-                                <th>Projects</th>
+                                <th>Agreements</th>
                                 <th>Created</th>
                                 <th style="width: 50px;"></th>
                             </tr>
@@ -32,7 +32,7 @@
                             <tr>
                                 <td><strong>{{ $state->name }}</strong></td>
                                 <td>{{ $state->organizations_count }}</td>
-                                <td>{{ $state->projects_count }}</td>
+                                <td>{{ $state->agreements_count }}</td>
                                 <td>{{ $state->created_at->format('M d, Y') }}</td>
                                 <td onclick="event.stopPropagation()">
                                     <div class="dropdown">
@@ -45,7 +45,7 @@
                                             </li>
                                             <li>
                                                 <form method="POST" action="{{ route('states.destroy', $state) }}" 
-                                                      onsubmit="return confirm('Are you sure you want to delete this state?');">
+                                                      hx-confirm="Are you sure you want to delete this state?">
                                                     @csrf
                                                     @method('DELETE')
                                                     <button type="submit" class="dropdown-item text-danger">Delete</button>

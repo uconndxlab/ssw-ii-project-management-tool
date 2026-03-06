@@ -22,7 +22,7 @@
                             <tr>
                                 <th>Name</th>
                                 <th>State</th>
-                                <th>Projects</th>
+                                <th>Agreements</th>
                                 <th>Created</th>
                                 @if(auth()->user()->isAdmin())
                                 <th style="width: 50px;"></th>
@@ -31,10 +31,10 @@
                         </thead>
                         <tbody>
                             @forelse($organizations as $organization)
-                            <tr style="cursor: pointer;" onclick="window.location='{{ route('organizations.show', $organization) }}'">
-                                <td><strong>{{ $organization->name }}</strong></td>
+                            <tr>
+                                <td><a href="{{ route('organizations.show', $organization) }}" class="text-decoration-none text-dark d-block"><strong>{{ $organization->name }}</strong></a></td>
                                 <td>{{ $organization->state->name }}</td>
-                                <td>{{ $organization->projects->count() }}</td>
+                                <td>{{ $organization->agreements->count() }}</td>
                                 <td>{{ $organization->created_at->format('M d, Y') }}</td>
                                 @if(auth()->user()->isAdmin())
                                 <td onclick="event.stopPropagation()">
@@ -48,7 +48,7 @@
                                             </li>
                                             <li>
                                                 <form method="POST" action="{{ route('organizations.destroy', $organization) }}" 
-                                                      onsubmit="return confirm('Are you sure you want to delete this organization?');">
+                                                      hx-confirm="Are you sure you want to delete this organization?">
                                                     @csrf
                                                     @method('DELETE')
                                                     <button type="submit" class="dropdown-item text-danger">Delete</button>

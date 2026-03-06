@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Engagement;
-use App\Models\Project;
+use App\Models\Activity;
+use App\Models\Agreement;
 use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
@@ -21,49 +21,49 @@ class DashboardController extends Controller
     
     protected function adminDashboard()
     {
-        // YTD engagements
-        $ytdEngagements = Engagement::whereYear('engagement_date', now()->year)
-            ->with(['activityType.contactFamily', 'user', 'project'])
+        // YTD activities
+        $ytdActivities = Activity::whereYear('engagement_date', now()->year)
+            ->with(['activityType.contactFamily', 'user', 'agreement'])
             ->get();
         
         // YTD totals
         $ytdTotals = [
-            'engagements' => $ytdEngagements->count(),
-            'hours' => $ytdEngagements->sum(fn($e) => $e->event_hours + ($e->prep_hours ?? 0) + ($e->followup_hours ?? 0)),
-            'participants' => $ytdEngagements->sum('participant_count'),
+            'activities' => $ytdActivities->count(),
+            'hours' => $ytdActivities->sum(fn($e) => $e->event_hours + ($e->prep_hours ?? 0) + ($e->followup_hours ?? 0)),
+            'participants' => $ytdActivities->sum('participant_count'),
         ];
         
-        // Recent 10 engagements
-        $recentEngagements = Engagement::with(['activityType.contactFamily', 'user', 'project'])
+        // Recent 10 activities
+        $recentActivities = Activity::with(['activityType.contactFamily', 'user', 'agreement'])
             ->orderByDesc('engagement_date')
             ->limit(10)
             ->get();
         
-        return view('dashboard', compact('ytdTotals', 'recentEngagements'));
+        return view('dashboard', compact('ytdTotals', 'recentActivities'));
     }
     
     protected function userDashboard($user)
     {
-        // Get user's projects
-        $myProjects = $user->projects()->with(['organization', 'state'])->get();
+        // Get user's agreements
+        $myAgreements = $user->agreements()->with(['organization', 'state'])->get();
         
-        // Get engagements for user's projects
-        $projectIds = $myProjects->pluck('id');
+        // Get activities for user's agreements
+        $agreementIds = $myAgreements->pluck('id');
         
-        // My recent engagements (last 10)
-        $myEngagements = Engagement::whereIn('project_id', $projectIds)
-            ->with(['activityType.contactFamily', 'user', 'project'])
+        // My recent activities (last 10)
+        $myActivities = Activity::whereIn('agreement_id', $agreementIds)
+            ->with(['activityType.contactFamily', 'user', 'agreement'])
             ->orderByDesc('engagement_date')
             ->limit(10)
             ->get();
         
-        // My YTD hours (engagements I personally logged)
-        $myYtdEngagements = Engagement::where('user_id', $user->id)
+        // My YTD hours (activities I personally logged)
+        $myYtdActivities = Activity::where('user_id', $user->id)
             ->whereYear('engagement_date', now()->year)
             ->get();
         
-        $myYtdHours = $myYtdEngagements->sum(fn($e) => $e->event_hours + ($e->prep_hours ?? 0) + ($e->followup_hours ?? 0));
+        $myYtdHours = $myYtdActivities->sum(fn($e) => $e->event_hours + ($e->prep_hours ?? 0) + ($e->followup_hours ?? 0));
         
-        return view('dashboard-user', compact('myProjects', 'myEngagements', 'myYtdHours'));
+        return view('dashboard-user', compact('myAgreements', 'myActivities', 'myYtdHours'));
     }
 }

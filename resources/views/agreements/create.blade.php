@@ -1,11 +1,11 @@
 @extends('layouts.app')
 
-@section('title', 'Create Project')
+@section('title', 'Create Agreement')
 
 @section('content')
 <div class="row mb-4">
     <div class="col-12">
-        <h1>Create Project</h1>
+        <h1>Create Agreement</h1>
     </div>
 </div>
 
@@ -23,11 +23,11 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('projects.store') }}">
+                <form method="POST" action="{{ route('agreements.store') }}">
                     @csrf
 
                     <div class="mb-3">
-                        <label for="name" class="form-label">Project Name</label>
+                        <label for="name" class="form-label">Agreement Name</label>
                         <input type="text" 
                                class="form-control @error('name') is-invalid @enderror" 
                                id="name" 
@@ -131,8 +131,8 @@
                     </div>
 
                     <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">Create Project</button>
-                        <a href="{{ route('projects.index') }}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Create Agreement</button>
+                        <a href="{{ route('agreements.index') }}" class="btn btn-secondary">Cancel</a>
                     </div>
                 </form>
             </div>
