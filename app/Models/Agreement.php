@@ -50,4 +50,9 @@ class Agreement extends Model
     {
         return $this->hasMany(Activity::class);
     }
+
+    public function deliverables(): HasMany
+    {
+        return $this->hasMany(AgreementDeliverable::class);
+    }
 }

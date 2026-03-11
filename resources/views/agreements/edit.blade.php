@@ -212,6 +212,110 @@
                         </div>
                     </div>
 
+                    <hr class="my-4">
+
+                    <div class="mb-3">
+                        <h5 class="mb-3">Deliverables</h5>
+                        
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h6 class="card-title">Add Deliverable</h6>
+                                <form hx-post="{{ route('agreements.add-deliverable', $agreement) }}"
+                                      hx-target="#deliverable-list"
+                                      hx-swap="innerHTML">
+                                    @csrf
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="deliverable_contact_family_id" class="form-label">Contact Family</label>
+                                                <select class="form-select" 
+                                                        id="deliverable_contact_family_id" 
+                                                        name="contact_family_id"
+                                                        hx-get="{{ route('activity-types.by-family') }}"
+                                                        hx-target="#deliverable_activity_type_id"
+                                                        hx-swap="innerHTML"
+                                                        hx-include="this">
+                                                    <option value="">Select contact family...</option>
+                                                    @foreach($contactFamilies as $family)
+                                                    <option value="{{ $family->id }}">{{ $family->name }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="deliverable_activity_type_id" class="form-label">Activity Type</label>
+                                                <select class="form-select" 
+                                                        id="deliverable_activity_type_id" 
+                                                        name="activity_type_id">
+                                                    <option value="">Select contact family first...</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="deliverable_required_hours" class="form-label">Required Hours</label>
+                                                <input type="number" 
+                                                       class="form-control" 
+                                                       id="deliverable_required_hours" 
+                                                       name="required_hours" 
+                                                       min="0" 
+                                                       step="0.1">
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="deliverable_required_activities" class="form-label">Required Activities</label>
+                                                <input type="number" 
+                                                       class="form-control" 
+                                                       id="deliverable_required_activities" 
+                                                       name="required_activities" 
+                                                       min="0" 
+                                                       step="1">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="deliverable_notes" class="form-label">Notes</label>
+                                        <textarea class="form-control" 
+                                                  id="deliverable_notes" 
+                                                  name="notes" 
+                                                  rows="2"></textarea>
+                                    </div>
+                                    
+                                    <button type="submit" class="btn btn-sm btn-outline-primary">
+                                        Add Deliverable
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Activity Type</th>
+                                        <th>Contact Family</th>
+                                        <th class="text-center">Hours</th>
+                                        <th class="text-center">Activities</th>
+                                        <th>Notes</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="deliverable-list">
+                                    @include('agreements.partials.deliverable-list', ['agreement' => $agreement])
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">Update Agreement</button>
                         <a href="{{ route('agreements.index') }}" class="btn btn-secondary">Cancel</a>

@@ -101,6 +101,35 @@
                     </div>
                 </div>
                 @endif
+                
+                @if($agreement->deliverables->isNotEmpty())
+                <div class="mt-3">
+                    <h6 class="text-muted small mb-2">Deliverables</h6>
+                    <div class="list-group list-group-flush">
+                        @foreach($agreement->deliverables as $deliverable)
+                        <div class="list-group-item px-0 py-2">
+                            <div class="d-flex align-items-start">
+                                <div class="flex-grow-1">
+                                    <strong>{{ $deliverable->activityType?->name ?? 'Unspecified' }}</strong>
+                                    @if($deliverable->contactFamily)
+                                    <span class="text-muted">| {{ $deliverable->contactFamily->name }}</span>
+                                    @endif
+                                    @if($deliverable->required_hours)
+                                    <span class="text-muted">| {{ number_format($deliverable->required_hours, 1) }} hours</span>
+                                    @endif
+                                    @if($deliverable->required_activities)
+                                    <span class="text-muted">| {{ $deliverable->required_activities }} activities</span>
+                                    @endif
+                                    @if($deliverable->notes)
+                                    <div class="small text-muted mt-1">{{ $deliverable->notes }}</div>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                </div>
+                @endif
             </div>
         </div>
     </div>

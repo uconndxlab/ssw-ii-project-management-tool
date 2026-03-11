@@ -32,6 +32,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/agreements/{agreement}/assign-user', [AgreementController::class, 'assignUser'])->name('agreements.assign-user');
     Route::delete('/agreements/{agreement}/remove-user/{user}', [AgreementController::class, 'removeUser'])->name('agreements.remove-user');
     
+    // HTMX endpoints for agreement deliverable management
+    Route::post('/agreements/{agreement}/add-deliverable', [AgreementController::class, 'addDeliverable'])->name('agreements.add-deliverable');
+    Route::delete('/agreements/{agreement}/remove-deliverable/{deliverable}', [AgreementController::class, 'removeDeliverable'])->name('agreements.remove-deliverable');
+    
     // Activities - visible to all authenticated users (with visibility filtering in controller)
     Route::get('/activities', [ActivityController::class, 'index'])->name('activities.index');
     Route::get('/activities/create', [ActivityController::class, 'create'])->name('activities.create');

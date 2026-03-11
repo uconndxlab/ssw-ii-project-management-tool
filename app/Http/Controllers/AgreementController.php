@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Organization;
 use App\Models\Agreement;
+use App\Models\AgreementDeliverable;
+use App\Models\ActivityType;
+use App\Models\ContactFamily;
 use App\Models\State;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -85,7 +88,7 @@ class AgreementController extends Controller
             abort(403, 'Unauthorized access to this agreement.');
         }
 
-        $agreement->load(['organization', 'state', 'users']);
+        $agreement->load(['organization', 'state', 'users', 'deliverables.activityType.contactFamily']);
         
         // Get activities for this agreement
         $activities = $agreement->activities()
@@ -131,9 +134,11 @@ class AgreementController extends Controller
         $states = State::orderBy('name')->get();
         $organizations = Organization::orderBy('name')->get();
         $users = User::orderBy('name')->get();
-        $agreement->load('users');
+        $contactFamilies = ContactFamily::where('active', true)->orderBy('sort_order')->orderBy('name')->get();
+        $activityTypes = ActivityType::where('active', true)->orderBy('sort_order')->orderBy('name')->get();
+        $agreement->load(['users', 'deliverables.activityType.contactFamily']);
         
-        return view('agreements.edit', compact('agreement', 'states', 'organizations', 'users'));
+        return view('agreements.edit', compact('agreement', 'states', 'organizations', 'users', 'contactFamilies', 'activityTypes'));
     }
 
     public function update(Request $request, Agreement $agreement)
@@ -204,5 +209,39 @@ class AgreementController extends Controller
         $agreement->load('users');
 
         return view('agreements.partials.user-list', compact('agreement'));
+    }
+
+    // HTMX endpoint for deliverable management
+    public function addDeliverable(Request $request, Agreement $agreement)
+    {
+        // Admin-only authorization
+        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can add deliverables.');
+
+        $validated = $request->validate([
+            'activity_type_id' => ['nullable', 'exists:activity_types,id'],
+            'contact_family_id' => ['nullable', 'exists:contact_families,id'],
+            'required_hours' => ['nullable', 'numeric', 'min:0'],
+            'required_activities' => ['nullable', 'integer', 'min:0'],
+            'notes' => ['nullable', 'string'],
+        ]);
+
+        $agreement->deliverables()->create($validated);
+        $agreement->load('deliverables.activityType.contactFamily');
+
+        return view('agreements.partials.deliverable-list', compact('agreement'));
+    }
+
+    public function removeDeliverable(Request $request, Agreement $agreement, AgreementDeliverable $deliverable)
+    {
+        // Admin-only authorization
+        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can remove deliverables.');
+
+        // Ensure deliverable belongs to this agreement
+        abort_unless($deliverable->agreement_id === $agreement->id, 403, 'Invalid deliverable.');
+
+        $deliverable->delete();
+        $agreement->load('deliverables.activityType.contactFamily');
+
+        return view('agreements.partials.deliverable-list', compact('agreement'));
     }
 }
