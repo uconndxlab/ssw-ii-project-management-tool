@@ -123,7 +123,37 @@ class AgreementController extends Controller
             'participants' => $ytdActivities->sum('participant_count'),
         ];
         
-        return view('agreements.show', compact('agreement', 'recentActivities', 'programs', 'lifetimeTotals', 'ytdTotals'));
+        // Calculate deliverable progress (all activities lifetime)
+        $deliverableProgress = $agreement->deliverables->map(function ($deliverable) use ($activities) {
+            $matchingActivities = $activities->filter(function ($activity) use ($deliverable) {
+                $matches = true;
+                
+                // Must match activity type if specified
+                if ($deliverable->activity_type_id) {
+                    $matches = $matches && ($activity->activity_type_id === $deliverable->activity_type_id);
+                }
+                
+                // Must also match contact family if specified
+                if ($deliverable->contact_family_id) {
+                    $matches = $matches && ($activity->activityType?->contact_family_id === $deliverable->contact_family_id);
+                }
+                
+                // If neither specified, don't match anything
+                if (!$deliverable->activity_type_id && !$deliverable->contact_family_id) {
+                    return false;
+                }
+                
+                return $matches;
+            });
+            
+            return [
+                'deliverable' => $deliverable,
+                'completed_hours' => $matchingActivities->sum(fn($a) => $a->event_hours + ($a->prep_hours ?? 0) + ($a->followup_hours ?? 0)),
+                'completed_activities' => $matchingActivities->count(),
+            ];
+        });
+        
+        return view('agreements.show', compact('agreement', 'recentActivities', 'programs', 'lifetimeTotals', 'ytdTotals', 'deliverableProgress'));
     }
 
     public function edit(Agreement $agreement)

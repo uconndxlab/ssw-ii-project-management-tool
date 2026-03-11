@@ -20,24 +20,25 @@
     </div>
 </div>
 
-<!-- Overview Section -->
+<!-- Agreement Info & Stats Row -->
 <div class="row mb-4">
+    <!-- Agreement Details -->
     <div class="col-md-8">
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0">Agreement Overview</h5>
+                <h5 class="mb-0">Agreement Details</h5>
             </div>
             <div class="card-body">
                 <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <h6 class="text-muted small mb-1">State</h6>
-                        <p class="mb-0">{{ $agreement->state->name }}</p>
-                    </div>
                     <div class="col-md-6 mb-3">
                         <h6 class="text-muted small mb-1">Organization</h6>
                         <p class="mb-0">
                             <a href="{{ route('organizations.show', $agreement->organization) }}">{{ $agreement->organization->name }}</a>
                         </p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-muted small mb-1">State</h6>
+                        <p class="mb-0">{{ $agreement->state->name }}</p>
                     </div>
                 </div>
                 
@@ -51,44 +52,24 @@
                 @endif
                 
                 <div class="row">
-                    <div class="col-md-6 mb-3">
+                    <div class="col-md-6 mb-2">
                         <h6 class="text-muted small mb-1">Start Date</h6>
                         <p class="mb-0">{{ $agreement->start_date?->format('M d, Y') ?? 'Not set' }}</p>
                     </div>
-                    <div class="col-md-6 mb-3">
+                    <div class="col-md-6 mb-2">
                         <h6 class="text-muted small mb-1">End Date</h6>
                         <p class="mb-0">{{ $agreement->end_date?->format('M d, Y') ?? 'Not set' }}</p>
                     </div>
-                    @if($agreement->original_end_date)
-                    <div class="col-md-6 mb-3">
+                    @if($agreement->original_end_date || $agreement->extended_end_date)
+                    <div class="col-md-6">
                         <h6 class="text-muted small mb-1">Original End Date</h6>
-                        <p class="mb-0">{{ $agreement->original_end_date->format('M d, Y') }}</p>
+                        <p class="mb-0">{{ $agreement->original_end_date?->format('M d, Y') ?? '—' }}</p>
                     </div>
-                    @endif
-                    @if($agreement->extended_end_date)
-                    <div class="col-md-6 mb-3">
+                    <div class="col-md-6">
                         <h6 class="text-muted small mb-1">Extended End Date</h6>
-                        <p class="mb-0">{{ $agreement->extended_end_date->format('M d, Y') }}</p>
+                        <p class="mb-0">{{ $agreement->extended_end_date?->format('M d, Y') ?? '—' }}</p>
                     </div>
                     @endif
-                    @if($agreement->certification_candidates)
-                    <div class="col-12 mb-3">
-                        <h6 class="text-muted small mb-1">Certification Candidates</h6>
-                        <p class="mb-0">{{ $agreement->certification_candidates }}</p>
-                    </div>
-                    @endif
-                </div>
-                
-                <div class="mt-3">
-                    <h6 class="text-muted small mb-2">Assigned Team Members ({{ $agreement->users->count() }})</h6>
-                    <div class="d-flex flex-wrap gap-2">
-                        @foreach($agreement->users as $user)
-                            <span class="badge bg-secondary">{{ $user->name }} ({{ ucfirst($user->role) }})</span>
-                        @endforeach
-                        @if($agreement->users->isEmpty())
-                            <span class="text-muted">No team members assigned</span>
-                        @endif
-                    </div>
                 </div>
                 
                 @if($programs->isNotEmpty())
@@ -101,41 +82,12 @@
                     </div>
                 </div>
                 @endif
-                
-                @if($agreement->deliverables->isNotEmpty())
-                <div class="mt-3">
-                    <h6 class="text-muted small mb-2">Deliverables</h6>
-                    <div class="list-group list-group-flush">
-                        @foreach($agreement->deliverables as $deliverable)
-                        <div class="list-group-item px-0 py-2">
-                            <div class="d-flex align-items-start">
-                                <div class="flex-grow-1">
-                                    <strong>{{ $deliverable->activityType?->name ?? 'Unspecified' }}</strong>
-                                    @if($deliverable->contactFamily)
-                                    <span class="text-muted">| {{ $deliverable->contactFamily->name }}</span>
-                                    @endif
-                                    @if($deliverable->required_hours)
-                                    <span class="text-muted">| {{ number_format($deliverable->required_hours, 1) }} hours</span>
-                                    @endif
-                                    @if($deliverable->required_activities)
-                                    <span class="text-muted">| {{ $deliverable->required_activities }} activities</span>
-                                    @endif
-                                    @if($deliverable->notes)
-                                    <div class="small text-muted mt-1">{{ $deliverable->notes }}</div>
-                                    @endif
-                                </div>
-                            </div>
-                        </div>
-                        @endforeach
-                    </div>
-                </div>
-                @endif
             </div>
         </div>
     </div>
     
-    <!-- Lifetime Summary -->
-    <div class="col-md-4">
+    <!-- Stats Summary -->
+    <div class="col-md-4 d-none">
         <div class="card mb-3">
             <div class="card-body">
                 <h6 class="text-muted small mb-3">Lifetime Totals</h6>
@@ -154,8 +106,7 @@
             </div>
         </div>
         
-        <!-- YTD Summary -->
-        <div class="card">
+        <div class="card d-none">
             <div class="card-body">
                 <h6 class="text-muted small mb-3">Year-to-Date ({{ now()->year }})</h6>
                 <div class="mb-3">
@@ -172,6 +123,132 @@
                 </div>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Deliverable Progress & Staff Row -->
+<div class="row mb-4">
+    <!-- Deliverable Progress -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Deliverable Progress</h5>
+            </div>
+            <div class="card-body">
+                @if($deliverableProgress->isNotEmpty())
+                    @foreach($deliverableProgress as $progress)
+                    <div class="mb-4 {{ !$loop->last ? 'pb-3 border-bottom' : '' }}">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <strong class="d-block">{{ $progress['deliverable']->activityType?->name ?? 'Unspecified Activity Type' }}</strong>
+                                @if($progress['deliverable']->contactFamily)
+                                <small class="text-muted">{{ $progress['deliverable']->contactFamily->name }}</small>
+                                @endif
+                            </div>
+                        </div>
+                        
+                        @if($progress['deliverable']->required_hours)
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="small text-muted">Hours Required</span>
+                                <span class="small">
+                                    <strong>{{ number_format($progress['completed_hours'], 1) }}</strong> / {{ number_format($progress['deliverable']->required_hours, 1) }}
+                                </span>
+                            </div>
+                            @php
+                                $hoursPercent = $progress['deliverable']->required_hours > 0 
+                                    ? min(100, ($progress['completed_hours'] / $progress['deliverable']->required_hours) * 100) 
+                                    : 0;
+                            @endphp
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar {{ $hoursPercent >= 100 ? 'bg-success' : 'bg-primary' }}" 
+                                     role="progressbar"
+                                     style="width: {{ $hoursPercent }}%"
+                                     aria-valuenow="{{ $hoursPercent }}"
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100"></div>
+                            </div>
+                        </div>
+                        @endif
+                        
+                        @if($progress['deliverable']->required_activities)
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="small text-muted">Activities Required</span>
+                                <span class="small">
+                                    <strong>{{ $progress['completed_activities'] }}</strong> / {{ $progress['deliverable']->required_activities }}
+                                </span>
+                            </div>
+                            @php
+                                $activitiesPercent = $progress['deliverable']->required_activities > 0 
+                                    ? min(100, ($progress['completed_activities'] / $progress['deliverable']->required_activities) * 100) 
+                                    : 0;
+                            @endphp
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar {{ $activitiesPercent >= 100 ? 'bg-success' : 'bg-primary' }}" 
+                                     role="progressbar"
+                                     style="width: {{ $activitiesPercent }}%"
+                                     aria-valuenow="{{ $activitiesPercent }}"
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100"></div>
+                            </div>
+                        </div>
+                        @endif
+                        
+                        @if($progress['deliverable']->notes)
+                        <div class="small text-muted mt-2">
+                            <em>{{ $progress['deliverable']->notes }}</em>
+                        </div>
+                        @endif
+                        
+                        @if(!$progress['deliverable']->required_hours && !$progress['deliverable']->required_activities)
+                        <div class="small text-muted">
+                            <em>No specific requirements defined</em>
+                        </div>
+                        @endif
+                    </div>
+                    @endforeach
+                @else
+                    <p class="text-muted mb-0">No deliverables defined for this agreement.</p>
+                @endif
+            </div>
+        </div>
+    </div>
+    
+    <!-- Assigned Staff & Certification Candidates -->
+    <div class="col-md-4">
+        <!-- Assigned Staff -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="mb-0">Assigned Staff</h5>
+            </div>
+            <div class="card-body">
+                @if($agreement->users->isNotEmpty())
+                    <div class="list-group list-group-flush">
+                        @foreach($agreement->users as $user)
+                        <div class="list-group-item px-0 py-2">
+                            <strong class="d-block">{{ $user->name }}</strong>
+                            <small class="text-muted">{{ ucfirst($user->role) }}</small>
+                        </div>
+                        @endforeach
+                    </div>
+                @else
+                    <p class="text-muted mb-0">No team members assigned</p>
+                @endif
+            </div>
+        </div>
+        
+        <!-- Certification Candidates -->
+        @if($agreement->certification_candidates)
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Certification Candidates</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-0" style="white-space: pre-line;">{{ $agreement->certification_candidates }}</p>
+            </div>
+        </div>
+        @endif
     </div>
 </div>
 
