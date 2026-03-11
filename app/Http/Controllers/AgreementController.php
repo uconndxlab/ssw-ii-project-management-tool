@@ -47,8 +47,12 @@ class AgreementController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'organization_id' => ['required', 'exists:organizations,id'],
             'state_id' => ['required', 'exists:states,id'],
+            'abstract' => ['nullable', 'string'],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'original_end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'extended_end_date' => ['nullable', 'date', 'after_or_equal:original_end_date'],
+            'certification_candidates' => ['nullable', 'string'],
             'user_ids' => ['nullable', 'array'],
             'user_ids.*' => ['exists:users,id'],
         ]);
@@ -57,8 +61,12 @@ class AgreementController extends Controller
             'name' => $validated['name'],
             'organization_id' => $validated['organization_id'],
             'state_id' => $validated['state_id'],
+            'abstract' => $validated['abstract'] ?? null,
             'start_date' => $validated['start_date'],
             'end_date' => $validated['end_date'],
+            'original_end_date' => $validated['original_end_date'] ?? null,
+            'extended_end_date' => $validated['extended_end_date'] ?? null,
+            'certification_candidates' => $validated['certification_candidates'] ?? null,
         ]);
 
         if (!empty($validated['user_ids'])) {
@@ -136,8 +144,12 @@ class AgreementController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'organization_id' => ['required', 'exists:organizations,id'],
             'state_id' => ['required', 'exists:states,id'],
+            'abstract' => ['nullable', 'string'],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'original_end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'extended_end_date' => ['nullable', 'date', 'after_or_equal:original_end_date'],
+            'certification_candidates' => ['nullable', 'string'],
             'user_ids' => ['nullable', 'array'],
             'user_ids.*' => ['exists:users,id'],
         ]);
@@ -146,8 +158,12 @@ class AgreementController extends Controller
             'name' => $validated['name'],
             'organization_id' => $validated['organization_id'],
             'state_id' => $validated['state_id'],
+            'abstract' => $validated['abstract'] ?? null,
             'start_date' => $validated['start_date'],
             'end_date' => $validated['end_date'],
+            'original_end_date' => $validated['original_end_date'] ?? null,
+            'extended_end_date' => $validated['extended_end_date'] ?? null,
+            'certification_candidates' => $validated['certification_candidates'] ?? null,
         ]);
 
         $agreement->users()->sync($validated['user_ids'] ?? []);

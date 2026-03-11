@@ -13,8 +13,12 @@ class Agreement extends Model
         'name',
         'organization_id',
         'state_id',
+        'abstract',
         'start_date',
         'end_date',
+        'original_end_date',
+        'extended_end_date',
+        'certification_candidates',
     ];
 
     protected function casts(): array
@@ -22,6 +26,8 @@ class Agreement extends Model
         return [
             'start_date' => 'date',
             'end_date' => 'date',
+            'original_end_date' => 'date',
+            'extended_end_date' => 'date',
         ];
     }
 

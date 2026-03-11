@@ -81,6 +81,17 @@
                         </div>
                     </div>
 
+                    <div class="mb-3">
+                        <label for="abstract" class="form-label">Abstract</label>
+                        <textarea class="form-control @error('abstract') is-invalid @enderror" 
+                                  id="abstract" 
+                                  name="abstract" 
+                                  rows="4">{{ old('abstract') }}</textarea>
+                        @error('abstract')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
@@ -109,6 +120,49 @@
                                 @enderror
                             </div>
                         </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="original_end_date" class="form-label">Original End Date</label>
+                                <input type="date" 
+                                       class="form-control @error('original_end_date') is-invalid @enderror" 
+                                       id="original_end_date" 
+                                       name="original_end_date" 
+                                       value="{{ old('original_end_date') }}">
+                                @error('original_end_date')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                <small class="text-muted">For tracking agreement extensions</small>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="extended_end_date" class="form-label">Extended End Date</label>
+                                <input type="date" 
+                                       class="form-control @error('extended_end_date') is-invalid @enderror" 
+                                       id="extended_end_date" 
+                                       name="extended_end_date" 
+                                       value="{{ old('extended_end_date') }}">
+                                @error('extended_end_date')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="certification_candidates" class="form-label">Certification Candidates</label>
+                        <textarea class="form-control @error('certification_candidates') is-invalid @enderror" 
+                                  id="certification_candidates" 
+                                  name="certification_candidates" 
+                                  rows="3">{{ old('certification_candidates') }}</textarea>
+                        @error('certification_candidates')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                        <small class="text-muted">List of certification candidates (placeholder)</small>
                     </div>
 
                     <div class="mb-3">

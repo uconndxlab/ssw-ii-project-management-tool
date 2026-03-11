@@ -39,6 +39,18 @@
                             <a href="{{ route('organizations.show', $agreement->organization) }}">{{ $agreement->organization->name }}</a>
                         </p>
                     </div>
+                </div>
+                
+                @if($agreement->abstract)
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <h6 class="text-muted small mb-1">Abstract</h6>
+                        <p class="mb-0">{{ $agreement->abstract }}</p>
+                    </div>
+                </div>
+                @endif
+                
+                <div class="row">
                     <div class="col-md-6 mb-3">
                         <h6 class="text-muted small mb-1">Start Date</h6>
                         <p class="mb-0">{{ $agreement->start_date?->format('M d, Y') ?? 'Not set' }}</p>
@@ -47,6 +59,24 @@
                         <h6 class="text-muted small mb-1">End Date</h6>
                         <p class="mb-0">{{ $agreement->end_date?->format('M d, Y') ?? 'Not set' }}</p>
                     </div>
+                    @if($agreement->original_end_date)
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-muted small mb-1">Original End Date</h6>
+                        <p class="mb-0">{{ $agreement->original_end_date->format('M d, Y') }}</p>
+                    </div>
+                    @endif
+                    @if($agreement->extended_end_date)
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-muted small mb-1">Extended End Date</h6>
+                        <p class="mb-0">{{ $agreement->extended_end_date->format('M d, Y') }}</p>
+                    </div>
+                    @endif
+                    @if($agreement->certification_candidates)
+                    <div class="col-12 mb-3">
+                        <h6 class="text-muted small mb-1">Certification Candidates</h6>
+                        <p class="mb-0">{{ $agreement->certification_candidates }}</p>
+                    </div>
+                    @endif
                 </div>
                 
                 <div class="mt-3">
