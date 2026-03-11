@@ -12,6 +12,7 @@ use App\Models\Program;
 use App\Models\ContactFamily;
 use App\Models\ActivityType;
 use App\Models\Agreement;
+use App\Models\AgreementDeliverable;
 use App\Models\Activity;
 use Carbon\Carbon;
 
@@ -41,7 +42,10 @@ class DemoSeeder extends Seeder
             // 6. Create Agreements
             $agreements = $this->createAgreements($states, $organizations, $users);
             
-            // 7. Create Activities
+            // 7. Create Deliverables for Agreements
+            $this->createDeliverables($agreements, $activityTypes);
+            
+            // 8. Create Activities
             $this->createActivities($agreements, $activityTypes, $programs);
             
             $this->command->info('Demo data seeded successfully!');
@@ -222,15 +226,60 @@ class DemoSeeder extends Seeder
     private function createAgreements(array $states, array $organizations, array $users): array
     {
         $agreementData = [
-            ['name' => 'Kansas MRSS 2025–2026', 'state' => 'Kansas'],
-            ['name' => 'Indiana FOCUS Implementation 2025', 'state' => 'Indiana'],
-            ['name' => 'Louisiana PEARLS Statewide Initiative', 'state' => 'Louisiana'],
-            ['name' => 'Connecticut TAN2 Technical Assistance', 'state' => 'Connecticut'],
-            ['name' => 'Ohio Data & Evaluation Support', 'state' => 'Ohio'],
-            ['name' => 'Massachusetts NTTAC Coaching Support', 'state' => 'Massachusetts'],
-            ['name' => 'Kansas Youth Services Training Project', 'state' => 'Kansas'],
-            ['name' => 'Indiana Regional Care Coordination Initiative', 'state' => 'Indiana'],
-            ['name' => 'Louisiana Wraparound Implementation Support', 'state' => 'Louisiana'],
+            [
+                'name' => 'Kansas MRSS 2025–2026',
+                'state' => 'Kansas',
+                'abstract' => 'Comprehensive training and technical assistance contract to support statewide implementation of Mobile Response and Stabilization Services (MRSS) across all regions.',
+                'certification_candidates' => "John Smith - Regional Coordinator\nMary Johnson - Care Manager\nRobert Davis - Clinical Supervisor",
+            ],
+            [
+                'name' => 'Indiana FOCUS Implementation 2025',
+                'state' => 'Indiana',
+                'abstract' => 'Multi-year implementation support for FOCUS model including supervisor training, fidelity assessments, and data infrastructure development.',
+                'certification_candidates' => "Lisa Anderson\nMichael Brown\nSarah Martinez",
+            ],
+            [
+                'name' => 'Louisiana PEARLS Statewide Initiative',
+                'state' => 'Louisiana',
+                'abstract' => 'Statewide rollout of PEARLS engagement model with train-the-trainer approach and ongoing coaching support for regional teams.',
+                'certification_candidates' => null,
+            ],
+            [
+                'name' => 'Connecticut TAN2 Technical Assistance',
+                'state' => 'Connecticut',
+                'abstract' => 'Technical assistance network support focused on cross-system collaboration and family voice integration in service planning.',
+                'certification_candidates' => "Jennifer Lee\nDavid Thompson",
+            ],
+            [
+                'name' => 'Ohio Data & Evaluation Support',
+                'state' => 'Ohio',
+                'abstract' => 'Comprehensive data system development and evaluation support for wraparound implementation including dashboard creation and outcome measurement.',
+                'certification_candidates' => null,
+            ],
+            [
+                'name' => 'Massachusetts NTTAC Coaching Support',
+                'state' => 'Massachusetts',
+                'abstract' => 'Ongoing coaching and implementation support through the National Training and Technical Assistance Center for Child and Family Mental Health.',
+                'certification_candidates' => "Emily Rodriguez\nChris Wilson\nAmanda Taylor",
+            ],
+            [
+                'name' => 'Kansas Youth Services Training Project',
+                'state' => 'Kansas',
+                'abstract' => 'Specialized training initiative focused on youth engagement practices and transition-age services.',
+                'certification_candidates' => null,
+            ],
+            [
+                'name' => 'Indiana Regional Care Coordination Initiative',
+                'state' => 'Indiana',
+                'abstract' => 'Regional implementation support for care coordination infrastructure development and team coaching.',
+                'certification_candidates' => "Patricia Moore\nJames Clark",
+            ],
+            [
+                'name' => 'Louisiana Wraparound Implementation Support',
+                'state' => 'Louisiana',
+                'abstract' => 'Wraparound implementation support with focus on high-fidelity practice, family partnership, and community resource development.',
+                'certification_candidates' => null,
+            ],
         ];
         
         $agreements = [];
@@ -241,13 +290,30 @@ class DemoSeeder extends Seeder
             $stateOrgs = collect($organizations)->where('state_id', $state->id);
             $org = $stateOrgs->isNotEmpty() ? $stateOrgs->random() : collect($organizations)->random();
             
+            $startDate = Carbon::now()->subMonths(rand(6, 18));
+            $endDate = Carbon::now()->addMonths(rand(12, 24));
+            
+            // Some agreements have extensions
+            $hasExtension = rand(0, 10) > 7; // 30% chance
+            $originalEndDate = null;
+            $extendedEndDate = null;
+            
+            if ($hasExtension) {
+                $originalEndDate = $endDate->copy()->subMonths(rand(6, 12));
+                $extendedEndDate = $endDate;
+            }
+            
             $agreement = Agreement::firstOrCreate(
                 ['name' => $data['name']],
                 [
                     'organization_id' => $org->id,
                     'state_id' => $state->id,
-                    'start_date' => Carbon::now()->subMonths(rand(6, 18)),
-                    'end_date' => Carbon::now()->addMonths(rand(12, 24)),
+                    'abstract' => $data['abstract'],
+                    'start_date' => $startDate,
+                    'end_date' => $endDate,
+                    'original_end_date' => $originalEndDate,
+                    'extended_end_date' => $extendedEndDate,
+                    'certification_candidates' => $data['certification_candidates'],
                 ]
             );
             
@@ -263,6 +329,66 @@ class DemoSeeder extends Seeder
         }
         
         return $agreements;
+    }
+
+    private function createDeliverables(array $agreements, array $activityTypes): void
+    {
+        $deliverableTemplates = [
+            [
+                'activity_type_pattern' => 'Training',
+                'required_activities' => 3,
+                'required_hours' => null,
+                'notes' => 'Deliver three training events throughout the agreement period',
+            ],
+            [
+                'activity_type_pattern' => 'Coaching',
+                'required_activities' => null,
+                'required_hours' => 10,
+                'notes' => 'Provide ongoing coaching support to implementation team',
+            ],
+            [
+                'activity_type_pattern' => 'Assessment',
+                'required_activities' => 2,
+                'required_hours' => null,
+                'notes' => 'Complete bi-annual fidelity assessments',
+            ],
+            [
+                'activity_type_pattern' => 'Webinar',
+                'required_activities' => 4,
+                'required_hours' => null,
+                'notes' => 'Quarterly learning collaborative webinars',
+            ],
+            [
+                'activity_type_pattern' => 'Data',
+                'required_activities' => null,
+                'required_hours' => 15,
+                'notes' => 'Dashboard development and data review support',
+            ],
+        ];
+        
+        foreach ($agreements as $agreement) {
+            // Each agreement gets 2-4 deliverables
+            $deliverableCount = rand(2, 4);
+            $selectedTemplates = collect($deliverableTemplates)->random($deliverableCount);
+            
+            foreach ($selectedTemplates as $template) {
+                // Find a matching activity type
+                $matchingType = collect($activityTypes)->first(function ($type) use ($template) {
+                    return str_contains($type->name, $template['activity_type_pattern']);
+                });
+                
+                if ($matchingType) {
+                    AgreementDeliverable::create([
+                        'agreement_id' => $agreement->id,
+                        'activity_type_id' => $matchingType->id,
+                        'contact_family_id' => $matchingType->contact_family_id,
+                        'required_hours' => $template['required_hours'],
+                        'required_activities' => $template['required_activities'],
+                        'notes' => $template['notes'],
+                    ]);
+                }
+            }
+        }
     }
 
     private function createActivities(array $agreements, array $activityTypes, array $programs): void
