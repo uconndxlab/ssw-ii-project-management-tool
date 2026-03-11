@@ -54,11 +54,11 @@
                             </td>
                             <td>
                                 <a href="{{ route('activity-types.edit', $type) }}" class="btn btn-sm btn-outline-primary">Edit</a>
-                                <form method="POST" action="{{ route('activity-types.destroy', $type) }}" class="d-inline">
+                                <form method="POST" action="{{ route('activity-types.destroy', $type) }}" class="d-inline"
+                                      hx-confirm="Are you sure you want to delete this activity type?">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-outline-danger" 
-                                            onclick="return confirm('Are you sure you want to delete this activity type?')">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
                                         Delete
                                     </button>
                                 </form>

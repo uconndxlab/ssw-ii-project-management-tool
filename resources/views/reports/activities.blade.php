@@ -1,11 +1,11 @@
 @extends('layouts.app')
 
-@section('title', 'Engagement Report')
+@section('title', 'Activity Report')
 
 @section('content')
 <div class="row mb-4">
     <div class="col-12">
-        <h1>Engagement Report</h1>
+        <h1>Activity Report</h1>
     </div>
 </div>
 
@@ -13,8 +13,8 @@
     <div class="col-12">
         <div class="card">
             <div class="card-body">
-                <form method="GET" action="{{ route('reports.engagements') }}" 
-                      hx-get="{{ route('reports.engagements') }}" 
+                <form method="GET" action="{{ route('reports.activities') }}" 
+                      hx-get="{{ route('reports.activities') }}" 
                       hx-target="#report-results" 
                       hx-swap="innerHTML">
                     
@@ -40,12 +40,12 @@
                         </div>
 
                         <div class="col-md-2">
-                            <label for="project_id" class="form-label">Project</label>
-                            <select class="form-select" id="project_id" name="project_id">
-                                <option value="">All Projects</option>
-                                @foreach($visibleProjects as $project)
-                                    <option value="{{ $project->id }}" {{ $projectId == $project->id ? 'selected' : '' }}>
-                                        {{ $project->name }} ({{ $project->organization->name }})
+                            <label for="agreement_id" class="form-label">Agreement</label>
+                            <select class="form-select" id="agreement_id" name="agreement_id">
+                                <option value="">All Agreements</option>
+                                @foreach($visibleAgreements as $agreement)
+                                    <option value="{{ $agreement->id }}" {{ $agreementId == $agreement->id ? 'selected' : '' }}>
+                                        {{ $agreement->name }} ({{ $agreement->organization->name }})
                                     </option>
                                 @endforeach
                             </select>
@@ -100,6 +100,6 @@
 </div>
 
 <div id="report-results">
-    @include('reports._engagements_results')
+    @include('reports.partials.results-table')
 </div>
 @endsection

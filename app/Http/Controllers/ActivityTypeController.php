@@ -101,11 +101,11 @@ class ActivityTypeController extends Controller
 
     public function destroy(ActivityType $activityType)
     {
-        // Check if activity type is used in engagements
-        if ($activityType->engagements()->count() > 0) {
+        // Check if activity type is used in activities
+        if ($activityType->activities()->count() > 0) {
             return redirect()
                 ->route('activity-types.index')
-                ->with('error', 'Cannot delete activity type that is used in engagements.');
+                ->with('error', 'Cannot delete activity type that is used in activities.');
         }
 
         $activityType->delete();

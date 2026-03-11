@@ -4,8 +4,8 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\StateController;
 use App\Http\Controllers\OrganizationController;
-use App\Http\Controllers\ProjectController;
-use App\Http\Controllers\EngagementController;
+use App\Http\Controllers\AgreementController;
+use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ProgramController;
 use App\Http\Controllers\ContactFamilyController;
@@ -25,27 +25,31 @@ Route::middleware('auth')->group(function () {
     
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     
-    // Projects - visible to all authenticated users (with visibility filtering in controller)
-    Route::resource('projects', ProjectController::class);
+    // Agreements - visible to all authenticated users (with visibility filtering in controller)
+    Route::resource('agreements', AgreementController::class);
     
-    // HTMX endpoints for project user management
-    Route::post('/projects/{project}/assign-user', [ProjectController::class, 'assignUser'])->name('projects.assign-user');
-    Route::delete('/projects/{project}/remove-user/{user}', [ProjectController::class, 'removeUser'])->name('projects.remove-user');
+    // HTMX endpoints for agreement user management
+    Route::post('/agreements/{agreement}/assign-user', [AgreementController::class, 'assignUser'])->name('agreements.assign-user');
+    Route::delete('/agreements/{agreement}/remove-user/{user}', [AgreementController::class, 'removeUser'])->name('agreements.remove-user');
     
-    // Engagements - visible to all authenticated users (with visibility filtering in controller)
-    Route::get('/engagements', [EngagementController::class, 'index'])->name('engagements.index');
-    Route::get('/engagements/create', [EngagementController::class, 'create'])->name('engagements.create');
-    Route::post('/engagements', [EngagementController::class, 'store'])->name('engagements.store');
-    Route::get('/engagements/{engagement}', [EngagementController::class, 'show'])->name('engagements.show');
-    Route::get('/engagements/{engagement}/edit', [EngagementController::class, 'edit'])->name('engagements.edit');
-    Route::put('/engagements/{engagement}', [EngagementController::class, 'update'])->name('engagements.update');
-    Route::delete('/engagements/{engagement}', [EngagementController::class, 'destroy'])->name('engagements.destroy');
+    // Activities - visible to all authenticated users (with visibility filtering in controller)
+    Route::get('/activities', [ActivityController::class, 'index'])->name('activities.index');
+    Route::get('/activities/create', [ActivityController::class, 'create'])->name('activities.create');
+    Route::post('/activities', [ActivityController::class, 'store'])->name('activities.store');
+    Route::get('/activities/{activity}', [ActivityController::class, 'show'])->name('activities.show');
+    Route::get('/activities/{activity}/edit', [ActivityController::class, 'edit'])->name('activities.edit');
+    Route::put('/activities/{activity}', [ActivityController::class, 'update'])->name('activities.update');
+    Route::delete('/activities/{activity}', [ActivityController::class, 'destroy'])->name('activities.destroy');
+    
+    // HTMX endpoint for activity participant selection
+    Route::get('/activities/participants-for-agreement', [ActivityController::class, 'getParticipantsForAgreement'])
+        ->name('activities.participants-for-agreement');
     
     // HTMX endpoint for filtering activity types by contact family
     Route::get('/activity-types/by-family', [ActivityTypeController::class, 'getByFamily'])->name('activity-types.by-family');
     
     // Reports
-    Route::get('/reports/engagements', [ReportController::class, 'engagements'])->name('reports.engagements');
+    Route::get('/reports/activities', [ReportController::class, 'activities'])->name('reports.activities');
     
     // Organizations - viewable by all, admin-only for create/edit/delete
     Route::get('/organizations', [OrganizationController::class, 'index'])->name('organizations.index');

@@ -66,7 +66,7 @@
                                 Active
                             </label>
                         </div>
-                        <div class="form-text">Only active contact families appear in engagement forms.</div>
+                        <div class="form-text">Only active contact families appear in activity forms.</div>
                     </div>
 
                     <div class="d-flex justify-content-between">

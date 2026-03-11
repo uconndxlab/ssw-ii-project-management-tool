@@ -16,8 +16,16 @@ class State extends Model
         return $this->hasMany(Organization::class);
     }
 
+    public function agreements(): HasMany
+    {
+        return $this->hasMany(Agreement::class);
+    }
+
+    /**
+     * Legacy accessor for backwards compatibility during migration
+     */
     public function projects(): HasMany
     {
-        return $this->hasMany(Project::class);
+        return $this->agreements();
     }
 }

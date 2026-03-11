@@ -84,7 +84,7 @@
                                 Active
                             </label>
                         </div>
-                        <div class="form-text">Only active activity types appear in engagement forms.</div>
+                        <div class="form-text">Only active activity types appear in activity forms.</div>
                     </div>
 
                     <div class="d-flex justify-content-between">

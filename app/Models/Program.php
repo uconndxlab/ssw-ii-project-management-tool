@@ -19,8 +19,10 @@ class Program extends Model
         ];
     }
 
-    public function engagements(): BelongsToMany
+    public function activities(): BelongsToMany
     {
-        return $this->belongsToMany(Engagement::class)->withTimestamps();
+        return $this->belongsToMany(Activity::class, 'activity_program')->withTimestamps();
     }
+
+
 }

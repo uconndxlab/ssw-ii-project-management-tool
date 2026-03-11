@@ -26,13 +26,13 @@
                         <a class="nav-link" href="{{ route('dashboard') }}">Dashboard</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ route('projects.index') }}">Projects</a>
+                        <a class="nav-link" href="{{ route('agreements.index') }}">Agreements</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ route('organizations.index') }}">Organizations</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ route('reports.engagements') }}">Reporting</a>
+                        <a class="nav-link" href="{{ route('reports.activities') }}">Reporting</a>
                     </li>
                     @if(auth()->user()->isAdmin())
                     <li class="nav-item dropdown">

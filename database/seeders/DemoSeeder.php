@@ -11,8 +11,8 @@ use App\Models\Organization;
 use App\Models\Program;
 use App\Models\ContactFamily;
 use App\Models\ActivityType;
-use App\Models\Project;
-use App\Models\Engagement;
+use App\Models\Agreement;
+use App\Models\Activity;
 use Carbon\Carbon;
 
 class DemoSeeder extends Seeder
@@ -38,11 +38,11 @@ class DemoSeeder extends Seeder
             // 5. Create Organizations
             $organizations = $this->createOrganizations($states);
             
-            // 6. Create Projects
-            $projects = $this->createProjects($states, $organizations, $users);
+            // 6. Create Agreements
+            $agreements = $this->createAgreements($states, $organizations, $users);
             
-            // 7. Create Engagements
-            $this->createEngagements($projects, $activityTypes, $programs);
+            // 7. Create Activities
+            $this->createActivities($agreements, $activityTypes, $programs);
             
             $this->command->info('Demo data seeded successfully!');
         });
@@ -219,9 +219,9 @@ class DemoSeeder extends Seeder
         return $organizations;
     }
 
-    private function createProjects(array $states, array $organizations, array $users): array
+    private function createAgreements(array $states, array $organizations, array $users): array
     {
-        $projectData = [
+        $agreementData = [
             ['name' => 'Kansas MRSS 2025–2026', 'state' => 'Kansas'],
             ['name' => 'Indiana FOCUS Implementation 2025', 'state' => 'Indiana'],
             ['name' => 'Louisiana PEARLS Statewide Initiative', 'state' => 'Louisiana'],
@@ -233,15 +233,15 @@ class DemoSeeder extends Seeder
             ['name' => 'Louisiana Wraparound Implementation Support', 'state' => 'Louisiana'],
         ];
         
-        $projects = [];
-        foreach ($projectData as $data) {
+        $agreements = [];
+        foreach ($agreementData as $data) {
             $state = collect($states)->firstWhere('name', $data['state']);
             
             // Find organizations in this state, or pick a random one if none exist
             $stateOrgs = collect($organizations)->where('state_id', $state->id);
             $org = $stateOrgs->isNotEmpty() ? $stateOrgs->random() : collect($organizations)->random();
             
-            $project = Project::firstOrCreate(
+            $agreement = Agreement::firstOrCreate(
                 ['name' => $data['name']],
                 [
                     'organization_id' => $org->id,
@@ -251,21 +251,21 @@ class DemoSeeder extends Seeder
                 ]
             );
             
-            // Assign 2-3 users to each project
+            // Assign 2-3 users to each agreement
             $nonAdminUsers = collect($users)->where('role', '!=', 'admin');
             if ($nonAdminUsers->isNotEmpty()) {
                 $userCount = min(rand(2, 3), $nonAdminUsers->count());
-                $projectUsers = $nonAdminUsers->random($userCount)->pluck('id');
-                $project->users()->syncWithoutDetaching($projectUsers);
+                $agreementUsers = $nonAdminUsers->random($userCount)->pluck('id');
+                $agreement->users()->syncWithoutDetaching($agreementUsers);
             }
             
-            $projects[] = $project;
+            $agreements[] = $agreement;
         }
         
-        return $projects;
+        return $agreements;
     }
 
-    private function createEngagements(array $projects, array $activityTypes, array $programs): void
+    private function createActivities(array $agreements, array $activityTypes, array $programs): void
     {
         $narratives = [
             [
@@ -312,24 +312,24 @@ class DemoSeeder extends Seeder
             ],
         ];
 
-        $engagementCount = rand(25, 30);
+        $activityCount = rand(25, 30);
         
-        for ($i = 0; $i < $engagementCount; $i++) {
-            $project = $projects[array_rand($projects)];
+        for ($i = 0; $i < $activityCount; $i++) {
+            $agreement = $agreements[array_rand($agreements)];
             $activityType = $activityTypes[array_rand($activityTypes)];
             $narrative = $narratives[array_rand($narratives)];
             
-            // Get project users
-            $projectUserIds = $project->users()->pluck('users.id')->toArray();
-            if (empty($projectUserIds)) {
-                continue; // Skip if project has no assigned users
+            // Get agreement users
+            $agreementUserIds = $agreement->users()->pluck('users.id')->toArray();
+            if (empty($agreementUserIds)) {
+                continue; // Skip if agreement has no assigned users
             }
             
-            // Select engagement creator (must be from project)
-            $userId = $projectUserIds[array_rand($projectUserIds)];
+            // Select activity creator (must be from agreement)
+            $userId = $agreementUserIds[array_rand($agreementUserIds)];
             
-            $engagement = Engagement::create([
-                'project_id' => $project->id,
+            $activity = Activity::create([
+                'agreement_id' => $agreement->id,
                 'user_id' => $userId,
                 'engagement_date' => Carbon::now()->subDays(rand(1, 180)),
                 'activity_type_id' => $activityType->id,
@@ -346,12 +346,12 @@ class DemoSeeder extends Seeder
             // Attach 1-2 programs
             $programCount = rand(1, 2);
             $selectedPrograms = collect($programs)->random($programCount)->pluck('id');
-            $engagement->programs()->sync($selectedPrograms);
+            $activity->programs()->sync($selectedPrograms);
             
-            // Attach 1-2 internal participants (from project users)
-            $participantCount = min(rand(1, 2), count($projectUserIds));
-            $selectedParticipants = collect($projectUserIds)->random($participantCount);
-            $engagement->participants()->sync($selectedParticipants);
+            // Attach 1-2 internal participants (from agreement users)
+            $participantCount = min(rand(1, 2), count($agreementUserIds));
+            $selectedParticipants = collect($agreementUserIds)->random($participantCount);
+            $activity->participants()->sync($selectedParticipants);
         }
     }
 }

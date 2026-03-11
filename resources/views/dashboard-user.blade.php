@@ -10,7 +10,7 @@
                 <h1>My Dashboard</h1>
                 <p class="text-muted mb-0">Welcome back, {{ auth()->user()->name }}</p>
             </div>
-            <a href="{{ route('engagements.create') }}" class="btn btn-success">Log Engagement</a>
+            <a href="{{ route('activities.create') }}" class="btn btn-success">Log Activity</a>
         </div>
     </div>
 </div>
@@ -29,8 +29,8 @@
     <div class="col-md-4">
         <div class="card">
             <div class="card-body text-center">
-                <h2 class="mb-2">{{ $myProjects->count() }}</h2>
-                <p class="text-muted mb-0">My Active Projects</p>
+                <h2 class="mb-2">{{ $myAgreements->count() }}</h2>
+                <p class="text-muted mb-0">My Active Agreements</p>
                 <small class="text-muted">Assigned to me</small>
             </div>
         </div>
@@ -38,8 +38,8 @@
     <div class="col-md-4">
         <div class="card">
             <div class="card-body text-center">
-                <h2 class="mb-2">{{ $myEngagements->count() }}</h2>
-                <p class="text-muted mb-0">Recent Engagements</p>
+                <h2 class="mb-2">{{ $myActivities->count() }}</h2>
+                <p class="text-muted mb-0">Recent Activities</p>
                 <small class="text-muted">Last 10 entries</small>
             </div>
         </div>
@@ -47,28 +47,28 @@
 </div>
 
 <div class="row">
-    <!-- My Projects -->
+    <!-- My Agreements -->
     <div class="col-md-6 mb-4">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">My Projects</h5>
-                <a href="{{ route('projects.index') }}" class="btn btn-sm btn-outline-secondary">View All</a>
+                <h5 class="mb-0">My Agreements</h5>
+                <a href="{{ route('agreements.index') }}" class="btn btn-sm btn-outline-secondary">View All</a>
             </div>
             <div class="card-body">
-                @if($myProjects->isNotEmpty())
+                @if($myAgreements->isNotEmpty())
                 <div class="list-group list-group-flush">
-                    @foreach($myProjects as $project)
-                    <a href="{{ route('projects.show', $project) }}" class="list-group-item list-group-item-action">
+                    @foreach($myAgreements as $agreement)
+                    <a href="{{ route('agreements.show', $agreement) }}" class="list-group-item list-group-item-action">
                         <div class="d-flex w-100 justify-content-between">
-                            <h6 class="mb-1">{{ $project->name }}</h6>
+                            <h6 class="mb-1">{{ $agreement->name }}</h6>
                         </div>
-                        <p class="mb-1 small text-muted">{{ $project->organization->name }}</p>
-                        <small class="text-muted">{{ $project->state->name }}</small>
+                        <p class="mb-1 small text-muted">{{ $agreement->organization->name }}</p>
+                        <small class="text-muted">{{ $agreement->state->name }}</small>
                     </a>
                     @endforeach
                 </div>
                 @else
-                <p class="text-muted mb-0">You are not assigned to any projects yet.</p>
+                <p class="text-muted mb-0">You are not assigned to any agreements yet.</p>
                 @endif
             </div>
         </div>
@@ -79,10 +79,10 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Recent Activity</h5>
-                <a href="{{ route('engagements.index') }}" class="btn btn-sm btn-outline-secondary">View All</a>
+                <a href="{{ route('activities.index') }}" class="btn btn-sm btn-outline-secondary">View All</a>
             </div>
             <div class="card-body">
-                @if($myEngagements->isNotEmpty())
+                @if($myActivities->isNotEmpty())
                 <div class="table-responsive">
                     <table class="table table-sm table-hover mb-0">
                         <thead>
@@ -93,21 +93,21 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($myEngagements as $engagement)
-                            <tr style="cursor: pointer;" onclick="window.location='{{ route('engagements.show', $engagement) }}'">
-                                <td>{{ $engagement->engagement_date->format('M d') }}</td>
+                            @foreach($myActivities as $activity)
+                            <tr>
+                                <td><a href="{{ route('activities.show', $activity) }}" class="text-decoration-none text-dark d-block">{{ $activity->engagement_date->format('M d') }}</a></td>
                                 <td>
-                                    <div class="small"><strong>{{ $engagement->project->name }}</strong></div>
-                                    <div class="small text-muted">{{ $engagement->activityType->name }}</div>
+                                    <div class="small"><strong>{{ $activity->agreement->name }}</strong></div>
+                                    <div class="small text-muted">{{ $activity->activityType->name }}</div>
                                 </td>
-                                <td>{{ number_format($engagement->total_hours, 1) }}</td>
+                                <td>{{ number_format($activity->total_hours, 1) }}</td>
                             </tr>
                             @endforeach
                         </tbody>
                     </table>
                 </div>
                 @else
-                <p class="text-muted mb-0">No recent activity on your projects.</p>
+                <p class="text-muted mb-0">No recent activity on your agreements.</p>
                 @endif
             </div>
         </div>

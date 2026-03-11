@@ -10,7 +10,7 @@
                 <h1>Dashboard</h1>
                 <p class="text-muted mb-0">Overview of {{ now()->year }} Activity</p>
             </div>
-            <a href="{{ route('engagements.create') }}" class="btn btn-success">Log Engagement</a>
+            <a href="{{ route('activities.create') }}" class="btn btn-success">Log Activity</a>
         </div>
     </div>
 </div>
@@ -20,8 +20,8 @@
     <div class="col-md-4">
         <div class="card">
             <div class="card-body text-center">
-                <h2 class="mb-2">{{ $ytdTotals['engagements'] }}</h2>
-                <p class="text-muted mb-0">Total Engagements</p>
+                <h2 class="mb-2">{{ $ytdTotals['activities'] }}</h2>
+                <p class="text-muted mb-0">Total Activities</p>
                 <small class="text-muted">Year-to-Date</small>
             </div>
         </div>
@@ -52,16 +52,16 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Recent Activity</h5>
-                <a href="{{ route('engagements.index') }}" class="btn btn-sm btn-outline-secondary">View All</a>
+                <a href="{{ route('activities.index') }}" class="btn btn-sm btn-outline-secondary">View All</a>
             </div>
             <div class="card-body">
-                @if($recentEngagements->isNotEmpty())
+                @if($recentActivities->isNotEmpty())
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
                         <thead>
                             <tr>
                                 <th>Date</th>
-                                <th>Project</th>
+                                <th>Agreement</th>
                                 <th>Contact Family</th>
                                 <th>Activity Type</th>
                                 <th>Hours</th>
@@ -69,14 +69,14 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($recentEngagements as $engagement)
-                            <tr style="cursor: pointer;" onclick="window.location='{{ route('engagements.show', $engagement) }}'">
-                                <td>{{ $engagement->engagement_date->format('M d, Y') }}</td>
-                                <td>{{ $engagement->project->name }}</td>
-                                <td><span class="badge bg-primary">{{ $engagement->activityType->contactFamily->name }}</span></td>
-                                <td>{{ $engagement->activityType->name }}</td>
-                                <td>{{ number_format($engagement->total_hours, 2) }}</td>
-                                <td>{{ $engagement->user->name }}</td>
+                            @foreach($recentActivities as $activity)
+                            <tr>
+                                <td><a href="{{ route('activities.show', $activity) }}" class="text-decoration-none text-dark d-block">{{ $activity->engagement_date->format('M d, Y') }}</a></td>
+                                <td>{{ $activity->agreement->name }}</td>
+                                <td><span class="badge bg-primary">{{ $activity->activityType->contactFamily->name }}</span></td>
+                                <td>{{ $activity->activityType->name }}</td>
+                                <td>{{ number_format($activity->total_hours, 2) }}</td>
+                                <td>{{ $activity->user->name }}</td>
                             </tr>
                             @endforeach
                         </tbody>
@@ -84,7 +84,7 @@
                 </div>
                 @else
                 <div class="text-center py-4 text-muted">
-                    <p class="mb-0">No engagements logged yet.</p>
+                    <p class="mb-0">No activities logged yet.</p>
                 </div>
                 @endif
             </div>
