@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Organization;
 use App\Models\Agreement;
+use App\Models\AgreementDeliverable;
+use App\Models\ActivityType;
+use App\Models\ContactFamily;
 use App\Models\State;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -47,8 +50,12 @@ class AgreementController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'organization_id' => ['required', 'exists:organizations,id'],
             'state_id' => ['required', 'exists:states,id'],
+            'abstract' => ['nullable', 'string'],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'original_end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'extended_end_date' => ['nullable', 'date', 'after_or_equal:original_end_date'],
+            'certification_candidates' => ['nullable', 'string'],
             'user_ids' => ['nullable', 'array'],
             'user_ids.*' => ['exists:users,id'],
         ]);
@@ -57,8 +64,12 @@ class AgreementController extends Controller
             'name' => $validated['name'],
             'organization_id' => $validated['organization_id'],
             'state_id' => $validated['state_id'],
+            'abstract' => $validated['abstract'] ?? null,
             'start_date' => $validated['start_date'],
             'end_date' => $validated['end_date'],
+            'original_end_date' => $validated['original_end_date'] ?? null,
+            'extended_end_date' => $validated['extended_end_date'] ?? null,
+            'certification_candidates' => $validated['certification_candidates'] ?? null,
         ]);
 
         if (!empty($validated['user_ids'])) {
@@ -77,7 +88,7 @@ class AgreementController extends Controller
             abort(403, 'Unauthorized access to this agreement.');
         }
 
-        $agreement->load(['organization', 'state', 'users']);
+        $agreement->load(['organization', 'state', 'users', 'deliverables.activityType.contactFamily']);
         
         // Get activities for this agreement
         $activities = $agreement->activities()
@@ -112,7 +123,37 @@ class AgreementController extends Controller
             'participants' => $ytdActivities->sum('participant_count'),
         ];
         
-        return view('agreements.show', compact('agreement', 'recentActivities', 'programs', 'lifetimeTotals', 'ytdTotals'));
+        // Calculate deliverable progress (all activities lifetime)
+        $deliverableProgress = $agreement->deliverables->map(function ($deliverable) use ($activities) {
+            $matchingActivities = $activities->filter(function ($activity) use ($deliverable) {
+                $matches = true;
+                
+                // Must match activity type if specified
+                if ($deliverable->activity_type_id) {
+                    $matches = $matches && ($activity->activity_type_id === $deliverable->activity_type_id);
+                }
+                
+                // Must also match contact family if specified
+                if ($deliverable->contact_family_id) {
+                    $matches = $matches && ($activity->activityType?->contact_family_id === $deliverable->contact_family_id);
+                }
+                
+                // If neither specified, don't match anything
+                if (!$deliverable->activity_type_id && !$deliverable->contact_family_id) {
+                    return false;
+                }
+                
+                return $matches;
+            });
+            
+            return [
+                'deliverable' => $deliverable,
+                'completed_hours' => $matchingActivities->sum(fn($a) => $a->event_hours + ($a->prep_hours ?? 0) + ($a->followup_hours ?? 0)),
+                'completed_activities' => $matchingActivities->count(),
+            ];
+        });
+        
+        return view('agreements.show', compact('agreement', 'recentActivities', 'programs', 'lifetimeTotals', 'ytdTotals', 'deliverableProgress'));
     }
 
     public function edit(Agreement $agreement)
@@ -123,9 +164,11 @@ class AgreementController extends Controller
         $states = State::orderBy('name')->get();
         $organizations = Organization::orderBy('name')->get();
         $users = User::orderBy('name')->get();
-        $agreement->load('users');
+        $contactFamilies = ContactFamily::where('active', true)->orderBy('sort_order')->orderBy('name')->get();
+        $activityTypes = ActivityType::where('active', true)->orderBy('sort_order')->orderBy('name')->get();
+        $agreement->load(['users', 'deliverables.activityType.contactFamily']);
         
-        return view('agreements.edit', compact('agreement', 'states', 'organizations', 'users'));
+        return view('agreements.edit', compact('agreement', 'states', 'organizations', 'users', 'contactFamilies', 'activityTypes'));
     }
 
     public function update(Request $request, Agreement $agreement)
@@ -136,8 +179,12 @@ class AgreementController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'organization_id' => ['required', 'exists:organizations,id'],
             'state_id' => ['required', 'exists:states,id'],
+            'abstract' => ['nullable', 'string'],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'original_end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'extended_end_date' => ['nullable', 'date', 'after_or_equal:original_end_date'],
+            'certification_candidates' => ['nullable', 'string'],
             'user_ids' => ['nullable', 'array'],
             'user_ids.*' => ['exists:users,id'],
         ]);
@@ -146,8 +193,12 @@ class AgreementController extends Controller
             'name' => $validated['name'],
             'organization_id' => $validated['organization_id'],
             'state_id' => $validated['state_id'],
+            'abstract' => $validated['abstract'] ?? null,
             'start_date' => $validated['start_date'],
             'end_date' => $validated['end_date'],
+            'original_end_date' => $validated['original_end_date'] ?? null,
+            'extended_end_date' => $validated['extended_end_date'] ?? null,
+            'certification_candidates' => $validated['certification_candidates'] ?? null,
         ]);
 
         $agreement->users()->sync($validated['user_ids'] ?? []);
@@ -188,5 +239,39 @@ class AgreementController extends Controller
         $agreement->load('users');
 
         return view('agreements.partials.user-list', compact('agreement'));
+    }
+
+    // HTMX endpoint for deliverable management
+    public function addDeliverable(Request $request, Agreement $agreement)
+    {
+        // Admin-only authorization
+        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can add deliverables.');
+
+        $validated = $request->validate([
+            'activity_type_id' => ['nullable', 'exists:activity_types,id'],
+            'contact_family_id' => ['nullable', 'exists:contact_families,id'],
+            'required_hours' => ['nullable', 'numeric', 'min:0'],
+            'required_activities' => ['nullable', 'integer', 'min:0'],
+            'notes' => ['nullable', 'string'],
+        ]);
+
+        $agreement->deliverables()->create($validated);
+        $agreement->load('deliverables.activityType.contactFamily');
+
+        return view('agreements.partials.deliverable-list', compact('agreement'));
+    }
+
+    public function removeDeliverable(Request $request, Agreement $agreement, AgreementDeliverable $deliverable)
+    {
+        // Admin-only authorization
+        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can remove deliverables.');
+
+        // Ensure deliverable belongs to this agreement
+        abort_unless($deliverable->agreement_id === $agreement->id, 403, 'Invalid deliverable.');
+
+        $deliverable->delete();
+        $agreement->load('deliverables.activityType.contactFamily');
+
+        return view('agreements.partials.deliverable-list', compact('agreement'));
     }
 }
