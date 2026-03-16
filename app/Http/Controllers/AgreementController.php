@@ -56,9 +56,25 @@ class AgreementController extends Controller
             'original_end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'extended_end_date' => ['nullable', 'date', 'after_or_equal:original_end_date'],
             'certification_candidates' => ['nullable', 'string'],
+
+            'activity_logging_config' => ['nullable', 'array'],
+            'activity_logging_config.event_hours' => ['nullable', 'boolean'],
+            'activity_logging_config.prep_hours' => ['nullable', 'boolean'],
+            'activity_logging_config.followup_hours' => ['nullable', 'boolean'],
+            'activity_logging_config.participant_count' => ['nullable', 'boolean'],
+            'activity_logging_config.external_attendees' => ['nullable', 'boolean'],
+            'activity_logging_config.summary' => ['nullable', 'boolean'],
+            'activity_logging_config.follow_up' => ['nullable', 'boolean'],
+            'activity_logging_config.strengths' => ['nullable', 'boolean'],
+            'activity_logging_config.recommendations' => ['nullable', 'boolean'],
+
             'user_ids' => ['nullable', 'array'],
             'user_ids.*' => ['exists:users,id'],
         ]);
+
+        $activityLoggingConfig = $this->normalizeActivityLoggingConfig(
+            $request->input('activity_logging_config', [])
+        );
 
         $agreement = Agreement::create([
             'name' => $validated['name'],
@@ -70,6 +86,7 @@ class AgreementController extends Controller
             'original_end_date' => $validated['original_end_date'] ?? null,
             'extended_end_date' => $validated['extended_end_date'] ?? null,
             'certification_candidates' => $validated['certification_candidates'] ?? null,
+            'activity_logging_config' => $activityLoggingConfig,
         ]);
 
         if (!empty($validated['user_ids'])) {
@@ -185,9 +202,25 @@ class AgreementController extends Controller
             'original_end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'extended_end_date' => ['nullable', 'date', 'after_or_equal:original_end_date'],
             'certification_candidates' => ['nullable', 'string'],
+
+            'activity_logging_config' => ['nullable', 'array'],
+            'activity_logging_config.event_hours' => ['nullable', 'boolean'],
+            'activity_logging_config.prep_hours' => ['nullable', 'boolean'],
+            'activity_logging_config.followup_hours' => ['nullable', 'boolean'],
+            'activity_logging_config.participant_count' => ['nullable', 'boolean'],
+            'activity_logging_config.external_attendees' => ['nullable', 'boolean'],
+            'activity_logging_config.summary' => ['nullable', 'boolean'],
+            'activity_logging_config.follow_up' => ['nullable', 'boolean'],
+            'activity_logging_config.strengths' => ['nullable', 'boolean'],
+            'activity_logging_config.recommendations' => ['nullable', 'boolean'],
+
             'user_ids' => ['nullable', 'array'],
             'user_ids.*' => ['exists:users,id'],
         ]);
+
+        $activityLoggingConfig = $this->normalizeActivityLoggingConfig(
+            $request->input('activity_logging_config', [])
+        );
 
         $agreement->update([
             'name' => $validated['name'],
@@ -199,6 +232,7 @@ class AgreementController extends Controller
             'original_end_date' => $validated['original_end_date'] ?? null,
             'extended_end_date' => $validated['extended_end_date'] ?? null,
             'certification_candidates' => $validated['certification_candidates'] ?? null,
+            'activity_logging_config' => $activityLoggingConfig,
         ]);
 
         $agreement->users()->sync($validated['user_ids'] ?? []);
@@ -273,5 +307,27 @@ class AgreementController extends Controller
         $agreement->load('deliverables.activityType.contactFamily');
 
         return view('agreements.partials.deliverable-list', compact('agreement'));
+    }
+
+    protected function normalizeActivityLoggingConfig(?array $submittedConfig = []): array
+    {
+        $defaultActivityLoggingConfig = [
+            'event_hours' => false,
+            'prep_hours' => false,
+            'followup_hours' => false,
+            'participant_count' => false,
+            'external_attendees' => false,
+            'summary' => false,
+            'follow_up' => false,
+            'strengths' => false,
+            'recommendations' => false,
+        ];
+
+        return array_merge(
+            $defaultActivityLoggingConfig,
+            collect($submittedConfig ?? [])
+                ->map(fn ($value) => (bool) $value)
+                ->toArray()
+        );
     }
 }
