@@ -53,7 +53,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/activity-types/by-family', [ActivityTypeController::class, 'getByFamily'])->name('activity-types.by-family');
     
     // Reports
-    Route::get('/reports/activities', [ReportController::class, 'activities'])->name('reports.activities');
+    // Route::get('/reports/activities', [ReportController::class, 'activities'])->name('reports.activities');
     
     // Organizations - viewable by all, admin-only for create/edit/delete
     Route::get('/organizations', [OrganizationController::class, 'index'])->name('organizations.index');
