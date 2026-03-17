@@ -17,6 +17,7 @@ class Activity extends Model
         'prep_hours',
         'followup_hours',
         'participant_count',
+        'external_attendees',
         'summary',
         'follow_up',
         'strengths',

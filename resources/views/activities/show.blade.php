@@ -142,6 +142,13 @@
                     <strong>Participants:</strong> {{ number_format($activity->participant_count) }}
                 </div>
                 @endif
+
+                @if($activity->external_attendees)
+                <div class="mt-3">
+                    <strong>External Attendees:</strong><br>
+                    {{ $activity->external_attendees }}
+                </div>
+                @endif
             </div>
         </div>
 

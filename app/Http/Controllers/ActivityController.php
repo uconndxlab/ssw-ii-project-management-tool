@@ -131,6 +131,7 @@ class ActivityController extends Controller
             'prep_hours' => !empty($config['prep_hours']) ? ($validated['prep_hours'] ?? 0) : 0,
             'followup_hours' => !empty($config['followup_hours']) ? ($validated['followup_hours'] ?? 0) : 0,
             'participant_count' => !empty($config['participant_count']) ? ($validated['participant_count'] ?? null) : null,
+            'external_attendees' => !empty($config['external_attendees']) ? ($validated['external_attendees'] ?? null) : null,
             'summary' => !empty($config['summary']) ? ($validated['summary'] ?? null) : null,
             'follow_up' => !empty($config['follow_up']) ? ($validated['follow_up'] ?? null) : null,
             'strengths' => !empty($config['strengths']) ? ($validated['strengths'] ?? null) : null,
@@ -225,6 +226,7 @@ class ActivityController extends Controller
             'prep_hours' => !empty($config['prep_hours']) ? ($validated['prep_hours'] ?? 0) : 0,
             'followup_hours' => !empty($config['followup_hours']) ? ($validated['followup_hours'] ?? 0) : 0,
             'participant_count' => !empty($config['participant_count']) ? ($validated['participant_count'] ?? null) : null,
+            'external_attendees' => !empty($config['external_attendees']) ? ($validated['external_attendees'] ?? null) : null,
             'summary' => !empty($config['summary']) ? ($validated['summary'] ?? null) : null,
             'follow_up' => !empty($config['follow_up']) ? ($validated['follow_up'] ?? null) : null,
             'strengths' => !empty($config['strengths']) ? ($validated['strengths'] ?? null) : null,
@@ -394,6 +396,10 @@ class ActivityController extends Controller
             'participant_count' => !empty($config['participant_count'])
                 ? ['nullable', 'integer', 'min:0']
                 : ['nullable', 'integer', 'min:0'],
+
+            'external_attendees' => !empty($config['external_attendees'])
+                ? ['nullable', 'string', 'max:5000']
+                : ['nullable', 'string', 'max:5000'],
 
             'summary' => !empty($config['summary'])
                 ? ['nullable', 'string', 'max:5000']

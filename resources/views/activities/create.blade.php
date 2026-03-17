@@ -193,6 +193,19 @@
                         @enderror
                     </div>
 
+                    <div class="mb-3" data-config-key="external_attendees">
+                        <label for="external_attendees" class="form-label">External Attendees</label>
+                        <textarea class="form-control @error('external_attendees') is-invalid @enderror"
+                                id="external_attendees"
+                                name="external_attendees"
+                                rows="3"
+                                placeholder="Jane Smith, John Smith, Kansas Workforce Team">{{ old('external_attendees') }}</textarea>
+                        @error('external_attendees')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                        <small class="text-muted">Enter a comma-separated list of external attendees</small>
+                    </div>
+
                     <div class="mb-3">
                         <label for="program_ids" class="form-label">Programs</label>
                         <select class="form-select @error('program_ids') is-invalid @enderror"
