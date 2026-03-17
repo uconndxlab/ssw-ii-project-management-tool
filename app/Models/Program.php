@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Program extends Model
 {
@@ -24,5 +25,8 @@ class Program extends Model
         return $this->belongsToMany(Activity::class, 'activity_program')->withTimestamps();
     }
 
-
+    public function agreementCertificationCandidates(): HasMany
+    {
+        return $this->hasMany(AgreementCertificationCandidate::class);
+    }
 }
