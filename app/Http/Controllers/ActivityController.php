@@ -96,26 +96,25 @@ class ActivityController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $baseValidated = $request->validate([
             'agreement_id' => ['required', 'exists:agreements,id'],
             'engagement_date' => ['required', 'date'],
             'activity_type_id' => ['required', 'exists:activity_types,id'],
-            'event_hours' => ['required', 'numeric', 'min:0', 'max:9999.99'],
-            'prep_hours' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-            'followup_hours' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-            'participant_count' => ['nullable', 'integer', 'min:0'],
-            'summary' => ['nullable', 'string', 'max:5000'],
-            'follow_up' => ['nullable', 'string', 'max:5000'],
-            'strengths' => ['nullable', 'string', 'max:5000'],
-            'recommendations' => ['nullable', 'string', 'max:5000'],
             'program_ids' => ['nullable', 'array'],
             'program_ids.*' => ['exists:programs,id'],
             'participant_user_ids' => ['nullable', 'array'],
             'participant_user_ids.*' => ['exists:users,id'],
         ]);
 
-        // Verify user has access to this agreement
-        $this->verifyAgreementAccess($validated['agreement_id']);
+        $this->verifyAgreementAccess($baseValidated['agreement_id']);
+
+        $agreement = Agreement::findOrFail($baseValidated['agreement_id']);
+        $config = $this->getAgreementActivityLoggingConfig($agreement);
+
+        $validated = array_merge(
+            $baseValidated,
+            $request->validate($this->activityLoggingValidationRules($config))
+        );
 
         // Verify all selected participants belong to the agreement
         if (!empty($validated['participant_user_ids'])) {
@@ -127,22 +126,21 @@ class ActivityController extends Controller
             'user_id' => Auth::id(),
             'engagement_date' => $validated['engagement_date'],
             'activity_type_id' => $validated['activity_type_id'],
-            'event_hours' => $validated['event_hours'],
-            'prep_hours' => $validated['prep_hours'] ?? 0,
-            'followup_hours' => $validated['followup_hours'] ?? 0,
-            'participant_count' => $validated['participant_count'],
-            'summary' => $validated['summary'],
-            'follow_up' => $validated['follow_up'],
-            'strengths' => $validated['strengths'],
-            'recommendations' => $validated['recommendations'],
+
+            'event_hours' => !empty($config['event_hours']) ? ($validated['event_hours'] ?? 0) : 0,
+            'prep_hours' => !empty($config['prep_hours']) ? ($validated['prep_hours'] ?? 0) : 0,
+            'followup_hours' => !empty($config['followup_hours']) ? ($validated['followup_hours'] ?? 0) : 0,
+            'participant_count' => !empty($config['participant_count']) ? ($validated['participant_count'] ?? null) : null,
+            'summary' => !empty($config['summary']) ? ($validated['summary'] ?? null) : null,
+            'follow_up' => !empty($config['follow_up']) ? ($validated['follow_up'] ?? null) : null,
+            'strengths' => !empty($config['strengths']) ? ($validated['strengths'] ?? null) : null,
+            'recommendations' => !empty($config['recommendations']) ? ($validated['recommendations'] ?? null) : null,
         ]);
 
-        // Sync programs
         if (!empty($validated['program_ids'])) {
             $activity->programs()->sync($validated['program_ids']);
         }
 
-        // Sync participants
         if (!empty($validated['participant_user_ids'])) {
             $activity->participants()->sync($validated['participant_user_ids']);
         }
@@ -192,31 +190,28 @@ class ActivityController extends Controller
 
     public function update(Request $request, Activity $activity)
     {
-        // Authorization: admin can edit any, staff/consultant can only edit their own
         $this->verifyActivityEditAccess($activity);
 
-        $validated = $request->validate([
+        $baseValidated = $request->validate([
             'agreement_id' => ['required', 'exists:agreements,id'],
             'engagement_date' => ['required', 'date'],
             'activity_type_id' => ['required', 'exists:activity_types,id'],
-            'event_hours' => ['required', 'numeric', 'min:0', 'max:9999.99'],
-            'prep_hours' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-            'followup_hours' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-            'participant_count' => ['nullable', 'integer', 'min:0'],
-            'summary' => ['nullable', 'string', 'max:5000'],
-            'follow_up' => ['nullable', 'string', 'max:5000'],
-            'strengths' => ['nullable', 'string', 'max:5000'],
-            'recommendations' => ['nullable', 'string', 'max:5000'],
             'program_ids' => ['nullable', 'array'],
             'program_ids.*' => ['exists:programs,id'],
             'participant_user_ids' => ['nullable', 'array'],
             'participant_user_ids.*' => ['exists:users,id'],
         ]);
 
-        // Verify user has access to new agreement (in case they changed it)
-        $this->verifyAgreementAccess($validated['agreement_id']);
+        $this->verifyAgreementAccess($baseValidated['agreement_id']);
 
-        // Verify all selected participants belong to the agreement
+        $agreement = Agreement::findOrFail($baseValidated['agreement_id']);
+        $config = $this->getAgreementActivityLoggingConfig($agreement);
+
+        $validated = array_merge(
+            $baseValidated,
+            $request->validate($this->activityLoggingValidationRules($config))
+        );
+
         if (!empty($validated['participant_user_ids'])) {
             $this->verifyParticipantsInAgreement($validated['agreement_id'], $validated['participant_user_ids']);
         }
@@ -225,20 +220,18 @@ class ActivityController extends Controller
             'agreement_id' => $validated['agreement_id'],
             'engagement_date' => $validated['engagement_date'],
             'activity_type_id' => $validated['activity_type_id'],
-            'event_hours' => $validated['event_hours'],
-            'prep_hours' => $validated['prep_hours'] ?? 0,
-            'followup_hours' => $validated['followup_hours'] ?? 0,
-            'participant_count' => $validated['participant_count'],
-            'summary' => $validated['summary'],
-            'follow_up' => $validated['follow_up'],
-            'strengths' => $validated['strengths'],
-            'recommendations' => $validated['recommendations'],
+
+            'event_hours' => !empty($config['event_hours']) ? ($validated['event_hours'] ?? 0) : 0,
+            'prep_hours' => !empty($config['prep_hours']) ? ($validated['prep_hours'] ?? 0) : 0,
+            'followup_hours' => !empty($config['followup_hours']) ? ($validated['followup_hours'] ?? 0) : 0,
+            'participant_count' => !empty($config['participant_count']) ? ($validated['participant_count'] ?? null) : null,
+            'summary' => !empty($config['summary']) ? ($validated['summary'] ?? null) : null,
+            'follow_up' => !empty($config['follow_up']) ? ($validated['follow_up'] ?? null) : null,
+            'strengths' => !empty($config['strengths']) ? ($validated['strengths'] ?? null) : null,
+            'recommendations' => !empty($config['recommendations']) ? ($validated['recommendations'] ?? null) : null,
         ]);
 
-        // Sync programs
         $activity->programs()->sync($validated['program_ids'] ?? []);
-
-        // Sync participants
         $activity->participants()->sync($validated['participant_user_ids'] ?? []);
 
         return redirect()
@@ -358,5 +351,65 @@ class ActivityController extends Controller
             'users' => $agreement->users,
             'selectedIds' => $selectedIds
         ])->render();
+    }
+
+    private function defaultActivityLoggingConfig(): array
+    {
+        return [
+            'event_hours' => true,
+            'prep_hours' => true,
+            'followup_hours' => false,
+            'participant_count' => true,
+            'external_attendees' => true,
+            'summary' => true,
+            'follow_up' => true,
+            'strengths' => false,
+            'recommendations' => false,
+        ];
+    }
+
+    private function getAgreementActivityLoggingConfig(Agreement $agreement): array
+    {
+        return array_merge(
+            $this->defaultActivityLoggingConfig(),
+            $agreement->activity_logging_config ?? []
+        );
+    }
+
+    private function activityLoggingValidationRules(array $config): array
+    {
+        return [
+            'event_hours' => !empty($config['event_hours'])
+                ? ['required', 'numeric', 'min:0', 'max:9999.99']
+                : ['nullable', 'numeric', 'min:0', 'max:9999.99'],
+
+            'prep_hours' => !empty($config['prep_hours'])
+                ? ['nullable', 'numeric', 'min:0', 'max:9999.99']
+                : ['nullable', 'numeric', 'min:0', 'max:9999.99'],
+
+            'followup_hours' => !empty($config['followup_hours'])
+                ? ['nullable', 'numeric', 'min:0', 'max:9999.99']
+                : ['nullable', 'numeric', 'min:0', 'max:9999.99'],
+
+            'participant_count' => !empty($config['participant_count'])
+                ? ['nullable', 'integer', 'min:0']
+                : ['nullable', 'integer', 'min:0'],
+
+            'summary' => !empty($config['summary'])
+                ? ['nullable', 'string', 'max:5000']
+                : ['nullable', 'string', 'max:5000'],
+
+            'follow_up' => !empty($config['follow_up'])
+                ? ['nullable', 'string', 'max:5000']
+                : ['nullable', 'string', 'max:5000'],
+
+            'strengths' => !empty($config['strengths'])
+                ? ['nullable', 'string', 'max:5000']
+                : ['nullable', 'string', 'max:5000'],
+
+            'recommendations' => !empty($config['recommendations'])
+                ? ['nullable', 'string', 'max:5000']
+                : ['nullable', 'string', 'max:5000'],
+        ];
     }
 }
