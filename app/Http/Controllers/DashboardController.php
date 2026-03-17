@@ -45,14 +45,18 @@ class DashboardController extends Controller
     protected function userDashboard($user)
     {
         // Get user's agreements
-        $myAgreements = $user->agreements()->with(['organization', 'state'])->get();
+        $myAgreements = $user->agreements()
+            ->with(['organization', 'state'])
+            ->withCount('activities')
+            ->withMax('activities', 'engagement_date')
+            ->get();
         
         // Get activities for user's agreements
         $agreementIds = $myAgreements->pluck('id');
         
         // My recent activities (last 10)
         $myActivities = Activity::whereIn('agreement_id', $agreementIds)
-            ->with(['activityType.contactFamily', 'user', 'agreement'])
+            ->with(['activityType.contactFamily', 'user', 'agreement', 'participants'])
             ->orderByDesc('engagement_date')
             ->limit(10)
             ->get();
