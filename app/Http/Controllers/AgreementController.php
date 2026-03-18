@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Auth;
 
 class AgreementController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $query = Agreement::with(['organization', 'state', 'users']);
 
@@ -25,9 +25,76 @@ class AgreementController extends Controller
             });
         }
 
-        $agreements = $query->orderBy('created_at', 'desc')->paginate(20);
-        
-        return view('agreements.index', compact('agreements'));
+        // Search
+        $search = trim((string) $request->input('search', ''));
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhereHas('organization', function ($orgQuery) use ($search) {
+                        $orgQuery->where('name', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('state', function ($stateQuery) use ($search) {
+                        $stateQuery->where('name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        // Filters
+        if ($request->filled('organization_id')) {
+            $query->where('organization_id', $request->integer('organization_id'));
+        }
+
+        if ($request->filled('state_id')) {
+            $query->where('state_id', $request->integer('state_id'));
+        }
+
+        // Sorting
+        $sort = $request->input('sort', 'name');
+        $direction = $request->input('direction', 'asc') === 'desc' ? 'desc' : 'asc';
+
+        switch ($sort) {
+            case 'organization':
+                $query->join('organizations', 'agreements.organization_id', '=', 'organizations.id')
+                    ->select('agreements.*')
+                    ->orderBy('organizations.name', $direction);
+                break;
+
+            case 'state':
+                $query->join('states', 'agreements.state_id', '=', 'states.id')
+                    ->select('agreements.*')
+                    ->orderBy('states.name', $direction);
+                break;
+
+            case 'start_date':
+                $query->orderBy('start_date', $direction);
+                break;
+
+            case 'team_members':
+                $query->withCount('users')->orderBy('users_count', $direction);
+                break;
+
+            case 'name':
+            default:
+                $query->orderBy('name', $direction);
+                break;
+        }
+
+        $agreements = $query->paginate(20)->withQueryString();
+
+        $organizations = Organization::orderBy('name')->get(['id', 'name']);
+        $states = State::orderBy('name')->get(['id', 'name']);
+
+        if ($request->header('HX-Request') === 'true') {
+            return view('agreements.partials.table', compact('agreements', 'sort', 'direction'));
+        }
+
+        return view('agreements.index', compact(
+            'agreements',
+            'organizations',
+            'states',
+            'sort',
+            'direction'
+        ));
     }
 
     public function create()
