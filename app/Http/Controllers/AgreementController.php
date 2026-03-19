@@ -16,6 +16,35 @@ class AgreementController extends Controller
 {
     public function index(Request $request)
     {
+        $baseQuery = Agreement::query();
+
+        // Visibility enforcement: non-admins only see assigned agreements
+        if (!Auth::user()->isAdmin()) {
+            $baseQuery->whereHas('users', function ($q) {
+                $q->where('user_id', Auth::id());
+            });
+        }
+
+        // Build organizations list for cascading filters
+        $organizationsQuery = Organization::query()->orderBy('name');
+
+        if ($request->filled('state_id')) {
+            $stateId = $request->integer('state_id');
+
+            $organizationsQuery->whereHas('agreements', function ($q) use ($stateId) {
+                $q->where('state_id', $stateId);
+
+                if (!Auth::user()->isAdmin()) {
+                    $q->whereHas('users', function ($userQuery) {
+                        $userQuery->where('user_id', Auth::id());
+                    });
+                }
+            });
+        }
+
+        $organizations = $organizationsQuery->get(['id', 'name']);
+        $states = State::orderBy('name')->get(['id', 'name']);
+
         $query = Agreement::with(['organization', 'state', 'users']);
 
         // Visibility enforcement: non-admins only see assigned agreements
@@ -39,13 +68,13 @@ class AgreementController extends Controller
             });
         }
 
-        // Filters
-        if ($request->filled('organization_id')) {
-            $query->where('organization_id', $request->integer('organization_id'));
-        }
-
+        // Cascading filters
         if ($request->filled('state_id')) {
             $query->where('state_id', $request->integer('state_id'));
+        }
+
+        if ($request->filled('organization_id')) {
+            $query->where('organization_id', $request->integer('organization_id'));
         }
 
         // Sorting
@@ -81,9 +110,12 @@ class AgreementController extends Controller
 
         $agreements = $query->paginate(20)->withQueryString();
 
-        $organizations = Organization::orderBy('name')->get(['id', 'name']);
-        $states = State::orderBy('name')->get(['id', 'name']);
+        // HTMX: filters only
+        if ($request->header('HX-Request') === 'true' && $request->input('partial') === 'filters') {
+            return view('agreements.partials.filters', compact('organizations', 'states', 'sort', 'direction'));
+        }
 
+        // HTMX: table only
         if ($request->header('HX-Request') === 'true') {
             return view('agreements.partials.table', compact('agreements', 'sort', 'direction'));
         }
