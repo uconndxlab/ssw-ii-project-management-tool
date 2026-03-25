@@ -7,11 +7,51 @@ use Illuminate\Http\Request;
 
 class ProgramController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $programs = Program::orderBy('name')->paginate(20);
-        
-        return view('programs.index', compact('programs'));
+        $query = Program::query();
+
+        // Search
+        $search = trim((string) $request->input('search', ''));
+        if ($search !== '') {
+            $query->where('name', 'like', "%{$search}%");
+        }
+
+        // Status filter
+        $status = $request->input('status');
+        if ($status === 'active') {
+            $query->where('active', true);
+        } elseif ($status === 'inactive') {
+            $query->where('active', false);
+        }
+
+        // Sorting
+        $sort = $request->input('sort', 'name');
+        $direction = $request->input('direction', 'asc') === 'desc' ? 'desc' : 'asc';
+
+        switch ($sort) {
+            case 'status':
+                $query->orderBy('active', $direction)->orderBy('name', 'asc');
+                break;
+
+            case 'created':
+                $query->orderBy('created_at', $direction);
+                break;
+
+            case 'name':
+            default:
+                $query->orderBy('name', $direction);
+                break;
+        }
+
+        $programs = $query->paginate(20)->withQueryString();
+
+        // HTMX: table only
+        if ($request->header('HX-Request') === 'true') {
+            return view('programs.partials.table', compact('programs', 'sort', 'direction'));
+        }
+
+        return view('programs.index', compact('programs', 'sort', 'direction'));
     }
 
     public function create()
