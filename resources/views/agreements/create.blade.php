@@ -289,21 +289,15 @@
 
                     <div class="mb-3">
                         <label class="form-label">Assign Users</label>
-                        <div class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
-                            @foreach($users as $user)
-                            <div class="form-check">
-                                <input class="form-check-input" 
-                                       type="checkbox" 
-                                       name="user_ids[]" 
-                                       value="{{ $user->id }}" 
-                                       id="user_{{ $user->id }}"
-                                       {{ in_array($user->id, old('user_ids', [])) ? 'checked' : '' }}>
-                                <label class="form-check-label" for="user_{{ $user->id }}">
-                                    {{ $user->name }} ({{ ucfirst($user->role) }})
-                                </label>
-                            </div>
-                            @endforeach
-                        </div>
+
+                        <x-user-picker
+                            picker-id="agreement-create-users"
+                            name="user_ids[]"
+                            :users="$users"
+                            :selected-ids="old('user_ids', [])"
+                            search-placeholder="Search to assign users..."
+                            :show-role="true"
+                        />
                     </div>
 
                     <div class="d-flex gap-2">

@@ -236,19 +236,14 @@
                         <label class="form-label">Internal Participants</label>
                         <div id="participants-container">
                             @if($activity->agreement->users->isNotEmpty())
-                                @foreach($activity->agreement->users as $user)
-                                    <div class="form-check">
-                                        <input class="form-check-input"
-                                               type="checkbox"
-                                               name="participant_user_ids[]"
-                                               value="{{ $user->id }}"
-                                               id="participant_{{ $user->id }}"
-                                               {{ in_array($user->id, old('participant_user_ids', $activity->participants->pluck('id')->toArray())) ? 'checked' : '' }}>
-                                        <label class="form-check-label" for="participant_{{ $user->id }}">
-                                            {{ $user->name }}
-                                        </label>
-                                    </div>
-                                @endforeach
+                                <x-user-picker
+                                    picker-id="activity-edit-participants"
+                                    name="participant_user_ids[]"
+                                    :users="$activity->agreement->users"
+                                    :selected-ids="old('participant_user_ids', $activity->participants->pluck('id')->toArray())"
+                                    search-placeholder="Search internal participants..."
+                                    empty-message="No team members assigned to this agreement."
+                                />
                             @else
                                 <small class="text-muted">No team members assigned to this agreement</small>
                             @endif
