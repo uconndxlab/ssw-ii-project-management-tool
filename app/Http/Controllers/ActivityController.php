@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Activity;
 use App\Models\Agreement;
+use App\Models\ActivityType;
+use App\Models\Organization;
 use App\Models\Program;
 use App\Models\State;
 use Illuminate\Http\Request;
@@ -13,66 +15,170 @@ class ActivityController extends Controller
 {
     public function index(Request $request)
     {
+        $visibleAgreements = $this->getVisibleAgreements()->load(['organization', 'state']);
+
+        $visibleAgreementIds = $visibleAgreements->pluck('id');
+
         $query = Activity::query()
-            ->with(['agreement.organization', 'agreement.state', 'user', 'activityType']);
+            ->with(['agreement.organization', 'agreement.state', 'user', 'activityType'])
+            ->whereIn('agreement_id', $visibleAgreementIds);
 
-        if (!Auth::user()->isAdmin()) {
-            $agreementIds = Auth::user()->agreements()->pluck('agreements.id');
-            $query->whereIn('agreement_id', $agreementIds);
-        }
-
-        $filters = $request->validate([
-            'agreement_id' => ['nullable', 'integer', 'exists:agreements,id'],
-            'organization_id' => ['nullable', 'integer', 'exists:organizations,id'],
-            'state_id' => ['nullable', 'integer', 'exists:states,id'],
-            'activity_type_id' => ['nullable', 'integer', 'exists:activity_types,id'],
-        ]);
-
-        if (!empty($filters['agreement_id'])) {
-            $query->where('agreement_id', $filters['agreement_id']);
-        }
-
-        if (!empty($filters['organization_id'])) {
-            $query->whereHas('agreement', function ($q) use ($filters) {
-                $q->where('organization_id', $filters['organization_id']);
+        // Search
+        $search = trim((string) $request->input('search', ''));
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('agreement', function ($agreementQuery) use ($search) {
+                    $agreementQuery->where('name', 'like', "%{$search}%")
+                        ->orWhereHas('organization', function ($orgQuery) use ($search) {
+                            $orgQuery->where('name', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('state', function ($stateQuery) use ($search) {
+                            $stateQuery->where('name', 'like', "%{$search}%");
+                        });
+                })
+                ->orWhereHas('activityType', function ($typeQuery) use ($search) {
+                    $typeQuery->where('name', 'like', "%{$search}%");
+                })
+                ->orWhereHas('user', function ($userQuery) use ($search) {
+                    $userQuery->where('name', 'like', "%{$search}%");
+                });
             });
         }
 
-        if (!empty($filters['state_id'])) {
-            $query->whereHas('agreement', function ($q) use ($filters) {
-                $q->where('state_id', $filters['state_id']);
+        // Filters
+        $stateId = $request->filled('state_id') ? $request->integer('state_id') : null;
+        $organizationId = $request->filled('organization_id') ? $request->integer('organization_id') : null;
+        $agreementId = $request->filled('agreement_id') ? $request->integer('agreement_id') : null;
+        $activityTypeId = $request->filled('activity_type_id') ? $request->integer('activity_type_id') : null;
+
+        if ($stateId) {
+            $query->whereHas('agreement', function ($q) use ($stateId) {
+                $q->where('state_id', $stateId);
             });
         }
 
-        if (!empty($filters['activity_type_id'])) {
-            $query->where('activity_type_id', $filters['activity_type_id']);
+        if ($organizationId) {
+            $query->whereHas('agreement', function ($q) use ($organizationId) {
+                $q->where('organization_id', $organizationId);
+            });
         }
 
-        $agreements = $this->getVisibleAgreements()->load(['organization', 'state']);
+        if ($agreementId) {
+            $query->where('agreement_id', $agreementId);
+        }
 
-        $orgIds = $agreements->pluck('organization_id')->filter()->unique()->values();
-        $organizations = \App\Models\Organization::whereIn('id', $orgIds)->orderBy('name')->get();
+        if ($activityTypeId) {
+            $query->where('activity_type_id', $activityTypeId);
+        }
 
-        $stateIds = $agreements->pluck('state_id')->filter()->unique()->values();
-        $states = State::whereIn('id', $stateIds)->orderBy('name')->get();
+        // Filter option lists for cascading filters
+        $states = State::query()
+            ->whereIn('id', $visibleAgreements->pluck('state_id')->filter()->unique())
+            ->orderBy('name')
+            ->get(['id', 'name']);
 
-        $activityTypes = \App\Models\ActivityType::where('active', true)
+        $organizationsQuery = Organization::query()
+            ->whereIn('id', $visibleAgreements->pluck('organization_id')->filter()->unique());
+
+        if ($stateId) {
+            $organizationsQuery->whereHas('agreements', function ($q) use ($stateId, $visibleAgreementIds) {
+                $q->where('state_id', $stateId)
+                    ->whereIn('agreements.id', $visibleAgreementIds);
+            });
+        }
+
+        $organizations = $organizationsQuery
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $agreementsQuery = Agreement::query()
+            ->with(['organization', 'state'])
+            ->whereIn('id', $visibleAgreementIds);
+
+        if ($stateId) {
+            $agreementsQuery->where('state_id', $stateId);
+        }
+
+        if ($organizationId) {
+            $agreementsQuery->where('organization_id', $organizationId);
+        }
+
+        $agreements = $agreementsQuery
+            ->orderBy('name')
+            ->get();
+
+        $activityTypes = ActivityType::query()
+            ->where('active', true)
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
 
-        $activities = $query
-            ->orderBy('engagement_date', 'desc')
-            ->paginate(50)
-            ->withQueryString();
+        // Sorting
+        $sort = $request->input('sort', 'date');
+        $direction = $request->input('direction', 'desc') === 'asc' ? 'asc' : 'desc';
+
+        switch ($sort) {
+            case 'agreement':
+                $query->join('agreements', 'activities.agreement_id', '=', 'agreements.id')
+                    ->select('activities.*')
+                    ->orderBy('agreements.name', $direction);
+                break;
+
+            case 'activity_type':
+                $query->join('activity_types', 'activities.activity_type_id', '=', 'activity_types.id')
+                    ->select('activities.*')
+                    ->orderBy('activity_types.name', $direction);
+                break;
+
+            case 'logged_by':
+                $query->join('users', 'activities.user_id', '=', 'users.id')
+                    ->select('activities.*')
+                    ->orderBy('users.name', $direction);
+                break;
+
+            case 'total_hours':
+                $query->orderByRaw(
+                    '(COALESCE(event_hours, 0) + COALESCE(prep_hours, 0) + COALESCE(followup_hours, 0)) ' . $direction
+                );
+                break;
+
+            case 'date':
+            default:
+                $query->orderBy('engagement_date', $direction);
+                break;
+        }
+
+        $activities = $query->paginate(50)->withQueryString();
+
+        // HTMX: filters only
+        if ($request->header('HX-Request') === 'true' && $request->input('partial') === 'filters') {
+            return view('activities.partials.filters', compact(
+                'states',
+                'organizations',
+                'agreements',
+                'activityTypes',
+                'sort',
+                'direction'
+            ));
+        }
+
+        // HTMX: table only
+        if ($request->header('HX-Request') === 'true') {
+            return view('activities.partials.table', compact(
+                'activities',
+                'sort',
+                'direction'
+            ));
+        }
 
         return view('activities.index', compact(
             'activities',
-            'agreements',
-            'organizations',
             'states',
+            'organizations',
+            'agreements',
             'activityTypes',
-            'filters'
+            'sort',
+            'direction'
         ));
     }
 
