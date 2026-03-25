@@ -105,7 +105,7 @@
                                         </a>
                                     </td>
                                     <td>{{ $organization->state->name }}</td>
-                                    <td>{{ $organization->agreements->count() }}</td>
+                                    <td>{{ $organization->agreements_count ?? $organization->agreements->count() }}</td>
                                     <td>{{ $organization->created_at->format('M d, Y') }}</td>
 
                                     @if(auth()->user()->isAdmin())
@@ -160,29 +160,23 @@
                                     </li>
                                 @endif
 
-                                @foreach ($organizations->linkCollection()->elements as $element)
-                                    @if (is_string($element))
-                                        <li class="page-item disabled"><span class="page-link">{{ $element }}</span></li>
+                                @for ($i = 1; $i <= $organizations->lastPage(); $i++)
+                                    @if ($i == $organizations->currentPage())
+                                        <li class="page-item active">
+                                            <span class="page-link">{{ $i }}</span>
+                                        </li>
+                                    @else
+                                        <li class="page-item">
+                                            <a
+                                                class="page-link"
+                                                hx-get="{{ $organizations->url($i) }}"
+                                                hx-target="#organizations-table"
+                                                hx-swap="innerHTML"
+                                                hx-push-url="true"
+                                            >{{ $i }}</a>
+                                        </li>
                                     @endif
-
-                                    @if (is_array($element))
-                                        @foreach ($element as $page => $url)
-                                            @if ($page == $organizations->currentPage())
-                                                <li class="page-item active"><span class="page-link">{{ $page }}</span></li>
-                                            @else
-                                                <li class="page-item">
-                                                    <a
-                                                        class="page-link"
-                                                        hx-get="{{ $url }}"
-                                                        hx-target="#organizations-table"
-                                                        hx-swap="innerHTML"
-                                                        hx-push-url="true"
-                                                    >{{ $page }}</a>
-                                                </li>
-                                            @endif
-                                        @endforeach
-                                    @endif
-                                @endforeach
+                                @endfor
 
                                 @if ($organizations->hasMorePages())
                                     <li class="page-item">

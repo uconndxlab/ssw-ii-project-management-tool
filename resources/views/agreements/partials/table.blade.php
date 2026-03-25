@@ -123,7 +123,7 @@
                                     <td>{{ $agreement->organization->name }}</td>
                                     <td>{{ $agreement->state->name }}</td>
                                     <td>{{ $agreement->start_date?->format('M d, Y') ?? 'N/A' }}</td>
-                                    <td>{{ $agreement->users->count() }}</td>
+                                    <td>{{ $agreement->users_count ?? $agreement->users->count() }}</td>
 
                                     @if(auth()->user()->isAdmin())
                                         <td onclick="event.stopPropagation();">
@@ -168,7 +168,6 @@
                     <div class="mt-3 d-flex justify-content-center">
                         <nav>
                             <ul class="pagination mb-0">
-                                {{-- Previous Page Link --}}
                                 @if ($agreements->onFirstPage())
                                     <li class="page-item disabled"><span class="page-link">‹</span></li>
                                 @else
@@ -183,32 +182,24 @@
                                     </li>
                                 @endif
 
-                                {{-- Pagination Elements --}}
-                                @foreach ($agreements->linkCollection()->elements as $element)
-                                    @if (is_string($element))
-                                        <li class="page-item disabled"><span class="page-link">{{ $element }}</span></li>
+                                @for ($i = 1; $i <= $agreements->lastPage(); $i++)
+                                    @if ($i == $agreements->currentPage())
+                                        <li class="page-item active">
+                                            <span class="page-link">{{ $i }}</span>
+                                        </li>
+                                    @else
+                                        <li class="page-item">
+                                            <a
+                                                class="page-link"
+                                                hx-get="{{ $agreements->url($i) }}"
+                                                hx-target="#agreements-table"
+                                                hx-swap="innerHTML"
+                                                hx-push-url="true"
+                                            >{{ $i }}</a>
+                                        </li>
                                     @endif
+                                @endfor
 
-                                    @if (is_array($element))
-                                        @foreach ($element as $page => $url)
-                                            @if ($page == $agreements->currentPage())
-                                                <li class="page-item active"><span class="page-link">{{ $page }}</span></li>
-                                            @else
-                                                <li class="page-item">
-                                                    <a
-                                                        class="page-link"
-                                                        hx-get="{{ $url }}"
-                                                        hx-target="#agreements-table"
-                                                        hx-swap="innerHTML"
-                                                        hx-push-url="true"
-                                                    >{{ $page }}</a>
-                                                </li>
-                                            @endif
-                                        @endforeach
-                                    @endif
-                                @endforeach
-
-                                {{-- Next Page Link --}}
                                 @if ($agreements->hasMorePages())
                                     <li class="page-item">
                                         <a
