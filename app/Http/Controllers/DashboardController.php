@@ -25,21 +25,31 @@ class DashboardController extends Controller
         $ytdActivities = Activity::whereYear('engagement_date', now()->year)
             ->with(['activityType.contactFamily', 'user', 'agreement'])
             ->get();
-        
+
         // YTD totals
         $ytdTotals = [
             'activities' => $ytdActivities->count(),
             'hours' => $ytdActivities->sum(fn($e) => $e->event_hours + ($e->prep_hours ?? 0) + ($e->followup_hours ?? 0)),
             'participants' => $ytdActivities->sum('participant_count'),
         ];
-        
+
         // Recent 10 activities
         $recentActivities = Activity::with(['activityType.contactFamily', 'user', 'agreement'])
             ->orderByDesc('engagement_date')
             ->limit(10)
             ->get();
-        
-        return view('dashboard', compact('ytdTotals', 'recentActivities'));
+
+        // Agreements list for dashboard
+        $user = Auth::user();
+
+        $agreements = $user->agreements()
+            ->with(['organization', 'state'])
+            ->withCount('activities')
+            ->withMax('activities', 'engagement_date')
+            ->orderBy('name')
+            ->get();
+
+        return view('dashboard', compact('ytdTotals', 'recentActivities', 'agreements'));
     }
     
     protected function userDashboard($user)
