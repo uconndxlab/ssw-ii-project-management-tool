@@ -28,9 +28,9 @@
 
                     <div class="mb-3">
                         <label for="contact_family_id" class="form-label">Contact Family <span class="text-danger">*</span></label>
-                        <select class="form-select @error('contact_family_id') is-invalid @enderror" 
-                                id="contact_family_id" 
-                                name="contact_family_id" 
+                        <select class="form-select @error('contact_family_id') is-invalid @enderror"
+                                id="contact_family_id"
+                                name="contact_family_id"
                                 required>
                             <option value="">Select contact family...</option>
                             @foreach($contactFamilies as $family)
@@ -46,11 +46,11 @@
 
                     <div class="mb-3">
                         <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
-                        <input type="text" 
-                               class="form-control @error('name') is-invalid @enderror" 
-                               id="name" 
-                               name="name" 
-                               value="{{ old('name') }}" 
+                        <input type="text"
+                               class="form-control @error('name') is-invalid @enderror"
+                               id="name"
+                               name="name"
+                               value="{{ old('name') }}"
                                required>
                         @error('name')
                             <div class="invalid-feedback">{{ $message }}</div>
@@ -59,11 +59,11 @@
 
                     <div class="mb-3">
                         <label for="sort_order" class="form-label">Sort Order</label>
-                        <input type="number" 
-                               class="form-control @error('sort_order') is-invalid @enderror" 
-                               id="sort_order" 
-                               name="sort_order" 
-                               value="{{ old('sort_order', 0) }}" 
+                        <input type="number"
+                               class="form-control @error('sort_order') is-invalid @enderror"
+                               id="sort_order"
+                               name="sort_order"
+                               value="{{ old('sort_order', 0) }}"
                                min="0">
                         @error('sort_order')
                             <div class="invalid-feedback">{{ $message }}</div>
@@ -72,12 +72,26 @@
                     </div>
 
                     <div class="mb-3">
+                        <label for="duration_days" class="form-label">Duration (Days)</label>
+                        <input type="number"
+                               class="form-control @error('duration_days') is-invalid @enderror"
+                               id="duration_days"
+                               name="duration_days"
+                               value="{{ old('duration_days', 0) }}"
+                               min="0">
+                        @error('duration_days')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                        <div class="form-text">Number of days associated with this activity type for reporting purposes.</div>
+                    </div>
+
+                    <div class="mb-3">
                         <div class="form-check">
-                            <input type="checkbox" 
-                                   class="form-check-input" 
-                                   id="active" 
-                                   name="active" 
-                                   value="1" 
+                            <input type="checkbox"
+                                   class="form-check-input"
+                                   id="active"
+                                   name="active"
+                                   value="1"
                                    {{ old('active', true) ? 'checked' : '' }}>
                             <label class="form-check-label" for="active">
                                 Active

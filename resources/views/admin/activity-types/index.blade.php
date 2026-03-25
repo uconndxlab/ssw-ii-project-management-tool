@@ -35,6 +35,7 @@
                         <th>Name</th>
                         <th>Contact Family</th>
                         <th>Sort Order</th>
+                        <th>Duration (Days)</th>
                         <th>Status</th>
                         <th style="width: 150px;">Actions</th>
                     </tr>
@@ -45,6 +46,7 @@
                             <td>{{ $type->name }}</td>
                             <td>{{ $type->contactFamily->name }}</td>
                             <td>{{ $type->sort_order }}</td>
+                            <td>{{ $type->duration_days }}</td>
                             <td>
                                 @if($type->active)
                                     <span class="badge bg-success">Active</span>
@@ -66,7 +68,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="text-center text-muted">No activity types found.</td>
+                            <td colspan="6" class="text-center text-muted">No activity types found.</td>
                         </tr>
                     @endforelse
                 </tbody>
