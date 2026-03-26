@@ -434,7 +434,7 @@ class ActivityController extends Controller
         $selectedIds = $request->input('participant_user_ids', []);
         
         if (!$agreementId) {
-            return '<small class="text-muted">Select an agreement first to see team members</small>';
+            return '<small class="text-muted">Select an agreement first to see team</small>';
         }
         
         $agreement = Agreement::with('users')->find($agreementId);
@@ -456,8 +456,9 @@ class ActivityController extends Controller
         }
         
         return view('activities.partials.participant-checkboxes', [
-            'users' => $agreement->users,
-            'selectedIds' => $selectedIds
+            'agreement' => $agreement,
+            'selectedIds' => $selectedIds,
+            'pickerId' => 'activity-participants-' . $agreement->id,
         ])->render();
     }
 

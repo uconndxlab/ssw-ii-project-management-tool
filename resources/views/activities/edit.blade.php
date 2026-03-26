@@ -54,13 +54,15 @@
                     <div class="mb-3">
                         <label for="agreement_id" class="form-label">Agreement <span class="text-danger">*</span></label>
                         <select class="form-select @error('agreement_id') is-invalid @enderror"
-                                id="agreement_id"
-                                name="agreement_id"
-                                hx-get="{{ route('activities.participants-for-agreement') }}"
-                                hx-target="#participants-container"
-                                hx-include="[name='participant_user_ids[]']"
-                                hx-swap="innerHTML"
-                                required>
+                            id="agreement_id"
+                            name="agreement_id"
+                            hx-get="{{ route('activities.participants-for-agreement') }}"
+                            hx-trigger="change"
+                            hx-target="#participants-container"
+                            hx-include="closest form"
+                            hx-swap="innerHTML"
+                            required
+                        >
                             <option value="">Select project...</option>
                             @foreach($agreements as $agreement)
                                 <option value="{{ $agreement->id }}" {{ old('agreement_id', $activity->agreement_id) == $agreement->id ? 'selected' : '' }}>
@@ -235,18 +237,11 @@
                     <div class="mb-3">
                         <label class="form-label">Internal Participants</label>
                         <div id="participants-container">
-                            @if($activity->agreement->users->isNotEmpty())
-                                <x-user-picker
-                                    picker-id="activity-edit-participants"
-                                    name="participant_user_ids[]"
-                                    :users="$activity->agreement->users"
-                                    :selected-ids="old('participant_user_ids', $activity->participants->pluck('id')->toArray())"
-                                    search-placeholder="Search internal participants..."
-                                    empty-message="No team members assigned to this agreement."
-                                />
-                            @else
-                                <small class="text-muted">No team members assigned to this agreement</small>
-                            @endif
+                            @include('activities.partials.participant-checkboxes', [
+                                'agreement' => $activity->agreement->loadMissing('users'),
+                                'selectedIds' => old('participant_user_ids', $activity->participants->pluck('id')->toArray()),
+                                'pickerId' => 'activity-participants-' . $activity->agreement->id,
+                            ])
                         </div>
                         @error('participant_user_ids')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
@@ -348,6 +343,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const agreementSelect = document.getElementById('agreement_id');
 
     updateActivityLoggingFields();
+
+    if (agreementSelect.value) {
+        htmx.trigger(agreementSelect, 'change');
+    }
 
     agreementSelect.addEventListener('change', function() {
         updateActivityLoggingFields();

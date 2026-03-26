@@ -53,13 +53,13 @@
                     <div class="mb-3">
                         <label for="agreement_id" class="form-label">Agreement <span class="text-danger">*</span></label>
                         <select class="form-select @error('agreement_id') is-invalid @enderror"
-                                id="agreement_id"
-                                name="agreement_id"
-                                hx-get="{{ route('activities.participants-for-agreement') }}"
-                                hx-target="#participants-container"
-                                hx-include="[name='participant_user_ids[]']"
-                                hx-swap="innerHTML"
-                                required>
+                            id="agreement_id"
+                            name="agreement_id"
+                            hx-get="{{ route('activities.participants-for-agreement') }}"
+                            hx-target="#participants-container"
+                            hx-swap="innerHTML"
+                            required
+                        >
                             <option value="">Select project...</option>
                             @foreach($agreements as $agreement)
                                 <option value="{{ $agreement->id }}" {{ (old('agreement_id') ?? $preselectedAgreementId) == $agreement->id ? 'selected' : '' }}>

@@ -36,6 +36,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/agreements/{agreement}/add-deliverable', [AgreementController::class, 'addDeliverable'])->name('agreements.add-deliverable');
     Route::delete('/agreements/{agreement}/remove-deliverable/{deliverable}', [AgreementController::class, 'removeDeliverable'])->name('agreements.remove-deliverable');
     
+    // HTMX endpoint for activity participant selection
+    Route::get('/activities/participants-for-agreement', [ActivityController::class, 'getParticipantsForAgreement'])
+        ->name('activities.participants-for-agreement');
+
     // Activities - visible to all authenticated users (with visibility filtering in controller)
     Route::get('/activities', [ActivityController::class, 'index'])->name('activities.index');
     Route::get('/activities/create', [ActivityController::class, 'create'])->name('activities.create');
@@ -44,10 +48,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/activities/{activity}/edit', [ActivityController::class, 'edit'])->name('activities.edit');
     Route::put('/activities/{activity}', [ActivityController::class, 'update'])->name('activities.update');
     Route::delete('/activities/{activity}', [ActivityController::class, 'destroy'])->name('activities.destroy');
-    
-    // HTMX endpoint for activity participant selection
-    Route::get('/activities/participants-for-agreement', [ActivityController::class, 'getParticipantsForAgreement'])
-        ->name('activities.participants-for-agreement');
     
     // HTMX endpoint for filtering activity types by contact family
     Route::get('/activity-types/by-family', [ActivityTypeController::class, 'getByFamily'])->name('activity-types.by-family');
