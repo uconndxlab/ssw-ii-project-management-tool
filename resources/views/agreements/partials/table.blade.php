@@ -123,7 +123,15 @@
                                     <td>{{ $agreement->organization->name }}</td>
                                     <td>{{ $agreement->state->name }}</td>
                                     <td>{{ $agreement->start_date?->format('M d, Y') ?? 'N/A' }}</td>
-                                    <td>{{ $agreement->users_count ?? $agreement->users->count() }}</td>
+                                    <td style="max-width: 240px; white-space: normal;">
+                                        @if($agreement->users->isNotEmpty())
+                                            <span class="small d-inline-block text-truncate align-middle" style="max-width: 260px;" title="{{ $agreement->users->sortBy('name')->pluck('name')->join(', ') }}">
+                                                {{ $agreement->users->sortBy('name')->pluck('name')->join(', ') }}
+                                            </span>
+                                        @else
+                                            <span class="text-muted small">No members</span>
+                                        @endif
+                                    </td>
 
                                     @if(auth()->user()->isAdmin())
                                         <td onclick="event.stopPropagation();">
