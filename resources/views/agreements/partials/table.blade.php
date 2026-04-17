@@ -123,10 +123,19 @@
                                     <td>{{ $agreement->organization->name }}</td>
                                     <td>{{ $agreement->state->name }}</td>
                                     <td>{{ $agreement->start_date?->format('M d, Y') ?? 'N/A' }}</td>
-                                    <td style="max-width: 240px; white-space: normal;">
-                                        @if($agreement->users->isNotEmpty())
-                                            <span class="small d-inline-block text-truncate align-middle" style="max-width: 260px;" title="{{ $agreement->users->sortBy('name')->pluck('name')->join(', ') }}">
-                                                {{ $agreement->users->sortBy('name')->pluck('name')->join(', ') }}
+                                    <td style="max-width: 240px;">
+                                        @php
+                                            $members = $agreement->users->sortBy('name')->pluck('name')->values();
+                                            $visibleMembers = $members->take(2);
+                                            $remainingCount = $members->count() - $visibleMembers->count();
+                                        @endphp
+
+                                        @if($members->isNotEmpty())
+                                            <span class="small" title="{{ $members->join(', ') }}">
+                                                {{ $visibleMembers->join(', ') }}
+                                                @if($remainingCount > 0)
+                                                    <span class="text-muted">+{{ $remainingCount }} more</span>
+                                                @endif
                                             </span>
                                         @else
                                             <span class="text-muted small">No members</span>
