@@ -34,7 +34,6 @@
                     <tr>
                         <th>Name</th>
                         <th>Contact Family</th>
-                        <th>Sort Order</th>
                         <th>Duration (Days)</th>
                         <th>Status</th>
                         <th style="width: 150px;">Actions</th>
@@ -45,7 +44,6 @@
                         <tr>
                             <td>{{ $type->name }}</td>
                             <td>{{ $type->contactFamily->name }}</td>
-                            <td>{{ $type->sort_order }}</td>
                             <td>{{ $type->duration_days }}</td>
                             <td>
                                 @if($type->active)
