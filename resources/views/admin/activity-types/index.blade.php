@@ -26,52 +26,27 @@
     </div>
 @endif
 
-<div class="card">
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Contact Family</th>
-                        <th>Duration (Days)</th>
-                        <th>Status</th>
-                        <th style="width: 150px;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($activityTypes as $type)
-                        <tr>
-                            <td>{{ $type->name }}</td>
-                            <td>{{ $type->contactFamily->name }}</td>
-                            <td>{{ $type->duration_days }}</td>
-                            <td>
-                                @if($type->active)
-                                    <span class="badge bg-success">Active</span>
-                                @else
-                                    <span class="badge bg-secondary">Inactive</span>
-                                @endif
-                            </td>
-                            <td>
-                                <a href="{{ route('activity-types.edit', $type) }}" class="btn btn-sm btn-outline-primary">Edit</a>
-                                <form method="POST" action="{{ route('activity-types.destroy', $type) }}" class="d-inline"
-                                      hx-confirm="Are you sure you want to delete this activity type?">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">
-                                        Delete
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="6" class="text-center text-muted">No activity types found.</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div id="activity-type-filters-container">
+                    @include('admin.activity-types.partials.filters', [
+                        'contactFamilies' => $contactFamilies,
+                        'sort' => $sort,
+                        'direction' => $direction,
+                    ])
+                </div>
+            </div>
         </div>
     </div>
+</div>
+
+<div id="activity-types-table">
+    @include('admin.activity-types.partials.table', [
+        'activityTypes' => $activityTypes,
+        'sort' => $sort,
+        'direction' => $direction,
+    ])
 </div>
 @endsection

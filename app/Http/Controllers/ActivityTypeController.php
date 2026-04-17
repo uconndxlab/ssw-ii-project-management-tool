@@ -11,19 +11,83 @@ class ActivityTypeController extends Controller
 {
     public function __construct()
     {
-        // Ensure only admins can access
         abort_unless(Auth::user()?->isAdmin(), 403);
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $activityTypes = ActivityType::with('contactFamily')
-            ->orderBy('contact_family_id')
-            ->orderBy('sort_order')
+        $contactFamilies = ContactFamily::orderBy('sort_order')
             ->orderBy('name')
-            ->get();
+            ->get(['id', 'name']);
 
-        return view('admin.activity-types.index', compact('activityTypes'));
+        $query = ActivityType::with('contactFamily');
+
+        // Search
+        $search = trim((string) $request->input('search', ''));
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhereHas('contactFamily', function ($familyQuery) use ($search) {
+                        $familyQuery->where('name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        // Filters
+        if ($request->filled('contact_family_id')) {
+            $query->where('contact_family_id', $request->integer('contact_family_id'));
+        }
+
+        if ($request->filled('active')) {
+            $query->where('active', $request->input('active') === '1');
+        }
+
+        // Sorting
+        $sort = $request->input('sort', 'name');
+        $direction = $request->input('direction', 'asc') === 'desc' ? 'desc' : 'asc';
+
+        switch ($sort) {
+            case 'contact_family':
+                $query->join('contact_families', 'activity_types.contact_family_id', '=', 'contact_families.id')
+                    ->select('activity_types.*')
+                    ->orderBy('contact_families.sort_order')
+                    ->orderBy('contact_families.name', $direction)
+                    ->orderBy('activity_types.sort_order')
+                    ->orderBy('activity_types.name');
+                break;
+
+            case 'duration_days':
+                $query->orderBy('duration_days', $direction)
+                    ->orderBy('name');
+                break;
+
+            case 'active':
+                $query->orderBy('active', $direction)
+                    ->orderBy('name');
+                break;
+
+            case 'name':
+            default:
+                $query->orderBy('name', $direction);
+                break;
+        }
+
+        $activityTypes = $query->paginate(20)->withQueryString();
+
+        if ($request->header('HX-Request') === 'true' && $request->input('partial') === 'filters') {
+            return view('admin.activity-types.partials.filters', compact('contactFamilies', 'sort', 'direction'));
+        }
+
+        if ($request->header('HX-Request') === 'true') {
+            return view('admin.activity-types.partials.table', compact('activityTypes', 'sort', 'direction'));
+        }
+
+        return view('admin.activity-types.index', compact(
+            'activityTypes',
+            'contactFamilies',
+            'sort',
+            'direction'
+        ));
     }
 
     public function create()
@@ -43,7 +107,6 @@ class ActivityTypeController extends Controller
             'duration_days' => ['nullable', 'integer', 'min:0'],
         ]);
 
-        // Check uniqueness within contact family
         $exists = ActivityType::where('contact_family_id', $validated['contact_family_id'])
             ->where('name', $validated['name'])
             ->exists();
@@ -84,7 +147,6 @@ class ActivityTypeController extends Controller
             'duration_days' => ['nullable', 'integer', 'min:0'],
         ]);
 
-        // Check uniqueness within contact family (excluding current record)
         $exists = ActivityType::where('contact_family_id', $validated['contact_family_id'])
             ->where('name', $validated['name'])
             ->where('id', '!=', $activityType->id)
@@ -111,7 +173,6 @@ class ActivityTypeController extends Controller
 
     public function destroy(ActivityType $activityType)
     {
-        // Check if activity type is used in activities
         if ($activityType->activities()->count() > 0) {
             return redirect()
                 ->route('activity-types.index')
@@ -125,9 +186,6 @@ class ActivityTypeController extends Controller
             ->with('success', 'Activity type deleted successfully.');
     }
 
-    /**
-     * HTMX endpoint: Get activity types for a specific contact family
-     */
     public function getByFamily(Request $request)
     {
         $contactFamilyId = $request->input('contact_family_id');
