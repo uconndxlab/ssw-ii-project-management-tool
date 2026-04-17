@@ -14,8 +14,37 @@ use Illuminate\Support\Facades\Auth;
 
 class AgreementController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $baseQuery = Agreement::query();
+
+        // Visibility enforcement: non-admins only see assigned agreements
+        if (!Auth::user()->isAdmin()) {
+            $baseQuery->whereHas('users', function ($q) {
+                $q->where('user_id', Auth::id());
+            });
+        }
+
+        // Build organizations list for cascading filters
+        $organizationsQuery = Organization::query()->orderBy('name');
+
+        if ($request->filled('state_id')) {
+            $stateId = $request->integer('state_id');
+
+            $organizationsQuery->whereHas('agreements', function ($q) use ($stateId) {
+                $q->where('state_id', $stateId);
+
+                if (!Auth::user()->isAdmin()) {
+                    $q->whereHas('users', function ($userQuery) {
+                        $userQuery->where('user_id', Auth::id());
+                    });
+                }
+            });
+        }
+
+        $organizations = $organizationsQuery->get(['id', 'name']);
+        $states = State::orderBy('name')->get(['id', 'name']);
+
         $query = Agreement::with(['organization', 'state', 'users']);
 
         // Visibility enforcement: non-admins only see assigned agreements
@@ -25,9 +54,79 @@ class AgreementController extends Controller
             });
         }
 
-        $agreements = $query->orderBy('created_at', 'desc')->paginate(20);
-        
-        return view('agreements.index', compact('agreements'));
+        // Search
+        $search = trim((string) $request->input('search', ''));
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhereHas('organization', function ($orgQuery) use ($search) {
+                        $orgQuery->where('name', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('state', function ($stateQuery) use ($search) {
+                        $stateQuery->where('name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        // Cascading filters
+        if ($request->filled('state_id')) {
+            $query->where('state_id', $request->integer('state_id'));
+        }
+
+        if ($request->filled('organization_id')) {
+            $query->where('organization_id', $request->integer('organization_id'));
+        }
+
+        // Sorting
+        $sort = $request->input('sort', 'name');
+        $direction = $request->input('direction', 'asc') === 'desc' ? 'desc' : 'asc';
+
+        switch ($sort) {
+            case 'organization':
+                $query->join('organizations', 'agreements.organization_id', '=', 'organizations.id')
+                    ->select('agreements.*')
+                    ->orderBy('organizations.name', $direction);
+                break;
+
+            case 'state':
+                $query->join('states', 'agreements.state_id', '=', 'states.id')
+                    ->select('agreements.*')
+                    ->orderBy('states.name', $direction);
+                break;
+
+            case 'start_date':
+                $query->orderBy('start_date', $direction);
+                break;
+
+            case 'team_members':
+                $query->withCount('users')->orderBy('users_count', $direction);
+                break;
+
+            case 'name':
+            default:
+                $query->orderBy('name', $direction);
+                break;
+        }
+
+        $agreements = $query->paginate(20)->withQueryString();
+
+        // HTMX: filters only
+        if ($request->header('HX-Request') === 'true' && $request->input('partial') === 'filters') {
+            return view('agreements.partials.filters', compact('organizations', 'states', 'sort', 'direction'));
+        }
+
+        // HTMX: table only
+        if ($request->header('HX-Request') === 'true') {
+            return view('agreements.partials.table', compact('agreements', 'sort', 'direction'));
+        }
+
+        return view('agreements.index', compact(
+            'agreements',
+            'organizations',
+            'states',
+            'sort',
+            'direction'
+        ));
     }
 
     public function create()
@@ -56,9 +155,25 @@ class AgreementController extends Controller
             'original_end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'extended_end_date' => ['nullable', 'date', 'after_or_equal:original_end_date'],
             'certification_candidates' => ['nullable', 'string'],
+
+            'activity_logging_config' => ['nullable', 'array'],
+            'activity_logging_config.event_hours' => ['nullable', 'boolean'],
+            'activity_logging_config.prep_hours' => ['nullable', 'boolean'],
+            'activity_logging_config.followup_hours' => ['nullable', 'boolean'],
+            'activity_logging_config.participant_count' => ['nullable', 'boolean'],
+            'activity_logging_config.external_attendees' => ['nullable', 'boolean'],
+            'activity_logging_config.summary' => ['nullable', 'boolean'],
+            'activity_logging_config.follow_up' => ['nullable', 'boolean'],
+            'activity_logging_config.strengths' => ['nullable', 'boolean'],
+            'activity_logging_config.recommendations' => ['nullable', 'boolean'],
+
             'user_ids' => ['nullable', 'array'],
             'user_ids.*' => ['exists:users,id'],
         ]);
+
+        $activityLoggingConfig = $this->normalizeActivityLoggingConfig(
+            $request->input('activity_logging_config', [])
+        );
 
         $agreement = Agreement::create([
             'name' => $validated['name'],
@@ -70,6 +185,7 @@ class AgreementController extends Controller
             'original_end_date' => $validated['original_end_date'] ?? null,
             'extended_end_date' => $validated['extended_end_date'] ?? null,
             'certification_candidates' => $validated['certification_candidates'] ?? null,
+            'activity_logging_config' => $activityLoggingConfig,
         ]);
 
         if (!empty($validated['user_ids'])) {
@@ -185,9 +301,25 @@ class AgreementController extends Controller
             'original_end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'extended_end_date' => ['nullable', 'date', 'after_or_equal:original_end_date'],
             'certification_candidates' => ['nullable', 'string'],
+
+            'activity_logging_config' => ['nullable', 'array'],
+            'activity_logging_config.event_hours' => ['nullable', 'boolean'],
+            'activity_logging_config.prep_hours' => ['nullable', 'boolean'],
+            'activity_logging_config.followup_hours' => ['nullable', 'boolean'],
+            'activity_logging_config.participant_count' => ['nullable', 'boolean'],
+            'activity_logging_config.external_attendees' => ['nullable', 'boolean'],
+            'activity_logging_config.summary' => ['nullable', 'boolean'],
+            'activity_logging_config.follow_up' => ['nullable', 'boolean'],
+            'activity_logging_config.strengths' => ['nullable', 'boolean'],
+            'activity_logging_config.recommendations' => ['nullable', 'boolean'],
+
             'user_ids' => ['nullable', 'array'],
             'user_ids.*' => ['exists:users,id'],
         ]);
+
+        $activityLoggingConfig = $this->normalizeActivityLoggingConfig(
+            $request->input('activity_logging_config', [])
+        );
 
         $agreement->update([
             'name' => $validated['name'],
@@ -199,6 +331,7 @@ class AgreementController extends Controller
             'original_end_date' => $validated['original_end_date'] ?? null,
             'extended_end_date' => $validated['extended_end_date'] ?? null,
             'certification_candidates' => $validated['certification_candidates'] ?? null,
+            'activity_logging_config' => $activityLoggingConfig,
         ]);
 
         $agreement->users()->sync($validated['user_ids'] ?? []);
@@ -273,5 +406,27 @@ class AgreementController extends Controller
         $agreement->load('deliverables.activityType.contactFamily');
 
         return view('agreements.partials.deliverable-list', compact('agreement'));
+    }
+
+    protected function normalizeActivityLoggingConfig(?array $submittedConfig = []): array
+    {
+        $defaultActivityLoggingConfig = [
+            'event_hours' => false,
+            'prep_hours' => false,
+            'followup_hours' => false,
+            'participant_count' => false,
+            'external_attendees' => false,
+            'summary' => false,
+            'follow_up' => false,
+            'strengths' => false,
+            'recommendations' => false,
+        ];
+
+        return array_merge(
+            $defaultActivityLoggingConfig,
+            collect($submittedConfig ?? [])
+                ->map(fn ($value) => (bool) $value)
+                ->toArray()
+        );
     }
 }

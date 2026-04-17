@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Activity extends Model
 {
@@ -17,6 +18,7 @@ class Activity extends Model
         'prep_hours',
         'followup_hours',
         'participant_count',
+        'external_attendees',
         'summary',
         'follow_up',
         'strengths',
@@ -75,5 +77,10 @@ class Activity extends Model
     public function participants(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'activity_user')->withTimestamps();
+    }
+
+    public function certificationCandidates(): HasMany
+    {
+        return $this->hasMany(AgreementCertificationCandidate::class);
     }
 }

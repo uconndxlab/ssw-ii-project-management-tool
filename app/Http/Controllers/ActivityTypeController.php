@@ -29,6 +29,7 @@ class ActivityTypeController extends Controller
     public function create()
     {
         $contactFamilies = ContactFamily::orderBy('sort_order')->orderBy('name')->get();
+
         return view('admin.activity-types.create', compact('contactFamilies'));
     }
 
@@ -39,6 +40,7 @@ class ActivityTypeController extends Controller
             'contact_family_id' => ['required', 'exists:contact_families,id'],
             'active' => ['boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
+            'duration_days' => ['nullable', 'integer', 'min:0'],
         ]);
 
         // Check uniqueness within contact family
@@ -49,11 +51,14 @@ class ActivityTypeController extends Controller
         if ($exists) {
             return back()
                 ->withInput()
-                ->withErrors(['name' => 'An activity type with this name already exists in the selected contact family.']);
+                ->withErrors([
+                    'name' => 'An activity type with this name already exists in the selected contact family.'
+                ]);
         }
 
         $validated['active'] = $request->has('active');
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
+        $validated['duration_days'] = $validated['duration_days'] ?? 0;
 
         ActivityType::create($validated);
 
@@ -65,6 +70,7 @@ class ActivityTypeController extends Controller
     public function edit(ActivityType $activityType)
     {
         $contactFamilies = ContactFamily::orderBy('sort_order')->orderBy('name')->get();
+
         return view('admin.activity-types.edit', compact('activityType', 'contactFamilies'));
     }
 
@@ -75,6 +81,7 @@ class ActivityTypeController extends Controller
             'contact_family_id' => ['required', 'exists:contact_families,id'],
             'active' => ['boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
+            'duration_days' => ['nullable', 'integer', 'min:0'],
         ]);
 
         // Check uniqueness within contact family (excluding current record)
@@ -86,11 +93,14 @@ class ActivityTypeController extends Controller
         if ($exists) {
             return back()
                 ->withInput()
-                ->withErrors(['name' => 'An activity type with this name already exists in the selected contact family.']);
+                ->withErrors([
+                    'name' => 'An activity type with this name already exists in the selected contact family.'
+                ]);
         }
 
         $validated['active'] = $request->has('active');
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
+        $validated['duration_days'] = $validated['duration_days'] ?? 0;
 
         $activityType->update($validated);
 
@@ -121,7 +131,7 @@ class ActivityTypeController extends Controller
     public function getByFamily(Request $request)
     {
         $contactFamilyId = $request->input('contact_family_id');
-        
+
         if (!$contactFamilyId) {
             return response('<option value="">Select activity type...</option>');
         }

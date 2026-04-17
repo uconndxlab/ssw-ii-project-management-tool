@@ -7,11 +7,47 @@ use Illuminate\Http\Request;
 
 class StateController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $states = State::withCount(['organizations', 'agreements'])->orderBy('name')->paginate(20);
-        
-        return view('states.index', compact('states'));
+        $query = State::query()->withCount(['organizations', 'agreements']);
+
+        // Search
+        $search = trim((string) $request->input('search', ''));
+        if ($search !== '') {
+            $query->where('name', 'like', "%{$search}%");
+        }
+
+        // Sorting
+        $sort = $request->input('sort', 'name');
+        $direction = $request->input('direction', 'asc') === 'desc' ? 'desc' : 'asc';
+
+        switch ($sort) {
+            case 'organizations':
+                $query->orderBy('organizations_count', $direction);
+                break;
+
+            case 'agreements':
+                $query->orderBy('agreements_count', $direction);
+                break;
+
+            case 'created':
+                $query->orderBy('created_at', $direction);
+                break;
+
+            case 'name':
+            default:
+                $query->orderBy('name', $direction);
+                break;
+        }
+
+        $states = $query->paginate(20)->withQueryString();
+
+        // HTMX: table only
+        if ($request->header('HX-Request') === 'true') {
+            return view('states.partials.table', compact('states', 'sort', 'direction'));
+        }
+
+        return view('states.index', compact('states', 'sort', 'direction'));
     }
 
     public function create()

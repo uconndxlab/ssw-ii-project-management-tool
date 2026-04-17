@@ -3,6 +3,30 @@
 @section('title', 'Log Activity')
 
 @section('content')
+
+@php
+    $defaultActivityLoggingConfig = [
+        'event_hours' => true,
+        'prep_hours' => true,
+        'followup_hours' => false,
+        'participant_count' => true,
+        'external_attendees' => true,
+        'summary' => true,
+        'follow_up' => true,
+        'strengths' => false,
+        'recommendations' => false,
+    ];
+
+    $agreementActivityConfigs = $agreements->mapWithKeys(function ($agreement) use ($defaultActivityLoggingConfig) {
+        return [
+            $agreement->id => array_merge(
+                $defaultActivityLoggingConfig,
+                $agreement->activity_logging_config ?? []
+            )
+        ];
+    });
+@endphp
+
 <div class="row mb-4">
     <div class="col-12">
         <h1>Log Activity</h1>
@@ -28,14 +52,14 @@
 
                     <div class="mb-3">
                         <label for="agreement_id" class="form-label">Agreement <span class="text-danger">*</span></label>
-                        <select class="form-select @error('agreement_id') is-invalid @enderror" 
-                                id="agreement_id" 
-                                name="agreement_id"
-                                hx-get="{{ route('activities.participants-for-agreement') }}"
-                                hx-target="#participants-container"
-                                hx-include="[name='participant_user_ids[]']"
-                                hx-swap="innerHTML"
-                                required>
+                        <select class="form-select @error('agreement_id') is-invalid @enderror"
+                            id="agreement_id"
+                            name="agreement_id"
+                            hx-get="{{ route('activities.participants-for-agreement') }}"
+                            hx-target="#participants-container"
+                            hx-swap="innerHTML"
+                            required
+                        >
                             <option value="">Select project...</option>
                             @foreach($agreements as $agreement)
                                 <option value="{{ $agreement->id }}" {{ (old('agreement_id') ?? $preselectedAgreementId) == $agreement->id ? 'selected' : '' }}>
@@ -52,11 +76,11 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="engagement_date" class="form-label">Date <span class="text-danger">*</span></label>
-                                <input type="date" 
-                                       class="form-control @error('engagement_date') is-invalid @enderror" 
-                                       id="engagement_date" 
-                                       name="engagement_date" 
-                                       value="{{ old('engagement_date', now()->format('Y-m-d')) }}" 
+                                <input type="date"
+                                       class="form-control @error('engagement_date') is-invalid @enderror"
+                                       id="engagement_date"
+                                       name="engagement_date"
+                                       value="{{ old('engagement_date', now()->format('Y-m-d')) }}"
                                        required>
                                 @error('engagement_date')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -67,9 +91,9 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="contact_family_id" class="form-label">Contact Family <span class="text-danger">*</span></label>
-                                <select class="form-select @error('contact_family_id') is-invalid @enderror" 
-                                        id="contact_family_id" 
-                                        name="contact_family_id" 
+                                <select class="form-select @error('contact_family_id') is-invalid @enderror"
+                                        id="contact_family_id"
+                                        name="contact_family_id"
                                         hx-get="{{ route('activity-types.by-family') }}"
                                         hx-target="#activity_type_id"
                                         hx-swap="innerHTML"
@@ -91,9 +115,9 @@
 
                     <div class="mb-3">
                         <label for="activity_type_id" class="form-label">Activity Type <span class="text-danger">*</span></label>
-                        <select class="form-select @error('activity_type_id') is-invalid @enderror" 
-                                id="activity_type_id" 
-                                name="activity_type_id" 
+                        <select class="form-select @error('activity_type_id') is-invalid @enderror"
+                                id="activity_type_id"
+                                name="activity_type_id"
                                 required>
                             <option value="">Select contact family first...</option>
                         </select>
@@ -103,31 +127,31 @@
                     </div>
 
                     <div class="row">
-                        <div class="col-md-4">
+                        <div class="col-md-4" data-config-key="event_hours">
                             <div class="mb-3">
                                 <label for="event_hours" class="form-label">Event Hours <span class="text-danger">*</span></label>
-                                <input type="number" 
-                                       class="form-control @error('event_hours') is-invalid @enderror" 
-                                       id="event_hours" 
-                                       name="event_hours" 
+                                <input type="number"
+                                       class="form-control @error('event_hours') is-invalid @enderror"
+                                       id="event_hours"
+                                       name="event_hours"
                                        step="0.25"
                                        min="0"
                                        max="9999.99"
-                                       value="{{ old('event_hours') }}" 
-                                       required>
+                                       value="{{ old('event_hours') }}"
+                                       data-required-when-enabled="true">
                                 @error('event_hours')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
                         </div>
 
-                        <div class="col-md-4">
+                        <div class="col-md-4" data-config-key="prep_hours">
                             <div class="mb-3">
                                 <label for="prep_hours" class="form-label">Prep Hours</label>
-                                <input type="number" 
-                                       class="form-control @error('prep_hours') is-invalid @enderror" 
-                                       id="prep_hours" 
-                                       name="prep_hours" 
+                                <input type="number"
+                                       class="form-control @error('prep_hours') is-invalid @enderror"
+                                       id="prep_hours"
+                                       name="prep_hours"
                                        step="0.25"
                                        min="0"
                                        max="9999.99"
@@ -138,13 +162,13 @@
                             </div>
                         </div>
 
-                        <div class="col-md-4">
+                        <div class="col-md-4" data-config-key="followup_hours">
                             <div class="mb-3">
                                 <label for="followup_hours" class="form-label">Follow-Up Hours</label>
-                                <input type="number" 
-                                       class="form-control @error('followup_hours') is-invalid @enderror" 
-                                       id="followup_hours" 
-                                       name="followup_hours" 
+                                <input type="number"
+                                       class="form-control @error('followup_hours') is-invalid @enderror"
+                                       id="followup_hours"
+                                       name="followup_hours"
                                        step="0.25"
                                        min="0"
                                        max="9999.99"
@@ -156,12 +180,12 @@
                         </div>
                     </div>
 
-                    <div class="mb-3">
+                    <div class="mb-3" data-config-key="participant_count">
                         <label for="participant_count" class="form-label">Participant Count</label>
-                        <input type="number" 
-                               class="form-control @error('participant_count') is-invalid @enderror" 
-                               id="participant_count" 
-                               name="participant_count" 
+                        <input type="number"
+                               class="form-control @error('participant_count') is-invalid @enderror"
+                               id="participant_count"
+                               name="participant_count"
                                min="0"
                                value="{{ old('participant_count') }}">
                         @error('participant_count')
@@ -169,15 +193,28 @@
                         @enderror
                     </div>
 
+                    <div class="mb-3" data-config-key="external_attendees">
+                        <label for="external_attendees" class="form-label">External Attendees</label>
+                        <textarea class="form-control @error('external_attendees') is-invalid @enderror"
+                                id="external_attendees"
+                                name="external_attendees"
+                                rows="3"
+                                placeholder="Jane Smith, John Smith, Kansas Workforce Team">{{ old('external_attendees') }}</textarea>
+                        @error('external_attendees')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                        <small class="text-muted">Enter a comma-separated list of external attendees</small>
+                    </div>
+
                     <div class="mb-3">
                         <label for="program_ids" class="form-label">Programs</label>
-                        <select class="form-select @error('program_ids') is-invalid @enderror" 
-                                id="program_ids" 
-                                name="program_ids[]" 
-                                multiple 
+                        <select class="form-select @error('program_ids') is-invalid @enderror"
+                                id="program_ids"
+                                name="program_ids[]"
+                                multiple
                                 size="5">
                             @foreach($programs as $program)
-                                <option value="{{ $program->id }}" 
+                                <option value="{{ $program->id }}"
                                     {{ in_array($program->id, old('program_ids', [])) ? 'selected' : '' }}>
                                     {{ $program->name }}
                                 </option>
@@ -200,44 +237,44 @@
                         <small class="text-muted">Check team members who participated in delivering this activity</small>
                     </div>
 
-                    <div class="mb-3">
+                    <div class="mb-3" data-config-key="summary">
                         <label for="summary" class="form-label">Summary</label>
-                        <textarea class="form-control @error('summary') is-invalid @enderror" 
-                                  id="summary" 
-                                  name="summary" 
+                        <textarea class="form-control @error('summary') is-invalid @enderror"
+                                  id="summary"
+                                  name="summary"
                                   rows="3">{{ old('summary') }}</textarea>
                         @error('summary')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
 
-                    <div class="mb-3">
+                    <div class="mb-3" data-config-key="follow_up">
                         <label for="follow_up" class="form-label">Follow-Up</label>
-                        <textarea class="form-control @error('follow_up') is-invalid @enderror" 
-                                  id="follow_up" 
-                                  name="follow_up" 
+                        <textarea class="form-control @error('follow_up') is-invalid @enderror"
+                                  id="follow_up"
+                                  name="follow_up"
                                   rows="3">{{ old('follow_up') }}</textarea>
                         @error('follow_up')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
 
-                    <div class="mb-3">
+                    <div class="mb-3" data-config-key="strengths">
                         <label for="strengths" class="form-label">Strengths</label>
-                        <textarea class="form-control @error('strengths') is-invalid @enderror" 
-                                  id="strengths" 
-                                  name="strengths" 
+                        <textarea class="form-control @error('strengths') is-invalid @enderror"
+                                  id="strengths"
+                                  name="strengths"
                                   rows="3">{{ old('strengths') }}</textarea>
                         @error('strengths')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
 
-                    <div class="mb-3">
+                    <div class="mb-3" data-config-key="recommendations">
                         <label for="recommendations" class="form-label">Recommendations</label>
-                        <textarea class="form-control @error('recommendations') is-invalid @enderror" 
-                                  id="recommendations" 
-                                  name="recommendations" 
+                        <textarea class="form-control @error('recommendations') is-invalid @enderror"
+                                  id="recommendations"
+                                  name="recommendations"
                                   rows="3">{{ old('recommendations') }}</textarea>
                         @error('recommendations')
                             <div class="invalid-feedback">{{ $message }}</div>
@@ -255,13 +292,53 @@
 </div>
 
 <script>
-// Trigger HTMX request on page load if agreement is pre-selected
+const defaultActivityLoggingConfig = @json($defaultActivityLoggingConfig);
+const agreementActivityConfigs = @json($agreementActivityConfigs);
+
+function updateActivityLoggingFields() {
+    const agreementSelect = document.getElementById('agreement_id');
+    const agreementId = agreementSelect.value;
+
+    const config = agreementActivityConfigs[agreementId] || defaultActivityLoggingConfig;
+
+    document.querySelectorAll('[data-config-key]').forEach(function (wrapper) {
+        const key = wrapper.dataset.configKey;
+        const enabled = !!config[key];
+
+        wrapper.style.display = enabled ? '' : 'none';
+
+        wrapper.querySelectorAll('input, textarea, select').forEach(function (field) {
+            field.disabled = !enabled;
+
+            if (field.dataset.requiredWhenEnabled === 'true') {
+                field.required = enabled;
+            }
+
+            if (!enabled) {
+                if (field.tagName === 'TEXTAREA') {
+                    field.value = '';
+                } else if (field.type === 'number') {
+                    field.value = '';
+                } else {
+                    field.value = '';
+                }
+            }
+        });
+    });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const agreementSelect = document.getElementById('agreement_id');
+
+    updateActivityLoggingFields();
+
     if (agreementSelect.value) {
-        // Trigger HTMX change event
         htmx.trigger(agreementSelect, 'change');
     }
+
+    agreementSelect.addEventListener('change', function() {
+        updateActivityLoggingFields();
+    });
 });
 </script>
 @endsection

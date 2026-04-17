@@ -3,6 +3,38 @@
 @section('title', $agreement->name)
 
 @section('content')
+
+@php
+    $defaultActivityLoggingConfig = [
+        'event_hours' => true,
+        'prep_hours' => true,
+        'followup_hours' => false,
+        'participant_count' => true,
+        'external_attendees' => true,
+        'summary' => true,
+        'follow_up' => true,
+        'strengths' => false,
+        'recommendations' => false,
+    ];
+
+    $activityLoggingConfig = $agreement->activity_logging_config ?? $defaultActivityLoggingConfig;
+
+    $activityLoggingLabels = [
+        'event_hours' => 'Event Hours',
+        'prep_hours' => 'Prep Hours',
+        'followup_hours' => 'Follow-up Hours',
+        'participant_count' => 'Participants',
+        'external_attendees' => 'External Attendees',
+        'summary' => 'Summary',
+        'follow_up' => 'Follow-Up',
+        'strengths' => 'Strengths',
+        'recommendations' => 'Recommendations',
+    ];
+
+    $enabledActivityLoggingFields = collect($activityLoggingLabels)
+        ->filter(fn ($label, $key) => !empty($activityLoggingConfig[$key]))
+        ->values();
+@endphp
 <div class="row mb-4">
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center">
@@ -28,6 +60,7 @@
             <div class="card-header">
                 <h5 class="mb-0">Agreement Details</h5>
             </div>
+
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-6 mb-3">
@@ -70,6 +103,21 @@
                         <p class="mb-0">{{ $agreement->extended_end_date?->format('M d, Y') ?? '—' }}</p>
                     </div>
                     @endif
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h6 class="text-muted small mb-2">Activity Logging Fields</h6>
+                        @if($enabledActivityLoggingFields->isNotEmpty())
+                            <div class="d-flex flex-wrap gap-2">
+                                @foreach($enabledActivityLoggingFields as $fieldLabel)
+                                    <span class="badge bg-light text-dark border">{{ $fieldLabel }}</span>
+                                @endforeach
+                            </div>
+                        @else
+                            <p class="mb-0 text-muted">No activity logging fields enabled.</p>
+                        @endif
+                    </div>
                 </div>
                 
                 @if($programs->isNotEmpty())

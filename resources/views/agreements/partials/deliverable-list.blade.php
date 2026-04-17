@@ -11,7 +11,8 @@
                 hx-delete="{{ route('agreements.remove-deliverable', [$agreement, $deliverable]) }}"
                 hx-target="#deliverable-list"
                 hx-swap="innerHTML"
-                hx-confirm="Remove this deliverable?">
+                hx-confirm="Remove this deliverable?"
+                hx-headers='{"X-CSRF-TOKEN": "{{ csrf_token() }}"}'>
             Remove
         </button>
     </td>
