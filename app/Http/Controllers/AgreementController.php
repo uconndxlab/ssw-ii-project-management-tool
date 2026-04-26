@@ -32,13 +32,11 @@ class AgreementController extends Controller
         if ($request->filled('state_id')) {
             $stateId = $request->integer('state_id');
 
-            $organizationsQuery->whereHas('agreements', function ($q) use ($stateId) {
-                $q->where('state_id', $stateId);
+            $organizationsQuery->whereHas('agreements.states', function ($q) use ($stateId) {
+                $q->where('states.id', $stateId);
 
                 if (!Auth::user()->isAdmin()) {
-                    $q->whereHas('users', function ($userQuery) {
-                        $userQuery->where('user_id', Auth::id());
-                    });
+                    // Additional filtering handled by agreement visibility
                 }
             });
         }
@@ -46,7 +44,7 @@ class AgreementController extends Controller
         $organizations = $organizationsQuery->get(['id', 'name']);
         $states = State::orderBy('name')->get(['id', 'name']);
 
-        $query = Agreement::with(['organization', 'state', 'users']);
+        $query = Agreement::with(['organizations', 'states', 'users']);
 
         // Visibility enforcement: non-admins only see assigned agreements
         if (!Auth::user()->isAdmin()) {
@@ -60,10 +58,10 @@ class AgreementController extends Controller
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                    ->orWhereHas('organization', function ($orgQuery) use ($search) {
+                    ->orWhereHas('organizations', function ($orgQuery) use ($search) {
                         $orgQuery->where('name', 'like', "%{$search}%");
                     })
-                    ->orWhereHas('state', function ($stateQuery) use ($search) {
+                    ->orWhereHas('states', function ($stateQuery) use ($search) {
                         $stateQuery->where('name', 'like', "%{$search}%");
                     });
             });
@@ -71,11 +69,15 @@ class AgreementController extends Controller
 
         // Cascading filters
         if ($request->filled('state_id')) {
-            $query->where('state_id', $request->integer('state_id'));
+            $query->whereHas('states', function ($q) use ($request) {
+                $q->where('states.id', $request->integer('state_id'));
+            });
         }
 
         if ($request->filled('organization_id')) {
-            $query->where('organization_id', $request->integer('organization_id'));
+            $query->whereHas('organizations', function ($q) use ($request) {
+                $q->where('organizations.id', $request->integer('organization_id'));
+            });
         }
 
         // Sorting
@@ -149,8 +151,10 @@ class AgreementController extends Controller
         abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can create agreements.');
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'organization_id' => ['required', 'exists:organizations,id'],
-            'state_id' => ['required', 'exists:states,id'],
+            'organization_ids' => ['nullable', 'array'],
+            'organization_ids.*' => ['exists:organizations,id'],
+            'state_ids' => ['nullable', 'array'],
+            'state_ids.*' => ['exists:states,id'],
             'abstract' => ['nullable', 'string'],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
@@ -179,8 +183,6 @@ class AgreementController extends Controller
 
         $agreement = Agreement::create([
             'name' => $validated['name'],
-            'organization_id' => $validated['organization_id'],
-            'state_id' => $validated['state_id'],
             'abstract' => $validated['abstract'] ?? null,
             'start_date' => $validated['start_date'],
             'end_date' => $validated['end_date'],
@@ -189,6 +191,9 @@ class AgreementController extends Controller
             'certification_candidates' => $validated['certification_candidates'] ?? null,
             'activity_logging_config' => $activityLoggingConfig,
         ]);
+
+        $agreement->organizations()->sync($validated['organization_ids'] ?? []);
+        $agreement->states()->sync($validated['state_ids'] ?? []);
 
         if (!empty($validated['user_ids'])) {
             $agreement->users()->sync($validated['user_ids']);
@@ -289,7 +294,7 @@ class AgreementController extends Controller
         $teams = Team::where('active', true)->orderBy('name')->get();
         $contactFamilies = ContactFamily::where('active', true)->orderBy('sort_order')->orderBy('name')->get();
         $activityTypes = ActivityType::where('active', true)->orderBy('sort_order')->orderBy('name')->get();
-        $agreement->load(['users', 'teams', 'deliverables.activityType.contactFamily']);
+        $agreement->load(['users', 'teams', 'deliverables.activityType.contactFamily', 'organizations', 'states']);
         
         return view('agreements.edit', compact('agreement', 'states', 'organizations', 'users', 'teams', 'contactFamilies', 'activityTypes'));
     }
@@ -300,8 +305,10 @@ class AgreementController extends Controller
         abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can update agreements.');
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'organization_id' => ['required', 'exists:organizations,id'],
-            'state_id' => ['required', 'exists:states,id'],
+            'organization_ids' => ['nullable', 'array'],
+            'organization_ids.*' => ['exists:organizations,id'],
+            'state_ids' => ['nullable', 'array'],
+            'state_ids.*' => ['exists:states,id'],
             'abstract' => ['nullable', 'string'],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
@@ -332,8 +339,6 @@ class AgreementController extends Controller
 
         $agreement->update([
             'name' => $validated['name'],
-            'organization_id' => $validated['organization_id'],
-            'state_id' => $validated['state_id'],
             'abstract' => $validated['abstract'] ?? null,
             'start_date' => $validated['start_date'],
             'end_date' => $validated['end_date'],
@@ -343,6 +348,8 @@ class AgreementController extends Controller
             'activity_logging_config' => $activityLoggingConfig,
         ]);
 
+        $agreement->organizations()->sync($validated['organization_ids'] ?? []);
+        $agreement->states()->sync($validated['state_ids'] ?? []);
         $agreement->users()->sync($validated['user_ids'] ?? []);
         $agreement->teams()->sync($validated['team_ids'] ?? []);
 

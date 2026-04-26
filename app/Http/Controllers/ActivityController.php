@@ -15,26 +15,34 @@ class ActivityController extends Controller
 {
     public function index(Request $request)
     {
-        $visibleAgreements = $this->getVisibleAgreements()->load(['organization', 'state']);
+        $visibleAgreements = $this->getVisibleAgreements()->load(['organizations', 'states']);
 
         $visibleAgreementIds = $visibleAgreements->pluck('id');
 
         $query = Activity::query()
-            ->with(['agreement.organization', 'agreement.state', 'user', 'activityType'])
-            ->whereIn('agreement_id', $visibleAgreementIds);
+            ->with(['agreements.organizations', 'agreements.states', 'user', 'activityType', 'organizations', 'states'])
+            ->whereHas('agreements', function ($q) use ($visibleAgreementIds) {
+                $q->whereIn('agreements.id', $visibleAgreementIds);
+            });
 
         // Search
         $search = trim((string) $request->input('search', ''));
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
-                $q->whereHas('agreement', function ($agreementQuery) use ($search) {
+                $q->whereHas('agreements', function ($agreementQuery) use ($search) {
                     $agreementQuery->where('name', 'like', "%{$search}%")
-                        ->orWhereHas('organization', function ($orgQuery) use ($search) {
+                        ->orWhereHas('organizations', function ($orgQuery) use ($search) {
                             $orgQuery->where('name', 'like', "%{$search}%");
                         })
-                        ->orWhereHas('state', function ($stateQuery) use ($search) {
+                        ->orWhereHas('states', function ($stateQuery) use ($search) {
                             $stateQuery->where('name', 'like', "%{$search}%");
                         });
+                })
+                ->orWhereHas('organizations', function ($orgQuery) use ($search) {
+                    $orgQuery->where('name', 'like', "%{$search}%");
+                })
+                ->orWhereHas('states', function ($stateQuery) use ($search) {
+                    $stateQuery->where('name', 'like', "%{$search}%");
                 })
                 ->orWhereHas('activityType', function ($typeQuery) use ($search) {
                     $typeQuery->where('name', 'like', "%{$search}%");
@@ -52,19 +60,21 @@ class ActivityController extends Controller
         $activityTypeId = $request->filled('activity_type_id') ? $request->integer('activity_type_id') : null;
 
         if ($stateId) {
-            $query->whereHas('agreement', function ($q) use ($stateId) {
-                $q->where('state_id', $stateId);
+            $query->whereHas('states', function ($q) use ($stateId) {
+                $q->where('states.id', $stateId);
             });
         }
 
         if ($organizationId) {
-            $query->whereHas('agreement', function ($q) use ($organizationId) {
-                $q->where('organization_id', $organizationId);
+            $query->whereHas('organizations', function ($q) use ($organizationId) {
+                $q->where('organizations.id', $organizationId);
             });
         }
 
         if ($agreementId) {
-            $query->where('agreement_id', $agreementId);
+            $query->whereHas('agreements', function ($q) use ($agreementId) {
+                $q->where('agreements.id', $agreementId);
+            });
         }
 
         if ($activityTypeId) {
@@ -119,8 +129,11 @@ class ActivityController extends Controller
 
         switch ($sort) {
             case 'agreement':
-                $query->join('agreements', 'activities.agreement_id', '=', 'agreements.id')
+                // Sort by first agreement name via pivot table
+                $query->leftJoin('activity_agreement', 'activities.id', '=', 'activity_agreement.activity_id')
+                    ->leftJoin('agreements', 'activity_agreement.agreement_id', '=', 'agreements.id')
                     ->select('activities.*')
+                    ->groupBy('activities.id')
                     ->orderBy('agreements.name', $direction);
                 break;
 
@@ -185,6 +198,8 @@ class ActivityController extends Controller
     public function create(Request $request)
     {
         $agreements = $this->getVisibleAgreements();
+        $states = State::orderBy('name')->get();
+        $organizations = Organization::orderBy('name')->get();
         $programs = Program::where('active', true)->orderBy('name')->get();
         $contactFamilies = \App\Models\ContactFamily::where('active', true)
             ->orderBy('sort_order')
@@ -197,13 +212,18 @@ class ActivityController extends Controller
         // Get pre-selected agreement if provided
         $preselectedAgreementId = $request->query('agreement_id');
         
-        return view('activities.create', compact('agreements', 'programs', 'contactFamilies', 'preselectedAgreementId'));
+        return view('activities.create', compact('agreements', 'states', 'organizations', 'programs', 'contactFamilies', 'preselectedAgreementId'));
     }
 
     public function store(Request $request)
     {
         $baseValidated = $request->validate([
-            'agreement_id' => ['required', 'exists:agreements,id'],
+            'agreement_ids' => ['nullable', 'array'],
+            'agreement_ids.*' => ['exists:agreements,id'],
+            'state_ids' => ['nullable', 'array'],
+            'state_ids.*' => ['exists:states,id'],
+            'organization_ids' => ['nullable', 'array'],
+            'organization_ids.*' => ['exists:organizations,id'],
             'engagement_date' => ['required', 'date'],
             'activity_type_id' => ['required', 'exists:activity_types,id'],
             'program_ids' => ['nullable', 'array'],
@@ -212,23 +232,25 @@ class ActivityController extends Controller
             'participant_user_ids.*' => ['exists:users,id'],
         ]);
 
-        $this->verifyAgreementAccess($baseValidated['agreement_id']);
-
-        $agreement = Agreement::findOrFail($baseValidated['agreement_id']);
-        $config = $this->getAgreementActivityLoggingConfig($agreement);
+        // Get config from first agreement if any are selected, otherwise use defaults
+        $agreement = null;
+        if (!empty($baseValidated['agreement_ids'])) {
+            $this->verifyAgreementAccess($baseValidated['agreement_ids'][0]);
+            $agreement = Agreement::findOrFail($baseValidated['agreement_ids'][0]);
+        }
+        $config = $agreement ? $this->getAgreementActivityLoggingConfig($agreement) : [];
 
         $validated = array_merge(
             $baseValidated,
             $request->validate($this->activityLoggingValidationRules($config))
         );
 
-        // Verify all selected participants belong to the agreement
-        if (!empty($validated['participant_user_ids'])) {
-            $this->verifyParticipantsInAgreement($validated['agreement_id'], $validated['participant_user_ids']);
+        // Verify all selected participants belong to at least one agreement
+        if (!empty($validated['participant_user_ids']) && !empty($validated['agreement_ids'])) {
+            $this->verifyParticipantsInAgreement($validated['agreement_ids'][0], $validated['participant_user_ids']);
         }
 
         $activity = Activity::create([
-            'agreement_id' => $validated['agreement_id'],
             'user_id' => Auth::id(),
             'engagement_date' => $validated['engagement_date'],
             'activity_type_id' => $validated['activity_type_id'],
@@ -243,6 +265,10 @@ class ActivityController extends Controller
             'strengths' => !empty($config['strengths']) ? ($validated['strengths'] ?? null) : null,
             'recommendations' => !empty($config['recommendations']) ? ($validated['recommendations'] ?? null) : null,
         ]);
+
+        $activity->agreements()->sync($validated['agreement_ids'] ?? []);
+        $activity->states()->sync($validated['state_ids'] ?? []);
+        $activity->organizations()->sync($validated['organization_ids'] ?? []);
 
         if (!empty($validated['program_ids'])) {
             $activity->programs()->sync($validated['program_ids']);
@@ -259,15 +285,16 @@ class ActivityController extends Controller
 
     public function show(Activity $activity)
     {
-        // Authorization: admin or assigned to agreement
+        // Authorization: admin or assigned to at least one agreement
         if (!Auth::user()->isAdmin()) {
-            $hasAccess = Auth::user()->agreements()->where('agreements.id', $activity->agreement_id)->exists();
-            if (!$hasAccess) {
+            $agreementIds = $activity->agreements->pluck('id');
+            $hasAccess = Auth::user()->agreements()->whereIn('agreements.id', $agreementIds)->exists();
+            if (!$hasAccess && $agreementIds->isEmpty()) {
                 abort(403, 'You do not have access to this activity.');
             }
         }
 
-        $activity->load(['agreement.organization', 'agreement.state', 'user', 'programs', 'participants', 'activityType.contactFamily']);
+        $activity->load(['agreements.organizations', 'agreements.states', 'organizations', 'states', 'user', 'programs', 'participants', 'activityType.contactFamily']);
 
         return view('activities.show', compact('activity'));
     }
@@ -278,6 +305,8 @@ class ActivityController extends Controller
         $this->verifyActivityEditAccess($activity);
 
         $agreements = $this->getVisibleAgreements();
+        $states = State::orderBy('name')->get();
+        $organizations = Organization::orderBy('name')->get();
         $programs = Program::where('active', true)->orderBy('name')->get();
         $contactFamilies = \App\Models\ContactFamily::where('active', true)
             ->orderBy('sort_order')
@@ -287,12 +316,12 @@ class ActivityController extends Controller
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
-        $activity->load(['programs', 'participants', 'activityType.contactFamily']);
+        $activity->load(['programs', 'participants', 'activityType.contactFamily', 'agreements', 'states', 'organizations']);
         
         // Pre-load users for each agreement for participant selection
         $agreements->load('users');
 
-        return view('activities.edit', compact('activity', 'agreements', 'programs', 'contactFamilies', 'activityTypes'));
+        return view('activities.edit', compact('activity', 'agreements', 'states', 'organizations', 'programs', 'contactFamilies', 'activityTypes'));
     }
 
     public function update(Request $request, Activity $activity)
@@ -300,7 +329,12 @@ class ActivityController extends Controller
         $this->verifyActivityEditAccess($activity);
 
         $baseValidated = $request->validate([
-            'agreement_id' => ['required', 'exists:agreements,id'],
+            'agreement_ids' => ['nullable', 'array'],
+            'agreement_ids.*' => ['exists:agreements,id'],
+            'state_ids' => ['nullable', 'array'],
+            'state_ids.*' => ['exists:states,id'],
+            'organization_ids' => ['nullable', 'array'],
+            'organization_ids.*' => ['exists:organizations,id'],
             'engagement_date' => ['required', 'date'],
             'activity_type_id' => ['required', 'exists:activity_types,id'],
             'program_ids' => ['nullable', 'array'],
@@ -309,22 +343,24 @@ class ActivityController extends Controller
             'participant_user_ids.*' => ['exists:users,id'],
         ]);
 
-        $this->verifyAgreementAccess($baseValidated['agreement_id']);
-
-        $agreement = Agreement::findOrFail($baseValidated['agreement_id']);
-        $config = $this->getAgreementActivityLoggingConfig($agreement);
+        // Get config from first agreement if any are selected
+        $agreement = null;
+        if (!empty($baseValidated['agreement_ids'])) {
+            $this->verifyAgreementAccess($baseValidated['agreement_ids'][0]);
+            $agreement = Agreement::findOrFail($baseValidated['agreement_ids'][0]);
+        }
+        $config = $agreement ? $this->getAgreementActivityLoggingConfig($agreement) : [];
 
         $validated = array_merge(
             $baseValidated,
             $request->validate($this->activityLoggingValidationRules($config))
         );
 
-        if (!empty($validated['participant_user_ids'])) {
-            $this->verifyParticipantsInAgreement($validated['agreement_id'], $validated['participant_user_ids']);
+        if (!empty($validated['participant_user_ids']) && !empty($validated['agreement_ids'])) {
+            $this->verifyParticipantsInAgreement($validated['agreement_ids'][0], $validated['participant_user_ids']);
         }
 
         $activity->update([
-            'agreement_id' => $validated['agreement_id'],
             'engagement_date' => $validated['engagement_date'],
             'activity_type_id' => $validated['activity_type_id'],
 
@@ -339,6 +375,9 @@ class ActivityController extends Controller
             'recommendations' => !empty($config['recommendations']) ? ($validated['recommendations'] ?? null) : null,
         ]);
 
+        $activity->agreements()->sync($validated['agreement_ids'] ?? []);
+        $activity->states()->sync($validated['state_ids'] ?? []);
+        $activity->organizations()->sync($validated['organization_ids'] ?? []);
         $activity->programs()->sync($validated['program_ids'] ?? []);
         $activity->participants()->sync($validated['participant_user_ids'] ?? []);
 
@@ -367,10 +406,10 @@ class ActivityController extends Controller
     private function getVisibleAgreements()
     {
         if (Auth::user()->isAdmin()) {
-            return Agreement::with('organization')->orderBy('name')->get();
+            return Agreement::with('organizations')->orderBy('name')->get();
         }
 
-        return Auth::user()->agreements()->with('organization')->orderBy('name')->get();
+        return Auth::user()->agreements()->with('organizations')->orderBy('name')->get();
     }
 
     /**
@@ -404,7 +443,8 @@ class ActivityController extends Controller
         }
 
         // Also verify they still have access to the agreement
-        $hasAccess = Auth::user()->agreements()->where('agreements.id', $activity->agreement_id)->exists();
+        $agreementIds = $activity->agreements->pluck('id');
+        $hasAccess = Auth::user()->agreements()->whereIn('agreements.id', $agreementIds)->exists();
         if (!$hasAccess) {
             abort(403, 'You do not have access to this activity.');
         }

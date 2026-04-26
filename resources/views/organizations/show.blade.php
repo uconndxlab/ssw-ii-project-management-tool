@@ -111,7 +111,13 @@
                             @foreach($recentActivities as $activity)
                             <tr>
                                 <td><a href="{{ route('activities.show', $activity) }}" class="text-decoration-none text-dark d-block">{{ $activity->engagement_date->format('M d, Y') }}</a></td>
-                                <td>{{ $activity->agreement->name }}</td>
+                                <td>
+                                    @forelse($activity->agreements as $agreement)
+                                        <span class="badge bg-secondary me-1 mb-1">{{ $agreement->name }}</span>
+                                    @empty
+                                        <span class="text-muted small">None</span>
+                                    @endforelse
+                                </td>
                                 <td>{{ $activity->activityType->name }}</td>
                                 <td>{{ number_format($activity->total_hours, 2) }}</td>
                                 <td>{{ $activity->user->name }}</td>

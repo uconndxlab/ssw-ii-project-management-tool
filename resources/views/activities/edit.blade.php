@@ -52,27 +52,48 @@
                     @method('PUT')
 
                     <div class="mb-3">
-                        <label for="agreement_id" class="form-label">Agreement <span class="text-danger">*</span></label>
-                        <select class="form-select @error('agreement_id') is-invalid @enderror"
-                            id="agreement_id"
-                            name="agreement_id"
-                            hx-get="{{ route('activities.participants-for-agreement') }}"
-                            hx-trigger="change"
-                            hx-target="#participants-container"
-                            hx-include="closest form"
-                            hx-swap="innerHTML"
-                            required
-                        >
-                            <option value="">Select project...</option>
-                            @foreach($agreements as $agreement)
-                                <option value="{{ $agreement->id }}" {{ old('agreement_id', $activity->agreement_id) == $agreement->id ? 'selected' : '' }}>
-                                    {{ $agreement->name }} ({{ $agreement->organization->name }})
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('agreement_id')
-                            <div class="invalid-feedback">{{ $message }}</div>
+                        <label class="form-label">Agreements</label>
+                        <x-agreement-picker
+                            picker-id="activity-agreements"
+                            name="agreement_ids[]"
+                            :agreements="$agreements"
+                            :selected-ids="old('agreement_ids', $activity->agreements->pluck('id')->toArray())"
+                        />
+                        @error('agreement_ids')
+                            <div class="text-danger small mt-1">{{ $message }}</div>
                         @enderror
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Organizations</label>
+                                <x-organization-picker
+                                    picker-id="activity-organizations"
+                                    name="organization_ids[]"
+                                    :organizations="$organizations"
+                                    :selected-ids="old('organization_ids', $activity->organizations->pluck('id')->toArray())"
+                                />
+                                @error('organization_ids')
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">States</label>
+                                <x-state-picker
+                                    picker-id="activity-states"
+                                    name="state_ids[]"
+                                    :states="$states"
+                                    :selected-ids="old('state_ids', $activity->states->pluck('id')->toArray())"
+                                />
+                                @error('state_ids')
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
                     </div>
 
                     <div class="row">
@@ -238,9 +259,9 @@
                         <label class="form-label">Internal Participants</label>
                         <div id="participants-container">
                             @include('activities.partials.participant-checkboxes', [
-                                'agreement' => $activity->agreement->loadMissing('users'),
-                                'selectedIds' => old('participant_user_ids', $activity->participants->pluck('id')->toArray()),
-                                'pickerId' => 'activity-participants-' . $activity->agreement->id,
+                                'agreement' => $activity->agreements->first()?->loadMissing('users'),
+                                'selectedUserIds' => old('participant_user_ids', $activity->participants->pluck('id')->toArray()),
+                                'pickerId' => 'activity-participants-edit',
                             ])
                         </div>
                         @error('participant_user_ids')

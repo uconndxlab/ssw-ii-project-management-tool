@@ -63,8 +63,20 @@
 
                                     <div>
                                         <h6 class="mb-1">{{ $agreement->name }}</h6>
-                                        <p class="mb-1 small text-muted">{{ $agreement->organization->name }}</p>
-                                        <div class="small text-muted">{{ $agreement->state->name }}</div>
+                                        <p class="mb-1 small text-muted">
+                                            @forelse($agreement->organizations as $org)
+                                                <span class="badge bg-secondary me-1">{{ $org->name }}</span>
+                                            @empty
+                                                <span class="text-muted">No organizations</span>
+                                            @endforelse
+                                        </p>
+                                        <div class="small text-muted">
+                                            @forelse($agreement->states as $state)
+                                                <span class="badge bg-info me-1">{{ $state->name }}</span>
+                                            @empty
+                                                <span class="text-muted">No states</span>
+                                            @endforelse
+                                        </div>
                                     </div>
 
                                     <div class="text-end small text-muted">
@@ -117,7 +129,13 @@
                                                 {{ $activity->engagement_date->format('M d, Y') }}
                                             </a>
                                         </td>
-                                        <td>{{ $activity->agreement->name }}</td>
+                                        <td>
+                                            @forelse($activity->agreements as $agreement)
+                                                <span class="badge bg-secondary me-1 mb-1">{{ $agreement->name }}</span>
+                                            @empty
+                                                <span class="text-muted small">None</span>
+                                            @endforelse
+                                        </td>
                                         <td><span class="badge bg-primary">{{ $activity->activityType->contactFamily->name }}</span></td>
                                         <td>{{ $activity->activityType->name }}</td>
                                         <td>{{ number_format($activity->total_hours, 2) }}</td>

@@ -58,18 +58,22 @@ class ReportController extends Controller
 
         // Build base query with visibility enforcement
         $query = Activity::query()
-            ->with(['agreement.organization', 'user', 'activityType.contactFamily'])
+            ->with(['agreements.organizations', 'agreements.states', 'user', 'activityType.contactFamily'])
             ->whereBetween('activity_date', [$startDate, $endDate]);
 
         // Visibility enforcement: non-admins only see their assigned agreements
         if (!Auth::user()->isAdmin()) {
             $agreementIds = Auth::user()->agreements()->pluck('agreements.id');
-            $query->whereIn('agreement_id', $agreementIds);
+            $query->whereHas('agreements', function ($q) use ($agreementIds) {
+                $q->whereIn('agreements.id', $agreementIds);
+            });
         }
 
         // Agreement filter
         if ($agreementId) {
-            $query->where('agreement_id', $agreementId);
+            $query->whereHas('agreements', function ($q) use ($agreementId) {
+                $q->where('agreements.id', $agreementId);
+            });
         }
 
         // Program filter
@@ -97,11 +101,13 @@ class ReportController extends Controller
         // Aggregate data by agreement
         $agreementData = [];
         foreach ($activities as $activity) {
-            $aid = $activity->agreement_id;
+            // Get first agreement for grouping (activities can have multiple)
+            $firstAgreement = $activity->agreements->first();
+            $aid = $firstAgreement?->id ?? 0;
             
             if (!isset($agreementData[$aid])) {
                 $agreementData[$aid] = [
-                    'agreement' => $activity->agreement,
+                    'agreement' => $firstAgreement,
                     'event_hours' => 0,
                     'prep_hours' => 0,
                     'followup_hours' => 0,
@@ -153,10 +159,10 @@ class ReportController extends Controller
     private function getVisibleAgreements()
     {
         if (Auth::user()->isAdmin()) {
-            return Agreement::with('organization')->orderBy('name')->get();
+            return Agreement::with('organizations')->orderBy('name')->get();
         }
 
-        return Auth::user()->agreements()->with('organization')->orderBy('name')->get();
+        return Auth::user()->agreements()->with('organizations')->orderBy('name')->get();
     }
 
     private function verifyAgreementAccess(int $agreementId): void

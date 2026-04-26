@@ -40,7 +40,19 @@
         <div class="d-flex justify-content-between align-items-center">
             <div>
                 <h1>{{ $agreement->name }}</h1>
-                <p class="text-muted mb-0">{{ $agreement->organization->name }} • {{ $agreement->state->name }}</p>
+                <p class="text-muted mb-0">
+                    @if($agreement->organizations->isNotEmpty())
+                        {{ $agreement->organizations->pluck('name')->join(', ') }}
+                    @else
+                        <span class="text-muted">No organizations</span>
+                    @endif
+                    •
+                    @if($agreement->states->isNotEmpty())
+                        {{ $agreement->states->pluck('name')->join(', ') }}
+                    @else
+                        <span class="text-muted">No states</span>
+                    @endif
+                </p>
             </div>
             <div>
                 <a href="{{ route('activities.create') }}?agreement_id={{ $agreement->id }}" class="btn btn-success">Log Activity</a>
@@ -64,14 +76,20 @@
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <h6 class="text-muted small mb-1">Organization</h6>
-                        <p class="mb-0">
-                            <a href="{{ route('organizations.show', $agreement->organization) }}">{{ $agreement->organization->name }}</a>
-                        </p>
+                        <h6 class="text-muted small mb-1">Organizations</h6>
+                        @forelse($agreement->organizations as $organization)
+                            <span class="badge bg-secondary me-1 mb-1">{{ $organization->name }}</span>
+                        @empty
+                            <p class="text-muted small mb-0">None assigned</p>
+                        @endforelse
                     </div>
                     <div class="col-md-6 mb-3">
-                        <h6 class="text-muted small mb-1">State</h6>
-                        <p class="mb-0">{{ $agreement->state->name }}</p>
+                        <h6 class="text-muted small mb-1">States</h6>
+                        @forelse($agreement->states as $state)
+                            <span class="badge bg-info me-1 mb-1">{{ $state->name }}</span>
+                        @empty
+                            <p class="text-muted small mb-0">None assigned</p>
+                        @endforelse
                     </div>
                 </div>
                 

@@ -23,7 +23,7 @@ class DashboardController extends Controller
     {
         // YTD activities
         $ytdActivities = Activity::whereYear('engagement_date', now()->year)
-            ->with(['activityType.contactFamily', 'user', 'agreement'])
+            ->with(['activityType.contactFamily', 'user', 'agreements'])
             ->get();
 
         // YTD totals
@@ -34,7 +34,7 @@ class DashboardController extends Controller
         ];
 
         // Recent 10 activities
-        $recentActivities = Activity::with(['activityType.contactFamily', 'user', 'agreement'])
+        $recentActivities = Activity::with(['activityType.contactFamily', 'user', 'agreements'])
             ->orderByDesc('engagement_date')
             ->limit(10)
             ->get();
@@ -43,7 +43,7 @@ class DashboardController extends Controller
         $user = Auth::user();
 
         $agreements = $user->agreements()
-            ->with(['organization', 'state'])
+            ->with(['organizations', 'states'])
             ->withCount('activities')
             ->withMax('activities', 'engagement_date')
             ->orderBy('name')
@@ -56,7 +56,7 @@ class DashboardController extends Controller
     {
         // Get user's agreements
         $myAgreements = $user->agreements()
-            ->with(['organization', 'state'])
+            ->with(['organizations', 'states'])
             ->withCount('activities')
             ->withMax('activities', 'engagement_date')
             ->get();
@@ -65,8 +65,10 @@ class DashboardController extends Controller
         $agreementIds = $myAgreements->pluck('id');
         
         // My recent activities (last 10)
-        $myActivities = Activity::whereIn('agreement_id', $agreementIds)
-            ->with(['activityType.contactFamily', 'user', 'agreement', 'participants'])
+        $myActivities = Activity::whereHas('agreements', function($query) use ($agreementIds) {
+                $query->whereIn('agreements.id', $agreementIds);
+            })
+            ->with(['activityType.contactFamily', 'user', 'agreements', 'participants'])
             ->orderByDesc('engagement_date')
             ->limit(10)
             ->get();

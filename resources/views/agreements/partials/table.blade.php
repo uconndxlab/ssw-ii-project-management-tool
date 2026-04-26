@@ -120,8 +120,20 @@
                                             <strong>{{ $agreement->name }}</strong>
                                         </a>
                                     </td>
-                                    <td>{{ $agreement->organization->name }}</td>
-                                    <td>{{ $agreement->state->name }}</td>
+                                    <td>
+                                        @forelse($agreement->organizations as $organization)
+                                            <span class="badge bg-secondary me-1 mb-1">{{ $organization->name }}</span>
+                                        @empty
+                                            <span class="text-muted small">None</span>
+                                        @endforelse
+                                    </td>
+                                    <td>
+                                        @forelse($agreement->states as $state)
+                                            <span class="badge bg-info me-1 mb-1">{{ $state->name }}</span>
+                                        @empty
+                                            <span class="text-muted small">None</span>
+                                        @endforelse
+                                    </td>
                                     <td>{{ $agreement->start_date?->format('M d, Y') ?? 'N/A' }}</td>
                                     <td style="max-width: 240px;">
                                         @php

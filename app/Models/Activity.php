@@ -10,7 +10,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Activity extends Model
 {
     protected $fillable = [
-        'agreement_id',
         'user_id',
         'engagement_date',
         'activity_type_id',
@@ -46,9 +45,19 @@ class Activity extends Model
             + ($this->followup_hours ?? 0);
     }
 
-    public function agreement(): BelongsTo
+    public function agreements(): BelongsToMany
     {
-        return $this->belongsTo(Agreement::class);
+        return $this->belongsToMany(Agreement::class, 'activity_agreement')->withTimestamps();
+    }
+
+    public function organizations(): BelongsToMany
+    {
+        return $this->belongsToMany(Organization::class, 'activity_organization')->withTimestamps();
+    }
+
+    public function states(): BelongsToMany
+    {
+        return $this->belongsToMany(State::class, 'activity_state')->withTimestamps();
     }
 
     public function user(): BelongsTo

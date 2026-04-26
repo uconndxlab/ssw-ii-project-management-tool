@@ -63,42 +63,30 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="organization_id" class="form-label">Organization</label>
-                                <select class="form-select @error('organization_id') is-invalid @enderror"
-                                        id="organization_id"
-                                        name="organization_id"
-                                        required>
-                                    <option value="">Select organization...</option>
-                                    @foreach($organizations as $organization)
-                                        <option value="{{ $organization->id }}"
-                                            {{ old('organization_id', $agreement->organization_id) == $organization->id ? 'selected' : '' }}>
-                                            {{ $organization->name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @error('organization_id')
-                                    <div class="invalid-feedback">{{ $message }}</div>
+                                <label class="form-label">Organizations</label>
+                                <x-organization-picker
+                                    picker-id="agreement-organizations"
+                                    name="organization_ids[]"
+                                    :organizations="$organizations"
+                                    :selected-ids="old('organization_ids', $agreement->organizations->pluck('id')->toArray())"
+                                />
+                                @error('organization_ids')
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
                         </div>
 
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="state_id" class="form-label">State</label>
-                                <select class="form-select @error('state_id') is-invalid @enderror"
-                                        id="state_id"
-                                        name="state_id"
-                                        required>
-                                    <option value="">Select state...</option>
-                                    @foreach($states as $state)
-                                        <option value="{{ $state->id }}"
-                                            {{ old('state_id', $agreement->state_id) == $state->id ? 'selected' : '' }}>
-                                            {{ $state->name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @error('state_id')
-                                    <div class="invalid-feedback">{{ $message }}</div>
+                                <label class="form-label">States</label>
+                                <x-state-picker
+                                    picker-id="agreement-states"
+                                    name="state_ids[]"
+                                    :states="$states"
+                                    :selected-ids="old('state_ids', $agreement->states->pluck('id')->toArray())"
+                                />
+                                @error('state_ids')
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
                         </div>

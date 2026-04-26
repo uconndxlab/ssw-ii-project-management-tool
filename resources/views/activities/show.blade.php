@@ -35,11 +35,40 @@
 
                 <div class="row mb-3">
                     <div class="col-md-4">
-                        <strong>Project:</strong>
+                        <strong>Agreements:</strong>
                     </div>
                     <div class="col-md-8">
-                        {{ $activity->agreement->name }}<br>
-                        <small class="text-muted">{{ $activity->agreement->organization->name }} ({{ $activity->agreement->state->name }})</small>
+                        @forelse($activity->agreements as $agreement)
+                            <span class="badge bg-secondary me-1 mb-1">{{ $agreement->name }}</span>
+                        @empty
+                            <span class="text-muted small">None assigned</span>
+                        @endforelse
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>Organizations:</strong>
+                    </div>
+                    <div class="col-md-8">
+                        @forelse($activity->organizations as $organization)
+                            <span class="badge bg-secondary me-1 mb-1">{{ $organization->name }}</span>
+                        @empty
+                            <span class="text-muted small">None assigned</span>
+                        @endforelse
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>States:</strong>
+                    </div>
+                    <div class="col-md-8">
+                        @forelse($activity->states as $state)
+                            <span class="badge bg-info me-1 mb-1">{{ $state->name }}</span>
+                        @empty
+                            <span class="text-muted small">None assigned</span>
+                        @endforelse
                     </div>
                 </div>
 

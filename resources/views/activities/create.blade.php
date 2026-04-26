@@ -51,25 +51,48 @@
                     @csrf
 
                     <div class="mb-3">
-                        <label for="agreement_id" class="form-label">Agreement <span class="text-danger">*</span></label>
-                        <select class="form-select @error('agreement_id') is-invalid @enderror"
-                            id="agreement_id"
-                            name="agreement_id"
-                            hx-get="{{ route('activities.participants-for-agreement') }}"
-                            hx-target="#participants-container"
-                            hx-swap="innerHTML"
-                            required
-                        >
-                            <option value="">Select project...</option>
-                            @foreach($agreements as $agreement)
-                                <option value="{{ $agreement->id }}" {{ (old('agreement_id') ?? $preselectedAgreementId) == $agreement->id ? 'selected' : '' }}>
-                                    {{ $agreement->name }} ({{ $agreement->organization->name }})
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('agreement_id')
-                            <div class="invalid-feedback">{{ $message }}</div>
+                        <label class="form-label">Agreements</label>
+                        <x-agreement-picker
+                            picker-id="activity-agreements"
+                            name="agreement_ids[]"
+                            :agreements="$agreements"
+                            :selected-ids="old('agreement_ids', $preselectedAgreementId ? [$preselectedAgreementId] : [])"
+                        />
+                        @error('agreement_ids')
+                            <div class="text-danger small mt-1">{{ $message }}</div>
                         @enderror
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Organizations</label>
+                                <x-organization-picker
+                                    picker-id="activity-organizations"
+                                    name="organization_ids[]"
+                                    :organizations="$organizations"
+                                    :selected-ids="old('organization_ids', [])"
+                                />
+                                @error('organization_ids')
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">States</label>
+                                <x-state-picker
+                                    picker-id="activity-states"
+                                    name="state_ids[]"
+                                    :states="$states"
+                                    :selected-ids="old('state_ids', [])"
+                                />
+                                @error('state_ids')
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
                     </div>
 
                     <div class="row">

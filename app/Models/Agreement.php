@@ -11,8 +11,6 @@ class Agreement extends Model
 {
     protected $fillable = [
         'name',
-        'organization_id',
-        'state_id',
         'abstract',
         'start_date',
         'end_date',
@@ -33,14 +31,14 @@ class Agreement extends Model
         ];
     }
 
-    public function organization(): BelongsTo
+    public function organizations(): BelongsToMany
     {
-        return $this->belongsTo(Organization::class);
+        return $this->belongsToMany(Organization::class, 'agreement_organization')->withTimestamps();
     }
 
-    public function state(): BelongsTo
+    public function states(): BelongsToMany
     {
-        return $this->belongsTo(State::class);
+        return $this->belongsToMany(State::class, 'agreement_state')->withTimestamps();
     }
 
     public function users(): BelongsToMany
@@ -53,9 +51,9 @@ class Agreement extends Model
         return $this->belongsToMany(Team::class, 'agreement_team')->withTimestamps();
     }
 
-    public function activities(): HasMany
+    public function activities(): BelongsToMany
     {
-        return $this->hasMany(Activity::class);
+        return $this->belongsToMany(Activity::class, 'activity_agreement')->withTimestamps();
     }
 
     public function deliverables(): HasMany
