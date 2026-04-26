@@ -292,6 +292,67 @@
                                 @enderror
                             </div>
                         </details>
+
+                        <div class="form-check form-switch mt-3 mb-3">
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   id="internal_only"
+                                   name="internal_only"
+                                   value="1"
+                                   {{ old('internal_only', $activity->internal_only) ? 'checked' : '' }}>
+                            <label class="form-check-label" for="internal_only">
+                                Internal only
+                                <small class="text-muted d-block mt-1">Exclude this activity from external reports.</small>
+                            </label>
+                        </div>
+                    </x-section-card>
+
+                    <x-section-card title="5) Time Tracking" subtitle="Choose how to track time for this activity.">
+                        <fieldset>
+                            <legend class="form-label fw-semibold mb-2">Time Tracking Method</legend>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input"
+                                           type="radio"
+                                           id="time_tracking_engagement"
+                                           name="time_tracking_mode"
+                                           value="engagement"
+                                           {{ old('time_tracking_mode', $activity->time_tracking_mode ?? 'engagement') === 'engagement' ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="time_tracking_engagement">
+                                        <strong>Time by Engagement</strong>
+                                        <small class="text-muted d-block">One total time value for the entire activity.</small>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input"
+                                           type="radio"
+                                           id="time_tracking_participant"
+                                           name="time_tracking_mode"
+                                           value="participant"
+                                           {{ old('time_tracking_mode', $activity->time_tracking_mode ?? 'engagement') === 'participant' ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="time_tracking_participant">
+                                        <strong>Time by Participant</strong>
+                                        <small class="text-muted d-block">Track individual time per team member.</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </fieldset>
+
+                        <!-- Participant times section (shown when participant mode is selected) -->
+                        <div id="participant-times-section" class="d-none mt-4">
+                            <hr class="my-3">
+                            <label class="form-label fw-semibold mb-3">Participant Time Tracking</label>
+                            
+                            <x-participant-time-rows />
+
+                            <div class="alert alert-info alert-sm mt-3" role="alert">
+                                <small>Add each team member and their hours. Remove rows you don't need.</small>
+                            </div>
+                        </div>
                     </x-section-card>
 
                     <x-section-card title="Save Status" subtitle="Live status for unsaved/saving states.">
@@ -328,6 +389,28 @@
     const hasErrors = @json($errors->any());
 
     if (!form) return;
+
+    // Time tracking mode UI management
+    function updateTimeTrackingUI() {
+        const mode = document.querySelector('input[name="time_tracking_mode"]:checked')?.value || 'engagement';
+        const participantTimesSection = document.getElementById('participant-times-section');
+        
+        if (participantTimesSection) {
+            if (mode === 'participant') {
+                participantTimesSection.classList.remove('d-none');
+            } else {
+                participantTimesSection.classList.add('d-none');
+            }
+        }
+    }
+
+    // Listen to time tracking mode changes
+    document.querySelectorAll('input[name="time_tracking_mode"]').forEach(radio => {
+        radio.addEventListener('change', function () {
+            updateTimeTrackingUI();
+            markDirty();
+        });
+    });
 
     function setStatus(html) {
         statusTop.innerHTML = html;
@@ -448,6 +531,7 @@
     updateActivityTypeState();
     updateActivityLoggingFields();
     loadParticipants();
+    updateTimeTrackingUI();
 
     document.querySelector('#activity-agreements-picker [data-token-search]')?.focus();
 })();

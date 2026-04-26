@@ -22,6 +22,8 @@ class Activity extends Model
         'follow_up',
         'strengths',
         'recommendations',
+        'internal_only',
+        'time_tracking_mode',
     ];
 
     protected function casts(): array
@@ -32,6 +34,7 @@ class Activity extends Model
             'prep_hours' => 'decimal:2',
             'followup_hours' => 'decimal:2',
             'participant_count' => 'integer',
+            'internal_only' => 'boolean',
         ];
     }
 
@@ -91,5 +94,43 @@ class Activity extends Model
     public function certificationCandidates(): HasMany
     {
         return $this->hasMany(AgreementCertificationCandidate::class);
+    }
+
+    public function participantTimes(): HasMany
+    {
+        return $this->hasMany(ActivityParticipantTime::class);
+    }
+
+    /**
+     * Scope: Exclude internal-only activities
+     */
+    public function scopeExternalOnly($query)
+    {
+        return $query->where('internal_only', false);
+    }
+
+    /**
+     * Scope: Include only internal activities
+     */
+    public function scopeInternalOnly($query)
+    {
+        return $query->where('internal_only', true);
+    }
+
+    /**
+     * Get total hours based on time tracking mode.
+     * For engagement mode: sum event_hours, prep_hours, followup_hours
+     * For participant mode: sum from activity_participant_times
+     */
+    public function getTotalHoursByModeAttribute(): float
+    {
+        if ($this->time_tracking_mode === 'participant') {
+            return $this->participantTimes->sum('hours') ?? 0;
+        }
+
+        // Default to engagement mode
+        return $this->event_hours 
+            + ($this->prep_hours ?? 0) 
+            + ($this->followup_hours ?? 0);
     }
 }

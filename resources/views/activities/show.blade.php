@@ -147,24 +147,56 @@
                 <h5 class="mb-0">Hours Breakdown</h5>
             </div>
             <div class="card-body">
-                <table class="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th>Event Hours</th>
-                            <th>Prep Hours</th>
-                            <th>Follow-Up Hours</th>
-                            <th><strong>Total Hours</strong></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>{{ number_format($activity->event_hours, 2) }}</td>
-                            <td>{{ number_format($activity->prep_hours ?? 0, 2) }}</td>
-                            <td>{{ number_format($activity->followup_hours ?? 0, 2) }}</td>
-                            <td><strong>{{ number_format($activity->total_hours, 2) }}</strong></td>
-                        </tr>
-                    </tbody>
-                </table>
+                @if($activity->time_tracking_mode === 'participant')
+                    <p class="text-muted mb-3"><small>Time tracked by participant</small></p>
+                    @if($activity->participantTimes->count() > 0)
+                        <table class="table table-sm table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Participant</th>
+                                    <th class="text-end">Hours</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($activity->participantTimes as $pt)
+                                    <tr>
+                                        <td>{{ $pt->user->name }}</td>
+                                        <td class="text-end">{{ number_format($pt->hours, 2) }}</td>
+                                        <td><small class="text-muted">{{ $pt->notes ?? '—' }}</small></td>
+                                    </tr>
+                                @endforeach
+                                <tr class="table-light">
+                                    <td><strong>Total</strong></td>
+                                    <td class="text-end"><strong>{{ number_format($activity->participantTimes->sum('hours'), 2) }}</strong></td>
+                                    <td></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    @else
+                        <p class="text-muted"><small>No participant times recorded.</small></p>
+                    @endif
+                @else
+                    <p class="text-muted mb-3"><small>Time tracked by engagement</small></p>
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Event Hours</th>
+                                <th>Prep Hours</th>
+                                <th>Follow-Up Hours</th>
+                                <th><strong>Total Hours</strong></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>{{ number_format($activity->event_hours, 2) }}</td>
+                                <td>{{ number_format($activity->prep_hours ?? 0, 2) }}</td>
+                                <td>{{ number_format($activity->followup_hours ?? 0, 2) }}</td>
+                                <td><strong>{{ number_format($activity->total_hours, 2) }}</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                @endif
 
                 @if($activity->participant_count)
                 <div class="mt-3">
@@ -178,6 +210,38 @@
                     {{ $activity->external_attendees }}
                 </div>
                 @endif
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0">Reporting & Visibility</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-2">
+                    <div class="col-md-4">
+                        <strong>Internal Only:</strong>
+                    </div>
+                    <div class="col-md-8">
+                        @if($activity->internal_only)
+                            <span class="badge bg-warning">Yes - Excluded from external reports</span>
+                        @else
+                            <span class="badge bg-success">No - Available for external reports</span>
+                        @endif
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4">
+                        <strong>Time Tracking Mode:</strong>
+                    </div>
+                    <div class="col-md-8">
+                        @if($activity->time_tracking_mode === 'participant')
+                            <span class="badge bg-info">By Participant</span>
+                        @else
+                            <span class="badge bg-secondary">By Engagement</span>
+                        @endif
+                    </div>
+                </div>
             </div>
         </div>
 

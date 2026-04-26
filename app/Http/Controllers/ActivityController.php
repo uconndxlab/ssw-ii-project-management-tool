@@ -258,6 +258,12 @@ class ActivityController extends Controller
             'program_ids.*' => ['exists:programs,id'],
             'participant_user_ids' => ['nullable', 'array'],
             'participant_user_ids.*' => ['exists:users,id'],
+            'internal_only' => ['nullable', 'boolean'],
+            'time_tracking_mode' => ['required', 'in:engagement,participant'],
+            'participant_times' => ['nullable', 'array'],
+            'participant_times.*.user_id' => ['exists:users,id'],
+            'participant_times.*.hours' => ['numeric', 'min:0.25', 'max:24'],
+            'participant_times.*.notes' => ['nullable', 'string', 'max:500'],
         ]);
 
         // Get config from first agreement if any are selected, otherwise use defaults
@@ -278,10 +284,20 @@ class ActivityController extends Controller
             $this->verifyParticipantsInAgreement($validated['agreement_ids'][0], $validated['participant_user_ids']);
         }
 
+        // Verify participant time users exist if using participant mode
+        if ($validated['time_tracking_mode'] === 'participant' && !empty($validated['participant_times'])) {
+            $participantTimeUserIds = array_column($validated['participant_times'], 'user_id');
+            if (!empty($validated['agreement_ids'])) {
+                $this->verifyParticipantsInAgreement($validated['agreement_ids'][0], $participantTimeUserIds);
+            }
+        }
+
         $activity = Activity::create([
             'user_id' => Auth::id(),
             'engagement_date' => $validated['engagement_date'],
             'activity_type_id' => $validated['activity_type_id'],
+            'internal_only' => $validated['internal_only'] ?? false,
+            'time_tracking_mode' => $validated['time_tracking_mode'] ?? 'engagement',
 
             'event_hours' => !empty($config['event_hours']) ? ($validated['event_hours'] ?? 0) : 0,
             'prep_hours' => !empty($config['prep_hours']) ? ($validated['prep_hours'] ?? 0) : 0,
@@ -306,6 +322,17 @@ class ActivityController extends Controller
             $activity->participants()->sync($validated['participant_user_ids']);
         }
 
+        // Save participant times if using participant mode
+        if ($activity->time_tracking_mode === 'participant' && !empty($validated['participant_times'])) {
+            foreach ($validated['participant_times'] as $participantTime) {
+                $activity->participantTimes()->create([
+                    'user_id' => $participantTime['user_id'],
+                    'hours' => $participantTime['hours'],
+                    'notes' => $participantTime['notes'] ?? null,
+                ]);
+            }
+        }
+
         $saveMode = $request->input('save_mode', 'save');
 
         if ($saveMode === 'save_new') {
@@ -315,6 +342,15 @@ class ActivityController extends Controller
         }
 
         if ($saveMode === 'save_duplicate') {
+            $participantTimes = [];
+            if ($activity->time_tracking_mode === 'participant') {
+                $participantTimes = $activity->participantTimes->map(fn ($pt) => [
+                    'user_id' => $pt->user_id,
+                    'hours' => $pt->hours,
+                    'notes' => $pt->notes,
+                ])->toArray();
+            }
+
             $duplicateData = [
                 'agreement_ids' => $validated['agreement_ids'] ?? [],
                 'state_ids' => $validated['state_ids'] ?? [],
@@ -333,6 +369,9 @@ class ActivityController extends Controller
                 'follow_up' => $validated['follow_up'] ?? null,
                 'strengths' => $validated['strengths'] ?? null,
                 'recommendations' => $validated['recommendations'] ?? null,
+                'internal_only' => $validated['internal_only'] ?? false,
+                'time_tracking_mode' => $validated['time_tracking_mode'] ?? 'engagement',
+                'participant_times' => $participantTimes,
             ];
 
             return redirect()
@@ -379,7 +418,7 @@ class ActivityController extends Controller
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
-        $activity->load(['programs', 'participants', 'activityType.contactFamily', 'agreements', 'states', 'organizations']);
+        $activity->load(['programs', 'participants', 'activityType.contactFamily', 'agreements', 'states', 'organizations', 'participantTimes.user']);
         $currentContactFamilyId = old('contact_family_id', $activity->activityType?->contactFamily?->id);
         
         // Pre-load users for each agreement for participant selection
@@ -415,6 +454,12 @@ class ActivityController extends Controller
             'program_ids.*' => ['exists:programs,id'],
             'participant_user_ids' => ['nullable', 'array'],
             'participant_user_ids.*' => ['exists:users,id'],
+            'internal_only' => ['nullable', 'boolean'],
+            'time_tracking_mode' => ['required', 'in:engagement,participant'],
+            'participant_times' => ['nullable', 'array'],
+            'participant_times.*.user_id' => ['exists:users,id'],
+            'participant_times.*.hours' => ['numeric', 'min:0.25', 'max:24'],
+            'participant_times.*.notes' => ['nullable', 'string', 'max:500'],
         ]);
 
         // Get config from first agreement if any are selected
@@ -434,9 +479,19 @@ class ActivityController extends Controller
             $this->verifyParticipantsInAgreement($validated['agreement_ids'][0], $validated['participant_user_ids']);
         }
 
+        // Verify participant time users exist if using participant mode
+        if ($validated['time_tracking_mode'] === 'participant' && !empty($validated['participant_times'])) {
+            $participantTimeUserIds = array_column($validated['participant_times'], 'user_id');
+            if (!empty($validated['agreement_ids'])) {
+                $this->verifyParticipantsInAgreement($validated['agreement_ids'][0], $participantTimeUserIds);
+            }
+        }
+
         $activity->update([
             'engagement_date' => $validated['engagement_date'],
             'activity_type_id' => $validated['activity_type_id'],
+            'internal_only' => $validated['internal_only'] ?? false,
+            'time_tracking_mode' => $validated['time_tracking_mode'] ?? 'engagement',
 
             'event_hours' => !empty($config['event_hours']) ? ($validated['event_hours'] ?? 0) : 0,
             'prep_hours' => !empty($config['prep_hours']) ? ($validated['prep_hours'] ?? 0) : 0,
@@ -455,6 +510,18 @@ class ActivityController extends Controller
         $activity->programs()->sync($validated['program_ids'] ?? []);
         $activity->participants()->sync($validated['participant_user_ids'] ?? []);
 
+        // Delete and recreate participant times if using participant mode
+        $activity->participantTimes()->delete();
+        if ($activity->time_tracking_mode === 'participant' && !empty($validated['participant_times'])) {
+            foreach ($validated['participant_times'] as $participantTime) {
+                $activity->participantTimes()->create([
+                    'user_id' => $participantTime['user_id'],
+                    'hours' => $participantTime['hours'],
+                    'notes' => $participantTime['notes'] ?? null,
+                ]);
+            }
+        }
+
         $saveMode = $request->input('save_mode', 'save');
 
         if ($saveMode === 'save_new') {
@@ -464,6 +531,15 @@ class ActivityController extends Controller
         }
 
         if ($saveMode === 'save_duplicate') {
+            $participantTimes = [];
+            if ($activity->time_tracking_mode === 'participant') {
+                $participantTimes = $activity->participantTimes->map(fn ($pt) => [
+                    'user_id' => $pt->user_id,
+                    'hours' => $pt->hours,
+                    'notes' => $pt->notes,
+                ])->toArray();
+            }
+
             $duplicateData = [
                 'agreement_ids' => $validated['agreement_ids'] ?? [],
                 'state_ids' => $validated['state_ids'] ?? [],
@@ -482,6 +558,9 @@ class ActivityController extends Controller
                 'follow_up' => $validated['follow_up'] ?? null,
                 'strengths' => $validated['strengths'] ?? null,
                 'recommendations' => $validated['recommendations'] ?? null,
+                'internal_only' => $validated['internal_only'] ?? false,
+                'time_tracking_mode' => $validated['time_tracking_mode'] ?? 'engagement',
+                'participant_times' => $participantTimes,
             ];
 
             return redirect()
