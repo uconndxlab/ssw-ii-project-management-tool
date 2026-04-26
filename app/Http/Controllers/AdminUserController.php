@@ -9,11 +9,39 @@ use Illuminate\Validation\Rules\Password;
 
 class AdminUserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $users = User::orderBy('created_at', 'desc')->paginate(20);
-        
-        return view('admin.users.index', compact('users'));
+        $query = User::query();
+
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('role')) {
+            $query->where('role', $request->input('role'));
+        }
+
+        $sort      = $request->input('sort', 'name');
+        $direction = $request->input('direction', 'asc') === 'desc' ? 'desc' : 'asc';
+
+        match ($sort) {
+            'email'   => $query->orderBy('email', $direction),
+            'role'    => $query->orderBy('role', $direction),
+            'created' => $query->orderBy('created_at', $direction),
+            default   => $query->orderBy('name', $direction),
+        };
+
+        $users = $query->paginate(20)->withQueryString();
+
+        if ($request->header('HX-Request')) {
+            return view('admin.users.partials.table', compact('users', 'sort', 'direction'));
+        }
+
+        return view('admin.users.index', compact('users', 'sort', 'direction'));
     }
 
     public function create()

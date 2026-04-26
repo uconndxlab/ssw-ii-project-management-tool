@@ -44,6 +44,10 @@ class TeamController extends Controller
 
         $teams = $query->paginate(20)->withQueryString();
 
+        if ($request->header('HX-Request')) {
+            return view('teams.partials.table', compact('teams', 'sort', 'direction'));
+        }
+
         return view('teams.index', compact('teams', 'sort', 'direction'));
     }
 

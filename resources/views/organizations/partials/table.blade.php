@@ -1,201 +1,88 @@
 @php
-    $currentSort = $sort ?? 'name';
-    $currentDirection = $direction ?? 'asc';
-
-    function organization_sort_direction($column, $currentSort, $currentDirection) {
-        if ($currentSort === $column) {
-            return $currentDirection === 'asc' ? 'desc' : 'asc';
-        }
-
-        return 'asc';
-    }
-
-    function organization_sort_icon($column, $currentSort, $currentDirection) {
-        if ($currentSort !== $column) {
-            return '↕';
-        }
-
-        return $currentDirection === 'asc' ? '↑' : '↓';
-    }
+    $s    = $sort ?? 'name';
+    $d    = $direction ?? 'asc';
+    $flip = fn($col) => ($s === $col && $d === 'asc') ? 'desc' : 'asc';
+    $icon = fn($col) => $s === $col ? ($d === 'asc' ? ' ↑' : ' ↓') : '';
+    $url  = fn($col) => route('organizations.index', array_merge(request()->query(), ['sort' => $col, 'direction' => $flip($col), 'page' => 1]));
 @endphp
 
-<div class="row">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead>
-                            <tr>
-                                <th>
-                                    <button
-                                        class="btn btn-link p-0 text-decoration-none fw-semibold"
-                                        hx-get="{{ route('organizations.index', array_merge(request()->query(), [
-                                            'sort' => 'name',
-                                            'direction' => organization_sort_direction('name', $currentSort, $currentDirection),
-                                            'page' => 1,
-                                        ])) }}"
-                                        hx-target="#organizations-table"
-                                        hx-swap="innerHTML"
-                                        hx-push-url="true"
-                                    >
-                                        Name {{ organization_sort_icon('name', $currentSort, $currentDirection) }}
-                                    </button>
-                                </th>
-
-                                <th>
-                                    <button
-                                        class="btn btn-link p-0 text-decoration-none fw-semibold"
-                                        hx-get="{{ route('organizations.index', array_merge(request()->query(), [
-                                            'sort' => 'state',
-                                            'direction' => organization_sort_direction('state', $currentSort, $currentDirection),
-                                            'page' => 1,
-                                        ])) }}"
-                                        hx-target="#organizations-table"
-                                        hx-swap="innerHTML"
-                                        hx-push-url="true"
-                                    >
-                                        State {{ organization_sort_icon('state', $currentSort, $currentDirection) }}
-                                    </button>
-                                </th>
-
-                                <th>
-                                    <button
-                                        class="btn btn-link p-0 text-decoration-none fw-semibold"
-                                        hx-get="{{ route('organizations.index', array_merge(request()->query(), [
-                                            'sort' => 'agreements',
-                                            'direction' => organization_sort_direction('agreements', $currentSort, $currentDirection),
-                                            'page' => 1,
-                                        ])) }}"
-                                        hx-target="#organizations-table"
-                                        hx-swap="innerHTML"
-                                        hx-push-url="true"
-                                    >
-                                        Agreements {{ organization_sort_icon('agreements', $currentSort, $currentDirection) }}
-                                    </button>
-                                </th>
-
-                                <th>
-                                    <button
-                                        class="btn btn-link p-0 text-decoration-none fw-semibold"
-                                        hx-get="{{ route('organizations.index', array_merge(request()->query(), [
-                                            'sort' => 'created',
-                                            'direction' => organization_sort_direction('created', $currentSort, $currentDirection),
-                                            'page' => 1,
-                                        ])) }}"
-                                        hx-target="#organizations-table"
-                                        hx-swap="innerHTML"
-                                        hx-push-url="true"
-                                    >
-                                        Created {{ organization_sort_icon('created', $currentSort, $currentDirection) }}
-                                    </button>
-                                </th>
-
-                                @if(auth()->user()->isAdmin())
-                                    <th style="width: 50px;"></th>
-                                @endif
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($organizations as $organization)
-                                <tr>
-                                    <td>
-                                        <a href="{{ route('organizations.show', $organization) }}" class="text-decoration-none text-dark d-block">
-                                            <strong>{{ $organization->name }}</strong>
-                                        </a>
-                                    </td>
-                                    <td>{{ $organization->state->name }}</td>
-                                    <td>{{ $organization->agreements_count ?? $organization->agreements->count() }}</td>
-                                    <td>{{ $organization->created_at->format('M d, Y') }}</td>
-
-                                    @if(auth()->user()->isAdmin())
-                                        <td onclick="event.stopPropagation()">
-                                            <div class="dropdown">
-                                                <button class="btn btn-sm btn-link text-secondary" type="button" data-bs-toggle="dropdown">
-                                                    ⋯
-                                                </button>
-                                                <ul class="dropdown-menu dropdown-menu-end">
-                                                    <li>
-                                                        <a class="dropdown-item" href="{{ route('organizations.edit', $organization) }}">Edit</a>
-                                                    </li>
-                                                    <li>
-                                                        <form method="POST" action="{{ route('organizations.destroy', $organization) }}"
-                                                              hx-confirm="Are you sure you want to delete this organization?">
-                                                            @csrf
-                                                            @method('DELETE')
-                                                            <button type="submit" class="dropdown-item text-danger">Delete</button>
-                                                        </form>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                        </td>
-                                    @endif
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="{{ auth()->user()->isAdmin() ? 5 : 4 }}" class="text-center text-muted">
-                                        No organizations found
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-
-                @if ($organizations->hasPages())
-                    <div class="mt-3 d-flex justify-content-center">
-                        <nav>
-                            <ul class="pagination mb-0">
-                                @if ($organizations->onFirstPage())
-                                    <li class="page-item disabled"><span class="page-link">‹</span></li>
-                                @else
-                                    <li class="page-item">
-                                        <a
-                                            class="page-link"
-                                            hx-get="{{ $organizations->previousPageUrl() }}"
-                                            hx-target="#organizations-table"
-                                            hx-swap="innerHTML"
-                                            hx-push-url="true"
-                                        >‹</a>
-                                    </li>
-                                @endif
-
-                                @for ($i = 1; $i <= $organizations->lastPage(); $i++)
-                                    @if ($i == $organizations->currentPage())
-                                        <li class="page-item active">
-                                            <span class="page-link">{{ $i }}</span>
-                                        </li>
-                                    @else
-                                        <li class="page-item">
-                                            <a
-                                                class="page-link"
-                                                hx-get="{{ $organizations->url($i) }}"
-                                                hx-target="#organizations-table"
-                                                hx-swap="innerHTML"
-                                                hx-push-url="true"
-                                            >{{ $i }}</a>
-                                        </li>
-                                    @endif
-                                @endfor
-
-                                @if ($organizations->hasMorePages())
-                                    <li class="page-item">
-                                        <a
-                                            class="page-link"
-                                            hx-get="{{ $organizations->nextPageUrl() }}"
-                                            hx-target="#organizations-table"
-                                            hx-swap="innerHTML"
-                                            hx-push-url="true"
-                                        >›</a>
-                                    </li>
-                                @else
-                                    <li class="page-item disabled"><span class="page-link">›</span></li>
-                                @endif
-                            </ul>
-                        </nav>
-                    </div>
-                @endif
-            </div>
-        </div>
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>
+                        <a class="text-decoration-none fw-semibold text-dark"
+                           href="{{ $url('name') }}"
+                           hx-get="{{ $url('name') }}" hx-target="#organizations-table" hx-push-url="true">
+                            Name{!! $icon('name') !!}
+                        </a>
+                    </th>
+                    <th>
+                        <a class="text-decoration-none fw-semibold text-dark"
+                           href="{{ $url('state') }}"
+                           hx-get="{{ $url('state') }}" hx-target="#organizations-table" hx-push-url="true">
+                            State{!! $icon('state') !!}
+                        </a>
+                    </th>
+                    <th>
+                        <a class="text-decoration-none fw-semibold text-dark"
+                           href="{{ $url('agreements') }}"
+                           hx-get="{{ $url('agreements') }}" hx-target="#organizations-table" hx-push-url="true">
+                            Agreements{!! $icon('agreements') !!}
+                        </a>
+                    </th>
+                    <th>
+                        <a class="text-decoration-none fw-semibold text-dark"
+                           href="{{ $url('created') }}"
+                           hx-get="{{ $url('created') }}" hx-target="#organizations-table" hx-push-url="true">
+                            Created{!! $icon('created') !!}
+                        </a>
+                    </th>
+                    <th class="text-end" style="width:{{ auth()->user()->isAdmin() ? '170px' : '80px' }};">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($organizations as $organization)
+                <tr>
+                    <td>
+                        <a href="{{ route('organizations.show', $organization) }}" class="fw-semibold text-decoration-none text-dark">
+                            {{ $organization->name }}
+                        </a>
+                    </td>
+                    <td class="text-muted small">{{ $organization->state->name ?? '—' }}</td>
+                    <td>
+                        <span class="badge bg-secondary">{{ $organization->agreements_count ?? $organization->agreements->count() }}</span>
+                    </td>
+                    <td class="text-muted small">{{ $organization->created_at->format('M d, Y') }}</td>
+                    <td class="text-end">
+                        <div class="d-flex gap-1 justify-content-end flex-nowrap">
+                            <a href="{{ route('organizations.show', $organization) }}" class="btn btn-sm btn-outline-primary">View</a>
+                            @if(auth()->user()->isAdmin())
+                                <a href="{{ route('organizations.edit', $organization) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                                <form method="POST" action="{{ route('organizations.destroy', $organization) }}" class="d-inline">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                                        onclick="return confirm('Delete {{ addslashes($organization->name) }}?')">Delete</button>
+                                </form>
+                            @endif
+                        </div>
+                    </td>
+                </tr>
+                @empty
+                <tr>
+                    <td colspan="5" class="text-center py-5">
+                        <p class="text-muted mb-2">No organizations found.</p>
+                        @if(auth()->user()->isAdmin())
+                            <a href="{{ route('organizations.create') }}" class="btn btn-sm btn-primary">Create Organization</a>
+                        @endif
+                    </td>
+                </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+    <div class="card-footer bg-white">
+        <x-htmx-pagination :paginator="$organizations" target="#organizations-table" />
     </div>
 </div>

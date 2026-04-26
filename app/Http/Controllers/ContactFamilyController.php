@@ -14,12 +14,17 @@ class ContactFamilyController extends Controller
         abort_unless(Auth::user()?->isAdmin(), 403);
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $contactFamilies = ContactFamily::withCount('activityTypes')
+        $query = ContactFamily::withCount('activityTypes')
             ->orderBy('sort_order')
-            ->orderBy('name')
-            ->get();
+            ->orderBy('name');
+
+        if ($request->filled('search')) {
+            $query->where('name', 'like', '%' . $request->input('search') . '%');
+        }
+
+        $contactFamilies = $query->get();
 
         return view('admin.contact-families.index', compact('contactFamilies'));
     }

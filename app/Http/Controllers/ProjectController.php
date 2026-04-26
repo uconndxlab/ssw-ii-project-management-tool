@@ -42,6 +42,10 @@ class ProjectController extends Controller
 
         $projects = $query->paginate(20)->withQueryString();
 
+        if ($request->header('HX-Request')) {
+            return view('projects.partials.table', compact('projects', 'sort', 'direction'));
+        }
+
         return view('projects.index', compact('projects', 'sort', 'direction'));
     }
 
