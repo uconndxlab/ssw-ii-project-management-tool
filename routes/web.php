@@ -59,14 +59,16 @@ Route::middleware('auth')->group(function () {
     
     // Organizations - viewable by all, admin-only for create/edit/delete
     Route::get('/organizations', [OrganizationController::class, 'index'])->name('organizations.index');
+    // Register /create before the {organization} wildcard to prevent route swallowing
+    Route::get('/organizations/create', [OrganizationController::class, 'create'])->name('organizations.create')->middleware('role:admin');
     Route::get('/organizations/{organization}', [OrganizationController::class, 'show'])->name('organizations.show');
-    
+
     // Admin routes
     Route::middleware('role:admin')->group(function () {
         Route::resource('contact-families', ContactFamilyController::class)->except(['show']);
         Route::resource('activity-types', ActivityTypeController::class)->except(['show']);
         Route::resource('states', StateController::class);
-        Route::resource('organizations', OrganizationController::class)->except(['index', 'show']);
+        Route::resource('organizations', OrganizationController::class)->except(['index', 'show', 'create']);
         Route::resource('projects', ProjectController::class);
         Route::resource('programs', ProgramController::class);
         Route::resource('teams', TeamController::class);

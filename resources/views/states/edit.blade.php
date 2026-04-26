@@ -23,7 +23,7 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('states.update', $state) }}">
+                <form method="POST" action="{{ route('states.update', $state) }}" id="states-edit-form">
                     @csrf
                     @method('PUT')
 
@@ -40,13 +40,10 @@
                         @enderror
                     </div>
 
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">Update State</button>
-                        <a href="{{ route('states.index') }}" class="btn btn-secondary">Cancel</a>
-                    </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+<x-save-bar form-id="states-edit-form" cancel-url="{{ route('states.index') }}" save-label="Save State" :last-saved-at="$state->updated_at" />
 @endsection

@@ -23,7 +23,7 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('teams.store') }}">
+                <form method="POST" action="{{ route('teams.store') }}" id="teams-create-form">
                     @csrf
 
                     <div class="mb-3">
@@ -79,4 +79,5 @@
         </div>
     </div>
 </div>
+<x-save-bar form-id="teams-create-form" cancel-url="{{ route('teams.index') }}" save-label="Create Team" />
 @endsection

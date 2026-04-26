@@ -23,7 +23,7 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('admin.users.store') }}">
+                <form method="POST" action="{{ route('admin.users.store') }}" id="users-create-form">
                     @csrf
 
                     <div class="mb-3">
@@ -97,13 +97,10 @@
                         @enderror
                     </div>
 
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">Create User</button>
-                        <a href="{{ route('admin.users.index') }}" class="btn btn-secondary">Cancel</a>
-                    </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+<x-save-bar form-id="users-create-form" cancel-url="{{ route('admin.users.index') }}" save-label="Create User" />
 @endsection

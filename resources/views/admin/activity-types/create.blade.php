@@ -23,7 +23,7 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('activity-types.store') }}">
+                <form method="POST" action="{{ route('activity-types.store') }}" id="activity-types-create-form">
                     @csrf
 
                     <div class="mb-3">
@@ -100,13 +100,10 @@
                         <div class="form-text">Only active activity types appear in activity forms.</div>
                     </div>
 
-                    <div class="d-flex justify-content-between">
-                        <a href="{{ route('activity-types.index') }}" class="btn btn-secondary">Cancel</a>
-                        <button type="submit" class="btn btn-primary">Create Activity Type</button>
-                    </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+<x-save-bar form-id="activity-types-create-form" cancel-url="{{ route('activity-types.index') }}" save-label="Create Activity Type" />
 @endsection

@@ -23,7 +23,7 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('activity-types.update', $activityType) }}">
+                <form method="POST" action="{{ route('activity-types.update', $activityType) }}" id="activity-types-edit-form">
                     @csrf
                     @method('PUT')
 
@@ -101,13 +101,10 @@
                         <div class="form-text">Only active activity types appear in activity forms.</div>
                     </div>
 
-                    <div class="d-flex justify-content-between">
-                        <a href="{{ route('activity-types.index') }}" class="btn btn-secondary">Cancel</a>
-                        <button type="submit" class="btn btn-primary">Update Activity Type</button>
-                    </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+<x-save-bar form-id="activity-types-edit-form" cancel-url="{{ route('activity-types.index') }}" save-label="Save Activity Type" :last-saved-at="$activityType->updated_at" />
 @endsection

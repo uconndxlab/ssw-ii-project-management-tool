@@ -23,7 +23,7 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('agreements.store') }}">
+                <form method="POST" action="{{ route('agreements.store') }}" id="agreements-create-form">
                     @csrf
 
                     <div class="mb-3">
@@ -306,13 +306,10 @@
                         </small>
                     </div>
 
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">Create Agreement</button>
-                        <a href="{{ route('agreements.index') }}" class="btn btn-secondary">Cancel</a>
-                    </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+<x-save-bar form-id="agreements-create-form" cancel-url="{{ route('agreements.index') }}" save-label="Create Agreement" />
 @endsection

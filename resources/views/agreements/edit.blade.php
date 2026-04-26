@@ -43,7 +43,7 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('agreements.update', $agreement) }}">
+                <form method="POST" action="{{ route('agreements.update', $agreement) }}" id="agreements-edit-form">
                     @csrf
                     @method('PUT')
 
@@ -333,10 +333,6 @@
                         </small>
                     </div>
 
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">Update Agreement</button>
-                        <a href="{{ route('agreements.index') }}" class="btn btn-secondary">Cancel</a>
-                    </div>
                 </form>
             </div>
         </div>
@@ -476,4 +472,5 @@
         </div>
     </div>
 </div>
+<x-save-bar form-id="agreements-edit-form" cancel-url="{{ route('agreements.index') }}" save-label="Save Agreement" :last-saved-at="$agreement->updated_at" />
 @endsection

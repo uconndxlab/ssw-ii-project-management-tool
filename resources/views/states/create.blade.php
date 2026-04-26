@@ -23,7 +23,7 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('states.store') }}">
+                <form method="POST" action="{{ route('states.store') }}" id="states-create-form">
                     @csrf
 
                     <div class="mb-3">
@@ -39,13 +39,10 @@
                         @enderror
                     </div>
 
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">Create State</button>
-                        <a href="{{ route('states.index') }}" class="btn btn-secondary">Cancel</a>
-                    </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+<x-save-bar form-id="states-create-form" cancel-url="{{ route('states.index') }}" save-label="Create State" />
 @endsection

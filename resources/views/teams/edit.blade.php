@@ -23,7 +23,7 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('teams.update', $team) }}">
+                <form method="POST" action="{{ route('teams.update', $team) }}" id="teams-edit-form">
                     @csrf
                     @method('PUT')
 
@@ -71,13 +71,10 @@
                         </small>
                     </div>
 
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">Update Team</button>
-                        <a href="{{ route('teams.index') }}" class="btn btn-secondary">Cancel</a>
-                    </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+<x-save-bar form-id="teams-edit-form" cancel-url="{{ route('teams.index') }}" save-label="Save Team" :last-saved-at="$team->updated_at" />
 @endsection

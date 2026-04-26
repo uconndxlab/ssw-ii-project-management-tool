@@ -23,7 +23,7 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('contact-families.update', $contactFamily) }}">
+                <form method="POST" action="{{ route('contact-families.update', $contactFamily) }}" id="contact-families-edit-form">
                     @csrf
                     @method('PUT')
 
@@ -69,13 +69,10 @@
                         <div class="form-text">Only active contact families appear in activity forms.</div>
                     </div>
 
-                    <div class="d-flex justify-content-between">
-                        <a href="{{ route('contact-families.index') }}" class="btn btn-secondary">Cancel</a>
-                        <button type="submit" class="btn btn-primary">Update Contact Family</button>
-                    </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+<x-save-bar form-id="contact-families-edit-form" cancel-url="{{ route('contact-families.index') }}" save-label="Save Contact Family" :last-saved-at="$contactFamily->updated_at" />
 @endsection

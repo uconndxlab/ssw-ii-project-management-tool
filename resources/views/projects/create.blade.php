@@ -23,7 +23,7 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('projects.store') }}">
+                <form method="POST" action="{{ route('projects.store') }}" id="projects-create-form">
                     @csrf
 
                     <div class="mb-3">
@@ -64,13 +64,10 @@
                         @enderror
                     </div>
 
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">Create Project</button>
-                        <a href="{{ route('projects.index') }}" class="btn btn-secondary">Cancel</a>
-                    </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+<x-save-bar form-id="projects-create-form" cancel-url="{{ route('projects.index') }}" save-label="Create Project" />
 @endsection
