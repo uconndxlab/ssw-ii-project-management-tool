@@ -71,8 +71,14 @@ class ProjectController extends Controller
     public function show(Project $project)
     {
         abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can view projects.');
-        $project->load(['programs']);
-        return view('projects.show', compact('project'));
+        $project->load(['programs.activities']);
+
+        $recentActivities = $project->programs
+            ->flatMap(fn ($p) => $p->activities)
+            ->sortByDesc('engagement_date')
+            ->take(10);
+
+        return view('projects.show', compact('project', 'recentActivities'));
     }
 
     public function edit(Project $project)

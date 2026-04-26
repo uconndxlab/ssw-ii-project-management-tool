@@ -68,6 +68,13 @@ class StateController extends Controller
             ->with('success', 'State created successfully.');
     }
 
+    public function show(State $state)
+    {
+        $state->load(['organizations.agreements', 'agreements.organizations', 'agreements.users']);
+
+        return view('states.show', compact('state'));
+    }
+
     public function edit(State $state)
     {
         return view('states.edit', compact('state'));

@@ -80,6 +80,15 @@ class ProgramController extends Controller
             ->with('success', 'Program created successfully.');
     }
 
+    public function show(Program $program)
+    {
+        $program->load(['project', 'activities.activityType', 'activities.user', 'activities.agreements']);
+
+        $recentActivities = $program->activities->sortByDesc('engagement_date')->take(10);
+
+        return view('programs.show', compact('program', 'recentActivities'));
+    }
+
     public function edit(Program $program)
     {
         $projects = Project::where('active', true)->orderBy('name')->get();

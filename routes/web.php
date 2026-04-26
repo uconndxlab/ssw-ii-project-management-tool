@@ -70,6 +70,9 @@ Route::middleware('auth')->group(function () {
         Route::resource('projects', ProjectController::class);
         Route::resource('programs', ProgramController::class);
         Route::resource('teams', TeamController::class);
+
+        // User show page (admin-only)
+        Route::get('/users/{user}', [AdminUserController::class, 'show'])->name('users.show');
     });
     
     // Admin user management

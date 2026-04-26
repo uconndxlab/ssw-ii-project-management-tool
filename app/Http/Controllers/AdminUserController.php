@@ -48,6 +48,19 @@ class AdminUserController extends Controller
             ->with('success', 'User created successfully.');
     }
 
+    public function show(User $user)
+    {
+        $user->load(['supervisor', 'agreements.organizations', 'agreements.states', 'teams']);
+
+        $recentActivities = $user->activities()
+            ->with(['activityType', 'agreements'])
+            ->orderByDesc('engagement_date')
+            ->take(10)
+            ->get();
+
+        return view('admin.users.show', compact('user', 'recentActivities'));
+    }
+
     /**
      * Check if setting a supervisor would create a circular reference.
      * Traverses up the supervisor chain to detect cycles.

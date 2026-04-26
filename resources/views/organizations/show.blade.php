@@ -3,187 +3,175 @@
 @section('title', $organization->name)
 
 @section('content')
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center">
-            <div>
-                <h1>{{ $organization->name }}</h1>
-                <p class="text-muted mb-0">{{ $organization->state->name }}</p>
-            </div>
-            <div>
-                <a href="{{ route('activities.create') }}" class="btn btn-success">Log Activity</a>
-                @if(auth()->user()->isAdmin())
-                <a href="{{ route('organizations.edit', $organization) }}" class="btn btn-outline-primary">Edit Organization</a>
-                @endif
-            </div>
-        </div>
-    </div>
-</div>
+<x-entity-show
+    title="{{ $organization->name }}"
+    type="Organization"
+    typeBadgeClass="bg-primary"
+    editRoute="{{ auth()->user()->isAdmin() ? route('organizations.edit', $organization) : null }}"
+    backRoute="{{ route('organizations.index') }}"
+    backLabel="All Organizations"
+>
+    {{-- ── Summary ─────────────────────────────────────────────────────── --}}
+    <x-slot:summary>
+        <dl class="row mb-0">
+            <dt class="col-5 text-muted fw-normal small">Name</dt>
+            <dd class="col-7 mb-2 fw-semibold">{{ $organization->name }}</dd>
 
-<!-- Overview Section -->
-<div class="row mb-4">
-    <div class="col-md-4">
-        <div class="card mb-3">
-            <div class="card-body">
-                <h6 class="text-muted small mb-3">Overview</h6>
-                <div class="mb-3">
-                    <h3 class="mb-0">{{ $agreements->count() }}</h3>
-                    <small class="text-muted">Active Agreements</small>
-                </div>
-                <div>
-                    <h3 class="mb-0">{{ $teamMembers->count() }}</h3>
-                    <small class="text-muted">Team Members</small>
-                </div>
-            </div>
-        </div>
-        
-        <!-- YTD Summary -->
-        <div class="card">
-            <div class="card-body">
-                <h6 class="text-muted small mb-3">Year-to-Date ({{ now()->year }})</h6>
-                <div class="mb-3">
-                    <h3 class="mb-0">{{ $ytdTotals['activities'] }}</h3>
-                    <small class="text-muted">Activities</small>
-                </div>
-                <div class="mb-3">
-                    <h3 class="mb-0">{{ number_format($ytdTotals['hours'], 1) }}</h3>
-                    <small class="text-muted">Hours</small>
-                </div>
-                <div>
-                    <h3 class="mb-0">{{ number_format($ytdTotals['participants']) }}</h3>
-                    <small class="text-muted">Participants</small>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-8">
-        <!-- Activity Breakdown by Contact Family -->
-        <div class="card mb-3">
-            <div class="card-header">
-                <h5 class="mb-0">YTD Activity Breakdown</h5>
-            </div>
-            <div class="card-body">
-                @if($contactFamilyBreakdown->isNotEmpty())
-                <div class="table-responsive">
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th>Contact Family</th>
-                                <th class="text-end">Activities</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($contactFamilyBreakdown as $family => $count)
-                            <tr>
-                                <td><span class="badge bg-primary">{{ $family }}</span></td>
-                                <td class="text-end"><strong>{{ $count }}</strong></td>
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-                @else
-                <p class="text-muted mb-0">No YTD activity recorded</p>
-                @endif
-            </div>
-        </div>
-        
-        <!-- Recent Activity -->
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">Recent Activity</h5>
-            </div>
-            <div class="card-body">
-                @if($recentActivities->isNotEmpty())
-                <div class="table-responsive">
-                    <table class="table table-sm table-hover">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Agreement</th>
-                                <th>Activity Type</th>
-                                <th>Hours</th>
-                                <th>Logged By</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($recentActivities as $activity)
-                            <tr>
-                                <td><a href="{{ route('activities.show', $activity) }}" class="text-decoration-none text-dark d-block">{{ $activity->engagement_date->format('M d, Y') }}</a></td>
-                                <td>
-                                    @forelse($activity->agreements as $agreement)
-                                        <span class="badge bg-secondary me-1 mb-1">{{ $agreement->name }}</span>
-                                    @empty
-                                        <span class="text-muted small">None</span>
-                                    @endforelse
-                                </td>
-                                <td>{{ $activity->activityType->name }}</td>
-                                <td>{{ number_format($activity->total_hours, 2) }}</td>
-                                <td>{{ $activity->user->name }}</td>
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-                @else
-                <p class="text-muted mb-0">No activities logged yet</p>
-                @endif
-            </div>
-        </div>
-    </div>
-</div>
+            <dt class="col-5 text-muted fw-normal small">State</dt>
+            <dd class="col-7 mb-2">
+                <a href="{{ route('states.show', $organization->state) }}" class="text-decoration-none">
+                    {{ $organization->state->name }}
+                </a>
+            </dd>
 
-<!-- Agreements List -->
-<div class="row">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Agreements ({{ $agreements->count() }})</h5>
-                @if(auth()->user()->isAdmin())
-                <a href="{{ route('agreements.create') }}" class="btn btn-sm btn-primary">Create Agreement</a>
-                @endif
-            </div>
-            <div class="card-body">
-                @if($agreements->isNotEmpty())
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Team Members</th>
-                                <th>Start Date</th>
-                                <th>End Date</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($agreements as $agreement)
-                            <tr>
-                                <td><a href="{{ route('agreements.show', $agreement) }}" class="text-decoration-none text-dark d-block"><strong>{{ $agreement->name }}</strong></a></td>
-                                <td>{{ $agreement->users->count() }}</td>
-                                <td>{{ $agreement->start_date?->format('M d, Y') ?? '—' }}</td>
-                                <td>{{ $agreement->end_date?->format('M d, Y') ?? '—' }}</td>
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-                @else
-                <div class="text-center py-4 text-muted">
-                    <p class="mb-3">No agreements under this organization yet.</p>
+            <dt class="col-5 text-muted fw-normal small">Agreements</dt>
+            <dd class="col-7 mb-2">
+                <span class="badge bg-success rounded-pill">{{ $agreements->count() }}</span>
+            </dd>
+
+            <dt class="col-5 text-muted fw-normal small">Staff</dt>
+            <dd class="col-7 mb-2">
+                <span class="badge bg-primary rounded-pill">{{ $teamMembers->count() }}</span>
+            </dd>
+        </dl>
+
+        <hr>
+
+        <h6 class="text-muted fw-normal small mb-2">Year-to-Date ({{ now()->year }})</h6>
+        <dl class="row mb-0">
+            <dt class="col-7 text-muted fw-normal small">Activities</dt>
+            <dd class="col-5 mb-1 fw-semibold text-end">{{ $ytdTotals['activities'] }}</dd>
+
+            <dt class="col-7 text-muted fw-normal small">Hours</dt>
+            <dd class="col-5 mb-1 fw-semibold text-end">{{ number_format($ytdTotals['hours'], 1) }}</dd>
+
+            <dt class="col-7 text-muted fw-normal small">Participants</dt>
+            <dd class="col-5 mb-0 fw-semibold text-end">{{ number_format($ytdTotals['participants']) }}</dd>
+        </dl>
+    </x-slot:summary>
+
+    {{-- ── Relationships ───────────────────────────────────────────────── --}}
+    <x-slot:relationships>
+        <div class="row g-4">
+            {{-- Agreements --}}
+            <div class="col-md-7">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-semibold mb-0">
+                        Agreements
+                        <span class="badge bg-success rounded-pill ms-1">{{ $agreements->count() }}</span>
+                    </h6>
                     @if(auth()->user()->isAdmin())
-                    <a href="{{ route('agreements.create') }}" class="btn btn-primary">Create First Agreement</a>
+                        <a href="{{ route('agreements.create') }}" class="btn btn-sm btn-outline-success">+ New</a>
                     @endif
                 </div>
-                @endif
+                @forelse($agreements as $agreement)
+                    <div class="py-2 border-bottom">
+                        <a href="{{ route('agreements.show', $agreement) }}" class="text-decoration-none fw-semibold d-block">
+                            {{ $agreement->name }}
+                        </a>
+                        <div class="d-flex gap-2 mt-1 flex-wrap">
+                            @foreach($agreement->states as $state)
+                                <a href="{{ route('states.show', $state) }}" class="badge bg-info text-dark text-decoration-none">
+                                    {{ $state->name }}
+                                </a>
+                            @endforeach
+                            <small class="text-muted">{{ $agreement->users->count() }} staff</small>
+                        </div>
+                    </div>
+                @empty
+                    <p class="text-muted small mb-0">No agreements yet.</p>
+                @endforelse
+            </div>
+
+            {{-- Team Members --}}
+            <div class="col-md-5">
+                <h6 class="fw-semibold mb-3">
+                    Assigned Staff
+                    <span class="badge bg-primary rounded-pill ms-1">{{ $teamMembers->count() }}</span>
+                </h6>
+                @forelse($teamMembers as $member)
+                    <div class="d-flex align-items-center py-1 border-bottom">
+                        <a href="{{ route('users.show', $member) }}" class="text-decoration-none small fw-semibold">
+                            {{ $member->name }}
+                        </a>
+                    </div>
+                @empty
+                    <p class="text-muted small mb-0">No staff assigned.</p>
+                @endforelse
             </div>
         </div>
-    </div>
-</div>
 
-<div class="row mt-3">
-    <div class="col-12">
-        <a href="{{ route('organizations.index') }}" class="btn btn-outline-secondary">Back to Organizations</a>
-    </div>
-</div>
+        {{-- YTD Breakdown --}}
+        @if($contactFamilyBreakdown->isNotEmpty())
+        <hr>
+        <h6 class="fw-semibold mb-3">YTD Activity Breakdown</h6>
+        <div class="table-responsive">
+            <table class="table table-sm mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Contact Family</th>
+                        <th class="text-end">Activities</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($contactFamilyBreakdown as $family => $count)
+                    <tr>
+                        <td><span class="badge bg-primary">{{ $family }}</span></td>
+                        <td class="text-end fw-semibold">{{ $count }}</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+        @endif
+    </x-slot:relationships>
+
+    {{-- ── Recent Activity ─────────────────────────────────────────────── --}}
+    <x-slot:activity>
+        @if($recentActivities->isNotEmpty())
+            <div class="d-flex justify-content-end mb-2">
+                <a href="{{ route('activities.create') }}" class="btn btn-sm btn-outline-success">Log Activity</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>Agreement</th>
+                            <th>Type</th>
+                            <th class="text-end">Hours</th>
+                            <th>By</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($recentActivities as $activity)
+                        <tr>
+                            <td>
+                                <a href="{{ route('activities.show', $activity) }}" class="text-decoration-none text-dark">
+                                    {{ $activity->engagement_date->format('M d, Y') }}
+                                </a>
+                            </td>
+                            <td>
+                                @foreach($activity->agreements->take(1) as $agr)
+                                    <a href="{{ route('agreements.show', $agr) }}" class="text-decoration-none badge bg-secondary">
+                                        {{ $agr->name }}
+                                    </a>
+                                @endforeach
+                            </td>
+                            <td class="small">{{ $activity->activityType->name }}</td>
+                            <td class="text-end">{{ number_format($activity->total_hours, 1) }}</td>
+                            <td class="small text-muted">{{ $activity->user->name }}</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @else
+            <div class="text-center py-3">
+                <p class="text-muted mb-2">No activities logged yet.</p>
+                <a href="{{ route('activities.create') }}" class="btn btn-sm btn-outline-success">Log First Activity</a>
+            </div>
+        @endif
+    </x-slot:activity>
+</x-entity-show>
 @endsection
