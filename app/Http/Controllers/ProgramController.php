@@ -3,13 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Program;
+use App\Models\Project;
 use Illuminate\Http\Request;
 
 class ProgramController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Program::query();
+        $query = Program::with('project');
 
         // Search
         $search = trim((string) $request->input('search', ''));
@@ -56,7 +57,8 @@ class ProgramController extends Controller
 
     public function create()
     {
-        return view('programs.create');
+        $projects = Project::where('active', true)->orderBy('name')->get();
+        return view('programs.create', compact('projects'));
     }
 
     public function store(Request $request)
@@ -64,11 +66,13 @@ class ProgramController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255', 'unique:programs'],
             'active' => ['nullable', 'boolean'],
+            'project_id' => ['required', 'exists:projects,id'],
         ]);
 
         Program::create([
             'name' => $validated['name'],
             'active' => $validated['active'] ?? true,
+            'project_id' => $validated['project_id'],
         ]);
 
         return redirect()
@@ -78,7 +82,9 @@ class ProgramController extends Controller
 
     public function edit(Program $program)
     {
-        return view('programs.edit', compact('program'));
+        $projects = Project::where('active', true)->orderBy('name')->get();
+        $program->load('project');
+        return view('programs.edit', compact('program', 'projects'));
     }
 
     public function update(Request $request, Program $program)
@@ -86,11 +92,13 @@ class ProgramController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255', 'unique:programs,name,' . $program->id],
             'active' => ['nullable', 'boolean'],
+            'project_id' => ['required', 'exists:projects,id'],
         ]);
 
         $program->update([
             'name' => $validated['name'],
             'active' => $validated['active'] ?? false,
+            'project_id' => $validated['project_id'],
         ]);
 
         return redirect()

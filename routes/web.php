@@ -12,6 +12,7 @@ use App\Http\Controllers\ContactFamilyController;
 use App\Http\Controllers\ActivityTypeController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TeamController;
+use App\Http\Controllers\ProjectController;
 use Illuminate\Support\Facades\Route;
 
 // Guest routes
@@ -66,6 +67,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('activity-types', ActivityTypeController::class)->except(['show']);
         Route::resource('states', StateController::class);
         Route::resource('organizations', OrganizationController::class)->except(['index', 'show']);
+        Route::resource('projects', ProjectController::class);
         Route::resource('programs', ProgramController::class);
         Route::resource('teams', TeamController::class);
     });

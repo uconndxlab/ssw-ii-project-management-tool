@@ -38,6 +38,7 @@
                         </a>
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" href="{{ route('states.index') }}">States</a></li>
+                            <li><a class="dropdown-item" href="{{ route('projects.index') }}">Projects</a></li>
                             <li><a class="dropdown-item" href="{{ route('programs.index') }}">Programs</a></li>
                             <li><a class="dropdown-item" href="{{ route('contact-families.index') }}">Contact Families</a></li>
                             <li><a class="dropdown-item" href="{{ route('activity-types.index') }}">Activity Types</a></li>

@@ -41,6 +41,24 @@
                     </div>
 
                     <div class="mb-3">
+                        <label for="project_id" class="form-label">Project</label>
+                        <select class="form-select @error('project_id') is-invalid @enderror" 
+                                id="project_id" 
+                                name="project_id" 
+                                required>
+                            <option value="">Select project...</option>
+                            @foreach($projects as $project)
+                                <option value="{{ $project->id }}" {{ old('project_id', $program->project_id) == $project->id ? 'selected' : '' }}>
+                                    {{ $project->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('project_id')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="mb-3">
                         <div class="form-check">
                             <input class="form-check-input" 
                                    type="checkbox" 

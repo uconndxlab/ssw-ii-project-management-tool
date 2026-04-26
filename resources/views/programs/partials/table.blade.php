@@ -43,6 +43,8 @@
                                     </button>
                                 </th>
 
+                                <th>Project</th>
+
                                 <th>
                                     <button
                                         class="btn btn-link p-0 text-decoration-none fw-semibold"
@@ -82,6 +84,7 @@
                             @forelse($programs as $program)
                                 <tr>
                                     <td><strong>{{ $program->name }}</strong></td>
+                                    <td>{{ $program->project->name ?? 'N/A' }}</td>
                                     <td>
                                         @if($program->active)
                                             <span class="badge bg-success">Active</span>
