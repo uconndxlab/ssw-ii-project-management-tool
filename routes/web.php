@@ -11,6 +11,7 @@ use App\Http\Controllers\ProgramController;
 use App\Http\Controllers\ContactFamilyController;
 use App\Http\Controllers\ActivityTypeController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\TeamController;
 use Illuminate\Support\Facades\Route;
 
 // Guest routes
@@ -66,6 +67,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('states', StateController::class);
         Route::resource('organizations', OrganizationController::class)->except(['index', 'show']);
         Route::resource('programs', ProgramController::class);
+        Route::resource('teams', TeamController::class);
     });
     
     // Admin user management

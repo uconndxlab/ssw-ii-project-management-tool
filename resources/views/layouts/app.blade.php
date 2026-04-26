@@ -42,6 +42,7 @@
                             <li><a class="dropdown-item" href="{{ route('contact-families.index') }}">Contact Families</a></li>
                             <li><a class="dropdown-item" href="{{ route('activity-types.index') }}">Activity Types</a></li>
                             <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ route('teams.index') }}">Teams</a></li>
                             <li><a class="dropdown-item" href="{{ route('admin.users.index') }}">Users</a></li>
                         </ul>
                     </li>

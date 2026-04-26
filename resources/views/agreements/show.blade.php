@@ -271,13 +271,46 @@
                 <h5 class="mb-0">Assigned Staff</h5>
             </div>
             <div class="card-body">
-                @if($agreement->users->isNotEmpty())
+                @php
+                    $usersBySource = $agreement->getUsersBySource();
+                    $directUsers = $usersBySource['direct'];
+                    $teamGroups = $usersBySource['teams'];
+                    $hasAnyUsers = $directUsers->isNotEmpty() || !empty($teamGroups);
+                @endphp
+
+                @if($hasAnyUsers)
                     <div class="list-group list-group-flush">
-                        @foreach($agreement->users as $user)
-                        <div class="list-group-item px-0 py-2">
-                            <strong class="d-block">{{ $user->name }}</strong>
-                            <small class="text-muted">{{ ucfirst($user->role) }}</small>
-                        </div>
+                        {{-- Direct Users --}}
+                        @if($directUsers->isNotEmpty())
+                            @foreach($directUsers as $user)
+                            <div class="list-group-item px-0 py-2">
+                                <strong class="d-block">{{ $user->name }}</strong>
+                                <div class="d-flex flex-wrap gap-1 align-items-center">
+                                    <small class="text-muted">{{ ucfirst($user->role) }}</small>
+                                    @if(!empty($user->also_in_teams))
+                                        <small class="text-muted">• Also in:</small>
+                                        @foreach($user->also_in_teams as $teamName)
+                                            <span class="badge bg-info text-dark">{{ $teamName }}</span>
+                                        @endforeach
+                                    @endif
+                                </div>
+                            </div>
+                            @endforeach
+                        @endif
+
+                        {{-- Team-based Users --}}
+                        @foreach($teamGroups as $teamName => $teamUsers)
+                            <div class="list-group-item px-0 py-2 bg-light">
+                                <strong class="d-block text-primary">
+                                    <i class="bi bi-people-fill"></i> Team: {{ $teamName }}
+                                </strong>
+                            </div>
+                            @foreach($teamUsers as $user)
+                            <div class="list-group-item px-0 py-2 ps-3">
+                                <strong class="d-block">{{ $user->name }}</strong>
+                                <small class="text-muted">{{ ucfirst($user->role) }}</small>
+                            </div>
+                            @endforeach
                         @endforeach
                     </div>
                 @else

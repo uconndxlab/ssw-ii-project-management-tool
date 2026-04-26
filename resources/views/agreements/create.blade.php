@@ -300,6 +300,22 @@
                         />
                     </div>
 
+                    <div class="mb-3">
+                        <label class="form-label">Assign Teams</label>
+
+                        <x-team-picker
+                            picker-id="agreement-create-teams"
+                            name="team_ids[]"
+                            :teams="$teams"
+                            :selected-ids="old('team_ids', [])"
+                            search-placeholder="Search to assign teams..."
+                        />
+
+                        <small class="text-muted">
+                            All users in assigned teams will have access to this agreement.
+                        </small>
+                    </div>
+
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">Create Agreement</button>
                         <a href="{{ route('agreements.index') }}" class="btn btn-secondary">Cancel</a>

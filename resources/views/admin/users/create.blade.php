@@ -80,6 +80,23 @@
                         @enderror
                     </div>
 
+                    <div class="mb-3">
+                        <label for="supervisor_id" class="form-label">Supervisor (Optional)</label>
+                        <select class="form-select @error('supervisor_id') is-invalid @enderror" 
+                                id="supervisor_id" 
+                                name="supervisor_id">
+                            <option value="">No supervisor</option>
+                            @foreach($users as $user)
+                                <option value="{{ $user->id }}" {{ old('supervisor_id') == $user->id ? 'selected' : '' }}>
+                                    {{ $user->name }} ({{ ucfirst($user->role) }})
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('supervisor_id')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">Create User</button>
                         <a href="{{ route('admin.users.index') }}" class="btn btn-secondary">Cancel</a>

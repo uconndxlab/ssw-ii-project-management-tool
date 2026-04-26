@@ -329,6 +329,22 @@
                         <small class="text-muted">Use the checkboxes above and click Update Agreement to save assigned users.</small>
                     </div>
 
+                    <div class="mb-3">
+                        <label class="form-label">Assign Teams</label>
+
+                        <x-team-picker
+                            picker-id="agreement-edit-teams"
+                            name="team_ids[]"
+                            :teams="$teams"
+                            :selected-ids="old('team_ids', $agreement->teams->pluck('id')->toArray())"
+                            search-placeholder="Search to assign teams..."
+                        />
+
+                        <small class="text-muted">
+                            All users in assigned teams will have access to this agreement.
+                        </small>
+                    </div>
+
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">Update Agreement</button>
                         <a href="{{ route('agreements.index') }}" class="btn btn-secondary">Cancel</a>

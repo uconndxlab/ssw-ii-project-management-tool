@@ -8,6 +8,7 @@ use App\Models\AgreementDeliverable;
 use App\Models\ActivityType;
 use App\Models\ContactFamily;
 use App\Models\State;
+use App\Models\Team;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -137,8 +138,9 @@ class AgreementController extends Controller
         $states = State::orderBy('name')->get();
         $organizations = Organization::orderBy('name')->get();
         $users = User::orderBy('name')->get();
+        $teams = Team::where('active', true)->orderBy('name')->get();
         
-        return view('agreements.create', compact('states', 'organizations', 'users'));
+        return view('agreements.create', compact('states', 'organizations', 'users', 'teams'));
     }
 
     public function store(Request $request)
@@ -192,6 +194,10 @@ class AgreementController extends Controller
             $agreement->users()->sync($validated['user_ids']);
         }
 
+        if (!empty($validated['team_ids'])) {
+            $agreement->teams()->sync($validated['team_ids']);
+        }
+
         return redirect()
             ->route('agreements.index')
             ->with('success', 'Agreement created successfully.');
@@ -204,7 +210,7 @@ class AgreementController extends Controller
             abort(403, 'Unauthorized access to this agreement.');
         }
 
-        $agreement->load(['organization', 'state', 'users', 'deliverables.activityType.contactFamily']);
+        $agreement->load(['organization', 'state', 'users', 'teams.users', 'deliverables.activityType.contactFamily']);
         
         // Get activities for this agreement
         $activities = $agreement->activities()
@@ -280,11 +286,12 @@ class AgreementController extends Controller
         $states = State::orderBy('name')->get();
         $organizations = Organization::orderBy('name')->get();
         $users = User::orderBy('name')->get();
+        $teams = Team::where('active', true)->orderBy('name')->get();
         $contactFamilies = ContactFamily::where('active', true)->orderBy('sort_order')->orderBy('name')->get();
         $activityTypes = ActivityType::where('active', true)->orderBy('sort_order')->orderBy('name')->get();
-        $agreement->load(['users', 'deliverables.activityType.contactFamily']);
+        $agreement->load(['users', 'teams', 'deliverables.activityType.contactFamily']);
         
-        return view('agreements.edit', compact('agreement', 'states', 'organizations', 'users', 'contactFamilies', 'activityTypes'));
+        return view('agreements.edit', compact('agreement', 'states', 'organizations', 'users', 'teams', 'contactFamilies', 'activityTypes'));
     }
 
     public function update(Request $request, Agreement $agreement)
@@ -315,6 +322,8 @@ class AgreementController extends Controller
 
             'user_ids' => ['nullable', 'array'],
             'user_ids.*' => ['exists:users,id'],
+            'team_ids' => ['nullable', 'array'],
+            'team_ids.*' => ['exists:teams,id'],
         ]);
 
         $activityLoggingConfig = $this->normalizeActivityLoggingConfig(
@@ -335,6 +344,7 @@ class AgreementController extends Controller
         ]);
 
         $agreement->users()->sync($validated['user_ids'] ?? []);
+        $agreement->teams()->sync($validated['team_ids'] ?? []);
 
         return redirect()
             ->route('agreements.index')
