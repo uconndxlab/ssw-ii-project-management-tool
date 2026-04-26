@@ -82,17 +82,29 @@ class ActivityController extends Controller
         }
 
         // Filter option lists for cascading filters
+        $visibleStateIds = $visibleAgreements
+            ->flatMap(fn ($agreement) => $agreement->states->pluck('id'))
+            ->unique()
+            ->values();
+
+        $visibleOrganizationIds = $visibleAgreements
+            ->flatMap(fn ($agreement) => $agreement->organizations->pluck('id'))
+            ->unique()
+            ->values();
+
         $states = State::query()
-            ->whereIn('id', $visibleAgreements->pluck('state_id')->filter()->unique())
+            ->whereIn('id', $visibleStateIds)
             ->orderBy('name')
             ->get(['id', 'name']);
 
         $organizationsQuery = Organization::query()
-            ->whereIn('id', $visibleAgreements->pluck('organization_id')->filter()->unique());
+            ->whereIn('id', $visibleOrganizationIds);
 
         if ($stateId) {
             $organizationsQuery->whereHas('agreements', function ($q) use ($stateId, $visibleAgreementIds) {
-                $q->where('state_id', $stateId)
+                $q->whereHas('states', function ($stateQuery) use ($stateId) {
+                    $stateQuery->where('states.id', $stateId);
+                })
                     ->whereIn('agreements.id', $visibleAgreementIds);
             });
         }
@@ -102,15 +114,19 @@ class ActivityController extends Controller
             ->get(['id', 'name']);
 
         $agreementsQuery = Agreement::query()
-            ->with(['organization', 'state'])
+            ->with(['organizations', 'states'])
             ->whereIn('id', $visibleAgreementIds);
 
         if ($stateId) {
-            $agreementsQuery->where('state_id', $stateId);
+            $agreementsQuery->whereHas('states', function ($q) use ($stateId) {
+                $q->where('states.id', $stateId);
+            });
         }
 
         if ($organizationId) {
-            $agreementsQuery->where('organization_id', $organizationId);
+            $agreementsQuery->whereHas('organizations', function ($q) use ($organizationId) {
+                $q->where('organizations.id', $organizationId);
+            });
         }
 
         $agreements = $agreementsQuery
@@ -211,8 +227,19 @@ class ActivityController extends Controller
         
         // Get pre-selected agreement if provided
         $preselectedAgreementId = $request->query('agreement_id');
+        $duplicateData = session('duplicate_data', []);
+        $currentContactFamilyId = old('contact_family_id', $duplicateData['contact_family_id'] ?? null);
         
-        return view('activities.create', compact('agreements', 'states', 'organizations', 'programs', 'contactFamilies', 'preselectedAgreementId'));
+        return view('activities.create', compact(
+            'agreements',
+            'states',
+            'organizations',
+            'programs',
+            'contactFamilies',
+            'preselectedAgreementId',
+            'duplicateData',
+            'currentContactFamilyId'
+        ));
     }
 
     public function store(Request $request)
@@ -225,6 +252,7 @@ class ActivityController extends Controller
             'organization_ids' => ['nullable', 'array'],
             'organization_ids.*' => ['exists:organizations,id'],
             'engagement_date' => ['required', 'date'],
+            'contact_family_id' => ['required', 'exists:contact_families,id'],
             'activity_type_id' => ['required', 'exists:activity_types,id'],
             'program_ids' => ['nullable', 'array'],
             'program_ids.*' => ['exists:programs,id'],
@@ -278,6 +306,41 @@ class ActivityController extends Controller
             $activity->participants()->sync($validated['participant_user_ids']);
         }
 
+        $saveMode = $request->input('save_mode', 'save');
+
+        if ($saveMode === 'save_new') {
+            return redirect()
+                ->route('activities.create')
+                ->with('success', 'Activity logged. Ready for a new entry.');
+        }
+
+        if ($saveMode === 'save_duplicate') {
+            $duplicateData = [
+                'agreement_ids' => $validated['agreement_ids'] ?? [],
+                'state_ids' => $validated['state_ids'] ?? [],
+                'organization_ids' => $validated['organization_ids'] ?? [],
+                'contact_family_id' => $validated['contact_family_id'] ?? null,
+                'activity_type_id' => $validated['activity_type_id'] ?? null,
+                'program_ids' => $validated['program_ids'] ?? [],
+                'participant_user_ids' => $validated['participant_user_ids'] ?? [],
+                'engagement_date' => now()->format('Y-m-d'),
+                'event_hours' => null,
+                'prep_hours' => 0,
+                'followup_hours' => 0,
+                'participant_count' => null,
+                'external_attendees' => $validated['external_attendees'] ?? null,
+                'summary' => $validated['summary'] ?? null,
+                'follow_up' => $validated['follow_up'] ?? null,
+                'strengths' => $validated['strengths'] ?? null,
+                'recommendations' => $validated['recommendations'] ?? null,
+            ];
+
+            return redirect()
+                ->route('activities.create')
+                ->with('success', 'Activity logged. Previous selections loaded for quick duplicate entry.')
+                ->with('duplicate_data', $duplicateData);
+        }
+
         return redirect()
             ->route('activities.index')
             ->with('success', 'Activity logged successfully.');
@@ -317,11 +380,21 @@ class ActivityController extends Controller
             ->orderBy('name')
             ->get();
         $activity->load(['programs', 'participants', 'activityType.contactFamily', 'agreements', 'states', 'organizations']);
+        $currentContactFamilyId = old('contact_family_id', $activity->activityType?->contactFamily?->id);
         
         // Pre-load users for each agreement for participant selection
         $agreements->load('users');
 
-        return view('activities.edit', compact('activity', 'agreements', 'states', 'organizations', 'programs', 'contactFamilies', 'activityTypes'));
+        return view('activities.edit', compact(
+            'activity',
+            'agreements',
+            'states',
+            'organizations',
+            'programs',
+            'contactFamilies',
+            'activityTypes',
+            'currentContactFamilyId'
+        ));
     }
 
     public function update(Request $request, Activity $activity)
@@ -336,6 +409,7 @@ class ActivityController extends Controller
             'organization_ids' => ['nullable', 'array'],
             'organization_ids.*' => ['exists:organizations,id'],
             'engagement_date' => ['required', 'date'],
+            'contact_family_id' => ['required', 'exists:contact_families,id'],
             'activity_type_id' => ['required', 'exists:activity_types,id'],
             'program_ids' => ['nullable', 'array'],
             'program_ids.*' => ['exists:programs,id'],
@@ -380,6 +454,41 @@ class ActivityController extends Controller
         $activity->organizations()->sync($validated['organization_ids'] ?? []);
         $activity->programs()->sync($validated['program_ids'] ?? []);
         $activity->participants()->sync($validated['participant_user_ids'] ?? []);
+
+        $saveMode = $request->input('save_mode', 'save');
+
+        if ($saveMode === 'save_new') {
+            return redirect()
+                ->route('activities.create')
+                ->with('success', 'Activity updated. Ready for a new entry.');
+        }
+
+        if ($saveMode === 'save_duplicate') {
+            $duplicateData = [
+                'agreement_ids' => $validated['agreement_ids'] ?? [],
+                'state_ids' => $validated['state_ids'] ?? [],
+                'organization_ids' => $validated['organization_ids'] ?? [],
+                'contact_family_id' => $validated['contact_family_id'] ?? null,
+                'activity_type_id' => $validated['activity_type_id'] ?? null,
+                'program_ids' => $validated['program_ids'] ?? [],
+                'participant_user_ids' => $validated['participant_user_ids'] ?? [],
+                'engagement_date' => now()->format('Y-m-d'),
+                'event_hours' => null,
+                'prep_hours' => 0,
+                'followup_hours' => 0,
+                'participant_count' => null,
+                'external_attendees' => $validated['external_attendees'] ?? null,
+                'summary' => $validated['summary'] ?? null,
+                'follow_up' => $validated['follow_up'] ?? null,
+                'strengths' => $validated['strengths'] ?? null,
+                'recommendations' => $validated['recommendations'] ?? null,
+            ];
+
+            return redirect()
+                ->route('activities.create')
+                ->with('success', 'Activity updated. Previous selections loaded for quick duplicate entry.')
+                ->with('duplicate_data', $duplicateData);
+        }
 
         return redirect()
             ->route('activities.index')

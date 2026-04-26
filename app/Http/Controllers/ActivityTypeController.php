@@ -189,6 +189,7 @@ class ActivityTypeController extends Controller
     public function getByFamily(Request $request)
     {
         $contactFamilyId = $request->input('contact_family_id');
+        $selectedActivityTypeId = (int) $request->input('activity_type_id');
 
         if (!$contactFamilyId) {
             return response('<option value="">Select activity type...</option>');
@@ -202,7 +203,8 @@ class ActivityTypeController extends Controller
 
         $html = '<option value="">Select activity type...</option>';
         foreach ($activityTypes as $type) {
-            $html .= '<option value="' . $type->id . '">' . e($type->name) . '</option>';
+            $selected = $selectedActivityTypeId === (int) $type->id ? ' selected' : '';
+            $html .= '<option value="' . $type->id . '"' . $selected . '>' . e($type->name) . '</option>';
         }
 
         return response($html);

@@ -25,140 +25,197 @@
             )
         ];
     });
+
+    $selectedAgreementIds = old('agreement_ids', $activity->agreements->pluck('id')->toArray());
+    $selectedOrganizationIds = old('organization_ids', $activity->organizations->pluck('id')->toArray());
+    $selectedStateIds = old('state_ids', $activity->states->pluck('id')->toArray());
+    $selectedProgramIds = old('program_ids', $activity->programs->pluck('id')->toArray());
+    $selectedParticipantIds = old('participant_user_ids', $activity->participants->pluck('id')->toArray());
+    $selectedActivityTypeId = old('activity_type_id', $activity->activity_type_id);
 @endphp
 
-<div class="row mb-4">
-    <div class="col-12">
-        <h1>Edit Activity</h1>
+<div class="container-fluid py-4">
+    <div class="row g-4 mb-2">
+        <div class="col-12">
+            <h1 class="h3 mb-1">Edit Activity</h1>
+            <p class="text-muted mb-0">Fast update mode for existing records.</p>
+        </div>
     </div>
-</div>
 
-<div class="row">
-    <div class="col-lg-10">
-        <div class="card">
-            <div class="card-body">
-                @if ($errors->any())
-                    <div class="alert alert-danger">
-                        <ul class="mb-0">
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
+    @if ($errors->any())
+        <div class="alert alert-danger py-2">
+            <strong>Please fix the highlighted fields.</strong>
+        </div>
+    @endif
 
-                <form method="POST" action="{{ route('activities.update', $activity) }}">
-                    @csrf
-                    @method('PUT')
+    <form method="POST" action="{{ route('activities.update', $activity) }}" id="activity-edit-form">
+        @csrf
+        @method('PUT')
 
-                    <div class="mb-3">
-                        <label class="form-label">Agreements</label>
-                        <x-agreement-picker
-                            picker-id="activity-agreements"
-                            name="agreement_ids[]"
-                            :agreements="$agreements"
-                            :selected-ids="old('agreement_ids', $activity->agreements->pluck('id')->toArray())"
-                        />
-                        @error('agreement_ids')
-                            <div class="text-danger small mt-1">{{ $message }}</div>
-                        @enderror
-                    </div>
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <div class="d-grid gap-4">
+                    <x-section-card title="1) Agreements & Coverage" subtitle="Update agreement context first.">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Agreements</label>
+                            <x-token-picker
+                                picker-id="activity-agreements-picker"
+                                name="agreement_ids[]"
+                                :items="$agreements"
+                                :selected-ids="$selectedAgreementIds"
+                                placeholder="Search agreements..."
+                                empty-message="No agreements match your search."
+                            />
+                            @error('agreement_ids')
+                                <div class="text-danger small mt-1">{{ $message }}</div>
+                            @enderror
+                        </div>
 
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
+                        <div class="row g-3">
+                            <div class="col-md-6">
                                 <label class="form-label">Organizations</label>
-                                <x-organization-picker
-                                    picker-id="activity-organizations"
+                                <x-token-picker
+                                    picker-id="activity-organizations-picker"
                                     name="organization_ids[]"
-                                    :organizations="$organizations"
-                                    :selected-ids="old('organization_ids', $activity->organizations->pluck('id')->toArray())"
+                                    :items="$organizations"
+                                    :selected-ids="$selectedOrganizationIds"
+                                    placeholder="Search organizations..."
                                 />
                                 @error('organization_ids')
                                     <div class="text-danger small mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <div class="mb-3">
+                            <div class="col-md-6">
                                 <label class="form-label">States</label>
-                                <x-state-picker
-                                    picker-id="activity-states"
+                                <x-token-picker
+                                    picker-id="activity-states-picker"
                                     name="state_ids[]"
-                                    :states="$states"
-                                    :selected-ids="old('state_ids', $activity->states->pluck('id')->toArray())"
+                                    :items="$states"
+                                    :selected-ids="$selectedStateIds"
+                                    placeholder="Search states..."
                                 />
                                 @error('state_ids')
                                     <div class="text-danger small mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
                         </div>
-                    </div>
+                    </x-section-card>
 
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="engagement_date" class="form-label">Date <span class="text-danger">*</span></label>
-                                <input type="date"
-                                       class="form-control @error('engagement_date') is-invalid @enderror"
-                                       id="engagement_date"
-                                       name="engagement_date"
-                                       value="{{ old('engagement_date', $activity->engagement_date->format('Y-m-d')) }}"
-                                       required>
-                                @error('engagement_date')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="contact_family_id" class="form-label">Contact Family <span class="text-danger">*</span></label>
+                    <x-section-card title="2) Activity Classification" subtitle="Contact family controls available activity types.">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="contact_family_id" class="form-label fw-semibold">
+                                    Contact Family <span class="text-danger">*</span>
+                                </label>
                                 <select class="form-select @error('contact_family_id') is-invalid @enderror"
                                         id="contact_family_id"
                                         name="contact_family_id"
                                         hx-get="{{ route('activity-types.by-family') }}"
                                         hx-target="#activity_type_id"
                                         hx-swap="innerHTML"
-                                        hx-include="this"
+                                        hx-include="#contact_family_id, #activity_type_selected"
+                                        hx-trigger="change, load"
                                         required>
                                     <option value="">Select contact family...</option>
                                     @foreach($contactFamilies as $family)
-                                        <option value="{{ $family->id }}" {{ old('contact_family_id', $activity->activityType->contact_family_id ?? '') == $family->id ? 'selected' : '' }}>
+                                        <option value="{{ $family->id }}" {{ (string) $currentContactFamilyId === (string) $family->id ? 'selected' : '' }}>
                                             {{ $family->name }}
                                         </option>
                                     @endforeach
                                 </select>
+                                <input type="hidden" id="activity_type_selected" value="{{ $selectedActivityTypeId }}">
                                 @error('contact_family_id')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
+
+                            <div class="col-md-6">
+                                <label for="activity_type_id" class="form-label fw-semibold">
+                                    Activity Type <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select @error('activity_type_id') is-invalid @enderror"
+                                        id="activity_type_id"
+                                        name="activity_type_id"
+                                        {{ $currentContactFamilyId ? '' : 'disabled' }}
+                                        required>
+                                    <option value="">Select contact family first...</option>
+                                </select>
+                                @error('activity_type_id')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
                         </div>
-                    </div>
+                    </x-section-card>
 
-                    <div class="mb-3">
-                        <label for="activity_type_id" class="form-label">Activity Type <span class="text-danger">*</span></label>
-                        <select class="form-select @error('activity_type_id') is-invalid @enderror"
-                                id="activity_type_id"
-                                name="activity_type_id"
-                                required>
-                            <option value="">Select activity type...</option>
-                            @foreach($activityTypes as $type)
-                                <option value="{{ $type->id }}" {{ old('activity_type_id', $activity->activity_type_id) == $type->id ? 'selected' : '' }}>
-                                    {{ $type->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('activity_type_id')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
+                    <x-section-card title="3) Notes & Participants" subtitle="Only fill what is needed.">
+                        <div class="mb-3" data-config-key="external_attendees">
+                            <details>
+                                <summary class="small text-muted mb-2">External Attendees (optional)</summary>
+                                <textarea class="form-control @error('external_attendees') is-invalid @enderror"
+                                          id="external_attendees"
+                                          name="external_attendees"
+                                          rows="2"
+                                          placeholder="Comma-separated names/organizations">{{ old('external_attendees', $activity->external_attendees) }}</textarea>
+                                @error('external_attendees')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </details>
+                        </div>
 
-                    <div class="row">
-                        <div class="col-md-4" data-config-key="event_hours">
-                            <div class="mb-3">
-                                <label for="event_hours" class="form-label">Event Hours <span class="text-danger">*</span></label>
+                        <div class="mb-3">
+                            <label class="form-label">Internal Participants</label>
+                            <div id="participants-container" class="border rounded p-2">
+                                <small class="text-muted">Select an agreement first to load team members.</small>
+                            </div>
+                            @error('participant_user_ids')
+                                <div class="text-danger small mt-1">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="mb-3" data-config-key="summary">
+                            <label for="summary" class="form-label">Summary</label>
+                            <textarea class="form-control @error('summary') is-invalid @enderror"
+                                      id="summary"
+                                      name="summary"
+                                      rows="2">{{ old('summary', $activity->summary) }}</textarea>
+                            @error('summary')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="mb-3" data-config-key="follow_up">
+                            <label for="follow_up" class="form-label">Follow-Up</label>
+                            <textarea class="form-control @error('follow_up') is-invalid @enderror"
+                                      id="follow_up"
+                                      name="follow_up"
+                                      rows="2">{{ old('follow_up', $activity->follow_up) }}</textarea>
+                            @error('follow_up')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </x-section-card>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="d-grid gap-4">
+                    <x-section-card title="4) Quick Details" subtitle="Date, time, count, programs.">
+                        <div class="mb-3">
+                            <label for="engagement_date" class="form-label fw-semibold">Date <span class="text-danger">*</span></label>
+                            <input type="date"
+                                   class="form-control @error('engagement_date') is-invalid @enderror"
+                                   id="engagement_date"
+                                   name="engagement_date"
+                                   value="{{ old('engagement_date', $activity->engagement_date?->format('Y-m-d')) }}"
+                                   required>
+                            @error('engagement_date')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="row g-2">
+                            <div class="col-12" data-config-key="event_hours">
+                                <label for="event_hours" class="form-label fw-semibold">Event Hours <span class="text-danger">*</span></label>
                                 <input type="number"
                                        class="form-control @error('event_hours') is-invalid @enderror"
                                        id="event_hours"
@@ -166,16 +223,15 @@
                                        step="0.25"
                                        min="0"
                                        max="9999.99"
-                                       value="{{ old('event_hours', $activity->event_hours) }}"
-                                       data-required-when-enabled="true">
+                                       data-required-when-enabled="true"
+                                       value="{{ old('event_hours', $activity->event_hours) }}">
+                                <x-numeric-quick-chips for="event_hours" />
                                 @error('event_hours')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
-                        </div>
 
-                        <div class="col-md-4" data-config-key="prep_hours">
-                            <div class="mb-3">
+                            <div class="col-6" data-config-key="prep_hours">
                                 <label for="prep_hours" class="form-label">Prep Hours</label>
                                 <input type="number"
                                        class="form-control @error('prep_hours') is-invalid @enderror"
@@ -185,14 +241,13 @@
                                        min="0"
                                        max="9999.99"
                                        value="{{ old('prep_hours', $activity->prep_hours ?? 0) }}">
+                                <x-numeric-quick-chips for="prep_hours" />
                                 @error('prep_hours')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
-                        </div>
 
-                        <div class="col-md-4" data-config-key="followup_hours">
-                            <div class="mb-3">
+                            <div class="col-6" data-config-key="followup_hours">
                                 <label for="followup_hours" class="form-label">Follow-Up Hours</label>
                                 <input type="number"
                                        class="form-control @error('followup_hours') is-invalid @enderror"
@@ -202,176 +257,199 @@
                                        min="0"
                                        max="9999.99"
                                        value="{{ old('followup_hours', $activity->followup_hours ?? 0) }}">
+                                <x-numeric-quick-chips for="followup_hours" />
                                 @error('followup_hours')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
                         </div>
-                    </div>
 
-                    <div class="mb-3" data-config-key="participant_count">
-                        <label for="participant_count" class="form-label">Participant Count</label>
-                        <input type="number"
-                               class="form-control @error('participant_count') is-invalid @enderror"
-                               id="participant_count"
-                               name="participant_count"
-                               min="0"
-                               value="{{ old('participant_count', $activity->participant_count) }}">
-                        @error('participant_count')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                    <div class="mb-3" data-config-key="external_attendees">
-                        <label for="external_attendees" class="form-label">External Attendees</label>
-                        <textarea class="form-control @error('external_attendees') is-invalid @enderror"
-                                id="external_attendees"
-                                name="external_attendees"
-                                rows="3"
-                                placeholder="Jane Smith, John Smith, Kansas Workforce Team">{{ old('external_attendees', $activity->external_attendees) }}</textarea>
-                        @error('external_attendees')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                        <small class="text-muted">Enter a comma-separated list of external attendees</small>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="program_ids" class="form-label">Programs</label>
-                        <select class="form-select @error('program_ids') is-invalid @enderror"
-                                id="program_ids"
-                                name="program_ids[]"
-                                multiple
-                                size="5">
-                            @foreach($programs as $program)
-                                <option value="{{ $program->id }}"
-                                    {{ in_array($program->id, old('program_ids', $activity->programs->pluck('id')->toArray())) ? 'selected' : '' }}>
-                                    {{ $program->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('program_ids')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                        <small class="text-muted">Hold Ctrl/Cmd to select multiple programs</small>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Internal Participants</label>
-                        <div id="participants-container">
-                            @include('activities.partials.participant-checkboxes', [
-                                'agreement' => $activity->agreements->first()?->loadMissing('users'),
-                                'selectedUserIds' => old('participant_user_ids', $activity->participants->pluck('id')->toArray()),
-                                'pickerId' => 'activity-participants-edit',
-                            ])
+                        <div class="mt-3" data-config-key="participant_count">
+                            <label for="participant_count" class="form-label">Participant Count</label>
+                            <input type="number"
+                                   class="form-control @error('participant_count') is-invalid @enderror"
+                                   id="participant_count"
+                                   name="participant_count"
+                                   min="0"
+                                   value="{{ old('participant_count', $activity->participant_count) }}">
+                            @error('participant_count')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                         </div>
-                        @error('participant_user_ids')
-                            <div class="invalid-feedback d-block">{{ $message }}</div>
-                        @enderror
-                        <small class="text-muted">Check team members who participated in delivering this activity</small>
-                    </div>
 
-                    <div class="mb-3" data-config-key="summary">
-                        <label for="summary" class="form-label">Summary</label>
-                        <textarea class="form-control @error('summary') is-invalid @enderror"
-                                  id="summary"
-                                  name="summary"
-                                  rows="3">{{ old('summary', $activity->summary) }}</textarea>
-                        @error('summary')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
+                        <details class="mt-3">
+                            <summary class="small text-muted">Programs (optional)</summary>
+                            <div class="mt-2">
+                                <x-token-picker
+                                    picker-id="activity-programs-picker"
+                                    name="program_ids[]"
+                                    :items="$programs"
+                                    :selected-ids="$selectedProgramIds"
+                                    placeholder="Search programs..."
+                                />
+                                @error('program_ids')
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </details>
+                    </x-section-card>
 
-                    <div class="mb-3" data-config-key="follow_up">
-                        <label for="follow_up" class="form-label">Follow-Up</label>
-                        <textarea class="form-control @error('follow_up') is-invalid @enderror"
-                                  id="follow_up"
-                                  name="follow_up"
-                                  rows="3">{{ old('follow_up', $activity->follow_up) }}</textarea>
-                        @error('follow_up')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                    <div class="mb-3" data-config-key="strengths">
-                        <label for="strengths" class="form-label">Strengths</label>
-                        <textarea class="form-control @error('strengths') is-invalid @enderror"
-                                  id="strengths"
-                                  name="strengths"
-                                  rows="3">{{ old('strengths', $activity->strengths) }}</textarea>
-                        @error('strengths')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                    <div class="mb-3" data-config-key="recommendations">
-                        <label for="recommendations" class="form-label">Recommendations</label>
-                        <textarea class="form-control @error('recommendations') is-invalid @enderror"
-                                  id="recommendations"
-                                  name="recommendations"
-                                  rows="3">{{ old('recommendations', $activity->recommendations) }}</textarea>
-                        @error('recommendations')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">Update Activity</button>
-                        <a href="{{ route('activities.index') }}" class="btn btn-secondary">Cancel</a>
-                    </div>
-                </form>
+                    <x-section-card title="Save Status" subtitle="Live status for unsaved/saving states.">
+                        <div id="activity-save-status" class="small text-muted">Ready</div>
+                    </x-section-card>
+                </div>
             </div>
+        </div>
+    </form>
+</div>
+
+<div id="activity-save-bar" class="position-fixed bottom-0 start-0 end-0 bg-white border-top shadow-lg" style="z-index: 1050;">
+    <div class="container-fluid py-2 d-flex align-items-center justify-content-between gap-2">
+        <div id="activity-save-bar-status" class="small text-muted">Ready</div>
+        <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+            <a href="{{ route('activities.index') }}" class="btn btn-sm btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-sm btn-primary" form="activity-edit-form" name="save_mode" value="save">Save Activity</button>
+            <button type="submit" class="btn btn-sm btn-outline-primary" form="activity-edit-form" name="save_mode" value="save_new">Save + New</button>
+            <button type="submit" class="btn btn-sm btn-outline-primary" form="activity-edit-form" name="save_mode" value="save_duplicate">Save + Duplicate</button>
         </div>
     </div>
 </div>
+<div style="height: 72px;"></div>
 
 <script>
-const defaultActivityLoggingConfig = @json($defaultActivityLoggingConfig);
-const agreementActivityConfigs = @json($agreementActivityConfigs);
+(function () {
+    const defaultActivityLoggingConfig = @json($defaultActivityLoggingConfig);
+    const agreementActivityConfigs = @json($agreementActivityConfigs);
+    const participantsUrl = @json(route('activities.participants-for-agreement'));
+    const selectedParticipants = @json($selectedParticipantIds);
+    const form = document.getElementById('activity-edit-form');
+    const statusTop = document.getElementById('activity-save-status');
+    const statusBar = document.getElementById('activity-save-bar-status');
+    const hasErrors = @json($errors->any());
 
-function updateActivityLoggingFields() {
-    const agreementSelect = document.getElementById('agreement_id');
-    const agreementId = agreementSelect.value;
+    if (!form) return;
 
-    const config = agreementActivityConfigs[agreementId] || defaultActivityLoggingConfig;
-
-    document.querySelectorAll('[data-config-key]').forEach(function (wrapper) {
-        const key = wrapper.dataset.configKey;
-        const enabled = !!config[key];
-
-        wrapper.style.display = enabled ? '' : 'none';
-
-        wrapper.querySelectorAll('input, textarea, select').forEach(function (field) {
-            field.disabled = !enabled;
-
-            if (field.dataset.requiredWhenEnabled === 'true') {
-                field.required = enabled;
-            }
-
-            if (!enabled) {
-                if (field.tagName === 'TEXTAREA') {
-                    field.value = '';
-                } else if (field.type === 'number') {
-                    field.value = '';
-                } else {
-                    field.value = '';
-                }
-            }
-        });
-    });
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    const agreementSelect = document.getElementById('agreement_id');
-
-    updateActivityLoggingFields();
-
-    if (agreementSelect.value) {
-        htmx.trigger(agreementSelect, 'change');
+    function setStatus(html) {
+        statusTop.innerHTML = html;
+        statusBar.innerHTML = html;
     }
 
-    agreementSelect.addEventListener('change', function() {
+    function selectedValues(name) {
+        return Array.from(form.querySelectorAll('input[type="hidden"][name="' + name + '"]')).map(i => i.value);
+    }
+
+    function firstSelectedAgreementId() {
+        return selectedValues('agreement_ids[]')[0] || null;
+    }
+
+    function updateActivityLoggingFields() {
+        const agreementId = firstSelectedAgreementId();
+        const config = agreementActivityConfigs[agreementId] || defaultActivityLoggingConfig;
+
+        document.querySelectorAll('[data-config-key]').forEach(function (wrapper) {
+            const key = wrapper.dataset.configKey;
+            const enabled = !!config[key];
+            wrapper.classList.toggle('d-none', !enabled);
+
+            wrapper.querySelectorAll('input, textarea, select, details').forEach(function (field) {
+                if (field.tagName !== 'DETAILS') {
+                    field.disabled = !enabled;
+                }
+
+                if (field.dataset.requiredWhenEnabled === 'true') {
+                    field.required = enabled;
+                }
+            });
+        });
+    }
+
+    function loadParticipants() {
+        const agreementId = firstSelectedAgreementId();
+        const container = document.getElementById('participants-container');
+        if (!container) return;
+
+        if (!agreementId) {
+            container.innerHTML = '<small class="text-muted">Select an agreement first to load team members.</small>';
+            return;
+        }
+
+        const params = new URLSearchParams();
+        params.set('agreement_id', agreementId);
+        selectedParticipants.forEach(function (id) {
+            params.append('participant_user_ids[]', id);
+        });
+
+        htmx.ajax('GET', participantsUrl + '?' + params.toString(), {
+            target: '#participants-container',
+            swap: 'innerHTML'
+        });
+    }
+
+    function updateActivityTypeState() {
+        const family = document.getElementById('contact_family_id');
+        const type = document.getElementById('activity_type_id');
+        if (!family || !type) return;
+
+        type.disabled = !family.value;
+    }
+
+    function markDirty() {
+        setStatus('<span class="text-warning fw-semibold">● Unsaved changes</span>');
+    }
+
+    document.getElementById('activity-agreements-picker')?.addEventListener('token-picker:change', function () {
         updateActivityLoggingFields();
+        loadParticipants();
+        markDirty();
     });
-});
+
+    ['activity-organizations-picker', 'activity-states-picker', 'activity-programs-picker'].forEach(function (id) {
+        document.getElementById(id)?.addEventListener('token-picker:change', markDirty);
+    });
+
+    form.addEventListener('input', markDirty);
+    form.addEventListener('change', function (event) {
+        if (event.target && event.target.id === 'contact_family_id') {
+            const selectedType = document.getElementById('activity_type_selected');
+            if (selectedType) {
+                selectedType.value = '';
+            }
+            updateActivityTypeState();
+        }
+        markDirty();
+    });
+
+    document.getElementById('contact_family_id')?.addEventListener('htmx:afterRequest', function () {
+        const selectedType = document.getElementById('activity_type_selected');
+        const type = document.getElementById('activity_type_id');
+        if (selectedType && type && selectedType.value) {
+            type.value = selectedType.value;
+        }
+        if (type) {
+            type.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    });
+
+    form.addEventListener('submit', function () {
+        setStatus('<span class="text-secondary">Saving…</span>');
+    });
+
+    if (hasErrors) {
+        setStatus('<span class="text-danger">⚠ Fix errors above to save</span>');
+    } else {
+        setStatus('<span class="text-muted">Saved</span>');
+    }
+
+    const family = document.getElementById('contact_family_id');
+    if (family && family.value) {
+        htmx.trigger(family, 'change');
+    }
+
+    updateActivityTypeState();
+    updateActivityLoggingFields();
+    loadParticipants();
+
+    document.querySelector('#activity-agreements-picker [data-token-search]')?.focus();
+})();
 </script>
 @endsection
