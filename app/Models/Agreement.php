@@ -75,6 +75,25 @@ class Agreement extends Model
     }
 
     /**
+     * Scope to filter active agreements based on date ranges.
+     * An agreement is active if today falls between start_date and end_date (or extension_end_date if extended).
+     */
+    public function scopeActive($query)
+    {
+        $today = now()->startOfDay();
+        
+        return $query->where('start_date', '<=', $today)
+            ->where(function ($q) use ($today) {
+                $q->whereNull('extension_end_date')
+                    ->where('end_date', '>=', $today)
+                    ->orWhere(function ($q2) use ($today) {
+                        $q2->whereNotNull('extension_end_date')
+                            ->where('extension_end_date', '>=', $today);
+                    });
+            });
+    }
+
+    /**
      * Get all users assigned to this agreement (both directly and via teams).
      */
     public function allUsers()

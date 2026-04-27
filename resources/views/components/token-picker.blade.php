@@ -200,6 +200,13 @@
         renderSelected();
         writeHiddenInputs();
         
+        // Dispatch initialization event when picker is ready with initial values
+        if (initialSelected.size > 0) {
+            setTimeout(function() {
+                picker.dispatchEvent(new CustomEvent('token-picker:initialized', { bubbles: true }));
+            }, 0);
+        }
+        
         // Check if input is already focused (e.g., browser autofocus) and show dropdown
         // Fixes: dropdown not appearing when page loads with focused field
         if (document.activeElement === searchInput) {

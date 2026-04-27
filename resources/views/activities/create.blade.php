@@ -91,7 +91,8 @@
                         <div class="row g-3" 
                              id="org-state-container"
                              hx-get="{{ route('activities.orgs-states-for-agreements') }}"
-                             hx-trigger="load, token-picker:change from:#activity-agreements-picker"
+                             hx-trigger="token-picker:change from:#activity-agreements-picker"
+                             hx-include="#activity-agreements-picker [name='agreement_ids[]'], #org-state-container [name='organization_ids[]'], #org-state-container [name='state_ids[]']"
                              hx-swap="innerHTML"
                              hx-indicator="#htmx-loading-indicator">
                             {{-- Dynamic organization and state pickers loaded via HTMX --}}
@@ -662,9 +663,17 @@
             return;
         }
 
+        // Get currently checked participants from the form (if any exist in DOM)
+        const currentlySelected = Array.from(
+            document.querySelectorAll('input[name="participant_user_ids[]"]:checked')
+        ).map(input => input.value);
+
         // Pass ALL agreement IDs to the HTMX participant checkboxes endpoint
         const params = new URLSearchParams();
         agreementIds.forEach(id => params.append('agreement_ids[]', id));
+        
+        // Pass currently selected participant IDs to preserve selections
+        currentlySelected.forEach(id => params.append('participant_user_ids[]', id));
         
         htmx.ajax('GET', participantsUrl + '?' + params.toString(), {
             target: '#participants-container',
@@ -778,27 +787,13 @@
     document.getElementById('activity-agreements-picker')?.addEventListener('token-picker:change', function () {
         loadParticipants();
         renderDynamicLoggingFields();
-        refreshOrgStateContainer();
         markDirty();
     });
 
-    function refreshOrgStateContainer() {
-        const agreementIds = selectedValues('agreement_ids[]');
-        const orgIds = selectedValues('organization_ids[]');
-        const stateIds = selectedValues('state_ids[]');
-        
-        const params = new URLSearchParams();
-        agreementIds.forEach(id => params.append('agreement_ids[]', id));
-        orgIds.forEach(id => params.append('organization_ids[]', id));
-        stateIds.forEach(id => params.append('state_ids[]', id));
-        
-        const url = '{{ route('activities.orgs-states-for-agreements') }}?' + params.toString();
-        
-        htmx.ajax('GET', url, {
-            target: '#org-state-container',
-            swap: 'innerHTML'
-        });
-    }
+    // Load participants when agreements picker is initialized with preselected values
+    document.getElementById('activity-agreements-picker')?.addEventListener('token-picker:initialized', function () {
+        loadParticipants();
+    });
 
     ['activity-organizations-picker', 'activity-states-picker', 'activity-programs-picker'].forEach(function (id) {
         document.getElementById(id)?.addEventListener('token-picker:change', markDirty);
@@ -844,11 +839,17 @@
     }
 
     updateActivityTypeState();
-    loadParticipants();
     renderTemplates();
     updateTimeTrackingUI();
 
-    document.querySelector('#activity-agreements-picker [data-token-search]')?.focus();
+    // Load participants initially (will also be triggered by token-picker:initialized if there are preselected agreements)
+    loadParticipants();
+
+    // Only focus agreement picker if no agreements are preselected
+    const hasPreselectedAgreements = @json(!empty($selectedAgreementIds));
+    if (!hasPreselectedAgreements) {
+        document.querySelector('#activity-agreements-picker [data-token-search]')?.focus();
+    }
 })();
 </script>
 @endsection
