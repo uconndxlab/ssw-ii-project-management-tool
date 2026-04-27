@@ -80,7 +80,7 @@
                         <div class="row g-3" 
                              id="org-state-container"
                              hx-get="{{ route('activities.orgs-states-for-agreements') }}"
-                             hx-trigger="load, token-picker:change from:#activity-agreements-picker"
+                             hx-trigger="token-picker:change from:#activity-agreements-picker"
                              hx-include="#activity-agreements-picker [name='agreement_ids[]'], #org-state-container [name='organization_ids[]'], #org-state-container [name='state_ids[]']"
                              hx-swap="innerHTML"
                              hx-indicator="#htmx-loading-indicator">
@@ -388,6 +388,9 @@
     const statusBar = document.getElementById('activity-save-bar-status');
     const hasErrors = @json($errors->any());
 
+    // Global participant data for time tracking component
+    window.activityParticipants = {};
+
     if (!form) return;
 
     // ============================================================================
@@ -549,25 +552,62 @@
     }
 
     function loadParticipants() {
-        const agreementId = firstSelectedAgreementId();
+        const agreementIds = selectedValues('agreement_ids[]');
         const container = document.getElementById('participants-container');
         if (!container) return;
 
-        if (!agreementId) {
+        if (agreementIds.length === 0) {
             container.innerHTML = '<small class="text-muted">Select an agreement first to load team members.</small>';
+            window.activityParticipants = {};
+            document.dispatchEvent(new CustomEvent('participants-updated'));
             return;
         }
 
-        const params = new URLSearchParams();
-        params.set('agreement_id', agreementId);
-        selectedParticipants.forEach(function (id) {
-            params.append('participant_user_ids[]', id);
-        });
+        // Get currently checked participants from the form (if any exist in DOM)
+        const currentlySelected = Array.from(
+            document.querySelectorAll('input[name="participant_user_ids[]"]:checked')
+        ).map(input => input.value);
 
+        // Use currently selected if available, otherwise use initial selections
+        const participantsToSelect = currentlySelected.length > 0 ? currentlySelected : selectedParticipants;
+
+        // Pass ALL agreement IDs to the HTMX participant checkboxes endpoint
+        const params = new URLSearchParams();
+        agreementIds.forEach(id => params.append('agreement_ids[]', id));
+        
+        // Pass selected participant IDs to pre-check them
+        participantsToSelect.forEach(id => params.append('participant_user_ids[]', id));
+        
         htmx.ajax('GET', participantsUrl + '?' + params.toString(), {
             target: '#participants-container',
             swap: 'innerHTML'
         });
+
+        // Fetch participant data for ALL selected agreements for the time tracking component
+        fetchParticipantData(agreementIds);
+    }
+
+    function fetchParticipantData(agreementIds) {
+        // Fetch users from all selected agreements for the time tracking component
+        const params = new URLSearchParams();
+        agreementIds.forEach(id => params.append('agreement_ids[]', id));
+        
+        fetch(`/api/agreements-users?${params.toString()}`)
+            .then(response => response.json())
+            .then(data => {
+                window.activityParticipants = {};
+                if (data.users && Array.isArray(data.users)) {
+                    data.users.forEach(user => {
+                        window.activityParticipants[user.id] = user.name;
+                    });
+                }
+                document.dispatchEvent(new CustomEvent('participants-updated'));
+            })
+            .catch(error => {
+                console.error('Error fetching participant data:', error);
+                window.activityParticipants = {};
+                document.dispatchEvent(new CustomEvent('participants-updated'));
+            });
     }
 
     function updateActivityTypeState() {
@@ -586,6 +626,11 @@
         updateActivityLoggingFields();
         loadParticipants();
         markDirty();
+    });
+
+    // Load participants when agreements picker is initialized with preselected values
+    document.getElementById('activity-agreements-picker')?.addEventListener('token-picker:initialized', function () {
+        loadParticipants();
     });
 
     ['activity-organizations-picker', 'activity-states-picker', 'activity-programs-picker'].forEach(function (id) {
@@ -634,8 +679,6 @@
     updateActivityLoggingFields();
     loadParticipants();
     updateTimeTrackingUI();
-
-    document.querySelector('#activity-agreements-picker [data-token-search]')?.focus();
 })();
 </script>
 @endsection

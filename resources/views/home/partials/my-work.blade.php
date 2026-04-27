@@ -40,11 +40,13 @@
                     @foreach($myActivities->take(5) as $activity)
                         <a href="{{ route('activities.show', $activity) }}" class="list-group-item list-group-item-action">
                             <div class="d-flex justify-content-between align-items-start">
-                                <div>
+                                <div class="flex-grow-1">
                                     <div class="fw-bold">{{ $activity->activityType?->name ?? 'Activity' }}</div>
                                     <small class="text-muted">
-                                        {{ $activity->engagement_date->format('M d, Y') }} 
-                                        by {{ $activity->user->name }}
+                                        {{ $activity->engagement_date->format('M d, Y') }}
+                                        @if($activity->agreements?->isNotEmpty())
+                                            • {{ $activity->agreements->pluck('name')->join(', ') }}
+                                        @endif
                                     </small>
                                 </div>
                                 <span class="badge bg-info">{{ number_format($activity->event_hours ?? 0, 1) }}h</span>

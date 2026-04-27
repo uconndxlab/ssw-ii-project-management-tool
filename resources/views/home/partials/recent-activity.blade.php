@@ -9,14 +9,17 @@
                 <div class="list-group-item px-3 py-2 d-flex justify-content-between align-items-start">
                     <div class="flex-grow-1">
                         <div class="mb-1">
-                            <strong>{{ $activity->user->name }}</strong>
+                            <a href="{{ route('users.show', $activity->user) }}" class="text-decoration-none fw-semibold">{{ $activity->user->name }}</a>
                             <span class="text-muted">logged</span>
-                            <strong>{{ $activity->activityType?->name ?? 'Activity' }}</strong>
+                            <a href="{{ route('activities.show', $activity) }}" class="text-decoration-none fw-semibold">{{ $activity->activityType?->name ?? 'Activity' }}</a>
                         </div>
                         <small class="text-muted">
                             {{ $activity->engagement_date->format('M d, Y') }}
                             @if($activity->agreements?->isNotEmpty())
-                                • {{ $activity->agreements->pluck('name')->join(', ') }}
+                                • 
+                                @foreach($activity->agreements as $agreement)
+                                    <a href="{{ route('agreements.show', $agreement) }}" class="text-decoration-none">{{ $agreement->name }}</a>@if(!$loop->last), @endif
+                                @endforeach
                             @endif
                         </small>
                     </div>

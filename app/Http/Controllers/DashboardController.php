@@ -45,7 +45,7 @@ class DashboardController extends Controller
 
         // Global stats
         $stats = [
-            'active_agreements' => Agreement::where('active', true)->count(),
+            'active_agreements' => Agreement::active()->count(),
             'activities_this_month' => $thisMonthActivities,
             'organizations' => Organization::count(),
             'states' => State::count(),
@@ -58,7 +58,7 @@ class DashboardController extends Controller
             ->get();
 
         // Get all agreements with stats
-        $agreements = Agreement::where('active', true)
+        $agreements = Agreement::active()
             ->with(['organizations', 'states'])
             ->withCount('activities')
             ->withMax('activities', 'engagement_date')
@@ -76,6 +76,7 @@ class DashboardController extends Controller
     {
         // Get user's agreements
         $myAgreements = $user->agreements()
+            ->active()
             ->with(['organizations', 'states'])
             ->withCount('activities')
             ->withMax('activities', 'engagement_date')
