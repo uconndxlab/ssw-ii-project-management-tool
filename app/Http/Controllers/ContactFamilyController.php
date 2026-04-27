@@ -31,7 +31,8 @@ class ContactFamilyController extends Controller
 
     public function create()
     {
-        return view('admin.contact-families.create');
+        $loggingFields = \App\Models\LoggingField::active()->ordered()->get();
+        return view('admin.contact-families.create', compact('loggingFields'));
     }
 
     public function store(Request $request)
@@ -40,12 +41,25 @@ class ContactFamilyController extends Controller
             'name' => ['required', 'string', 'max:255', 'unique:contact_families,name'],
             'active' => ['boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
+            'logging_field_ids' => ['nullable', 'array'],
+            'logging_field_ids.*' => ['exists:logging_fields,id'],
+            'required_logging_field_ids' => ['nullable', 'array'],
+            'required_logging_field_ids.*' => ['exists:logging_fields,id'],
         ]);
 
         $validated['active'] = $request->has('active');
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
 
-        ContactFamily::create($validated);
+        $contactFamily = ContactFamily::create($validated);
+        
+        // Sync logging fields with is_required pivot data
+        $loggingFieldIds = $validated['logging_field_ids'] ?? [];
+        $requiredFieldIds = $validated['required_logging_field_ids'] ?? [];
+        $syncData = [];
+        foreach ($loggingFieldIds as $fieldId) {
+            $syncData[$fieldId] = ['is_required' => in_array($fieldId, $requiredFieldIds)];
+        }
+        $contactFamily->loggingFields()->sync($syncData);
 
         return redirect()
             ->route('contact-families.index')
@@ -54,7 +68,9 @@ class ContactFamilyController extends Controller
 
     public function edit(ContactFamily $contactFamily)
     {
-        return view('admin.contact-families.edit', compact('contactFamily'));
+        $loggingFields = \App\Models\LoggingField::active()->ordered()->get();
+        $contactFamily->load('loggingFields');
+        return view('admin.contact-families.edit', compact('contactFamily', 'loggingFields'));
     }
 
     public function update(Request $request, ContactFamily $contactFamily)
@@ -63,12 +79,25 @@ class ContactFamilyController extends Controller
             'name' => ['required', 'string', 'max:255', 'unique:contact_families,name,' . $contactFamily->id],
             'active' => ['boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
+            'logging_field_ids' => ['nullable', 'array'],
+            'logging_field_ids.*' => ['exists:logging_fields,id'],
+            'required_logging_field_ids' => ['nullable', 'array'],
+            'required_logging_field_ids.*' => ['exists:logging_fields,id'],
         ]);
 
         $validated['active'] = $request->has('active');
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
 
         $contactFamily->update($validated);
+        
+        // Sync logging fields with is_required pivot data
+        $loggingFieldIds = $validated['logging_field_ids'] ?? [];
+        $requiredFieldIds = $validated['required_logging_field_ids'] ?? [];
+        $syncData = [];
+        foreach ($loggingFieldIds as $fieldId) {
+            $syncData[$fieldId] = ['is_required' => in_array($fieldId, $requiredFieldIds)];
+        }
+        $contactFamily->loggingFields()->sync($syncData);
 
         return redirect()
             ->route('contact-families.index')

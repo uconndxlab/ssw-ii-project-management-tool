@@ -24,6 +24,7 @@ class Activity extends Model
         'recommendations',
         'internal_only',
         'time_tracking_mode',
+        'logging_field_data',
     ];
 
     protected function casts(): array
@@ -35,6 +36,7 @@ class Activity extends Model
             'followup_hours' => 'decimal:2',
             'participant_count' => 'integer',
             'internal_only' => 'boolean',
+            'logging_field_data' => 'array',
         ];
     }
 

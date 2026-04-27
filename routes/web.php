@@ -47,6 +47,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/activities/participants-for-agreement', [ActivityController::class, 'getParticipantsForAgreement'])
         ->name('activities.participants-for-agreement');
     
+    // API endpoint for getting agreement users (for participant time tracking)
+    Route::get('/api/agreements/{agreement}/users', [ActivityController::class, 'getAgreementUsers'])
+        ->name('api.agreements.users');
+    Route::get('/api/agreements-users', [ActivityController::class, 'getAgreementsUsers'])
+        ->name('api.agreements-users');
+    
     // HTMX endpoint for filtering organizations and states by agreements
     Route::get('/activities/orgs-states-for-agreements', [ActivityController::class, 'getOrganizationsAndStatesForAgreements'])
         ->name('activities.orgs-states-for-agreements');

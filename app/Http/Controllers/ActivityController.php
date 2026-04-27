@@ -223,7 +223,11 @@ class ActivityController extends Controller
             ->get();
         
         // Pre-load users for each agreement for participant selection
-        $agreements->load('users');
+        $agreements->load(['users', 'loggingFields']);
+        $contactFamilies->load('loggingFields');
+        
+        // Get all active logging fields for reference
+        $allLoggingFields = \App\Models\LoggingField::active()->ordered()->get();
         
         // Get pre-selected agreement if provided
         $preselectedAgreementId = $request->query('agreement_id');
@@ -236,6 +240,7 @@ class ActivityController extends Controller
             'organizations',
             'programs',
             'contactFamilies',
+            'allLoggingFields',
             'preselectedAgreementId',
             'duplicateData',
             'currentContactFamilyId'
@@ -244,7 +249,7 @@ class ActivityController extends Controller
 
     public function store(Request $request)
     {
-        $baseValidated = $request->validate([
+        $validated = $request->validate([
             'agreement_ids' => ['nullable', 'array'],
             'agreement_ids.*' => ['exists:agreements,id'],
             'state_ids' => ['nullable', 'array'],
@@ -264,20 +269,8 @@ class ActivityController extends Controller
             'participant_times.*.user_id' => ['exists:users,id'],
             'participant_times.*.hours' => ['numeric', 'min:0.25', 'max:24'],
             'participant_times.*.notes' => ['nullable', 'string', 'max:500'],
+            'logging_field_data' => ['nullable', 'array'],
         ]);
-
-        // Get config from first agreement if any are selected, otherwise use defaults
-        $agreement = null;
-        if (!empty($baseValidated['agreement_ids'])) {
-            $this->verifyAgreementAccess($baseValidated['agreement_ids'][0]);
-            $agreement = Agreement::findOrFail($baseValidated['agreement_ids'][0]);
-        }
-        $config = $agreement ? $this->getAgreementActivityLoggingConfig($agreement) : [];
-
-        $validated = array_merge(
-            $baseValidated,
-            $request->validate($this->activityLoggingValidationRules($config))
-        );
 
         // Verify all selected participants belong to at least one agreement
         if (!empty($validated['participant_user_ids']) && !empty($validated['agreement_ids'])) {
@@ -298,16 +291,7 @@ class ActivityController extends Controller
             'activity_type_id' => $validated['activity_type_id'],
             'internal_only' => $validated['internal_only'] ?? false,
             'time_tracking_mode' => $validated['time_tracking_mode'] ?? 'engagement',
-
-            'event_hours' => !empty($config['event_hours']) ? ($validated['event_hours'] ?? 0) : 0,
-            'prep_hours' => !empty($config['prep_hours']) ? ($validated['prep_hours'] ?? 0) : 0,
-            'followup_hours' => !empty($config['followup_hours']) ? ($validated['followup_hours'] ?? 0) : 0,
-            'participant_count' => !empty($config['participant_count']) ? ($validated['participant_count'] ?? null) : null,
-            'external_attendees' => !empty($config['external_attendees']) ? ($validated['external_attendees'] ?? null) : null,
-            'summary' => !empty($config['summary']) ? ($validated['summary'] ?? null) : null,
-            'follow_up' => !empty($config['follow_up']) ? ($validated['follow_up'] ?? null) : null,
-            'strengths' => !empty($config['strengths']) ? ($validated['strengths'] ?? null) : null,
-            'recommendations' => !empty($config['recommendations']) ? ($validated['recommendations'] ?? null) : null,
+            'logging_field_data' => $validated['logging_field_data'] ?? null,
         ]);
 
         $activity->agreements()->sync($validated['agreement_ids'] ?? []);
@@ -360,18 +344,10 @@ class ActivityController extends Controller
                 'program_ids' => $validated['program_ids'] ?? [],
                 'participant_user_ids' => $validated['participant_user_ids'] ?? [],
                 'engagement_date' => now()->format('Y-m-d'),
-                'event_hours' => null,
-                'prep_hours' => 0,
-                'followup_hours' => 0,
-                'participant_count' => null,
-                'external_attendees' => $validated['external_attendees'] ?? null,
-                'summary' => $validated['summary'] ?? null,
-                'follow_up' => $validated['follow_up'] ?? null,
-                'strengths' => $validated['strengths'] ?? null,
-                'recommendations' => $validated['recommendations'] ?? null,
                 'internal_only' => $validated['internal_only'] ?? false,
                 'time_tracking_mode' => $validated['time_tracking_mode'] ?? 'engagement',
                 'participant_times' => $participantTimes,
+                'logging_field_data' => $validated['logging_field_data'] ?? null,
             ];
 
             return redirect()
@@ -440,7 +416,7 @@ class ActivityController extends Controller
     {
         $this->verifyActivityEditAccess($activity);
 
-        $baseValidated = $request->validate([
+        $validated = $request->validate([
             'agreement_ids' => ['nullable', 'array'],
             'agreement_ids.*' => ['exists:agreements,id'],
             'state_ids' => ['nullable', 'array'],
@@ -460,20 +436,8 @@ class ActivityController extends Controller
             'participant_times.*.user_id' => ['exists:users,id'],
             'participant_times.*.hours' => ['numeric', 'min:0.25', 'max:24'],
             'participant_times.*.notes' => ['nullable', 'string', 'max:500'],
+            'logging_field_data' => ['nullable', 'array'],
         ]);
-
-        // Get config from first agreement if any are selected
-        $agreement = null;
-        if (!empty($baseValidated['agreement_ids'])) {
-            $this->verifyAgreementAccess($baseValidated['agreement_ids'][0]);
-            $agreement = Agreement::findOrFail($baseValidated['agreement_ids'][0]);
-        }
-        $config = $agreement ? $this->getAgreementActivityLoggingConfig($agreement) : [];
-
-        $validated = array_merge(
-            $baseValidated,
-            $request->validate($this->activityLoggingValidationRules($config))
-        );
 
         if (!empty($validated['participant_user_ids']) && !empty($validated['agreement_ids'])) {
             $this->verifyParticipantsInAgreement($validated['agreement_ids'][0], $validated['participant_user_ids']);
@@ -492,16 +456,7 @@ class ActivityController extends Controller
             'activity_type_id' => $validated['activity_type_id'],
             'internal_only' => $validated['internal_only'] ?? false,
             'time_tracking_mode' => $validated['time_tracking_mode'] ?? 'engagement',
-
-            'event_hours' => !empty($config['event_hours']) ? ($validated['event_hours'] ?? 0) : 0,
-            'prep_hours' => !empty($config['prep_hours']) ? ($validated['prep_hours'] ?? 0) : 0,
-            'followup_hours' => !empty($config['followup_hours']) ? ($validated['followup_hours'] ?? 0) : 0,
-            'participant_count' => !empty($config['participant_count']) ? ($validated['participant_count'] ?? null) : null,
-            'external_attendees' => !empty($config['external_attendees']) ? ($validated['external_attendees'] ?? null) : null,
-            'summary' => !empty($config['summary']) ? ($validated['summary'] ?? null) : null,
-            'follow_up' => !empty($config['follow_up']) ? ($validated['follow_up'] ?? null) : null,
-            'strengths' => !empty($config['strengths']) ? ($validated['strengths'] ?? null) : null,
-            'recommendations' => !empty($config['recommendations']) ? ($validated['recommendations'] ?? null) : null,
+            'logging_field_data' => $validated['logging_field_data'] ?? null,
         ]);
 
         $activity->agreements()->sync($validated['agreement_ids'] ?? []);
@@ -549,18 +504,10 @@ class ActivityController extends Controller
                 'program_ids' => $validated['program_ids'] ?? [],
                 'participant_user_ids' => $validated['participant_user_ids'] ?? [],
                 'engagement_date' => now()->format('Y-m-d'),
-                'event_hours' => null,
-                'prep_hours' => 0,
-                'followup_hours' => 0,
-                'participant_count' => null,
-                'external_attendees' => $validated['external_attendees'] ?? null,
-                'summary' => $validated['summary'] ?? null,
-                'follow_up' => $validated['follow_up'] ?? null,
-                'strengths' => $validated['strengths'] ?? null,
-                'recommendations' => $validated['recommendations'] ?? null,
                 'internal_only' => $validated['internal_only'] ?? false,
                 'time_tracking_mode' => $validated['time_tracking_mode'] ?? 'engagement',
                 'participant_times' => $participantTimes,
+                'logging_field_data' => $validated['logging_field_data'] ?? null,
             ];
 
             return redirect()
@@ -654,104 +601,73 @@ class ActivityController extends Controller
     }
 
     /**
-     * HTMX endpoint: Get participant checkboxes for an agreement
+     * HTMX endpoint: Get participant checkboxes for agreement(s)
      */
     public function getParticipantsForAgreement(Request $request)
     {
-        $agreementId = $request->input('agreement_id');
+        $agreementIds = $request->input('agreement_ids', []);
         $selectedIds = $request->input('participant_user_ids', []);
         
-        if (!$agreementId) {
+        if (empty($agreementIds)) {
             return '<small class="text-muted">Select an agreement first to see team</small>';
         }
         
-        $agreement = Agreement::with('users')->find($agreementId);
+        // Get unique users from all selected agreements
+        $users = \App\Models\User::whereHas('agreements', function ($query) use ($agreementIds) {
+            $query->whereIn('agreements.id', $agreementIds);
+        })
+        ->orderBy('name')
+        ->get();
         
-        if (!$agreement) {
-            return '<small class="text-muted">Agreement not found</small>';
-        }
-        
-        // Verify user has access to this agreement
-        if (!Auth::user()->isAdmin()) {
-            $hasAccess = Auth::user()->agreements()->where('agreements.id', $agreementId)->exists();
-            if (!$hasAccess) {
-                return '<small class="text-muted">You do not have access to this agreement</small>';
-            }
-        }
-        
-        if ($agreement->users->isEmpty()) {
-            return '<small class="text-muted">No team members assigned to this agreement</small>';
+        if ($users->isEmpty()) {
+            return '<small class="text-muted">No team members assigned to the selected agreement(s)</small>';
         }
         
         return view('activities.partials.participant-checkboxes', [
-            'agreement' => $agreement,
+            'users' => $users,
             'selectedIds' => $selectedIds,
-            'pickerId' => 'activity-participants-' . $agreement->id,
+            'pickerId' => 'activity-participants',
         ])->render();
     }
 
-    private function defaultActivityLoggingConfig(): array
+    /**
+     * API endpoint to get users for an agreement (for participant time tracking)
+     */
+    public function getAgreementUsers(Agreement $agreement)
     {
-        return [
-            'event_hours' => true,
-            'prep_hours' => true,
-            'followup_hours' => false,
-            'participant_count' => true,
-            'external_attendees' => true,
-            'summary' => true,
-            'follow_up' => true,
-            'strengths' => false,
-            'recommendations' => false,
-        ];
+        // Load users for the agreement
+        $users = $agreement->users()
+            ->select('users.id', 'users.name')
+            ->orderBy('users.name')
+            ->get();
+
+        return response()->json([
+            'users' => $users
+        ]);
     }
 
-    private function getAgreementActivityLoggingConfig(Agreement $agreement): array
+    /**
+     * API endpoint to get users for multiple agreements (for participant time tracking)
+     */
+    public function getAgreementsUsers(Request $request)
     {
-        return array_merge(
-            $this->defaultActivityLoggingConfig(),
-            $agreement->activity_logging_config ?? []
-        );
-    }
+        $agreementIds = $request->input('agreement_ids', []);
+        
+        if (empty($agreementIds)) {
+            return response()->json(['users' => []]);
+        }
 
-    private function activityLoggingValidationRules(array $config): array
-    {
-        return [
-            'event_hours' => !empty($config['event_hours'])
-                ? ['required', 'numeric', 'min:0', 'max:9999.99']
-                : ['nullable', 'numeric', 'min:0', 'max:9999.99'],
+        // Get unique users from all selected agreements
+        $users = \App\Models\User::whereHas('agreements', function ($query) use ($agreementIds) {
+            $query->whereIn('agreements.id', $agreementIds);
+        })
+        ->select('users.id', 'users.name')
+        ->orderBy('users.name')
+        ->get();
 
-            'prep_hours' => !empty($config['prep_hours'])
-                ? ['nullable', 'numeric', 'min:0', 'max:9999.99']
-                : ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-
-            'followup_hours' => !empty($config['followup_hours'])
-                ? ['nullable', 'numeric', 'min:0', 'max:9999.99']
-                : ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-
-            'participant_count' => !empty($config['participant_count'])
-                ? ['nullable', 'integer', 'min:0']
-                : ['nullable', 'integer', 'min:0'],
-
-            'external_attendees' => !empty($config['external_attendees'])
-                ? ['nullable', 'string', 'max:5000']
-                : ['nullable', 'string', 'max:5000'],
-
-            'summary' => !empty($config['summary'])
-                ? ['nullable', 'string', 'max:5000']
-                : ['nullable', 'string', 'max:5000'],
-
-            'follow_up' => !empty($config['follow_up'])
-                ? ['nullable', 'string', 'max:5000']
-                : ['nullable', 'string', 'max:5000'],
-
-            'strengths' => !empty($config['strengths'])
-                ? ['nullable', 'string', 'max:5000']
-                : ['nullable', 'string', 'max:5000'],
-
-            'recommendations' => !empty($config['recommendations'])
-                ? ['nullable', 'string', 'max:5000']
-                : ['nullable', 'string', 'max:5000'],
-        ];
+        return response()->json([
+            'users' => $users
+        ]);
     }
 
     /**

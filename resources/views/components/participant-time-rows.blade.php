@@ -45,26 +45,20 @@ document.addEventListener('DOMContentLoaded', function () {
     const addBtn = document.getElementById('add-participant-time-btn');
     let rowIndex = 0;
 
-    // Get available participants from all selected agreements
-    function getAvailableParticipants() {
-        // This will be populated dynamically based on selected agreements
-        // Format: { userId: 'name', ... }
-        const agreementSelects = document.querySelectorAll('[data-agreement-participants]');
-        const participants = {};
-        
-        agreementSelects.forEach(select => {
-            const data = select.dataset.agreementParticipants;
-            if (data) {
-                try {
-                    const parsed = JSON.parse(data);
-                    Object.assign(participants, parsed);
-                } catch (e) {
-                    console.error('Failed to parse participant data:', e);
-                }
-            }
+    // Validate required elements exist
+    if (!container || !template || !addBtn) {
+        console.error('Participant time tracking: Required elements not found', {
+            container: !!container,
+            template: !!template,
+            addBtn: !!addBtn
         });
-        
-        return participants;
+        return;
+    }
+
+    // Get available participants from global variable
+    function getAvailableParticipants() {
+        // Populated by main activity form when agreements are selected
+        return window.activityParticipants || {};
     }
 
     function populateParticipantSelects() {
@@ -88,32 +82,57 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function addRow() {
+        if (!template) {
+            console.error('Template not found');
+            return;
+        }
+
         const clone = template.content.cloneNode(true);
-        const html = clone.innerHTML.replaceAll('__INDEX__', rowIndex);
         
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = html;
-        const row = tempDiv.firstElementChild;
+        // Create a temporary container to work with the cloned content
+        const tempContainer = document.createElement('div');
+        tempContainer.appendChild(clone);
         
+        // Replace placeholders in all name attributes
+        tempContainer.querySelectorAll('[name*="__INDEX__"]').forEach(element => {
+            element.name = element.name.replace('__INDEX__', rowIndex);
+        });
+        
+        // Get the row element
+        const row = tempContainer.querySelector('.participant-time-row');
+        
+        if (!row) {
+            console.error('Participant time row not found in template');
+            return;
+        }
+        
+        // Append to container
         container.appendChild(row);
         
         // Attach remove handler
-        row.querySelector('.remove-row-btn').addEventListener('click', function () {
-            row.remove();
-        });
+        const removeBtn = row.querySelector('.remove-row-btn');
+        if (removeBtn) {
+            removeBtn.addEventListener('click', function () {
+                row.remove();
+            });
+        }
         
         rowIndex++;
         populateParticipantSelects();
     }
 
     // Add button handler
-    addBtn.addEventListener('click', addRow);
+    addBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        addRow();
+    });
 
     // Remove button handlers (event delegation)
     container.addEventListener('click', function (e) {
-        if (e.target.closest('.remove-row-btn')) {
+        const removeBtn = e.target.closest('.remove-row-btn');
+        if (removeBtn) {
             e.preventDefault();
-            e.target.closest('.participant-time-row').remove();
+            removeBtn.closest('.participant-time-row')?.remove();
         }
     });
 
@@ -124,8 +143,8 @@ document.addEventListener('DOMContentLoaded', function () {
         populateParticipantSelects();
     }
 
-    // Listen for agreement selection changes to update participant list
-    document.addEventListener('agreement-selection-changed', populateParticipantSelects);
+    // Listen for participants update from main form
+    document.addEventListener('participants-updated', populateParticipantSelects);
 });
 </script>
 

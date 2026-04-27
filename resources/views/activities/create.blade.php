@@ -5,24 +5,36 @@
 @section('content')
 
 @php
-    $defaultActivityLoggingConfig = [
-        'event_hours' => true,
-        'prep_hours' => true,
-        'followup_hours' => false,
-        'participant_count' => true,
-        'external_attendees' => true,
-        'summary' => true,
-        'follow_up' => true,
-        'strengths' => false,
-        'recommendations' => false,
-    ];
-
-    $agreementActivityConfigs = $agreements->mapWithKeys(function ($agreement) use ($defaultActivityLoggingConfig) {
+    // Map agreement and contact family logging fields for JavaScript
+    $agreementLoggingFields = $agreements->mapWithKeys(function ($agreement) {
         return [
-            $agreement->id => array_merge(
-                $defaultActivityLoggingConfig,
-                $agreement->activity_logging_config ?? []
-            )
+            $agreement->id => $agreement->loggingFields->map(function ($field) {
+                return [
+                    'id' => $field->id,
+                    'name' => $field->name,
+                    'slug' => $field->slug,
+                    'field_type' => $field->field_type,
+                    'help_text' => $field->help_text,
+                    'options_json' => $field->options_json,
+                    'is_required' => $field->pivot->is_required,
+                ];
+            })->values()
+        ];
+    });
+    
+    $contactFamilyLoggingFields = $contactFamilies->mapWithKeys(function ($family) {
+        return [
+            $family->id => $family->loggingFields->map(function ($field) {
+                return [
+                    'id' => $field->id,
+                    'name' => $field->name,
+                    'slug' => $field->slug,
+                    'field_type' => $field->field_type,
+                    'help_text' => $field->help_text,
+                    'options_json' => $field->options_json,
+                    'is_required' => $field->pivot->is_required,
+                ];
+            })->values()
         ];
     });
 
@@ -80,7 +92,6 @@
                              id="org-state-container"
                              hx-get="{{ route('activities.orgs-states-for-agreements') }}"
                              hx-trigger="load, token-picker:change from:#activity-agreements-picker"
-                             hx-include="#activity-agreements-picker [name='agreement_ids[]'], #org-state-container [name='organization_ids[]'], #org-state-container [name='state_ids[]']"
                              hx-swap="innerHTML"
                              hx-indicator="#htmx-loading-indicator">
                             {{-- Dynamic organization and state pickers loaded via HTMX --}}
@@ -146,21 +157,7 @@
                         </div>
                     </x-section-card>
 
-                    <x-section-card title="3) Notes & Participants" subtitle="Only fill what is needed.">
-                        <div class="mb-3" data-config-key="external_attendees">
-                            <details>
-                                <summary class="small text-muted mb-2">External Attendees (optional)</summary>
-                                <textarea class="form-control @error('external_attendees') is-invalid @enderror"
-                                          id="external_attendees"
-                                          name="external_attendees"
-                                          rows="2"
-                                          placeholder="Comma-separated names/organizations">{{ old('external_attendees', $prefill['external_attendees'] ?? '') }}</textarea>
-                                @error('external_attendees')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </details>
-                        </div>
-
+                    <x-section-card title="3) Internal Participants" subtitle="Select team members who participated.">
                         <div class="mb-3">
                             <label class="form-label">Internal Participants</label>
                             <div id="participants-container" class="border rounded p-2">
@@ -170,35 +167,13 @@
                                 <div class="text-danger small mt-1">{{ $message }}</div>
                             @enderror
                         </div>
-
-                        <div class="mb-3" data-config-key="summary">
-                            <label for="summary" class="form-label">Summary</label>
-                            <textarea class="form-control @error('summary') is-invalid @enderror"
-                                      id="summary"
-                                      name="summary"
-                                      rows="2">{{ old('summary', $prefill['summary'] ?? '') }}</textarea>
-                            @error('summary')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="mb-3" data-config-key="follow_up">
-                            <label for="follow_up" class="form-label">Follow-Up</label>
-                            <textarea class="form-control @error('follow_up') is-invalid @enderror"
-                                      id="follow_up"
-                                      name="follow_up"
-                                      rows="2">{{ old('follow_up', $prefill['follow_up'] ?? '') }}</textarea>
-                            @error('follow_up')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
                     </x-section-card>
                 </div>
             </div>
 
             <div class="col-lg-4">
                 <div class="d-grid gap-4">
-                    <x-section-card title="4) Quick Details" subtitle="Date, time, count, programs.">
+                    <x-section-card title="4) Quick Details" subtitle="Core activity metadata.">
                         <div class="mb-3">
                             <label for="engagement_date" class="form-label fw-semibold">Date <span class="text-danger">*</span></label>
                             <input type="date"
@@ -208,70 +183,6 @@
                                    value="{{ old('engagement_date', $prefill['engagement_date'] ?? now()->format('Y-m-d')) }}"
                                    required>
                             @error('engagement_date')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="row g-2">
-                            <div class="col-12" data-config-key="event_hours">
-                                <label for="event_hours" class="form-label fw-semibold">Event Hours <span class="text-danger">*</span></label>
-                                <input type="number"
-                                       class="form-control @error('event_hours') is-invalid @enderror"
-                                       id="event_hours"
-                                       name="event_hours"
-                                       step="0.25"
-                                       min="0"
-                                       max="9999.99"
-                                       data-required-when-enabled="true"
-                                       value="{{ old('event_hours', $prefill['event_hours'] ?? '') }}">
-                                <x-numeric-quick-chips for="event_hours" />
-                                @error('event_hours')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <div class="col-6" data-config-key="prep_hours">
-                                <label for="prep_hours" class="form-label">Prep Hours</label>
-                                <input type="number"
-                                       class="form-control @error('prep_hours') is-invalid @enderror"
-                                       id="prep_hours"
-                                       name="prep_hours"
-                                       step="0.25"
-                                       min="0"
-                                       max="9999.99"
-                                       value="{{ old('prep_hours', $prefill['prep_hours'] ?? 0) }}">
-                                <x-numeric-quick-chips for="prep_hours" />
-                                @error('prep_hours')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <div class="col-6" data-config-key="followup_hours">
-                                <label for="followup_hours" class="form-label">Follow-Up Hours</label>
-                                <input type="number"
-                                       class="form-control @error('followup_hours') is-invalid @enderror"
-                                       id="followup_hours"
-                                       name="followup_hours"
-                                       step="0.25"
-                                       min="0"
-                                       max="9999.99"
-                                       value="{{ old('followup_hours', $prefill['followup_hours'] ?? 0) }}">
-                                <x-numeric-quick-chips for="followup_hours" />
-                                @error('followup_hours')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-
-                        <div class="mt-3" data-config-key="participant_count">
-                            <label for="participant_count" class="form-label">Participant Count</label>
-                            <input type="number"
-                                   class="form-control @error('participant_count') is-invalid @enderror"
-                                   id="participant_count"
-                                   name="participant_count"
-                                   min="0"
-                                   value="{{ old('participant_count', $prefill['participant_count'] ?? '') }}">
-                            @error('participant_count')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
@@ -303,6 +214,13 @@
                                 Internal only
                                 <small class="text-muted d-block mt-1">Exclude this activity from external reports.</small>
                             </label>
+                        </div>
+                    </x-section-card>
+
+                    <!-- Dynamic Logging Fields: Single Source of Truth for Metrics -->
+                    <x-section-card title="Activity Details" subtitle="Metrics and reporting fields from your selections." id="dynamic-logging-fields-card">
+                        <div id="dynamic-logging-fields-container">
+                            <p class="text-muted small mb-0">Select agreements and contact family above to see required fields.</p>
                         </div>
                     </x-section-card>
 
@@ -380,15 +298,220 @@
 
 <script>
 (function () {
-    const defaultActivityLoggingConfig = @json($defaultActivityLoggingConfig);
-    const agreementActivityConfigs = @json($agreementActivityConfigs);
+    const agreementLoggingFields = @json($agreementLoggingFields);
+    const contactFamilyLoggingFields = @json($contactFamilyLoggingFields);
     const participantsUrl = @json(route('activities.participants-for-agreement'));
     const form = document.getElementById('activity-create-form');
     const statusTop = document.getElementById('activity-save-status');
     const statusBar = document.getElementById('activity-save-bar-status');
     const hasErrors = @json($errors->any());
+    const oldLoggingFieldData = @json(old('logging_field_data', $prefill['logging_field_data'] ?? []));
+
+    // Global participant data for time tracking component
+    window.activityParticipants = {};
 
     if (!form) return;
+
+    // ============================================================================
+    // Dynamic Logging Fields System
+    // ============================================================================
+    function calculateLoggingFieldsUnion() {
+        const selectedAgreementIds = Array.from(document.querySelectorAll('input[name="agreement_ids[]"]:checked'))
+            .map(el => parseInt(el.value));
+        const selectedContactFamilyId = document.getElementById('contact_family_id')?.value;
+
+        const fieldsMap = new Map(); // key: field.id, value: field with is_required aggregated
+
+        // Collect fields from selected agreements
+        selectedAgreementIds.forEach(agreementId => {
+            const fields = agreementLoggingFields[agreementId] || [];
+            fields.forEach(field => {
+                if (fieldsMap.has(field.id)) {
+                    // If any source marks it required, it's required
+                    const existing = fieldsMap.get(field.id);
+                    existing.is_required = existing.is_required || field.is_required;
+                } else {
+                    // Clone to avoid mutation
+                    fieldsMap.set(field.id, { ...field });
+                }
+            });
+        });
+
+        // Collect fields from selected contact family
+        if (selectedContactFamilyId) {
+            const fields = contactFamilyLoggingFields[selectedContactFamilyId] || [];
+            fields.forEach(field => {
+                if (fieldsMap.has(field.id)) {
+                    const existing = fieldsMap.get(field.id);
+                    existing.is_required = existing.is_required || field.is_required;
+                } else {
+                    fieldsMap.set(field.id, { ...field });
+                }
+            });
+        }
+
+        return Array.from(fieldsMap.values());
+    }
+
+    function renderDynamicLoggingFields() {
+        const fields = calculateLoggingFieldsUnion();
+        const container = document.getElementById('dynamic-logging-fields-container');
+        const card = document.getElementById('dynamic-logging-fields-card');
+
+        if (!container || !card) return;
+
+        // Always show the card
+        card.style.display = 'block';
+
+        if (fields.length === 0) {
+            container.innerHTML = '<p class="text-muted small mb-0">Select agreements and contact family above to see required fields.</p>';
+            return;
+        }
+
+        container.innerHTML = '';
+
+        fields.forEach(field => {
+            const fieldDiv = document.createElement('div');
+            fieldDiv.className = 'mb-3';
+
+            const label = document.createElement('label');
+            label.className = 'form-label' + (field.is_required ? ' fw-semibold' : '');
+            label.htmlFor = `logging_field_${field.slug}`;
+            label.textContent = field.name;
+            if (field.is_required) {
+                const required = document.createElement('span');
+                required.className = 'text-danger';
+                required.textContent = ' *';
+                label.appendChild(required);
+            }
+
+            fieldDiv.appendChild(label);
+
+            // Render input based on field_type
+            let input;
+            const oldValue = oldLoggingFieldData[field.slug] ?? '';
+
+            switch (field.field_type) {
+                case 'number':
+                    input = document.createElement('input');
+                    input.type = 'number';
+                    input.className = 'form-control';
+                    input.id = `logging_field_${field.slug}`;
+                    input.name = `logging_field_data[${field.slug}]`;
+                    input.value = oldValue;
+                    if (field.is_required) input.required = true;
+                    break;
+
+                case 'decimal':
+                    input = document.createElement('input');
+                    input.type = 'number';
+                    input.step = '0.01';
+                    input.className = 'form-control';
+                    input.id = `logging_field_${field.slug}`;
+                    input.name = `logging_field_data[${field.slug}]`;
+                    input.value = oldValue;
+                    if (field.is_required) input.required = true;
+                    break;
+
+                case 'text':
+                    input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'form-control';
+                    input.id = `logging_field_${field.slug}`;
+                    input.name = `logging_field_data[${field.slug}]`;
+                    input.value = oldValue;
+                    if (field.is_required) input.required = true;
+                    break;
+
+                case 'textarea':
+                    input = document.createElement('textarea');
+                    input.className = 'form-control';
+                    input.rows = 3;
+                    input.id = `logging_field_${field.slug}`;
+                    input.name = `logging_field_data[${field.slug}]`;
+                    input.value = oldValue;
+                    if (field.is_required) input.required = true;
+                    break;
+
+                case 'checkbox':
+                    const checkDiv = document.createElement('div');
+                    checkDiv.className = 'form-check';
+                    input = document.createElement('input');
+                    input.type = 'checkbox';
+                    input.className = 'form-check-input';
+                    input.id = `logging_field_${field.slug}`;
+                    input.name = `logging_field_data[${field.slug}]`;
+                    input.value = '1';
+                    if (oldValue == '1' || oldValue === true) input.checked = true;
+                    const checkLabel = document.createElement('label');
+                    checkLabel.className = 'form-check-label';
+                    checkLabel.htmlFor = `logging_field_${field.slug}`;
+                    checkLabel.textContent = 'Yes';
+                    checkDiv.appendChild(input);
+                    checkDiv.appendChild(checkLabel);
+                    fieldDiv.removeChild(label);
+                    fieldDiv.appendChild(checkDiv);
+                    input = checkDiv;
+                    break;
+
+                case 'select':
+                    input = document.createElement('select');
+                    input.className = 'form-select';
+                    input.id = `logging_field_${field.slug}`;
+                    input.name = `logging_field_data[${field.slug}]`;
+                    if (field.is_required) input.required = true;
+                    
+                    const emptyOption = document.createElement('option');
+                    emptyOption.value = '';
+                    emptyOption.textContent = '-- Select --';
+                    input.appendChild(emptyOption);
+
+                    if (field.options_json && Array.isArray(field.options_json)) {
+                        field.options_json.forEach(option => {
+                            const opt = document.createElement('option');
+                            opt.value = option;
+                            opt.textContent = option;
+                            if (oldValue === option) opt.selected = true;
+                            input.appendChild(opt);
+                        });
+                    }
+                    break;
+
+                default:
+                    input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'form-control';
+                    input.id = `logging_field_${field.slug}`;
+                    input.name = `logging_field_data[${field.slug}]`;
+                    input.value = oldValue;
+                    break;
+            }
+
+            if (field.field_type !== 'checkbox') {
+                fieldDiv.appendChild(input);
+            }
+
+            // Add help text if present
+            if (field.help_text) {
+                const helpText = document.createElement('small');
+                helpText.className = 'form-text text-muted';
+                helpText.textContent = field.help_text;
+                fieldDiv.appendChild(helpText);
+            }
+
+            container.appendChild(fieldDiv);
+        });
+    }
+
+    // Listen for agreement selection changes
+    document.addEventListener('change', function(e) {
+        if (e.target.name === 'agreement_ids[]' || e.target.id === 'contact_family_id') {
+            renderDynamicLoggingFields();
+        }
+    });
+
+    // Initial render on page load
+    renderDynamicLoggingFields();
 
     // ============================================================================
     // Organization & State Selection Preservation across HTMX swaps
@@ -527,41 +650,52 @@
         return selectedValues('agreement_ids[]')[0] || null;
     }
 
-    function updateActivityLoggingFields() {
-        const agreementId = firstSelectedAgreementId();
-        const config = agreementActivityConfigs[agreementId] || defaultActivityLoggingConfig;
-
-        document.querySelectorAll('[data-config-key]').forEach(function (wrapper) {
-            const key = wrapper.dataset.configKey;
-            const enabled = !!config[key];
-            wrapper.classList.toggle('d-none', !enabled);
-
-            wrapper.querySelectorAll('input, textarea, select, details').forEach(function (field) {
-                if (field.tagName !== 'DETAILS') {
-                    field.disabled = !enabled;
-                }
-
-                if (field.dataset.requiredWhenEnabled === 'true') {
-                    field.required = enabled;
-                }
-            });
-        });
-    }
-
     function loadParticipants() {
-        const agreementId = firstSelectedAgreementId();
+        const agreementIds = selectedValues('agreement_ids[]');
         const container = document.getElementById('participants-container');
         if (!container) return;
 
-        if (!agreementId) {
+        if (agreementIds.length === 0) {
             container.innerHTML = '<small class="text-muted">Select an agreement first to load team members.</small>';
+            window.activityParticipants = {};
+            document.dispatchEvent(new CustomEvent('participants-updated'));
             return;
         }
 
-        htmx.ajax('GET', participantsUrl + '?agreement_id=' + encodeURIComponent(agreementId), {
+        // Pass ALL agreement IDs to the HTMX participant checkboxes endpoint
+        const params = new URLSearchParams();
+        agreementIds.forEach(id => params.append('agreement_ids[]', id));
+        
+        htmx.ajax('GET', participantsUrl + '?' + params.toString(), {
             target: '#participants-container',
             swap: 'innerHTML'
         });
+
+        // Fetch participant data for ALL selected agreements for the time tracking component
+        fetchParticipantData(agreementIds);
+    }
+
+    function fetchParticipantData(agreementIds) {
+        // Fetch users from all selected agreements for the time tracking component
+        const params = new URLSearchParams();
+        agreementIds.forEach(id => params.append('agreement_ids[]', id));
+        
+        fetch(`/api/agreements-users?${params.toString()}`)
+            .then(response => response.json())
+            .then(data => {
+                window.activityParticipants = {};
+                if (data.users && Array.isArray(data.users)) {
+                    data.users.forEach(user => {
+                        window.activityParticipants[user.id] = user.name;
+                    });
+                }
+                document.dispatchEvent(new CustomEvent('participants-updated'));
+            })
+            .catch(error => {
+                console.error('Error fetching participant data:', error);
+                window.activityParticipants = {};
+                document.dispatchEvent(new CustomEvent('participants-updated'));
+            });
     }
 
     function updateActivityTypeState() {
@@ -642,10 +776,29 @@
     }
 
     document.getElementById('activity-agreements-picker')?.addEventListener('token-picker:change', function () {
-        updateActivityLoggingFields();
         loadParticipants();
+        renderDynamicLoggingFields();
+        refreshOrgStateContainer();
         markDirty();
     });
+
+    function refreshOrgStateContainer() {
+        const agreementIds = selectedValues('agreement_ids[]');
+        const orgIds = selectedValues('organization_ids[]');
+        const stateIds = selectedValues('state_ids[]');
+        
+        const params = new URLSearchParams();
+        agreementIds.forEach(id => params.append('agreement_ids[]', id));
+        orgIds.forEach(id => params.append('organization_ids[]', id));
+        stateIds.forEach(id => params.append('state_ids[]', id));
+        
+        const url = '{{ route('activities.orgs-states-for-agreements') }}?' + params.toString();
+        
+        htmx.ajax('GET', url, {
+            target: '#org-state-container',
+            swap: 'innerHTML'
+        });
+    }
 
     ['activity-organizations-picker', 'activity-states-picker', 'activity-programs-picker'].forEach(function (id) {
         document.getElementById(id)?.addEventListener('token-picker:change', markDirty);
@@ -691,7 +844,6 @@
     }
 
     updateActivityTypeState();
-    updateActivityLoggingFields();
     loadParticipants();
     renderTemplates();
     updateTimeTrackingUI();

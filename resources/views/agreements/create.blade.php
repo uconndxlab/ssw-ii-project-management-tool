@@ -190,114 +190,54 @@
 
                     <!-- Reporting / Logging Fields -->
                     <x-section-card title="6) Reporting / Logging" subtitle="Activity logging configuration.">
-                        <p class="text-muted small mb-3">✅ Check fields to enable:</p>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input"
-                                   type="checkbox"
-                                   name="activity_logging_config[event_hours]"
-                                   id="activity_logging_config_event_hours"
-                                   value="1"
-                                   {{ old('activity_logging_config.event_hours') ? 'checked' : '' }}>
-                            <label class="form-check-label" for="activity_logging_config_event_hours">
-                                Event Hours
-                            </label>
-                        </div>
+                        <p class="text-muted small mb-3">✅ Select fields to enable for activity logging:</p>
+                        
+                        @foreach($loggingFields as $field)
+                            <div class="border-bottom pb-2 mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input logging-field-checkbox"
+                                           type="checkbox"
+                                           name="logging_field_ids[]"
+                                           id="logging_field_{{ $field->id }}"
+                                           value="{{ $field->id }}"
+                                           {{ in_array($field->id, old('logging_field_ids', [])) ? 'checked' : '' }}
+                                           onchange="toggleRequiredCheckbox({{ $field->id }})">
+                                    <label class="form-check-label fw-semibold" for="logging_field_{{ $field->id }}">
+                                        {{ $field->name }}
+                                        <span class="badge bg-secondary text-uppercase small">{{ $field->field_type }}</span>
+                                    </label>
+                                </div>
+                                @if($field->help_text)
+                                    <small class="text-muted d-block ms-4">{{ $field->help_text }}</small>
+                                @endif
+                                <div class="form-check ms-4 mt-1" id="required_{{ $field->id }}" style="display: {{ in_array($field->id, old('logging_field_ids', [])) ? 'block' : 'none' }};">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           name="required_logging_field_ids[]"
+                                           id="required_logging_field_{{ $field->id }}"
+                                           value="{{ $field->id }}"
+                                           {{ in_array($field->id, old('required_logging_field_ids', [])) ? 'checked' : '' }}>
+                                    <label class="form-check-label small text-muted" for="required_logging_field_{{ $field->id }}">
+                                        Make this field required
+                                    </label>
+                                </div>
+                            </div>
+                        @endforeach
 
-                        <div class="form-check mb-2">
-                            <input class="form-check-input"
-                                   type="checkbox"
-                                   name="activity_logging_config[prep_hours]"
-                                   id="activity_logging_config_prep_hours"
-                                   value="1"
-                                   {{ old('activity_logging_config.prep_hours') ? 'checked' : '' }}>
-                            <label class="form-check-label" for="activity_logging_config_prep_hours">
-                                Prep Hours
-                            </label>
-                        </div>
-
-                        <div class="form-check mb-2">
-                            <input class="form-check-input"
-                                   type="checkbox"
-                                   name="activity_logging_config[followup_hours]"
-                                   id="activity_logging_config_followup_hours"
-                                   value="1"
-                                   {{ old('activity_logging_config.followup_hours') ? 'checked' : '' }}>
-                            <label class="form-check-label" for="activity_logging_config_followup_hours">
-                                Follow-Up Hours
-                            </label>
-                        </div>
-
-                        <div class="form-check mb-2">
-                            <input class="form-check-input"
-                                   type="checkbox"
-                                   name="activity_logging_config[participant_count]"
-                                   id="activity_logging_config_participant_count"
-                                   value="1"
-                                   {{ old('activity_logging_config.participant_count') ? 'checked' : '' }}>
-                            <label class="form-check-label" for="activity_logging_config_participant_count">
-                                Participant Count
-                            </label>
-                        </div>
-
-                        <div class="form-check mb-2">
-                            <input class="form-check-input"
-                                   type="checkbox"
-                                   name="activity_logging_config[external_attendees]"
-                                   id="activity_logging_config_external_attendees"
-                                   value="1"
-                                   {{ old('activity_logging_config.external_attendees') ? 'checked' : '' }}>
-                            <label class="form-check-label" for="activity_logging_config_external_attendees">
-                                External Attendees
-                            </label>
-                        </div>
-
-                        <div class="form-check mb-2">
-                            <input class="form-check-input"
-                                   type="checkbox"
-                                   name="activity_logging_config[summary]"
-                                   id="activity_logging_config_summary"
-                                   value="1"
-                                   {{ old('activity_logging_config.summary') ? 'checked' : '' }}>
-                            <label class="form-check-label" for="activity_logging_config_summary">
-                                Summary / Notes
-                            </label>
-                        </div>
-
-                        <div class="form-check mb-2">
-                            <input class="form-check-input"
-                                   type="checkbox"
-                                   name="activity_logging_config[follow_up]"
-                                   id="activity_logging_config_follow_up"
-                                   value="1"
-                                   {{ old('activity_logging_config.follow_up') ? 'checked' : '' }}>
-                            <label class="form-check-label" for="activity_logging_config_follow_up">
-                                Follow-Up Notes
-                            </label>
-                        </div>
-
-                        <div class="form-check mb-2">
-                            <input class="form-check-input"
-                                   type="checkbox"
-                                   name="activity_logging_config[strengths]"
-                                   id="activity_logging_config_strengths"
-                                   value="1"
-                                   {{ old('activity_logging_config.strengths') ? 'checked' : '' }}>
-                            <label class="form-check-label" for="activity_logging_config_strengths">
-                                Strengths
-                            </label>
-                        </div>
-
-                        <div class="form-check mb-2">
-                            <input class="form-check-input"
-                                   type="checkbox"
-                                   name="activity_logging_config[recommendations]"
-                                   id="activity_logging_config_recommendations"
-                                   value="1"
-                                   {{ old('activity_logging_config.recommendations') ? 'checked' : '' }}>
-                            <label class="form-check-label" for="activity_logging_config_recommendations">
-                                Recommendations
-                            </label>
-                        </div>
+                        <script>
+                        function toggleRequiredCheckbox(fieldId) {
+                            const checkbox = document.getElementById('logging_field_' + fieldId);
+                            const requiredDiv = document.getElementById('required_' + fieldId);
+                            const requiredCheckbox = document.getElementById('required_logging_field_' + fieldId);
+                            
+                            if (checkbox.checked) {
+                                requiredDiv.style.display = 'block';
+                            } else {
+                                requiredDiv.style.display = 'none';
+                                requiredCheckbox.checked = false;
+                            }
+                        }
+                        </script>
 
                         <hr class="my-3">
 

@@ -142,8 +142,9 @@ class AgreementController extends Controller
         $organizations = Organization::orderBy('name')->get();
         $users = User::orderBy('name')->get();
         $teams = Team::where('active', true)->orderBy('name')->get();
+        $loggingFields = \App\Models\LoggingField::active()->ordered()->get();
         
-        return view('agreements.create', compact('states', 'organizations', 'users', 'teams'));
+        return view('agreements.create', compact('states', 'organizations', 'users', 'teams', 'loggingFields'));
     }
 
     public function store(Request $request)
@@ -180,6 +181,11 @@ class AgreementController extends Controller
             'team_ids' => ['nullable', 'array'],
             'team_ids.*' => ['exists:teams,id'],
             
+            'logging_field_ids' => ['nullable', 'array'],
+            'logging_field_ids.*' => ['exists:logging_fields,id'],
+            'required_logging_field_ids' => ['nullable', 'array'],
+            'required_logging_field_ids.*' => ['exists:logging_fields,id'],
+            
             'attachments' => ['nullable', 'array'],
             'attachments.*' => ['file', 'max:10240', 'mimes:pdf,doc,docx,xls,xlsx,txt'],
         ]);
@@ -204,6 +210,15 @@ class AgreementController extends Controller
         $agreement->states()->sync($validated['state_ids'] ?? []);
         $agreement->users()->sync($validated['user_ids'] ?? []);
         $agreement->teams()->sync($validated['team_ids'] ?? []);
+        
+        // Sync logging fields with is_required pivot data
+        $loggingFieldIds = $validated['logging_field_ids'] ?? [];
+        $requiredFieldIds = $validated['required_logging_field_ids'] ?? [];
+        $syncData = [];
+        foreach ($loggingFieldIds as $fieldId) {
+            $syncData[$fieldId] = ['is_required' => in_array($fieldId, $requiredFieldIds)];
+        }
+        $agreement->loggingFields()->sync($syncData);
         
         // Handle file uploads
         if ($request->hasFile('attachments')) {
@@ -311,9 +326,10 @@ class AgreementController extends Controller
         $teams = Team::where('active', true)->orderBy('name')->get();
         $contactFamilies = ContactFamily::where('active', true)->orderBy('sort_order')->orderBy('name')->get();
         $activityTypes = ActivityType::where('active', true)->orderBy('sort_order')->orderBy('name')->get();
-        $agreement->load(['users', 'teams', 'deliverables.activityType.contactFamily', 'organizations', 'states', 'attachments']);
+        $loggingFields = \App\Models\LoggingField::active()->ordered()->get();
+        $agreement->load(['users', 'teams', 'deliverables.activityType.contactFamily', 'organizations', 'states', 'attachments', 'loggingFields']);
         
-        return view('agreements.edit', compact('agreement', 'states', 'organizations', 'users', 'teams', 'contactFamilies', 'activityTypes'));
+        return view('agreements.edit', compact('agreement', 'states', 'organizations', 'users', 'teams', 'contactFamilies', 'activityTypes', 'loggingFields'));
     }
 
     public function update(Request $request, Agreement $agreement)
@@ -350,6 +366,11 @@ class AgreementController extends Controller
             'team_ids' => ['nullable', 'array'],
             'team_ids.*' => ['exists:teams,id'],
             
+            'logging_field_ids' => ['nullable', 'array'],
+            'logging_field_ids.*' => ['exists:logging_fields,id'],
+            'required_logging_field_ids' => ['nullable', 'array'],
+            'required_logging_field_ids.*' => ['exists:logging_fields,id'],
+            
             'attachments' => ['nullable', 'array'],
             'attachments.*' => ['file', 'max:10240', 'mimes:pdf,doc,docx,xls,xlsx,txt'],
         ]);
@@ -374,6 +395,15 @@ class AgreementController extends Controller
         $agreement->states()->sync($validated['state_ids'] ?? []);
         $agreement->users()->sync($validated['user_ids'] ?? []);
         $agreement->teams()->sync($validated['team_ids'] ?? []);
+        
+        // Sync logging fields with is_required pivot data
+        $loggingFieldIds = $validated['logging_field_ids'] ?? [];
+        $requiredFieldIds = $validated['required_logging_field_ids'] ?? [];
+        $syncData = [];
+        foreach ($loggingFieldIds as $fieldId) {
+            $syncData[$fieldId] = ['is_required' => in_array($fieldId, $requiredFieldIds)];
+        }
+        $agreement->loggingFields()->sync($syncData);
         
         // Handle file uploads
         if ($request->hasFile('attachments')) {
