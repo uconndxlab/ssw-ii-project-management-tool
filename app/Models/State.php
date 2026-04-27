@@ -10,6 +10,12 @@ class State extends Model
 {
     protected $fillable = [
         'name',
+        'code',
+        'is_territory',
+    ];
+
+    protected $casts = [
+        'is_territory' => 'boolean',
     ];
 
     public function organizations(): HasMany
