@@ -54,9 +54,12 @@
         <div class="row g-4">
             <div class="col-lg-8">
                 <div class="d-grid gap-4">
-                    <x-section-card title="1) Agreements & Coverage" subtitle="Select agreements first, then optional org/state context.">
+                    <x-section-card title="1) Agreements & Coverage" subtitle="Select agreements first — organizations and states will auto-populate.">
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">Agreements</label>
+                            <label class="form-label fw-semibold">
+                                Agreements
+                                <span class="badge bg-info text-white ms-2">Start here</span>
+                            </label>
                             <x-token-picker
                                 picker-id="activity-agreements-picker"
                                 name="agreement_ids[]"
@@ -65,38 +68,35 @@
                                 placeholder="Search agreements..."
                                 empty-message="No agreements match your search."
                             />
+                            <small class="text-muted d-block mt-1">
+                                💡 Leave empty for internal-only activities (meetings, admin work, etc.)
+                            </small>
                             @error('agreement_ids')
                                 <div class="text-danger small mt-1">{{ $message }}</div>
                             @enderror
                         </div>
 
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Organizations</label>
-                                <x-token-picker
-                                    picker-id="activity-organizations-picker"
-                                    name="organization_ids[]"
-                                    :items="$organizations"
-                                    :selected-ids="$selectedOrganizationIds"
-                                    placeholder="Search organizations..."
-                                />
-                                @error('organization_ids')
-                                    <div class="text-danger small mt-1">{{ $message }}</div>
-                                @enderror
+                        <div class="row g-3" 
+                             id="org-state-container"
+                             hx-get="{{ route('activities.orgs-states-for-agreements') }}"
+                             hx-trigger="load, token-picker:change from:#activity-agreements-picker"
+                             hx-include="#activity-agreements-picker [name='agreement_ids[]'], #org-state-container [name='organization_ids[]'], #org-state-container [name='state_ids[]']"
+                             hx-swap="innerHTML"
+                             hx-indicator="#htmx-loading-indicator">
+                            {{-- Dynamic organization and state pickers loaded via HTMX --}}
+                            @include('activities.partials.org-state-pickers', [
+                                'agreementIds' => $selectedAgreementIds,
+                                'selectedOrganizationIds' => $selectedOrganizationIds,
+                                'selectedStateIds' => $selectedStateIds,
+                            ])
+                        </div>
+                        
+                        {{-- Loading indicator --}}
+                        <div id="htmx-loading-indicator" class="htmx-indicator">
+                            <div class="spinner-border spinner-border-sm text-primary mt-2" role="status">
+                                <span class="visually-hidden">Loading...</span>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label">States</label>
-                                <x-token-picker
-                                    picker-id="activity-states-picker"
-                                    name="state_ids[]"
-                                    :items="$states"
-                                    :selected-ids="$selectedStateIds"
-                                    placeholder="Search states..."
-                                />
-                                @error('state_ids')
-                                    <div class="text-danger small mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
+                            <small class="text-muted ms-2">Updating options...</small>
                         </div>
                     </x-section-card>
 
@@ -389,6 +389,108 @@
     const hasErrors = @json($errors->any());
 
     if (!form) return;
+
+    // ============================================================================
+    // Organization & State Selection Preservation across HTMX swaps
+    // ============================================================================
+    (function() {
+        let preservedOrgIds = [];
+        let preservedStateIds = [];
+        
+        // Before HTMX swap, capture current selected values from token pickers
+        document.body.addEventListener('htmx:beforeRequest', function(event) {
+            const target = event.detail.target;
+            if (target.id === 'org-state-container' || target.closest('#org-state-container')) {
+                const orgPicker = document.getElementById('activity-organizations-picker');
+                const statePicker = document.getElementById('activity-states-picker');
+                
+                if (orgPicker) {
+                    const orgInputs = orgPicker.querySelectorAll('input[name="organization_ids[]"]');
+                    preservedOrgIds = Array.from(orgInputs).map(input => input.value);
+                }
+                
+                if (statePicker) {
+                    const stateInputs = statePicker.querySelectorAll('input[name="state_ids[]"]');
+                    preservedStateIds = Array.from(stateInputs).map(input => input.value);
+                }
+            }
+        });
+        
+        // After HTMX settles, restore selections
+        document.body.addEventListener('htmx:afterSettle', function(event) {
+            const target = event.target;
+            if (target.id === 'org-state-container' || target.closest('#org-state-container')) {
+                // Wait for token pickers to be fully initialized before setting values
+                function waitForPickersAndSet() {
+                    const orgPicker = document.getElementById('activity-organizations-picker');
+                    const statePicker = document.getElementById('activity-states-picker');
+                    
+                    // Check if pickers are initialized
+                    const orgReady = orgPicker && orgPicker.dataset.tokenPickerInitialized === 'true';
+                    const stateReady = statePicker && statePicker.dataset.tokenPickerInitialized === 'true';
+                    
+                    if (!orgReady || !stateReady) {
+                        // Not ready yet, try again shortly
+                        setTimeout(waitForPickersAndSet, 50);
+                        return;
+                    }
+                    
+                    // Get server-provided IDs from data element
+                    const dataElement = document.getElementById('org-state-data');
+                    const serverOrgIds = dataElement ? JSON.parse(dataElement.dataset.orgIds || '[]') : [];
+                    const serverStateIds = dataElement ? JSON.parse(dataElement.dataset.stateIds || '[]') : [];
+                    
+                    // MERGE preserved selections with server-provided selections
+                    const orgIdsToSet = [...new Set([...preservedOrgIds, ...serverOrgIds])];
+                    const stateIdsToSet = [...new Set([...preservedStateIds, ...serverStateIds])];
+                    
+                    console.log('Setting org IDs:', orgIdsToSet);
+                    console.log('Setting state IDs:', stateIdsToSet);
+                    
+                    if (orgPicker && orgIdsToSet.length > 0) {
+                        orgPicker.dispatchEvent(new CustomEvent('token-picker:set', { 
+                            detail: orgIdsToSet,
+                            bubbles: true
+                        }));
+                    }
+                    
+                    if (statePicker && stateIdsToSet.length > 0) {
+                        statePicker.dispatchEvent(new CustomEvent('token-picker:set', { 
+                            detail: stateIdsToSet,
+                            bubbles: true
+                        }));
+                    }
+                }
+                
+                // Start checking for initialized pickers
+                setTimeout(waitForPickersAndSet, 50);
+            }
+        });
+    })();
+
+    // ============================================================================
+    // Workaround for token picker dropdown not showing reliably on first focus
+    // ============================================================================
+    document.addEventListener('click', function(event) {
+        const searchInput = event.target.closest('[data-token-search]');
+        if (searchInput) {
+            const picker = searchInput.closest('[data-token-picker]');
+            if (picker) {
+                const dropdown = picker.querySelector('[data-token-dropdown]');
+                if (dropdown && dropdown.classList.contains('d-none')) {
+                    // Trigger focus to ensure dropdown appears
+                    searchInput.focus();
+                    // Small delay then check if dropdown appeared
+                    setTimeout(() => {
+                        if (dropdown.classList.contains('d-none')) {
+                            // Force dropdown to show if it didn't appear
+                            dropdown.classList.remove('d-none');
+                        }
+                    }, 10);
+                }
+            }
+        }
+    }, true);
 
     // Time tracking mode UI management
     function updateTimeTrackingUI() {

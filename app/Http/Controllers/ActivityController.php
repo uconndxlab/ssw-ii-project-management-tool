@@ -753,4 +753,20 @@ class ActivityController extends Controller
                 : ['nullable', 'string', 'max:5000'],
         ];
     }
+
+    /**
+     * HTMX endpoint to get filtered organizations and states based on selected agreements
+     */
+    public function getOrganizationsAndStatesForAgreements(Request $request)
+    {
+        $agreementIds = $request->input('agreement_ids', []);
+        $selectedOrganizationIds = $request->input('organization_ids', []);
+        $selectedStateIds = $request->input('state_ids', []);
+        
+        return view('activities.partials.org-state-pickers', [
+            'agreementIds' => $agreementIds,
+            'selectedOrganizationIds' => $selectedOrganizationIds,
+            'selectedStateIds' => $selectedStateIds,
+        ])->render();
+    }
 }

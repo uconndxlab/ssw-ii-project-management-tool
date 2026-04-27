@@ -41,6 +41,10 @@ Route::middleware('auth')->group(function () {
     // HTMX endpoint for activity participant selection
     Route::get('/activities/participants-for-agreement', [ActivityController::class, 'getParticipantsForAgreement'])
         ->name('activities.participants-for-agreement');
+    
+    // HTMX endpoint for filtering organizations and states by agreements
+    Route::get('/activities/orgs-states-for-agreements', [ActivityController::class, 'getOrganizationsAndStatesForAgreements'])
+        ->name('activities.orgs-states-for-agreements');
 
     // Activities - visible to all authenticated users (with visibility filtering in controller)
     Route::get('/activities', [ActivityController::class, 'index'])->name('activities.index');

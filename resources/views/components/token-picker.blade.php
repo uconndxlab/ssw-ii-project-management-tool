@@ -199,6 +199,12 @@
 
         renderSelected();
         writeHiddenInputs();
+        
+        // Check if input is already focused (e.g., browser autofocus) and show dropdown
+        // Fixes: dropdown not appearing when page loads with focused field
+        if (document.activeElement === searchInput) {
+            renderDropdown();
+        }
     }
 
     function initTokenPickers(root) {
