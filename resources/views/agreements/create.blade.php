@@ -3,161 +3,163 @@
 @section('title', 'Create Agreement')
 
 @section('content')
-<div class="row mb-4">
-    <div class="col-12">
-        <h1>Create Agreement</h1>
+<div class="container-fluid py-4">
+    <div class="row g-4 mb-2">
+        <div class="col-12">
+            <h1 class="h3 mb-1">Create Agreement</h1>
+            <p class="text-muted mb-0">Configure contract metadata, staffing, reporting needs, and files.</p>
+        </div>
     </div>
-</div>
 
-<div class="row">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-body">
-                @if ($errors->any())
-                    <div class="alert alert-danger">
-                        <ul class="mb-0">
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
+    @if ($errors->any())
+        <div class="alert alert-danger py-2">
+            <strong>Please fix the highlighted fields.</strong>
+        </div>
+    @endif
 
-                <form method="POST" action="{{ route('agreements.store') }}" id="agreements-create-form">
-                    @csrf
+    <form method="POST" action="{{ route('agreements.store') }}" id="agreements-create-form" enctype="multipart/form-data">
+        @csrf
 
-                    <div class="mb-3">
-                        <label for="name" class="form-label">Agreement Name</label>
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <div class="d-grid gap-4">
+                    <!-- Basic Information -->
+                    <x-section-card title="1) Basic Information" subtitle="Start with the agreement name.">
+                        <div class="mb-3">
+                            <label for="name" class="form-label fw-semibold">Agreement Name <span class="text-danger">*</span></label>
                         <input type="text" 
                                class="form-control @error('name') is-invalid @enderror" 
                                id="name" 
                                name="name" 
                                value="{{ old('name') }}" 
                                required>
-                        @error('name')
+                            @error('name')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </x-section-card>
+
+                    <!-- Dates -->
+                    <x-section-card title="2) Dates" subtitle="Contract start, end, and extension dates.">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="start_date" class="form-label fw-semibold">Start Date</label>
+                        <input type="date" 
+                               class="form-control @error('start_date') is-invalid @enderror" 
+                               id="start_date" 
+                               name="start_date" 
+                               value="{{ old('start_date') }}">
+                        @error('start_date')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
 
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Organizations</label>
-                                <x-organization-picker
-                                    picker-id="agreement-organizations"
-                                    name="organization_ids[]"
-                                    :organizations="$organizations"
-                                    :selected-ids="old('organization_ids', [])"
-                                />
+                            <div class="col-md-6 mb-3">
+                                <label for="end_date" class="form-label fw-semibold">End Date</label>
+                        <input type="date" 
+                               class="form-control @error('end_date') is-invalid @enderror" 
+                               id="end_date" 
+                               name="end_date" 
+                               value="{{ old('end_date') }}">
+                        @error('end_date')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                            <div class="col-md-6">
+                                <label for="extension_start_date" class="form-label fw-semibold">Extension Start Date</label>
+                        <input type="date" 
+                               class="form-control @error('extension_start_date') is-invalid @enderror" 
+                               id="extension_start_date" 
+                               name="extension_start_date" 
+                               value="{{ old('extension_start_date') }}">
+                                <small class="text-muted">Optional: If the agreement was extended</small>
+                                @error('extension_start_date')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="extension_end_date" class="form-label fw-semibold">Extension End Date</label>
+                        <input type="date" 
+                               class="form-control @error('extension_end_date') is-invalid @enderror" 
+                               id="extension_end_date" 
+                               name="extension_end_date" 
+                               value="{{ old('extension_end_date') }}">
+                                <small class="text-muted">Optional: Final extended end date</small>
+                                @error('extension_end_date')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    </x-section-card>
+
+                    <!-- Relationships -->
+                    <x-section-card title="3) Relationships" subtitle="Link organizations and states to this agreement.">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Organizations</label>
+                        <x-organization-picker
+                            picker-id="agreement-organizations"
+                            name="organization_ids[]"
+                            :organizations="$organizations"
+                            :selected-ids="old('organization_ids', [])"
+                        />
+                                <small class="text-muted">Select one or more organizations</small>
                                 @error('organization_ids')
                                     <div class="text-danger small mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
-                        </div>
 
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">States</label>
-                                <x-state-picker
-                                    picker-id="agreement-states"
-                                    name="state_ids[]"
-                                    :states="$states"
-                                    :selected-ids="old('state_ids', [])"
-                                />
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">States</label>
+                        <x-state-picker
+                            picker-id="agreement-states"
+                            name="state_ids[]"
+                            :states="$states"
+                            :selected-ids="old('state_ids', [])"
+                        />
+                                <small class="text-muted">Select one or more states</small>
                                 @error('state_ids')
                                     <div class="text-danger small mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
                         </div>
-                    </div>
+                    </x-section-card>
 
-                    <div class="mb-3">
-                        <label for="abstract" class="form-label">Abstract</label>
-                        <textarea class="form-control @error('abstract') is-invalid @enderror" 
-                                  id="abstract" 
-                                  name="abstract" 
-                                  rows="4">{{ old('abstract') }}</textarea>
-                        @error('abstract')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
+                    <!-- Staffing -->
+                    <x-section-card title="4) Staffing" subtitle="Assign individual users and teams who can access this agreement.">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Assign Users</label>
+                        <x-user-picker
+                            picker-id="agreement-create-users"
+                            name="user_ids[]"
+                            :users="$users"
+                            :selected-ids="old('user_ids', [])"
+                            search-placeholder="Search to assign users..."
+                            :show-role="true"
+                        />
+                                <small class="text-muted">Individual users assigned to this agreement</small>
+                            </div>
 
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="start_date" class="form-label">Start Date</label>
-                                <input type="date" 
-                                       class="form-control @error('start_date') is-invalid @enderror" 
-                                       id="start_date" 
-                                       name="start_date" 
-                                       value="{{ old('start_date') }}">
-                                @error('start_date')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Assign Teams</label>
+                        <x-team-picker
+                            picker-id="agreement-create-teams"
+                            name="team_ids[]"
+                            :teams="$teams"
+                            :selected-ids="old('team_ids', [])"
+                            search-placeholder="Search to assign teams..."
+                        />
+                                <small class="text-muted">All users in assigned teams will have access</small>
                             </div>
                         </div>
+                    </x-section-card>
 
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="end_date" class="form-label">End Date</label>
-                                <input type="date" 
-                                       class="form-control @error('end_date') is-invalid @enderror" 
-                                       id="end_date" 
-                                       name="end_date" 
-                                       value="{{ old('end_date') }}">
-                                @error('end_date')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="original_end_date" class="form-label">Original End Date</label>
-                                <input type="date" 
-                                       class="form-control @error('original_end_date') is-invalid @enderror" 
-                                       id="original_end_date" 
-                                       name="original_end_date" 
-                                       value="{{ old('original_end_date') }}">
-                                @error('original_end_date')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                                <small class="text-muted">For tracking agreement extensions</small>
-                            </div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="extended_end_date" class="form-label">Extended End Date</label>
-                                <input type="date" 
-                                       class="form-control @error('extended_end_date') is-invalid @enderror" 
-                                       id="extended_end_date" 
-                                       name="extended_end_date" 
-                                       value="{{ old('extended_end_date') }}">
-                                @error('extended_end_date')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="certification_candidates" class="form-label">Certification Candidates</label>
-                        <textarea class="form-control @error('certification_candidates') is-invalid @enderror" 
-                                  id="certification_candidates" 
-                                  name="certification_candidates" 
-                                  rows="3">{{ old('certification_candidates') }}</textarea>
-                        @error('certification_candidates')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                        <small class="text-muted">List of certification candidates (placeholder)</small>
-                    </div>
-
-                    <div class="mb-4">
-                        <h5 class="mb-3">Activity Logging Fields</h5>
-
+                    <!-- Reporting / Logging Fields -->
+                    <x-section-card title="5) Reporting / Logging Fields" subtitle="Configure which fields appear when logging activities.">
+                        <p class="text-muted small mb-3">✅ Check the fields that should be available for activity logging under this agreement.</p>
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-check mb-2">
@@ -166,7 +168,7 @@
                                            name="activity_logging_config[event_hours]"
                                            id="activity_logging_config_event_hours"
                                            value="1"
-                                           {{ !empty($activityLoggingConfig['event_hours']) ? 'checked' : '' }}>
+                                           {{ old('activity_logging_config.event_hours') ? 'checked' : '' }}>
                                     <label class="form-check-label" for="activity_logging_config_event_hours">
                                         Event Hours
                                     </label>
@@ -178,7 +180,7 @@
                                            name="activity_logging_config[prep_hours]"
                                            id="activity_logging_config_prep_hours"
                                            value="1"
-                                           {{ !empty($activityLoggingConfig['prep_hours']) ? 'checked' : '' }}>
+                                           {{ old('activity_logging_config.prep_hours') ? 'checked' : '' }}>
                                     <label class="form-check-label" for="activity_logging_config_prep_hours">
                                         Prep Hours
                                     </label>
@@ -190,9 +192,9 @@
                                            name="activity_logging_config[followup_hours]"
                                            id="activity_logging_config_followup_hours"
                                            value="1"
-                                           {{ !empty($activityLoggingConfig['followup_hours']) ? 'checked' : '' }}>
+                                           {{ old('activity_logging_config.followup_hours') ? 'checked' : '' }}>
                                     <label class="form-check-label" for="activity_logging_config_followup_hours">
-                                        Follow-up Hours
+                                        Follow-Up Hours
                                     </label>
                                 </div>
 
@@ -202,9 +204,9 @@
                                            name="activity_logging_config[participant_count]"
                                            id="activity_logging_config_participant_count"
                                            value="1"
-                                           {{ !empty($activityLoggingConfig['participant_count']) ? 'checked' : '' }}>
+                                           {{ old('activity_logging_config.participant_count') ? 'checked' : '' }}>
                                     <label class="form-check-label" for="activity_logging_config_participant_count">
-                                        Participants
+                                        Participant Count
                                     </label>
                                 </div>
 
@@ -214,7 +216,7 @@
                                            name="activity_logging_config[external_attendees]"
                                            id="activity_logging_config_external_attendees"
                                            value="1"
-                                           {{ !empty($activityLoggingConfig['external_attendees']) ? 'checked' : '' }}>
+                                           {{ old('activity_logging_config.external_attendees') ? 'checked' : '' }}>
                                     <label class="form-check-label" for="activity_logging_config_external_attendees">
                                         External Attendees
                                     </label>
@@ -228,9 +230,9 @@
                                            name="activity_logging_config[summary]"
                                            id="activity_logging_config_summary"
                                            value="1"
-                                           {{ !empty($activityLoggingConfig['summary']) ? 'checked' : '' }}>
+                                           {{ old('activity_logging_config.summary') ? 'checked' : '' }}>
                                     <label class="form-check-label" for="activity_logging_config_summary">
-                                        Summary
+                                        Summary / Notes
                                     </label>
                                 </div>
 
@@ -240,11 +242,11 @@
                                            name="activity_logging_config[follow_up]"
                                            id="activity_logging_config_follow_up"
                                            value="1"
-                                           {{ !empty($activityLoggingConfig['follow_up']) ? 'checked' : '' }}>
+                                           {{ old('activity_logging_config.follow_up') ? 'checked' : '' }}>
                                     <label class="form-check-label" for="activity_logging_config_follow_up">
-                                        Follow-Up
+                                        Follow-Up Notes
                                     </label>
-                                </div>
+                                        </div>
 
                                 <div class="form-check mb-2">
                                     <input class="form-check-input"
@@ -252,7 +254,7 @@
                                            name="activity_logging_config[strengths]"
                                            id="activity_logging_config_strengths"
                                            value="1"
-                                           {{ !empty($activityLoggingConfig['strengths']) ? 'checked' : '' }}>
+                                           {{ old('activity_logging_config.strengths') ? 'checked' : '' }}>
                                     <label class="form-check-label" for="activity_logging_config_strengths">
                                         Strengths
                                     </label>
@@ -264,7 +266,7 @@
                                            name="activity_logging_config[recommendations]"
                                            id="activity_logging_config_recommendations"
                                            value="1"
-                                           {{ !empty($activityLoggingConfig['recommendations']) ? 'checked' : '' }}>
+                                           {{ old('activity_logging_config.recommendations') ? 'checked' : '' }}>
                                     <label class="form-check-label" for="activity_logging_config_recommendations">
                                         Recommendations
                                     </label>
@@ -272,44 +274,103 @@
                             </div>
                         </div>
 
-                        <small class="text-muted">
-                            Select which fields should appear when logging activities for this agreement.
-                        </small>
-                    </div>
+                        <!-- Time Tracking Mode -->
+                        <div class="row mt-4">
+                            <div class="col-md-12">
+                                <label class="form-label fw-semibold">Time Tracking Mode</label>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" 
+                                                   type="radio" 
+                                                   name="time_tracking_mode" 
+                                                   id="time_tracking_engagement" 
+                                                   value="engagement"
+                                                   {{ old('time_tracking_mode', 'engagement') === 'engagement' ? 'checked' : '' }}>
+                                            <label class="form-check-label" for="time_tracking_engagement">
+                                                Time by Engagement
+                                            </label>
+                                            <small class="d-block text-muted">Track time at the engagement/activity level</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" 
+                                                   type="radio" 
+                                                   name="time_tracking_mode" 
+                                                   id="time_tracking_participant" 
+                                                   value="participant"
+                                                   {{ old('time_tracking_mode') === 'participant' ? 'checked' : '' }}>
+                                            <label class="form-check-label" for="time_tracking_participant">
+                                                Time by Participant
+                                            </label>
+                                            <small class="d-block text-muted">Track time per participant</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </x-section-card>
 
-                    <div class="mb-3">
-                        <label class="form-label">Assign Users</label>
+                    <!-- Attachments -->
+                    <x-section-card title="6) Attachments" subtitle="Upload PDFs, documents, or other contract files.">
+                        <div class="mb-3">
+                            <label for="attachments" class="form-label fw-semibold">Upload Files</label>
+                            <input type="file" 
+                                   class="form-control @error('attachments.*') is-invalid @enderror" 
+                                   id="attachments" 
+                                   name="attachments[]" 
+                                   multiple
+                                   accept=".pdf,.doc,.docx,.xls,.xlsx,.txt">
+                            <small class="text-muted">📎 Upload PDFs, documents, or other relevant files. You can select multiple files.</small>
+                            @error('attachments.*')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </x-section-card>
 
-                        <x-user-picker
-                            picker-id="agreement-create-users"
-                            name="user_ids[]"
-                            :users="$users"
-                            :selected-ids="old('user_ids', [])"
-                            search-placeholder="Search to assign users..."
-                            :show-role="true"
-                        />
-                    </div>
+                    <!-- Scope of Work -->
+                    <x-section-card title="7) Scope of Work" subtitle="Describe the agreement's objectives, deliverables, and details.">
+                        <div class="mb-3">
+                            <label for="abstract" class="form-label fw-semibold">Description</label>
+                            <textarea class="form-control @error('abstract') is-invalid @enderror" 
+                                      id="abstract" 
+                                      name="abstract" 
+                                      rows="6"
+                                      placeholder="Describe the scope of work, deliverables, or other relevant details...">{{ old('abstract') }}</textarea>
+                            <small class="text-muted">Provide details about the agreement's scope, objectives, and deliverables.</small>
+                            @error('abstract')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Assign Teams</label>
-
-                        <x-team-picker
-                            picker-id="agreement-create-teams"
-                            name="team_ids[]"
-                            :teams="$teams"
-                            :selected-ids="old('team_ids', [])"
-                            search-placeholder="Search to assign teams..."
-                        />
-
-                        <small class="text-muted">
-                            All users in assigned teams will have access to this agreement.
-                        </small>
-                    </div>
-
-                </form>
+                        <div class="mb-3">
+                            <label for="certification_candidates" class="form-label fw-semibold">Certification Candidates</label>
+                            <textarea class="form-control @error('certification_candidates') is-invalid @enderror" 
+                                      id="certification_candidates" 
+                                      name="certification_candidates" 
+                                      rows="3"
+                                      placeholder="List certification candidates if applicable...">{{ old('certification_candidates') }}</textarea>
+                            <small class="text-muted">Optional: List any certification candidates associated with this agreement.</small>
+                            @error('certification_candidates')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </x-section-card>
+                </div>
             </div>
         </div>
-    </div>
+    </form>
 </div>
-<x-save-bar form-id="agreements-create-form" cancel-url="{{ route('agreements.index') }}" save-label="Create Agreement" />
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Sticky Save Bar -->
+<x-save-bar 
+    form-id="agreements-create-form" 
+    cancel-url="{{ route('agreements.index') }}" 
+    save-label="Create Agreement" />
+
 @endsection

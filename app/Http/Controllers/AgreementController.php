@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Organization;
 use App\Models\Agreement;
+use App\Models\AgreementAttachment;
 use App\Models\AgreementDeliverable;
 use App\Models\ActivityType;
 use App\Models\ContactFamily;
@@ -158,9 +159,10 @@ class AgreementController extends Controller
             'abstract' => ['nullable', 'string'],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
-            'original_end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
-            'extended_end_date' => ['nullable', 'date', 'after_or_equal:original_end_date'],
+            'extension_start_date' => ['nullable', 'date'],
+            'extension_end_date' => ['nullable', 'date', 'after_or_equal:extension_start_date'],
             'certification_candidates' => ['nullable', 'string'],
+            'time_tracking_mode' => ['required', 'in:engagement,participant'],
 
             'activity_logging_config' => ['nullable', 'array'],
             'activity_logging_config.event_hours' => ['nullable', 'boolean'],
@@ -175,6 +177,11 @@ class AgreementController extends Controller
 
             'user_ids' => ['nullable', 'array'],
             'user_ids.*' => ['exists:users,id'],
+            'team_ids' => ['nullable', 'array'],
+            'team_ids.*' => ['exists:teams,id'],
+            
+            'attachments' => ['nullable', 'array'],
+            'attachments.*' => ['file', 'max:10240', 'mimes:pdf,doc,docx,xls,xlsx,txt'],
         ]);
 
         $activityLoggingConfig = $this->normalizeActivityLoggingConfig(
@@ -186,21 +193,31 @@ class AgreementController extends Controller
             'abstract' => $validated['abstract'] ?? null,
             'start_date' => $validated['start_date'],
             'end_date' => $validated['end_date'],
-            'original_end_date' => $validated['original_end_date'] ?? null,
-            'extended_end_date' => $validated['extended_end_date'] ?? null,
+            'extension_start_date' => $validated['extension_start_date'] ?? null,
+            'extension_end_date' => $validated['extension_end_date'] ?? null,
             'certification_candidates' => $validated['certification_candidates'] ?? null,
             'activity_logging_config' => $activityLoggingConfig,
+            'time_tracking_mode' => $validated['time_tracking_mode'] ?? 'engagement',
         ]);
 
         $agreement->organizations()->sync($validated['organization_ids'] ?? []);
         $agreement->states()->sync($validated['state_ids'] ?? []);
-
-        if (!empty($validated['user_ids'])) {
-            $agreement->users()->sync($validated['user_ids']);
-        }
-
-        if (!empty($validated['team_ids'])) {
-            $agreement->teams()->sync($validated['team_ids']);
+        $agreement->users()->sync($validated['user_ids'] ?? []);
+        $agreement->teams()->sync($validated['team_ids'] ?? []);
+        
+        // Handle file uploads
+        if ($request->hasFile('attachments')) {
+            foreach ($request->file('attachments') as $file) {
+                $filename = $file->getClientOriginalName();
+                $path = $file->store('agreement-attachments', 'public');
+                
+                $agreement->attachments()->create([
+                    'filename' => $filename,
+                    'file_path' => $path,
+                    'mime_type' => $file->getMimeType(),
+                    'file_size' => $file->getSize(),
+                ]);
+            }
         }
 
         return redirect()
@@ -294,7 +311,7 @@ class AgreementController extends Controller
         $teams = Team::where('active', true)->orderBy('name')->get();
         $contactFamilies = ContactFamily::where('active', true)->orderBy('sort_order')->orderBy('name')->get();
         $activityTypes = ActivityType::where('active', true)->orderBy('sort_order')->orderBy('name')->get();
-        $agreement->load(['users', 'teams', 'deliverables.activityType.contactFamily', 'organizations', 'states']);
+        $agreement->load(['users', 'teams', 'deliverables.activityType.contactFamily', 'organizations', 'states', 'attachments']);
         
         return view('agreements.edit', compact('agreement', 'states', 'organizations', 'users', 'teams', 'contactFamilies', 'activityTypes'));
     }
@@ -312,9 +329,10 @@ class AgreementController extends Controller
             'abstract' => ['nullable', 'string'],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
-            'original_end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
-            'extended_end_date' => ['nullable', 'date', 'after_or_equal:original_end_date'],
+            'extension_start_date' => ['nullable', 'date'],
+            'extension_end_date' => ['nullable', 'date', 'after_or_equal:extension_start_date'],
             'certification_candidates' => ['nullable', 'string'],
+            'time_tracking_mode' => ['required', 'in:engagement,participant'],
 
             'activity_logging_config' => ['nullable', 'array'],
             'activity_logging_config.event_hours' => ['nullable', 'boolean'],
@@ -331,6 +349,9 @@ class AgreementController extends Controller
             'user_ids.*' => ['exists:users,id'],
             'team_ids' => ['nullable', 'array'],
             'team_ids.*' => ['exists:teams,id'],
+            
+            'attachments' => ['nullable', 'array'],
+            'attachments.*' => ['file', 'max:10240', 'mimes:pdf,doc,docx,xls,xlsx,txt'],
         ]);
 
         $activityLoggingConfig = $this->normalizeActivityLoggingConfig(
@@ -342,16 +363,32 @@ class AgreementController extends Controller
             'abstract' => $validated['abstract'] ?? null,
             'start_date' => $validated['start_date'],
             'end_date' => $validated['end_date'],
-            'original_end_date' => $validated['original_end_date'] ?? null,
-            'extended_end_date' => $validated['extended_end_date'] ?? null,
+            'extension_start_date' => $validated['extension_start_date'] ?? null,
+            'extension_end_date' => $validated['extension_end_date'] ?? null,
             'certification_candidates' => $validated['certification_candidates'] ?? null,
             'activity_logging_config' => $activityLoggingConfig,
+            'time_tracking_mode' => $validated['time_tracking_mode'] ?? 'engagement',
         ]);
 
         $agreement->organizations()->sync($validated['organization_ids'] ?? []);
         $agreement->states()->sync($validated['state_ids'] ?? []);
         $agreement->users()->sync($validated['user_ids'] ?? []);
         $agreement->teams()->sync($validated['team_ids'] ?? []);
+        
+        // Handle file uploads
+        if ($request->hasFile('attachments')) {
+            foreach ($request->file('attachments') as $file) {
+                $filename = $file->getClientOriginalName();
+                $path = $file->store('agreement-attachments', 'public');
+                
+                $agreement->attachments()->create([
+                    'filename' => $filename,
+                    'file_path' => $path,
+                    'mime_type' => $file->getMimeType(),
+                    'file_size' => $file->getSize(),
+                ]);
+            }
+        }
 
         return redirect()
             ->route('agreements.index')
@@ -445,5 +482,34 @@ class AgreementController extends Controller
                 ->map(fn ($value) => (bool) $value)
                 ->toArray()
         );
+    }
+
+    /**
+     * Download an agreement attachment.
+     */
+    public function downloadAttachment(Agreement $agreement, $attachmentId)
+    {
+        $attachment = $agreement->attachments()->findOrFail($attachmentId);
+        
+        return response()->download(
+            storage_path('app/public/' . $attachment->file_path),
+            $attachment->filename
+        );
+    }
+
+    /**
+     * Delete an agreement attachment.
+     */
+    public function destroyAttachment(Agreement $agreement, $attachmentId)
+    {
+        // Admin-only authorization
+        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can delete attachments.');
+        
+        $attachment = $agreement->attachments()->findOrFail($attachmentId);
+        $attachment->delete(); // Will trigger model event to delete physical file
+        
+        return redirect()
+            ->route('agreements.edit', $agreement)
+            ->with('success', 'Attachment deleted successfully.');
     }
 }
