@@ -67,6 +67,13 @@ class Agreement extends Model
         return $this->hasMany(AgreementAttachment::class);
     }
 
+    public function loggingFields(): BelongsToMany
+    {
+        return $this->belongsToMany(LoggingField::class, 'agreement_logging_field')
+            ->withPivot('is_required')
+            ->withTimestamps();
+    }
+
     /**
      * Get all users assigned to this agreement (both directly and via teams).
      */

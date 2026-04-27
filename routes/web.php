@@ -13,6 +13,7 @@ use App\Http\Controllers\ActivityTypeController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\LoggingFieldController;
 use Illuminate\Support\Facades\Route;
 
 // Guest routes
@@ -75,6 +76,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:admin')->group(function () {
         Route::resource('contact-families', ContactFamilyController::class)->except(['show']);
         Route::resource('activity-types', ActivityTypeController::class)->except(['show']);
+        Route::resource('logging-fields', LoggingFieldController::class);
         Route::resource('states', StateController::class);
         Route::resource('organizations', OrganizationController::class)->except(['index', 'show', 'create']);
         Route::resource('projects', ProjectController::class);
