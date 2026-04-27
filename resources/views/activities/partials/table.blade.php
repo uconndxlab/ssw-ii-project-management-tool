@@ -114,7 +114,13 @@
                             @forelse($activities as $activity)
                                 <tr>
                                     <td>{{ $activity->engagement_date->format('M d, Y') }}</td>
-                                    <td>{{ $activity->agreement->name }}</td>
+                                    <td>
+                                        @forelse($activity->agreements as $agreement)
+                                            <span class="badge bg-secondary me-1 mb-1">{{ $agreement->name }}</span>
+                                        @empty
+                                            <span class="text-muted small">None</span>
+                                        @endforelse
+                                    </td>
                                     <td>
                                         <span class="badge bg-info">
                                             {{ $activity->activityType->name }}

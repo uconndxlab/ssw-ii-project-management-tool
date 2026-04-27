@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Organization;
 use App\Models\Agreement;
+use App\Models\AgreementAttachment;
 use App\Models\AgreementDeliverable;
 use App\Models\ActivityType;
 use App\Models\ContactFamily;
 use App\Models\State;
+use App\Models\Team;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -31,13 +33,11 @@ class AgreementController extends Controller
         if ($request->filled('state_id')) {
             $stateId = $request->integer('state_id');
 
-            $organizationsQuery->whereHas('agreements', function ($q) use ($stateId) {
-                $q->where('state_id', $stateId);
+            $organizationsQuery->whereHas('agreements.states', function ($q) use ($stateId) {
+                $q->where('states.id', $stateId);
 
                 if (!Auth::user()->isAdmin()) {
-                    $q->whereHas('users', function ($userQuery) {
-                        $userQuery->where('user_id', Auth::id());
-                    });
+                    // Additional filtering handled by agreement visibility
                 }
             });
         }
@@ -45,7 +45,7 @@ class AgreementController extends Controller
         $organizations = $organizationsQuery->get(['id', 'name']);
         $states = State::orderBy('name')->get(['id', 'name']);
 
-        $query = Agreement::with(['organization', 'state', 'users']);
+        $query = Agreement::with(['organizations', 'states', 'users']);
 
         // Visibility enforcement: non-admins only see assigned agreements
         if (!Auth::user()->isAdmin()) {
@@ -59,10 +59,10 @@ class AgreementController extends Controller
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                    ->orWhereHas('organization', function ($orgQuery) use ($search) {
+                    ->orWhereHas('organizations', function ($orgQuery) use ($search) {
                         $orgQuery->where('name', 'like', "%{$search}%");
                     })
-                    ->orWhereHas('state', function ($stateQuery) use ($search) {
+                    ->orWhereHas('states', function ($stateQuery) use ($search) {
                         $stateQuery->where('name', 'like', "%{$search}%");
                     });
             });
@@ -70,11 +70,15 @@ class AgreementController extends Controller
 
         // Cascading filters
         if ($request->filled('state_id')) {
-            $query->where('state_id', $request->integer('state_id'));
+            $query->whereHas('states', function ($q) use ($request) {
+                $q->where('states.id', $request->integer('state_id'));
+            });
         }
 
         if ($request->filled('organization_id')) {
-            $query->where('organization_id', $request->integer('organization_id'));
+            $query->whereHas('organizations', function ($q) use ($request) {
+                $q->where('organizations.id', $request->integer('organization_id'));
+            });
         }
 
         // Sorting
@@ -137,8 +141,10 @@ class AgreementController extends Controller
         $states = State::orderBy('name')->get();
         $organizations = Organization::orderBy('name')->get();
         $users = User::orderBy('name')->get();
+        $teams = Team::where('active', true)->orderBy('name')->get();
+        $loggingFields = \App\Models\LoggingField::active()->ordered()->get();
         
-        return view('agreements.create', compact('states', 'organizations', 'users'));
+        return view('agreements.create', compact('states', 'organizations', 'users', 'teams', 'loggingFields'));
     }
 
     public function store(Request $request)
@@ -147,14 +153,17 @@ class AgreementController extends Controller
         abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can create agreements.');
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'organization_id' => ['required', 'exists:organizations,id'],
-            'state_id' => ['required', 'exists:states,id'],
+            'organization_ids' => ['nullable', 'array'],
+            'organization_ids.*' => ['exists:organizations,id'],
+            'state_ids' => ['nullable', 'array'],
+            'state_ids.*' => ['exists:states,id'],
             'abstract' => ['nullable', 'string'],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
-            'original_end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
-            'extended_end_date' => ['nullable', 'date', 'after_or_equal:original_end_date'],
+            'extension_start_date' => ['nullable', 'date'],
+            'extension_end_date' => ['nullable', 'date', 'after_or_equal:extension_start_date'],
             'certification_candidates' => ['nullable', 'string'],
+            'time_tracking_mode' => ['required', 'in:engagement,participant'],
 
             'activity_logging_config' => ['nullable', 'array'],
             'activity_logging_config.event_hours' => ['nullable', 'boolean'],
@@ -169,6 +178,16 @@ class AgreementController extends Controller
 
             'user_ids' => ['nullable', 'array'],
             'user_ids.*' => ['exists:users,id'],
+            'team_ids' => ['nullable', 'array'],
+            'team_ids.*' => ['exists:teams,id'],
+            
+            'logging_field_ids' => ['nullable', 'array'],
+            'logging_field_ids.*' => ['exists:logging_fields,id'],
+            'required_logging_field_ids' => ['nullable', 'array'],
+            'required_logging_field_ids.*' => ['exists:logging_fields,id'],
+            
+            'attachments' => ['nullable', 'array'],
+            'attachments.*' => ['file', 'max:10240', 'mimes:pdf,doc,docx,xls,xlsx,txt'],
         ]);
 
         $activityLoggingConfig = $this->normalizeActivityLoggingConfig(
@@ -177,19 +196,43 @@ class AgreementController extends Controller
 
         $agreement = Agreement::create([
             'name' => $validated['name'],
-            'organization_id' => $validated['organization_id'],
-            'state_id' => $validated['state_id'],
             'abstract' => $validated['abstract'] ?? null,
             'start_date' => $validated['start_date'],
             'end_date' => $validated['end_date'],
-            'original_end_date' => $validated['original_end_date'] ?? null,
-            'extended_end_date' => $validated['extended_end_date'] ?? null,
+            'extension_start_date' => $validated['extension_start_date'] ?? null,
+            'extension_end_date' => $validated['extension_end_date'] ?? null,
             'certification_candidates' => $validated['certification_candidates'] ?? null,
             'activity_logging_config' => $activityLoggingConfig,
+            'time_tracking_mode' => $validated['time_tracking_mode'] ?? 'engagement',
         ]);
 
-        if (!empty($validated['user_ids'])) {
-            $agreement->users()->sync($validated['user_ids']);
+        $agreement->organizations()->sync($validated['organization_ids'] ?? []);
+        $agreement->states()->sync($validated['state_ids'] ?? []);
+        $agreement->users()->sync($validated['user_ids'] ?? []);
+        $agreement->teams()->sync($validated['team_ids'] ?? []);
+        
+        // Sync logging fields with is_required pivot data
+        $loggingFieldIds = $validated['logging_field_ids'] ?? [];
+        $requiredFieldIds = $validated['required_logging_field_ids'] ?? [];
+        $syncData = [];
+        foreach ($loggingFieldIds as $fieldId) {
+            $syncData[$fieldId] = ['is_required' => in_array($fieldId, $requiredFieldIds)];
+        }
+        $agreement->loggingFields()->sync($syncData);
+        
+        // Handle file uploads
+        if ($request->hasFile('attachments')) {
+            foreach ($request->file('attachments') as $file) {
+                $filename = $file->getClientOriginalName();
+                $path = $file->store('agreement-attachments', 'public');
+                
+                $agreement->attachments()->create([
+                    'filename' => $filename,
+                    'file_path' => $path,
+                    'mime_type' => $file->getMimeType(),
+                    'file_size' => $file->getSize(),
+                ]);
+            }
         }
 
         return redirect()
@@ -204,7 +247,7 @@ class AgreementController extends Controller
             abort(403, 'Unauthorized access to this agreement.');
         }
 
-        $agreement->load(['organization', 'state', 'users', 'deliverables.activityType.contactFamily']);
+        $agreement->load(['organizations', 'states', 'users', 'teams.users', 'deliverables.activityType.contactFamily']);
         
         // Get activities for this agreement
         $activities = $agreement->activities()
@@ -280,11 +323,13 @@ class AgreementController extends Controller
         $states = State::orderBy('name')->get();
         $organizations = Organization::orderBy('name')->get();
         $users = User::orderBy('name')->get();
+        $teams = Team::where('active', true)->orderBy('name')->get();
         $contactFamilies = ContactFamily::where('active', true)->orderBy('sort_order')->orderBy('name')->get();
         $activityTypes = ActivityType::where('active', true)->orderBy('sort_order')->orderBy('name')->get();
-        $agreement->load(['users', 'deliverables.activityType.contactFamily']);
+        $loggingFields = \App\Models\LoggingField::active()->ordered()->get();
+        $agreement->load(['users', 'teams', 'deliverables.activityType.contactFamily', 'organizations', 'states', 'attachments', 'loggingFields']);
         
-        return view('agreements.edit', compact('agreement', 'states', 'organizations', 'users', 'contactFamilies', 'activityTypes'));
+        return view('agreements.edit', compact('agreement', 'states', 'organizations', 'users', 'teams', 'contactFamilies', 'activityTypes', 'loggingFields'));
     }
 
     public function update(Request $request, Agreement $agreement)
@@ -293,14 +338,17 @@ class AgreementController extends Controller
         abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can update agreements.');
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'organization_id' => ['required', 'exists:organizations,id'],
-            'state_id' => ['required', 'exists:states,id'],
+            'organization_ids' => ['nullable', 'array'],
+            'organization_ids.*' => ['exists:organizations,id'],
+            'state_ids' => ['nullable', 'array'],
+            'state_ids.*' => ['exists:states,id'],
             'abstract' => ['nullable', 'string'],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
-            'original_end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
-            'extended_end_date' => ['nullable', 'date', 'after_or_equal:original_end_date'],
+            'extension_start_date' => ['nullable', 'date'],
+            'extension_end_date' => ['nullable', 'date', 'after_or_equal:extension_start_date'],
             'certification_candidates' => ['nullable', 'string'],
+            'time_tracking_mode' => ['required', 'in:engagement,participant'],
 
             'activity_logging_config' => ['nullable', 'array'],
             'activity_logging_config.event_hours' => ['nullable', 'boolean'],
@@ -315,6 +363,16 @@ class AgreementController extends Controller
 
             'user_ids' => ['nullable', 'array'],
             'user_ids.*' => ['exists:users,id'],
+            'team_ids' => ['nullable', 'array'],
+            'team_ids.*' => ['exists:teams,id'],
+            
+            'logging_field_ids' => ['nullable', 'array'],
+            'logging_field_ids.*' => ['exists:logging_fields,id'],
+            'required_logging_field_ids' => ['nullable', 'array'],
+            'required_logging_field_ids.*' => ['exists:logging_fields,id'],
+            
+            'attachments' => ['nullable', 'array'],
+            'attachments.*' => ['file', 'max:10240', 'mimes:pdf,doc,docx,xls,xlsx,txt'],
         ]);
 
         $activityLoggingConfig = $this->normalizeActivityLoggingConfig(
@@ -323,18 +381,44 @@ class AgreementController extends Controller
 
         $agreement->update([
             'name' => $validated['name'],
-            'organization_id' => $validated['organization_id'],
-            'state_id' => $validated['state_id'],
             'abstract' => $validated['abstract'] ?? null,
             'start_date' => $validated['start_date'],
             'end_date' => $validated['end_date'],
-            'original_end_date' => $validated['original_end_date'] ?? null,
-            'extended_end_date' => $validated['extended_end_date'] ?? null,
+            'extension_start_date' => $validated['extension_start_date'] ?? null,
+            'extension_end_date' => $validated['extension_end_date'] ?? null,
             'certification_candidates' => $validated['certification_candidates'] ?? null,
             'activity_logging_config' => $activityLoggingConfig,
+            'time_tracking_mode' => $validated['time_tracking_mode'] ?? 'engagement',
         ]);
 
+        $agreement->organizations()->sync($validated['organization_ids'] ?? []);
+        $agreement->states()->sync($validated['state_ids'] ?? []);
         $agreement->users()->sync($validated['user_ids'] ?? []);
+        $agreement->teams()->sync($validated['team_ids'] ?? []);
+        
+        // Sync logging fields with is_required pivot data
+        $loggingFieldIds = $validated['logging_field_ids'] ?? [];
+        $requiredFieldIds = $validated['required_logging_field_ids'] ?? [];
+        $syncData = [];
+        foreach ($loggingFieldIds as $fieldId) {
+            $syncData[$fieldId] = ['is_required' => in_array($fieldId, $requiredFieldIds)];
+        }
+        $agreement->loggingFields()->sync($syncData);
+        
+        // Handle file uploads
+        if ($request->hasFile('attachments')) {
+            foreach ($request->file('attachments') as $file) {
+                $filename = $file->getClientOriginalName();
+                $path = $file->store('agreement-attachments', 'public');
+                
+                $agreement->attachments()->create([
+                    'filename' => $filename,
+                    'file_path' => $path,
+                    'mime_type' => $file->getMimeType(),
+                    'file_size' => $file->getSize(),
+                ]);
+            }
+        }
 
         return redirect()
             ->route('agreements.index')
@@ -428,5 +512,34 @@ class AgreementController extends Controller
                 ->map(fn ($value) => (bool) $value)
                 ->toArray()
         );
+    }
+
+    /**
+     * Download an agreement attachment.
+     */
+    public function downloadAttachment(Agreement $agreement, $attachmentId)
+    {
+        $attachment = $agreement->attachments()->findOrFail($attachmentId);
+        
+        return response()->download(
+            storage_path('app/public/' . $attachment->file_path),
+            $attachment->filename
+        );
+    }
+
+    /**
+     * Delete an agreement attachment.
+     */
+    public function destroyAttachment(Agreement $agreement, $attachmentId)
+    {
+        // Admin-only authorization
+        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can delete attachments.');
+        
+        $attachment = $agreement->attachments()->findOrFail($attachmentId);
+        $attachment->delete(); // Will trigger model event to delete physical file
+        
+        return redirect()
+            ->route('agreements.edit', $agreement)
+            ->with('success', 'Attachment deleted successfully.');
     }
 }

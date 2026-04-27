@@ -114,7 +114,13 @@
                             <tr>
                                 <td><a href="{{ route('activities.show', $activity) }}" class="text-decoration-none text-dark d-block">{{ $activity->engagement_date->format('M d') }}</a></td>
                                 <td>
-                                    <div class="small"><strong>{{ $activity->agreement->name }}</strong></div>
+                                    <div class="small">
+                                        @forelse($activity->agreements as $agreement)
+                                            <span class="badge bg-secondary me-1 mb-1">{{ $agreement->name }}</span>
+                                        @empty
+                                            <span class="text-muted small">None</span>
+                                        @endforelse
+                                    </div>
                                     <div class="small text-muted">{{ $activity->activityType->name }}</div>
                                 </td>
                                 <td>{{ number_format($activity->total_hours, 1) }}</td>

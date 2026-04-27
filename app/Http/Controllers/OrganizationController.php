@@ -78,11 +78,13 @@ class OrganizationController extends Controller
     public function show(Organization $organization)
     {
         // Load agreements with relationships
-        $agreements = $organization->agreements()->with(['state', 'users'])->get();
+        $agreements = $organization->agreements()->with(['states', 'users'])->get();
         
         // Get all activities for this organization's agreements
-        $allActivities = \App\Models\Activity::whereIn('agreement_id', $agreements->pluck('id'))
-            ->with(['activityType.contactFamily', 'user', 'agreement'])
+        $allActivities = \App\Models\Activity::whereHas('agreements', function($query) use ($agreements) {
+                $query->whereIn('agreements.id', $agreements->pluck('id'));
+            })
+            ->with(['activityType.contactFamily', 'user', 'agreements'])
             ->orderByDesc('engagement_date')
             ->get();
         

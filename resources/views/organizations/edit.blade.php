@@ -23,7 +23,7 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('organizations.update', $organization) }}">
+                <form method="POST" action="{{ route('organizations.update', $organization) }}" id="organizations-edit-form">
                     @csrf
                     @method('PUT')
 
@@ -59,13 +59,10 @@
                         @enderror
                     </div>
 
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">Update Organization</button>
-                        <a href="{{ route('organizations.index') }}" class="btn btn-secondary">Cancel</a>
-                    </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+<x-save-bar form-id="organizations-edit-form" cancel-url="{{ route('organizations.index') }}" save-label="Save Organization" :last-saved-at="$organization->updated_at" />
 @endsection

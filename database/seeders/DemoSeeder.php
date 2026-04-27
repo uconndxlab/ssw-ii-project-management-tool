@@ -8,12 +8,14 @@ use Illuminate\Support\Facades\DB;
 use App\Models\User;
 use App\Models\State;
 use App\Models\Organization;
+use App\Models\Project;
 use App\Models\Program;
 use App\Models\ContactFamily;
 use App\Models\ActivityType;
 use App\Models\Agreement;
 use App\Models\AgreementDeliverable;
 use App\Models\Activity;
+use App\Models\LoggingField;
 use Carbon\Carbon;
 
 class DemoSeeder extends Seeder
@@ -30,22 +32,28 @@ class DemoSeeder extends Seeder
             // 2. Create Users
             $users = $this->createUsers();
             
-            // 3. Create Programs
-            $programs = $this->createPrograms();
+            // 3. Create Project
+            $project = $this->createProject();
             
-            // 4. Create Contact Families & Activity Types
+            // 4. Create Programs
+            $programs = $this->createPrograms($project);
+            
+            // 5. Create Contact Families & Activity Types
             $activityTypes = $this->createContactFamiliesAndActivityTypes();
             
-            // 5. Create Organizations
+            // 6. Create Organizations
             $organizations = $this->createOrganizations($states);
             
-            // 6. Create Agreements
+            // 7. Create Agreements
             $agreements = $this->createAgreements($states, $organizations, $users);
             
-            // 7. Create Deliverables for Agreements
+            // 7b. Attach logging fields to agreements and contact families
+            $this->attachLoggingFields($agreements);
+            
+            // 8. Create Deliverables for Agreements
             $this->createDeliverables($agreements, $activityTypes);
             
-            // 8. Create Activities
+            // 9. Create Activities
             $this->createActivities($agreements, $activityTypes, $programs);
             
             $this->command->info('Demo data seeded successfully!');
@@ -119,7 +127,18 @@ class DemoSeeder extends Seeder
         return $users;
     }
 
-    private function createPrograms(): array
+    private function createProject()
+    {
+        return Project::firstOrCreate(
+            ['name' => 'SSW II Project'],
+            [
+                'description' => 'Main project for SSW II programs',
+                'active' => true,
+            ]
+        );
+    }
+
+    private function createPrograms($project): array
     {
         $programNames = ['MRSS', 'FOCUS', 'NWIC', 'PEARLS', 'NTTAC', 'TAN2'];
         $programs = [];
@@ -127,7 +146,10 @@ class DemoSeeder extends Seeder
         foreach ($programNames as $name) {
             $programs[] = Program::firstOrCreate(
                 ['name' => $name],
-                ['active' => true]
+                [
+                    'active' => true,
+                    'project_id' => $project->id,
+                ]
             );
         }
         
@@ -295,27 +317,30 @@ class DemoSeeder extends Seeder
             
             // Some agreements have extensions
             $hasExtension = rand(0, 10) > 7; // 30% chance
-            $originalEndDate = null;
-            $extendedEndDate = null;
+            $extensionStartDate = null;
+            $extensionEndDate = null;
             
             if ($hasExtension) {
-                $originalEndDate = $endDate->copy()->subMonths(rand(6, 12));
-                $extendedEndDate = $endDate;
+                // Original end date logic: extension starts around the original end, extends further
+                $extensionStartDate = $endDate->copy()->subMonths(rand(3, 6));
+                $extensionEndDate = $endDate;
             }
             
             $agreement = Agreement::firstOrCreate(
                 ['name' => $data['name']],
                 [
-                    'organization_id' => $org->id,
-                    'state_id' => $state->id,
                     'abstract' => $data['abstract'],
                     'start_date' => $startDate,
                     'end_date' => $endDate,
-                    'original_end_date' => $originalEndDate,
-                    'extended_end_date' => $extendedEndDate,
+                    'extension_start_date' => $extensionStartDate,
+                    'extension_end_date' => $extensionEndDate,
                     'certification_candidates' => $data['certification_candidates'],
                 ]
             );
+            
+            // Attach organization and state
+            $agreement->organizations()->syncWithoutDetaching([$org->id]);
+            $agreement->states()->syncWithoutDetaching([$state->id]);
             
             // Assign 2-3 users to each agreement
             $nonAdminUsers = collect($users)->where('role', '!=', 'admin');
@@ -455,7 +480,6 @@ class DemoSeeder extends Seeder
             $userId = $agreementUserIds[array_rand($agreementUserIds)];
             
             $activity = Activity::create([
-                'agreement_id' => $agreement->id,
                 'user_id' => $userId,
                 'engagement_date' => Carbon::now()->subDays(rand(1, 180)),
                 'activity_type_id' => $activityType->id,
@@ -469,6 +493,19 @@ class DemoSeeder extends Seeder
                 'recommendations' => $narrative['recommendations'],
             ]);
             
+            // Attach agreement
+            $activity->agreements()->attach($agreement->id);
+            
+            // Attach organizations and states from the agreement
+            $agreementOrgs = $agreement->organizations()->pluck('organizations.id');
+            $agreementStates = $agreement->states()->pluck('states.id');
+            if ($agreementOrgs->isNotEmpty()) {
+                $activity->organizations()->sync($agreementOrgs);
+            }
+            if ($agreementStates->isNotEmpty()) {
+                $activity->states()->sync($agreementStates);
+            }
+            
             // Attach 1-2 programs
             $programCount = rand(1, 2);
             $selectedPrograms = collect($programs)->random($programCount)->pluck('id');
@@ -479,5 +516,96 @@ class DemoSeeder extends Seeder
             $selectedParticipants = collect($agreementUserIds)->random($participantCount);
             $activity->participants()->sync($selectedParticipants);
         }
+    }
+
+    private function attachLoggingFields(array $agreements): void
+    {
+        $loggingFields = LoggingField::all();
+        if ($loggingFields->isEmpty()) {
+            $this->command->warn('No logging fields found. Skipping pivot table population.');
+            return;
+        }
+
+        // Get commonly used fields
+        $eventHours = $loggingFields->firstWhere('name', 'Event Hours');
+        $prepHours = $loggingFields->firstWhere('name', 'Prep Hours');
+        $followupHours = $loggingFields->firstWhere('name', 'Follow-up Hours');
+        $participantCount = $loggingFields->firstWhere('name', 'Participant Count');
+        $externalAttendees = $loggingFields->firstWhere('name', 'External Attendees');
+        $summary = $loggingFields->firstWhere('name', 'Summary');
+        $travelMiles = $loggingFields->firstWhere('name', 'Travel Miles');
+        $materialsCost = $loggingFields->firstWhere('name', 'Materials Cost');
+        $deliverablesCompleted = $loggingFields->firstWhere('name', 'Deliverables Completed');
+        $eventType = $loggingFields->firstWhere('name', 'Event Type');
+
+        // Attach logging fields to a few agreements with varied requirements
+        foreach ($agreements as $index => $agreement) {
+            $fieldsToAttach = [];
+            
+            // Different agreements have different field requirements
+            if ($index % 3 === 0) {
+                // Training-focused agreements (require event hours, participant count, summary)
+                if ($eventHours) $fieldsToAttach[$eventHours->id] = ['is_required' => true];
+                if ($prepHours) $fieldsToAttach[$prepHours->id] = ['is_required' => false];
+                if ($participantCount) $fieldsToAttach[$participantCount->id] = ['is_required' => true];
+                if ($summary) $fieldsToAttach[$summary->id] = ['is_required' => true];
+                if ($eventType) $fieldsToAttach[$eventType->id] = ['is_required' => false];
+            } elseif ($index % 3 === 1) {
+                // Coaching/TA-focused agreements (require all time fields, summary, follow-up)
+                if ($eventHours) $fieldsToAttach[$eventHours->id] = ['is_required' => true];
+                if ($prepHours) $fieldsToAttach[$prepHours->id] = ['is_required' => true];
+                if ($followupHours) $fieldsToAttach[$followupHours->id] = ['is_required' => true];
+                if ($summary) $fieldsToAttach[$summary->id] = ['is_required' => true];
+                if ($externalAttendees) $fieldsToAttach[$externalAttendees->id] = ['is_required' => false];
+            } else {
+                // Data/Evaluation-focused agreements (require summary, deliverables, materials cost)
+                if ($eventHours) $fieldsToAttach[$eventHours->id] = ['is_required' => true];
+                if ($summary) $fieldsToAttach[$summary->id] = ['is_required' => true];
+                if ($deliverablesCompleted) $fieldsToAttach[$deliverablesCompleted->id] = ['is_required' => false];
+                if ($materialsCost) $fieldsToAttach[$materialsCost->id] = ['is_required' => false];
+                if ($travelMiles) $fieldsToAttach[$travelMiles->id] = ['is_required' => false];
+            }
+            
+            if (!empty($fieldsToAttach)) {
+                $agreement->loggingFields()->sync($fieldsToAttach);
+            }
+        }
+
+        // Attach logging fields to Contact Families
+        $contactFamilies = ContactFamily::all();
+        foreach ($contactFamilies as $index => $family) {
+            $fieldsToAttach = [];
+            
+            // Different contact families have different field requirements based on their nature
+            if (str_contains($family->name, 'Training')) {
+                // Training activities need event hours, participant count, and summary
+                if ($eventHours) $fieldsToAttach[$eventHours->id] = ['is_required' => true];
+                if ($participantCount) $fieldsToAttach[$participantCount->id] = ['is_required' => true];
+                if ($summary) $fieldsToAttach[$summary->id] = ['is_required' => true];
+                if ($prepHours) $fieldsToAttach[$prepHours->id] = ['is_required' => false];
+            } elseif (str_contains($family->name, 'Coaching')) {
+                // Coaching activities need time tracking fields
+                if ($eventHours) $fieldsToAttach[$eventHours->id] = ['is_required' => true];
+                if ($prepHours) $fieldsToAttach[$prepHours->id] = ['is_required' => false];
+                if ($followupHours) $fieldsToAttach[$followupHours->id] = ['is_required' => false];
+                if ($summary) $fieldsToAttach[$summary->id] = ['is_required' => true];
+            } elseif (str_contains($family->name, 'Webinar') || str_contains($family->name, 'Presentation')) {
+                // Webinars need participant count and event hours
+                if ($eventHours) $fieldsToAttach[$eventHours->id] = ['is_required' => true];
+                if ($participantCount) $fieldsToAttach[$participantCount->id] = ['is_required' => false];
+                if ($summary) $fieldsToAttach[$summary->id] = ['is_required' => true];
+                if ($externalAttendees) $fieldsToAttach[$externalAttendees->id] = ['is_required' => false];
+            } else {
+                // Other activities - basic requirements
+                if ($eventHours) $fieldsToAttach[$eventHours->id] = ['is_required' => true];
+                if ($summary) $fieldsToAttach[$summary->id] = ['is_required' => true];
+            }
+            
+            if (!empty($fieldsToAttach)) {
+                $family->loggingFields()->sync($fieldsToAttach);
+            }
+        }
+
+        $this->command->info('Logging fields attached to agreements and contact families.');
     }
 }

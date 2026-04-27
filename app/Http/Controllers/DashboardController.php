@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Activity;
 use App\Models\Agreement;
+use App\Models\Organization;
+use App\Models\State;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
@@ -13,17 +16,19 @@ class DashboardController extends Controller
         $user = Auth::user();
         
         if ($user->isAdmin()) {
-            return $this->adminDashboard();
+            return $this->adminHome();
         }
         
-        return $this->userDashboard($user);
+        return $this->userHome($user);
     }
     
-    protected function adminDashboard()
+    protected function adminHome()
     {
+        $user = Auth::user();
+        
         // YTD activities
         $ytdActivities = Activity::whereYear('engagement_date', now()->year)
-            ->with(['activityType.contactFamily', 'user', 'agreement'])
+            ->with(['activityType.contactFamily', 'user', 'agreements'])
             ->get();
 
         // YTD totals
@@ -33,30 +38,45 @@ class DashboardController extends Controller
             'participants' => $ytdActivities->sum('participant_count'),
         ];
 
-        // Recent 10 activities
-        $recentActivities = Activity::with(['activityType.contactFamily', 'user', 'agreement'])
+        // This month activities
+        $thisMonthActivities = Activity::whereYear('engagement_date', now()->year)
+            ->whereMonth('engagement_date', now()->month)
+            ->count();
+
+        // Global stats
+        $stats = [
+            'active_agreements' => Agreement::where('active', true)->count(),
+            'activities_this_month' => $thisMonthActivities,
+            'organizations' => Organization::count(),
+            'states' => State::count(),
+        ];
+
+        // Recent 10 activities (system-wide)
+        $recentActivities = Activity::with(['activityType.contactFamily', 'user', 'agreements'])
             ->orderByDesc('engagement_date')
             ->limit(10)
             ->get();
 
-        // Agreements list for dashboard
-        $user = Auth::user();
-
-        $agreements = $user->agreements()
-            ->with(['organization', 'state'])
+        // Get all agreements with stats
+        $agreements = Agreement::where('active', true)
+            ->with(['organizations', 'states'])
             ->withCount('activities')
             ->withMax('activities', 'engagement_date')
             ->orderBy('name')
             ->get();
 
-        return view('dashboard', compact('ytdTotals', 'recentActivities', 'agreements'));
+        // Always define these for the view
+        $myActivities = collect();
+        $myAgreements = collect();
+
+        return view('home', compact('ytdTotals', 'recentActivities', 'agreements', 'stats', 'user', 'myActivities', 'myAgreements'));
     }
     
-    protected function userDashboard($user)
+    protected function userHome($user)
     {
         // Get user's agreements
         $myAgreements = $user->agreements()
-            ->with(['organization', 'state'])
+            ->with(['organizations', 'states'])
             ->withCount('activities')
             ->withMax('activities', 'engagement_date')
             ->get();
@@ -65,8 +85,10 @@ class DashboardController extends Controller
         $agreementIds = $myAgreements->pluck('id');
         
         // My recent activities (last 10)
-        $myActivities = Activity::whereIn('agreement_id', $agreementIds)
-            ->with(['activityType.contactFamily', 'user', 'agreement', 'participants'])
+        $myActivities = Activity::whereHas('agreements', function($query) use ($agreementIds) {
+                $query->whereIn('agreements.id', $agreementIds);
+            })
+            ->with(['activityType.contactFamily', 'user', 'agreements', 'participants'])
             ->orderByDesc('engagement_date')
             ->limit(10)
             ->get();
@@ -78,6 +100,20 @@ class DashboardController extends Controller
         
         $myYtdHours = $myYtdActivities->sum(fn($e) => $e->event_hours + ($e->prep_hours ?? 0) + ($e->followup_hours ?? 0));
         
-        return view('dashboard-user', compact('myAgreements', 'myActivities', 'myYtdHours'));
+        // This month for user
+        $myThisMonthActivities = Activity::where('user_id', $user->id)
+            ->whereYear('engagement_date', now()->year)
+            ->whereMonth('engagement_date', now()->month)
+            ->count();
+
+        // Global stats
+        $stats = [
+            'active_agreements' => $myAgreements->count(),
+            'my_activities_ytd' => $myYtdActivities->count(),
+            'my_activities_this_month' => $myThisMonthActivities,
+            'my_total_hours_ytd' => $myYtdHours,
+        ];
+
+        return view('home', compact('myAgreements', 'myActivities', 'stats', 'user', 'myActivities', 'myAgreements'));
     }
 }

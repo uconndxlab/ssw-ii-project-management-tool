@@ -23,7 +23,7 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('programs.update', $program) }}">
+                <form method="POST" action="{{ route('programs.update', $program) }}" id="programs-edit-form">
                     @csrf
                     @method('PUT')
 
@@ -36,6 +36,24 @@
                                value="{{ old('name', $program->name) }}" 
                                required>
                         @error('name')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="project_id" class="form-label">Project</label>
+                        <select class="form-select @error('project_id') is-invalid @enderror" 
+                                id="project_id" 
+                                name="project_id" 
+                                required>
+                            <option value="">Select project...</option>
+                            @foreach($projects as $project)
+                                <option value="{{ $project->id }}" {{ old('project_id', $program->project_id) == $project->id ? 'selected' : '' }}>
+                                    {{ $project->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('project_id')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
@@ -54,13 +72,10 @@
                         </div>
                     </div>
 
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">Update Program</button>
-                        <a href="{{ route('programs.index') }}" class="btn btn-secondary">Cancel</a>
-                    </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+<x-save-bar form-id="programs-edit-form" cancel-url="{{ route('programs.index') }}" save-label="Save Program" :last-saved-at="$program->updated_at" />
 @endsection
