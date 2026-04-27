@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\User;
 use App\Models\State;
 use App\Models\Organization;
+use App\Models\Project;
 use App\Models\Program;
 use App\Models\ContactFamily;
 use App\Models\ActivityType;
@@ -30,22 +31,25 @@ class DemoSeeder extends Seeder
             // 2. Create Users
             $users = $this->createUsers();
             
-            // 3. Create Programs
-            $programs = $this->createPrograms();
+            // 3. Create Project
+            $project = $this->createProject();
             
-            // 4. Create Contact Families & Activity Types
+            // 4. Create Programs
+            $programs = $this->createPrograms($project);
+            
+            // 5. Create Contact Families & Activity Types
             $activityTypes = $this->createContactFamiliesAndActivityTypes();
             
-            // 5. Create Organizations
+            // 6. Create Organizations
             $organizations = $this->createOrganizations($states);
             
-            // 6. Create Agreements
+            // 7. Create Agreements
             $agreements = $this->createAgreements($states, $organizations, $users);
             
-            // 7. Create Deliverables for Agreements
+            // 8. Create Deliverables for Agreements
             $this->createDeliverables($agreements, $activityTypes);
             
-            // 8. Create Activities
+            // 9. Create Activities
             $this->createActivities($agreements, $activityTypes, $programs);
             
             $this->command->info('Demo data seeded successfully!');
@@ -119,7 +123,18 @@ class DemoSeeder extends Seeder
         return $users;
     }
 
-    private function createPrograms(): array
+    private function createProject()
+    {
+        return Project::firstOrCreate(
+            ['name' => 'SSW II Project'],
+            [
+                'description' => 'Main project for SSW II programs',
+                'active' => true,
+            ]
+        );
+    }
+
+    private function createPrograms($project): array
     {
         $programNames = ['MRSS', 'FOCUS', 'NWIC', 'PEARLS', 'NTTAC', 'TAN2'];
         $programs = [];
@@ -127,7 +142,10 @@ class DemoSeeder extends Seeder
         foreach ($programNames as $name) {
             $programs[] = Program::firstOrCreate(
                 ['name' => $name],
-                ['active' => true]
+                [
+                    'active' => true,
+                    'project_id' => $project->id,
+                ]
             );
         }
         
@@ -306,8 +324,6 @@ class DemoSeeder extends Seeder
             $agreement = Agreement::firstOrCreate(
                 ['name' => $data['name']],
                 [
-                    'organization_id' => $org->id,
-                    'state_id' => $state->id,
                     'abstract' => $data['abstract'],
                     'start_date' => $startDate,
                     'end_date' => $endDate,
@@ -316,6 +332,10 @@ class DemoSeeder extends Seeder
                     'certification_candidates' => $data['certification_candidates'],
                 ]
             );
+            
+            // Attach organization and state
+            $agreement->organizations()->syncWithoutDetaching([$org->id]);
+            $agreement->states()->syncWithoutDetaching([$state->id]);
             
             // Assign 2-3 users to each agreement
             $nonAdminUsers = collect($users)->where('role', '!=', 'admin');
@@ -455,7 +475,6 @@ class DemoSeeder extends Seeder
             $userId = $agreementUserIds[array_rand($agreementUserIds)];
             
             $activity = Activity::create([
-                'agreement_id' => $agreement->id,
                 'user_id' => $userId,
                 'engagement_date' => Carbon::now()->subDays(rand(1, 180)),
                 'activity_type_id' => $activityType->id,
@@ -468,6 +487,19 @@ class DemoSeeder extends Seeder
                 'strengths' => $narrative['strengths'],
                 'recommendations' => $narrative['recommendations'],
             ]);
+            
+            // Attach agreement
+            $activity->agreements()->attach($agreement->id);
+            
+            // Attach organizations and states from the agreement
+            $agreementOrgs = $agreement->organizations()->pluck('organizations.id');
+            $agreementStates = $agreement->states()->pluck('states.id');
+            if ($agreementOrgs->isNotEmpty()) {
+                $activity->organizations()->sync($agreementOrgs);
+            }
+            if ($agreementStates->isNotEmpty()) {
+                $activity->states()->sync($agreementStates);
+            }
             
             // Attach 1-2 programs
             $programCount = rand(1, 2);
