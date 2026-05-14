@@ -11,6 +11,7 @@ class Agreement extends Model
 {
     protected $fillable = [
         'name',
+        'project_id',
         'abstract',
         'start_date',
         'end_date',
@@ -35,6 +36,11 @@ class Agreement extends Model
     public function organizations(): BelongsToMany
     {
         return $this->belongsToMany(Organization::class, 'agreement_organization')->withTimestamps();
+    }
+
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class);
     }
 
     public function states(): BelongsToMany
@@ -72,6 +78,11 @@ class Agreement extends Model
         return $this->belongsToMany(LoggingField::class, 'agreement_logging_field')
             ->withPivot('is_required')
             ->withTimestamps();
+    }
+
+    public function programs(): BelongsToMany
+    {
+        return $this->belongsToMany(Program::class, 'agreement_program')->withTimestamps();
     }
 
     /**

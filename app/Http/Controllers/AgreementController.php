@@ -8,6 +8,7 @@ use App\Models\AgreementAttachment;
 use App\Models\AgreementDeliverable;
 use App\Models\ActivityType;
 use App\Models\ContactFamily;
+use App\Models\Project;
 use App\Models\State;
 use App\Models\Team;
 use App\Models\User;
@@ -142,9 +143,14 @@ class AgreementController extends Controller
         $organizations = Organization::orderBy('name')->get();
         $users = User::orderBy('name')->get();
         $teams = Team::where('active', true)->orderBy('name')->get();
+        $projects = Project::where('active', true)->with('programs')->orderBy('name')->get();
+        $programsByProject = \App\Models\Program::where('active', true)
+            ->with('project')
+            ->get()
+            ->groupBy('project_id');
         $loggingFields = \App\Models\LoggingField::active()->ordered()->get();
         
-        return view('agreements.create', compact('states', 'organizations', 'users', 'teams', 'loggingFields'));
+        return view('agreements.create', compact('states', 'organizations', 'users', 'teams', 'projects', 'programsByProject', 'loggingFields'));
     }
 
     public function store(Request $request)
@@ -157,6 +163,9 @@ class AgreementController extends Controller
             'organization_ids.*' => ['exists:organizations,id'],
             'state_ids' => ['nullable', 'array'],
             'state_ids.*' => ['exists:states,id'],
+            'project_id' => ['nullable', 'exists:projects,id'],
+            'program_ids' => ['nullable', 'array'],
+            'program_ids.*' => ['exists:programs,id'],
             'abstract' => ['nullable', 'string'],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
@@ -196,6 +205,7 @@ class AgreementController extends Controller
 
         $agreement = Agreement::create([
             'name' => $validated['name'],
+            'project_id' => $validated['project_id'] ?? null,
             'abstract' => $validated['abstract'] ?? null,
             'start_date' => $validated['start_date'],
             'end_date' => $validated['end_date'],
@@ -206,8 +216,20 @@ class AgreementController extends Controller
             'time_tracking_mode' => $validated['time_tracking_mode'] ?? 'engagement',
         ]);
 
+        $selectedProgramIds = $validated['program_ids'] ?? [];
+        if (!empty($validated['project_id'])) {
+            $projectProgramIds = Project::find($validated['project_id'])
+                ?->programs()
+                ->where('active', true)
+                ->pluck('id')
+                ->toArray() ?? [];
+
+            $selectedProgramIds = array_values(array_unique(array_merge($selectedProgramIds, $projectProgramIds)));
+        }
+
         $agreement->organizations()->sync($validated['organization_ids'] ?? []);
         $agreement->states()->sync($validated['state_ids'] ?? []);
+        $agreement->programs()->sync($selectedProgramIds);
         $agreement->users()->sync($validated['user_ids'] ?? []);
         $agreement->teams()->sync($validated['team_ids'] ?? []);
         
@@ -326,10 +348,15 @@ class AgreementController extends Controller
         $teams = Team::where('active', true)->orderBy('name')->get();
         $contactFamilies = ContactFamily::where('active', true)->orderBy('sort_order')->orderBy('name')->get();
         $activityTypes = ActivityType::where('active', true)->orderBy('sort_order')->orderBy('name')->get();
+        $projects = Project::where('active', true)->with('programs')->orderBy('name')->get();
+        $programsByProject = \App\Models\Program::where('active', true)
+            ->with('project')
+            ->get()
+            ->groupBy('project_id');
         $loggingFields = \App\Models\LoggingField::active()->ordered()->get();
-        $agreement->load(['users', 'teams', 'deliverables.activityType.contactFamily', 'organizations', 'states', 'attachments', 'loggingFields']);
+        $agreement->load(['users', 'teams', 'deliverables.activityType.contactFamily', 'organizations', 'states', 'attachments', 'loggingFields', 'programs']);
         
-        return view('agreements.edit', compact('agreement', 'states', 'organizations', 'users', 'teams', 'contactFamilies', 'activityTypes', 'loggingFields'));
+        return view('agreements.edit', compact('agreement', 'states', 'organizations', 'users', 'teams', 'contactFamilies', 'activityTypes', 'projects', 'programsByProject', 'loggingFields'));
     }
 
     public function update(Request $request, Agreement $agreement)
@@ -342,6 +369,9 @@ class AgreementController extends Controller
             'organization_ids.*' => ['exists:organizations,id'],
             'state_ids' => ['nullable', 'array'],
             'state_ids.*' => ['exists:states,id'],
+            'project_id' => ['nullable', 'exists:projects,id'],
+            'program_ids' => ['nullable', 'array'],
+            'program_ids.*' => ['exists:programs,id'],
             'abstract' => ['nullable', 'string'],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
@@ -381,6 +411,7 @@ class AgreementController extends Controller
 
         $agreement->update([
             'name' => $validated['name'],
+            'project_id' => $validated['project_id'] ?? null,
             'abstract' => $validated['abstract'] ?? null,
             'start_date' => $validated['start_date'],
             'end_date' => $validated['end_date'],
@@ -391,8 +422,20 @@ class AgreementController extends Controller
             'time_tracking_mode' => $validated['time_tracking_mode'] ?? 'engagement',
         ]);
 
+        $selectedProgramIds = $validated['program_ids'] ?? [];
+        if (!empty($validated['project_id'])) {
+            $projectProgramIds = Project::find($validated['project_id'])
+                ?->programs()
+                ->where('active', true)
+                ->pluck('id')
+                ->toArray() ?? [];
+
+            $selectedProgramIds = array_values(array_unique(array_merge($selectedProgramIds, $projectProgramIds)));
+        }
+
         $agreement->organizations()->sync($validated['organization_ids'] ?? []);
         $agreement->states()->sync($validated['state_ids'] ?? []);
+        $agreement->programs()->sync($selectedProgramIds);
         $agreement->users()->sync($validated['user_ids'] ?? []);
         $agreement->teams()->sync($validated['team_ids'] ?? []);
         
@@ -542,4 +585,5 @@ class AgreementController extends Controller
             ->route('agreements.edit', $agreement)
             ->with('success', 'Attachment deleted successfully.');
     }
+
 }

@@ -99,8 +99,54 @@
                         </div>
                     </x-section-card>
 
+                    <!-- Programs & Projects -->
+                    <x-section-card title="3) Programs & Projects" subtitle="Select a project to auto-select all programs, or manually cherry-pick programs.">
+                        @php
+                            $selectedProgramIds = old('program_ids', $agreement->programs->pluck('id')->toArray());
+                        @endphp
+
+                        <div class="mb-3">
+                            <label for="project_id" class="form-label fw-semibold">Project (optional)</label>
+                            <select id="project_id" name="project_id" class="form-select @error('project_id') is-invalid @enderror">
+                                <option value="">No project selected</option>
+                                @foreach($projects as $project)
+                                    <option value="{{ $project->id }}" {{ old('project_id', $agreement->project_id) == $project->id ? 'selected' : '' }}>{{ $project->name }}</option>
+                                @endforeach
+                            </select>
+                            <small class="text-muted">Selecting a project will check all of its programs automatically.</small>
+                            @error('project_id')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <label class="form-label fw-semibold">Programs</label>
+                        <div class="border rounded p-3 bg-light" id="program-checkboxes">
+                            @foreach($programsByProject as $projectId => $programs)
+                                @php
+                                    $project = $projectId ? $projects->find($projectId) : null;
+                                    $projectName = $project ? $project->name : 'Unassigned Programs';
+                                @endphp
+                                <div class="mb-2">
+                                    <div class="small text-muted fw-semibold mb-1">{{ $projectName }}</div>
+                                    @foreach($programs->sortBy('name') as $program)
+                                        <div class="form-check mb-1">
+                                            <input class="form-check-input agreement-program-checkbox"
+                                                   type="checkbox"
+                                                   name="program_ids[]"
+                                                   id="program_{{ $program->id }}"
+                                                   value="{{ $program->id }}"
+                                                   data-project-id="{{ $program->project_id }}"
+                                                   {{ in_array($program->id, $selectedProgramIds) ? 'checked' : '' }}>
+                                            <label class="form-check-label" for="program_{{ $program->id }}">{{ $program->name }}</label>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endforeach
+                        </div>
+                    </x-section-card>
+
                     <!-- Staffing -->
-                    <x-section-card title="3) Staffing" subtitle="Assign individual users and teams to this agreement.">
+                    <x-section-card title="4) Staffing" subtitle="Assign individual users and teams to this agreement.">
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Assign Users</label>
@@ -130,7 +176,7 @@
                     </x-section-card>
 
                     <!-- Scope of Work -->
-                    <x-section-card title="4) Scope of Work" subtitle="Detailed description and certification candidates.">
+                    <x-section-card title="5) Scope of Work" subtitle="Detailed description and certification candidates.">
                         <div class="mb-3">
                             <label for="abstract" class="form-label fw-semibold">Description</label>
                             <textarea class="form-control @error('abstract') is-invalid @enderror"
@@ -157,13 +203,114 @@
                             @enderror
                         </div>
                     </x-section-card>
+
+                    <!-- Deliverables -->
+                    <x-section-card title="6) Deliverables" subtitle="Define required deliverables and track progress.">
+                        <div class="mb-3">
+                            <h6 class="mb-3">Add Deliverable</h6>
+                            <form hx-post="{{ route('agreements.add-deliverable', $agreement) }}"
+                                  hx-target="#deliverable-list"
+                                  hx-swap="innerHTML"
+                                  class="border rounded p-3 bg-light mb-3">
+                                @csrf
+                                
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <label for="deliverable_contact_family_id" class="form-label small fw-semibold">Contact Family</label>
+                                        <select class="form-select form-select-sm" 
+                                                id="deliverable_contact_family_id" 
+                                                name="contact_family_id"
+                                                hx-get="{{ route('activity-types.by-family') }}"
+                                                hx-target="#deliverable_activity_type_id"
+                                                hx-swap="innerHTML"
+                                                hx-include="this">
+                                            <option value="">Select contact family...</option>
+                                            @foreach($contactFamilies as $family)
+                                            <option value="{{ $family->id }}">{{ $family->name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label for="deliverable_activity_type_id" class="form-label small fw-semibold">Activity Type</label>
+                                        <select class="form-select form-select-sm" 
+                                                id="deliverable_activity_type_id" 
+                                                name="activity_type_id">
+                                            <option value="">Select contact family first...</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="row g-2 mt-1">
+                                    <div class="col-md-6">
+                                        <label for="deliverable_required_hours" class="form-label small fw-semibold">Required Hours</label>
+                                        <input type="number" 
+                                               class="form-control form-control-sm" 
+                                               id="deliverable_required_hours" 
+                                               name="required_hours" 
+                                               min="0" 
+                                               step="0.1"
+                                               placeholder="Optional">
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label for="deliverable_required_activities" class="form-label small fw-semibold">Required Activities</label>
+                                        <input type="number" 
+                                               class="form-control form-control-sm" 
+                                               id="deliverable_required_activities" 
+                                               name="required_activities" 
+                                               min="0" 
+                                               step="1"
+                                               placeholder="Optional">
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-2">
+                                    <label for="deliverable_notes" class="form-label small fw-semibold">Notes</label>
+                                    <textarea class="form-control form-control-sm" 
+                                              id="deliverable_notes" 
+                                              name="notes" 
+                                              rows="2"
+                                              placeholder="Optional notes about this deliverable..."></textarea>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-sm btn-primary mt-2">
+                                    + Add Deliverable
+                                </button>
+                            </form>
+                        </div>
+                        
+                        @if($agreement->deliverables->isNotEmpty())
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="small">Activity Type</th>
+                                        <th class="small">Contact Family</th>
+                                        <th class="small text-center">Hours</th>
+                                        <th class="small text-center">Activities</th>
+                                        <th class="small">Notes</th>
+                                        <th class="small text-end">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="deliverable-list">
+                                    @include('agreements.partials.deliverable-list', ['agreement' => $agreement])
+                                </tbody>
+                            </table>
+                        </div>
+                        @else
+                        <div class="alert alert-info small mb-0">
+                            No deliverables defined yet. Add one using the form above.
+                        </div>
+                        @endif
+                    </x-section-card>
                 </div>
             </div>
 
             <div class="col-lg-4">
                 <div class="d-grid gap-4">
                     <!-- Dates -->
-                    <x-section-card title="5) Dates" subtitle="Contract timeline.">
+                    <x-section-card title="7) Dates" subtitle="Contract timeline.">
                         <div class="mb-3">
                             <label for="start_date" class="form-label fw-semibold">Start Date</label>
                             <input type="date"
@@ -218,7 +365,7 @@
                     </x-section-card>
 
                     <!-- Reporting / Logging Fields -->
-                    <x-section-card title="6) Reporting / Logging" subtitle="Activity logging configuration.">
+                    <x-section-card title="8) Reporting / Logging" subtitle="Activity logging configuration.">
                         <p class="text-muted small mb-3">✅ Select fields to enable for activity logging:</p>
                         
                         @foreach($loggingFields as $field)
@@ -298,7 +445,7 @@
                     </x-section-card>
 
                     <!-- Attachments -->
-                    <x-section-card title="7) Attachments" subtitle="📎 Upload documents.">
+                    <x-section-card title="9) Attachments" subtitle="📎 Upload documents.">
                         @if($agreement->attachments->isNotEmpty())
                             <h6 class="mb-3">Current Files</h6>
                             <div class="list-group mb-3">
@@ -347,6 +494,26 @@
         </div>
     </form>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const projectSelect = document.getElementById('project_id');
+        const programCheckboxes = document.querySelectorAll('.agreement-program-checkbox');
+
+        if (!projectSelect) return;
+
+        projectSelect.addEventListener('change', function () {
+            const selectedProjectId = this.value;
+            if (!selectedProjectId) return;
+
+            programCheckboxes.forEach((checkbox) => {
+                if (checkbox.dataset.projectId === selectedProjectId) {
+                    checkbox.checked = true;
+                }
+            });
+        });
+    });
+</script>
 
 <!-- Sticky Save Bar -->
 <x-save-bar 

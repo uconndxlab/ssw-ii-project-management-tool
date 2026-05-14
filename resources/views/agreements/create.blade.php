@@ -72,38 +72,80 @@
                         </div>
                     </x-section-card>
 
+                    <!-- Programs & Projects -->
+                    <x-section-card title="3) Programs & Projects" subtitle="Select a project to auto-select all programs, or manually cherry-pick programs.">
+                        <div class="mb-3">
+                            <label for="project_id" class="form-label fw-semibold">Project (optional)</label>
+                            <select id="project_id" name="project_id" class="form-select @error('project_id') is-invalid @enderror">
+                                <option value="">No project selected</option>
+                                @foreach($projects as $project)
+                                    <option value="{{ $project->id }}" {{ old('project_id') == $project->id ? 'selected' : '' }}>{{ $project->name }}</option>
+                                @endforeach
+                            </select>
+                            <small class="text-muted">Selecting a project will check all of its programs automatically.</small>
+                            @error('project_id')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <label class="form-label fw-semibold">Programs</label>
+                        <div class="border rounded p-3 bg-light" id="program-checkboxes">
+                            @foreach($programsByProject as $projectId => $programs)
+                                @php
+                                    $project = $projectId ? $projects->find($projectId) : null;
+                                    $projectName = $project ? $project->name : 'Unassigned Programs';
+                                @endphp
+                                <div class="mb-2">
+                                    <div class="small text-muted fw-semibold mb-1">{{ $projectName }}</div>
+                                    @foreach($programs->sortBy('name') as $program)
+                                        <div class="form-check mb-1">
+                                            <input class="form-check-input agreement-program-checkbox"
+                                                   type="checkbox"
+                                                   name="program_ids[]"
+                                                   id="program_{{ $program->id }}"
+                                                   value="{{ $program->id }}"
+                                                   data-project-id="{{ $program->project_id }}"
+                                                   {{ in_array($program->id, old('program_ids', [])) ? 'checked' : '' }}>
+                                            <label class="form-check-label" for="program_{{ $program->id }}">{{ $program->name }}</label>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endforeach
+                        </div>
+                    </x-section-card>
+
                     <!-- Staffing -->
-                    <x-section-card title="3) Staffing" subtitle="Assign individual users and teams who can access this agreement.">
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
+                    <x-section-card title="4) Staffing" subtitle="Assign individual users and teams who can access this agreement.">
+                        <div class="row g-3">
+                            <div class="col-md-6">
                                 <label class="form-label fw-semibold">Assign Users</label>
-                        <x-user-picker
-                            picker-id="agreement-create-users"
-                            name="user_ids[]"
-                            :users="$users"
-                            :selected-ids="old('user_ids', [])"
-                            search-placeholder="Search to assign users..."
-                            :show-role="true"
-                        />
+                                <x-user-picker
+                                    picker-id="agreement-create-users"
+                                    name="user_ids[]"
+                                    :users="$users"
+                                    :selected-ids="old('user_ids', [])"
+                                    search-placeholder="Search to assign users..."
+                                    :show-role="true"
+                                />
                                 <small class="text-muted">Individual users assigned to this agreement</small>
                             </div>
 
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-6">
                                 <label class="form-label fw-semibold">Assign Teams</label>
-                        <x-team-picker
-                            picker-id="agreement-create-teams"
-                            name="team_ids[]"
-                            :teams="$teams"
-                            :selected-ids="old('team_ids', [])"
-                            search-placeholder="Search to assign teams..."
-                        />
+                                <x-team-picker
+                                    picker-id="agreement-create-teams"
+                                    name="team_ids[]"
+                                    :teams="$teams"
+                                    :selected-ids="old('team_ids', [])"
+                                    search-placeholder="Search to assign teams..."
+                                />
                                 <small class="text-muted">All users in assigned teams will have access</small>
                             </div>
                         </div>
                     </x-section-card>
 
                     <!-- Scope of Work -->
-                    <x-section-card title="4) Scope of Work" subtitle="Describe the agreement's objectives, deliverables, and details.">
+                    <x-section-card title="5) Scope of Work" subtitle="Describe the agreement's objectives, deliverables, and details.">
                         <div class="mb-3">
                             <label for="abstract" class="form-label fw-semibold">Description</label>
                             <textarea class="form-control @error('abstract') is-invalid @enderror" 
@@ -136,7 +178,7 @@
             <div class="col-lg-4">
                 <div class="d-grid gap-4">
                     <!-- Dates -->
-                    <x-section-card title="5) Dates" subtitle="Contract timeline.">
+                    <x-section-card title="6) Dates" subtitle="Contract timeline.">
                         <div class="mb-3">
                             <label for="start_date" class="form-label fw-semibold">Start Date</label>
                             <input type="date" 
@@ -189,7 +231,7 @@
                     </x-section-card>
 
                     <!-- Reporting / Logging Fields -->
-                    <x-section-card title="6) Reporting / Logging" subtitle="Activity logging configuration.">
+                    <x-section-card title="7) Reporting / Logging" subtitle="Activity logging configuration.">
                         <p class="text-muted small mb-3">✅ Select fields to enable for activity logging:</p>
                         
                         @foreach($loggingFields as $field)
@@ -269,7 +311,7 @@
                     </x-section-card>
 
                     <!-- Attachments -->
-                    <x-section-card title="7) Attachments" subtitle="📎 Upload documents.">
+                    <x-section-card title="8) Attachments" subtitle="📎 Upload documents.">
                         <div class="mb-3">
                             <label for="attachments" class="form-label fw-semibold">Upload Files</label>
                             <input type="file" 
@@ -289,6 +331,26 @@
         </div>
     </form>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const projectSelect = document.getElementById('project_id');
+        const programCheckboxes = document.querySelectorAll('.agreement-program-checkbox');
+
+        if (!projectSelect) return;
+
+        projectSelect.addEventListener('change', function () {
+            const selectedProjectId = this.value;
+            if (!selectedProjectId) return;
+
+            programCheckboxes.forEach((checkbox) => {
+                if (checkbox.dataset.projectId === selectedProjectId) {
+                    checkbox.checked = true;
+                }
+            });
+        });
+    });
+</script>
 
 <!-- Sticky Save Bar -->
 <x-save-bar 
