@@ -27,11 +27,18 @@ class ContactFamily extends Model
         return $this->hasMany(ActivityType::class)->orderBy('sort_order')->orderBy('name');
     }
 
+    public function contactFamilyLoggingFields(): BelongsToMany
+    {
+        return $this->belongsToMany(ContactFamilyLoggingField::class, 'contact_family_logging_field_assignments')
+            ->withPivot('is_required')
+            ->withTimestamps()
+            ->orderBy('sort_order')
+            ->orderBy('name');
+    }
+
     public function loggingFields(): BelongsToMany
     {
-        return $this->belongsToMany(LoggingField::class, 'contact_family_logging_field')
-            ->withPivot('is_required')
-            ->withTimestamps();
+        return $this->contactFamilyLoggingFields();
     }
 
     /**

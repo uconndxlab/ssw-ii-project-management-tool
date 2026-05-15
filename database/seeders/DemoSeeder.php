@@ -15,7 +15,8 @@ use App\Models\ActivityType;
 use App\Models\Agreement;
 use App\Models\AgreementDeliverable;
 use App\Models\Activity;
-use App\Models\LoggingField;
+use App\Models\AgreementLoggingField;
+use App\Models\ContactFamilyLoggingField;
 use Carbon\Carbon;
 
 class DemoSeeder extends Seeder
@@ -49,13 +50,13 @@ class DemoSeeder extends Seeder
             
             // 7b. Attach logging fields to agreements and contact families
             $this->attachLoggingFields($agreements);
-            
+
             // 8. Create Deliverables for Agreements
             $this->createDeliverables($agreements, $activityTypes);
-            
+
             // 9. Create Activities
             $this->createActivities($agreements, $activityTypes, $programs);
-            
+
             $this->command->info('Demo data seeded successfully!');
         });
     }
@@ -64,19 +65,18 @@ class DemoSeeder extends Seeder
     {
         $stateNames = ['Kansas', 'Indiana', 'Louisiana', 'Connecticut', 'Massachusetts', 'Ohio'];
         $states = [];
-        
+
         foreach ($stateNames as $name) {
             $states[] = State::firstOrCreate(['name' => $name]);
         }
-        
+
         return $states;
     }
 
     private function createUsers(): array
     {
         $users = [];
-        
-        // Admin
+
         $users[] = User::firstOrCreate(
             ['email' => 'admin@example.com'],
             [
@@ -85,8 +85,7 @@ class DemoSeeder extends Seeder
                 'role' => 'admin',
             ]
         );
-        
-        // Staff
+
         $users[] = User::firstOrCreate(
             ['email' => 'staff1@example.com'],
             [
@@ -95,7 +94,7 @@ class DemoSeeder extends Seeder
                 'role' => 'staff',
             ]
         );
-        
+
         $users[] = User::firstOrCreate(
             ['email' => 'staff2@example.com'],
             [
@@ -104,8 +103,7 @@ class DemoSeeder extends Seeder
                 'role' => 'staff',
             ]
         );
-        
-        // Consultants
+
         $users[] = User::firstOrCreate(
             ['email' => 'consultant1@example.com'],
             [
@@ -114,7 +112,7 @@ class DemoSeeder extends Seeder
                 'role' => 'consultant',
             ]
         );
-        
+
         $users[] = User::firstOrCreate(
             ['email' => 'consultant2@example.com'],
             [
@@ -123,7 +121,7 @@ class DemoSeeder extends Seeder
                 'role' => 'consultant',
             ]
         );
-        
+
         return $users;
     }
 
@@ -142,7 +140,7 @@ class DemoSeeder extends Seeder
     {
         $programNames = ['MRSS', 'FOCUS', 'NWIC', 'PEARLS', 'NTTAC', 'TAN2'];
         $programs = [];
-        
+
         foreach ($programNames as $name) {
             $programs[] = Program::firstOrCreate(
                 ['name' => $name],
@@ -152,7 +150,7 @@ class DemoSeeder extends Seeder
                 ]
             );
         }
-        
+
         return $programs;
     }
 
@@ -188,16 +186,16 @@ class DemoSeeder extends Seeder
                 'Dashboard Development Support',
             ],
         ];
-        
+
         $activityTypes = [];
         $sortOrder = 0;
-        
+
         foreach ($taxonomyData as $familyName => $typeNames) {
             $family = ContactFamily::firstOrCreate(
                 ['name' => $familyName],
                 ['active' => true, 'sort_order' => $sortOrder++]
             );
-            
+
             $typeSortOrder = 0;
             foreach ($typeNames as $typeName) {
                 $activityTypes[] = ActivityType::firstOrCreate(
@@ -212,7 +210,7 @@ class DemoSeeder extends Seeder
                 );
             }
         }
-        
+
         return $activityTypes;
     }
 
@@ -520,89 +518,69 @@ class DemoSeeder extends Seeder
 
     private function attachLoggingFields(array $agreements): void
     {
-        $loggingFields = LoggingField::all();
-        if ($loggingFields->isEmpty()) {
+        $agreementLoggingFields = AgreementLoggingField::all();
+        $contactFamilyLoggingFields = ContactFamilyLoggingField::all();
+
+        if ($agreementLoggingFields->isEmpty() && $contactFamilyLoggingFields->isEmpty()) {
             $this->command->warn('No logging fields found. Skipping pivot table population.');
             return;
         }
 
-        // Get commonly used fields
-        $eventHours = $loggingFields->firstWhere('name', 'Event Hours');
-        $prepHours = $loggingFields->firstWhere('name', 'Prep Hours');
-        $followupHours = $loggingFields->firstWhere('name', 'Follow-up Hours');
-        $participantCount = $loggingFields->firstWhere('name', 'Participant Count');
-        $externalAttendees = $loggingFields->firstWhere('name', 'External Attendees');
-        $summary = $loggingFields->firstWhere('name', 'Summary');
-        $travelMiles = $loggingFields->firstWhere('name', 'Travel Miles');
-        $materialsCost = $loggingFields->firstWhere('name', 'Materials Cost');
-        $deliverablesCompleted = $loggingFields->firstWhere('name', 'Deliverables Completed');
-        $eventType = $loggingFields->firstWhere('name', 'Event Type');
+        $travelMiles = $agreementLoggingFields->firstWhere('name', 'Travel Miles');
+        $materialsCost = $agreementLoggingFields->firstWhere('name', 'Materials Cost');
+        $deliverablesCompleted = $agreementLoggingFields->firstWhere('name', 'Deliverables Completed');
+        $outcomeNotes = $agreementLoggingFields->firstWhere('name', 'Agreement Outcome Notes');
+        $deliverableType = $agreementLoggingFields->firstWhere('name', 'Deliverable Type');
 
-        // Attach logging fields to a few agreements with varied requirements
+        $sessionFormat = $contactFamilyLoggingFields->firstWhere('name', 'Session Format');
+        $audienceSegment = $contactFamilyLoggingFields->firstWhere('name', 'Audience Segment');
+        $resourceShared = $contactFamilyLoggingFields->firstWhere('name', 'Resource Shared');
+        $classificationNotes = $contactFamilyLoggingFields->firstWhere('name', 'Classification Notes');
+
         foreach ($agreements as $index => $agreement) {
             $fieldsToAttach = [];
-            
-            // Different agreements have different field requirements
+
             if ($index % 3 === 0) {
-                // Training-focused agreements (require event hours, participant count, summary)
-                if ($eventHours) $fieldsToAttach[$eventHours->id] = ['is_required' => true];
-                if ($prepHours) $fieldsToAttach[$prepHours->id] = ['is_required' => false];
-                if ($participantCount) $fieldsToAttach[$participantCount->id] = ['is_required' => true];
-                if ($summary) $fieldsToAttach[$summary->id] = ['is_required' => true];
-                if ($eventType) $fieldsToAttach[$eventType->id] = ['is_required' => false];
+                if ($travelMiles) $fieldsToAttach[$travelMiles->id] = ['is_required' => true];
+                if ($outcomeNotes) $fieldsToAttach[$outcomeNotes->id] = ['is_required' => true];
+                if ($deliverableType) $fieldsToAttach[$deliverableType->id] = ['is_required' => false];
             } elseif ($index % 3 === 1) {
-                // Coaching/TA-focused agreements (require all time fields, summary, follow-up)
-                if ($eventHours) $fieldsToAttach[$eventHours->id] = ['is_required' => true];
-                if ($prepHours) $fieldsToAttach[$prepHours->id] = ['is_required' => true];
-                if ($followupHours) $fieldsToAttach[$followupHours->id] = ['is_required' => true];
-                if ($summary) $fieldsToAttach[$summary->id] = ['is_required' => true];
-                if ($externalAttendees) $fieldsToAttach[$externalAttendees->id] = ['is_required' => false];
-            } else {
-                // Data/Evaluation-focused agreements (require summary, deliverables, materials cost)
-                if ($eventHours) $fieldsToAttach[$eventHours->id] = ['is_required' => true];
-                if ($summary) $fieldsToAttach[$summary->id] = ['is_required' => true];
+                if ($materialsCost) $fieldsToAttach[$materialsCost->id] = ['is_required' => true];
+                if ($outcomeNotes) $fieldsToAttach[$outcomeNotes->id] = ['is_required' => true];
                 if ($deliverablesCompleted) $fieldsToAttach[$deliverablesCompleted->id] = ['is_required' => false];
-                if ($materialsCost) $fieldsToAttach[$materialsCost->id] = ['is_required' => false];
+            } else {
                 if ($travelMiles) $fieldsToAttach[$travelMiles->id] = ['is_required' => false];
+                if ($materialsCost) $fieldsToAttach[$materialsCost->id] = ['is_required' => false];
+                if ($deliverablesCompleted) $fieldsToAttach[$deliverablesCompleted->id] = ['is_required' => true];
             }
-            
+
             if (!empty($fieldsToAttach)) {
-                $agreement->loggingFields()->sync($fieldsToAttach);
+                $agreement->agreementLoggingFields()->sync($fieldsToAttach);
             }
         }
 
-        // Attach logging fields to Contact Families
         $contactFamilies = ContactFamily::all();
-        foreach ($contactFamilies as $index => $family) {
+        foreach ($contactFamilies as $family) {
             $fieldsToAttach = [];
-            
-            // Different contact families have different field requirements based on their nature
+
             if (str_contains($family->name, 'Training')) {
-                // Training activities need event hours, participant count, and summary
-                if ($eventHours) $fieldsToAttach[$eventHours->id] = ['is_required' => true];
-                if ($participantCount) $fieldsToAttach[$participantCount->id] = ['is_required' => true];
-                if ($summary) $fieldsToAttach[$summary->id] = ['is_required' => true];
-                if ($prepHours) $fieldsToAttach[$prepHours->id] = ['is_required' => false];
+                if ($sessionFormat) $fieldsToAttach[$sessionFormat->id] = ['is_required' => true];
+                if ($audienceSegment) $fieldsToAttach[$audienceSegment->id] = ['is_required' => true];
+                if ($resourceShared) $fieldsToAttach[$resourceShared->id] = ['is_required' => false];
             } elseif (str_contains($family->name, 'Coaching')) {
-                // Coaching activities need time tracking fields
-                if ($eventHours) $fieldsToAttach[$eventHours->id] = ['is_required' => true];
-                if ($prepHours) $fieldsToAttach[$prepHours->id] = ['is_required' => false];
-                if ($followupHours) $fieldsToAttach[$followupHours->id] = ['is_required' => false];
-                if ($summary) $fieldsToAttach[$summary->id] = ['is_required' => true];
+                if ($sessionFormat) $fieldsToAttach[$sessionFormat->id] = ['is_required' => true];
+                if ($classificationNotes) $fieldsToAttach[$classificationNotes->id] = ['is_required' => true];
             } elseif (str_contains($family->name, 'Webinar') || str_contains($family->name, 'Presentation')) {
-                // Webinars need participant count and event hours
-                if ($eventHours) $fieldsToAttach[$eventHours->id] = ['is_required' => true];
-                if ($participantCount) $fieldsToAttach[$participantCount->id] = ['is_required' => false];
-                if ($summary) $fieldsToAttach[$summary->id] = ['is_required' => true];
-                if ($externalAttendees) $fieldsToAttach[$externalAttendees->id] = ['is_required' => false];
+                if ($sessionFormat) $fieldsToAttach[$sessionFormat->id] = ['is_required' => true];
+                if ($audienceSegment) $fieldsToAttach[$audienceSegment->id] = ['is_required' => false];
+                if ($resourceShared) $fieldsToAttach[$resourceShared->id] = ['is_required' => false];
             } else {
-                // Other activities - basic requirements
-                if ($eventHours) $fieldsToAttach[$eventHours->id] = ['is_required' => true];
-                if ($summary) $fieldsToAttach[$summary->id] = ['is_required' => true];
+                if ($audienceSegment) $fieldsToAttach[$audienceSegment->id] = ['is_required' => true];
+                if ($classificationNotes) $fieldsToAttach[$classificationNotes->id] = ['is_required' => false];
             }
-            
+
             if (!empty($fieldsToAttach)) {
-                $family->loggingFields()->sync($fieldsToAttach);
+                $family->contactFamilyLoggingFields()->sync($fieldsToAttach);
             }
         }
 

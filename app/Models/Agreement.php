@@ -6,20 +6,19 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Builder;
 
 class Agreement extends Model
 {
     protected $fillable = [
         'name',
-        'project_id',
         'abstract',
         'start_date',
         'end_date',
-        'extension_start_date',
-        'extension_end_date',
+        'original_end_date',
+        'extended_end_date',
         'certification_candidates',
         'activity_logging_config',
-        'time_tracking_mode',
     ];
 
     protected function casts(): array
@@ -27,8 +26,8 @@ class Agreement extends Model
         return [
             'start_date' => 'date',
             'end_date' => 'date',
-            'extension_start_date' => 'date',
-            'extension_end_date' => 'date',
+            'original_end_date' => 'date',
+            'extended_end_date' => 'date',
             'activity_logging_config' => 'array',
         ];
     }
@@ -36,11 +35,6 @@ class Agreement extends Model
     public function organizations(): BelongsToMany
     {
         return $this->belongsToMany(Organization::class, 'agreement_organization')->withTimestamps();
-    }
-
-    public function project(): BelongsTo
-    {
-        return $this->belongsTo(Project::class);
     }
 
     public function states(): BelongsToMany
@@ -63,45 +57,23 @@ class Agreement extends Model
         return $this->belongsToMany(Activity::class, 'activity_agreement')->withTimestamps();
     }
 
-    public function deliverables(): HasMany
+    public function agreementLoggingFields(): BelongsToMany
     {
-        return $this->hasMany(AgreementDeliverable::class);
-    }
-
-    public function attachments(): HasMany
-    {
-        return $this->hasMany(AgreementAttachment::class);
+        return $this->belongsToMany(AgreementLoggingField::class, 'agreement_logging_field_assignments')
+            ->withPivot('is_required')
+            ->withTimestamps()
+            ->orderBy('sort_order')
+            ->orderBy('name');
     }
 
     public function loggingFields(): BelongsToMany
     {
-        return $this->belongsToMany(LoggingField::class, 'agreement_logging_field')
-            ->withPivot('is_required')
-            ->withTimestamps();
+        return $this->agreementLoggingFields();
     }
 
-    public function programs(): BelongsToMany
+    public function deliverables(): HasMany
     {
-        return $this->belongsToMany(Program::class, 'agreement_program')->withTimestamps();
-    }
-
-    /**
-     * Scope to filter active agreements based on date ranges.
-     * An agreement is active if today falls between start_date and end_date (or extension_end_date if extended).
-     */
-    public function scopeActive($query)
-    {
-        $today = now()->startOfDay();
-        
-        return $query->where('start_date', '<=', $today)
-            ->where(function ($q) use ($today) {
-                $q->whereNull('extension_end_date')
-                    ->where('end_date', '>=', $today)
-                    ->orWhere(function ($q2) use ($today) {
-                        $q2->whereNotNull('extension_end_date')
-                            ->where('extension_end_date', '>=', $today);
-                    });
-            });
+        return $this->hasMany(AgreementDeliverable::class);
     }
 
     /**
@@ -150,5 +122,32 @@ class Agreement extends Model
             'direct' => $directUsersWithTeams,
             'teams' => $teamGroups,
         ];
+    }
+
+    public function scopeActive(Builder $query): Builder
+    {
+        $today = now()->toDateString();
+
+        return $query
+            ->where(function (Builder $builder) use ($today) {
+                $builder
+                    ->whereNull('start_date')
+                    ->orWhereDate('start_date', '<=', $today);
+            })
+            ->where(function (Builder $builder) use ($today) {
+                $builder
+                    ->whereNull('extension_end_date')
+                    ->where(function (Builder $nested) use ($today) {
+                        $nested
+                            ->whereNull('end_date')
+                            ->orWhereDate('end_date', '>=', $today);
+                    })
+                    ->orWhereDate('extension_end_date', '>=', $today);
+            });
+    }
+
+    public function scopeCurrent(Builder $query): Builder
+    {
+        return $this->scopeActive($query);
     }
 }

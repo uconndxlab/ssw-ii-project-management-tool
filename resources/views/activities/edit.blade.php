@@ -32,6 +32,8 @@
     $selectedProgramIds = old('program_ids', $activity->programs->pluck('id')->toArray());
     $selectedParticipantIds = old('participant_user_ids', $activity->participants->pluck('id')->toArray());
     $selectedActivityTypeId = old('activity_type_id', $activity->activity_type_id);
+    $agreementLoggingData = old('agreement_logging_values', $activity->logging_field_data['agreements'] ?? []);
+    $contactFamilyLoggingData = old('contact_family_logging_values', $activity->logging_field_data['contact_family'] ?? []);
 @endphp
 
 <div class="container-fluid py-4">
@@ -55,12 +57,9 @@
         <div class="row g-4">
             <div class="col-lg-8">
                 <div class="d-grid gap-4">
-                    <x-section-card title="1) Agreements & Coverage" subtitle="Select agreements first — organizations and states will auto-populate.">
+                    <x-section-card title="1) Agreements & Coverage" subtitle="Update agreement context first.">
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">
-                                Agreements
-                                <span class="badge bg-info text-white ms-2">Start here</span>
-                            </label>
+                            <label class="form-label fw-semibold">Agreements</label>
                             <x-token-picker
                                 picker-id="activity-agreements-picker"
                                 name="agreement_ids[]"
@@ -69,35 +68,76 @@
                                 placeholder="Search agreements..."
                                 empty-message="No agreements match your search."
                             />
-                            <small class="text-muted d-block mt-1">
-                                💡 Leave empty for internal-only activities (meetings, admin work, etc.)
-                            </small>
                             @error('agreement_ids')
                                 <div class="text-danger small mt-1">{{ $message }}</div>
                             @enderror
                         </div>
 
-                        <div class="row g-3" 
-                             id="org-state-container"
-                             hx-get="{{ route('activities.orgs-states-for-agreements') }}"
-                             hx-trigger="token-picker:change from:#activity-agreements-picker"
-                             hx-include="#activity-agreements-picker [name='agreement_ids[]'], #org-state-container [name='organization_ids[]'], #org-state-container [name='state_ids[]']"
-                             hx-swap="innerHTML"
-                             hx-indicator="#htmx-loading-indicator">
-                            {{-- Dynamic organization and state pickers loaded via HTMX --}}
-                            @include('activities.partials.org-state-pickers', [
-                                'agreementIds' => $selectedAgreementIds,
-                                'selectedOrganizationIds' => $selectedOrganizationIds,
-                                'selectedStateIds' => $selectedStateIds,
-                            ])
-                        </div>
-                        
-                        {{-- Loading indicator --}}
-                        <div id="htmx-loading-indicator" class="htmx-indicator">
-                            <div class="spinner-border spinner-border-sm text-primary mt-2" role="status">
-                                <span class="visually-hidden">Loading...</span>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Organizations</label>
+                                <x-token-picker
+                                    picker-id="activity-organizations-picker"
+                                    name="organization_ids[]"
+                                    :items="$organizations"
+                                    :selected-ids="$selectedOrganizationIds"
+                                    placeholder="Search organizations..."
+                                />
+                                @error('organization_ids')
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                @enderror
                             </div>
-                            <small class="text-muted ms-2">Updating options...</small>
+                            <div class="col-md-6">
+                                <label class="form-label">States</label>
+                                <x-token-picker
+                                    picker-id="activity-states-picker"
+                                    name="state_ids[]"
+                                    :items="$states"
+                                    :selected-ids="$selectedStateIds"
+                                    placeholder="Search states..."
+                                />
+                                @error('state_ids')
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    </x-section-card>
+
+                    <x-section-card title="1b) Agreement Logging Fields" subtitle="Agreement-specific questions are grouped below each selected agreement.">
+                        <div id="agreement-logging-groups" class="d-grid gap-3">
+                            @foreach($agreements as $agreement)
+                                <div class="border rounded p-3 d-none" data-agreement-logging-group="{{ $agreement->id }}">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div>
+                                            <h5 class="mb-1">{{ $agreement->name }}</h5>
+                                            <p class="small text-muted mb-0">Agreement-level logging fields</p>
+                                        </div>
+                                    </div>
+
+                                    @if($agreement->agreementLoggingFields->isEmpty())
+                                        <div class="text-muted small">No agreement-specific logging fields are assigned to this agreement.</div>
+                                    @else
+                                        <div class="row g-3">
+                                            @foreach($agreement->agreementLoggingFields as $field)
+                                                <div class="col-md-6">
+                                                    @include('activities.partials.logging-field-input', [
+                                                        'field' => $field,
+                                                        'inputName' => "agreement_logging_values[{$agreement->id}][{$field->id}]",
+                                                        'oldKey' => "agreement_logging_values.{$agreement->id}.{$field->id}",
+                                                        'value' => data_get($agreementLoggingData, "{$agreement->id}.{$field->id}"),
+                                                        'inputId' => "agreement_{$agreement->id}_field_{$field->id}",
+                                                        'isRequired' => (bool) $field->pivot->is_required,
+                                                    ])
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @endif
+                                </div>
+                            @endforeach
+
+                            <div id="agreement-logging-empty" class="text-muted small border rounded p-3">
+                                Select one or more agreements to see their grouped logging fields.
+                            </div>
                         </div>
                     </x-section-card>
 
@@ -144,6 +184,33 @@
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
+                        </div>
+
+                        <div class="mt-4">
+                            @foreach($contactFamilies as $family)
+                                <div class="border rounded p-3 d-none" data-contact-family-logging-group="{{ $family->id }}">
+                                    <div class="fw-semibold mb-2">{{ $family->name }} Logging Fields</div>
+
+                                    @if($family->contactFamilyLoggingFields->isEmpty())
+                                        <div class="text-muted small">No classification logging fields are assigned to this contact family.</div>
+                                    @else
+                                        <div class="row g-3">
+                                            @foreach($family->contactFamilyLoggingFields as $field)
+                                                <div class="col-md-6">
+                                                    @include('activities.partials.logging-field-input', [
+                                                        'field' => $field,
+                                                        'inputName' => "contact_family_logging_values[{$field->id}]",
+                                                        'oldKey' => "contact_family_logging_values.{$field->id}",
+                                                        'value' => data_get($contactFamilyLoggingData, (string) $field->id),
+                                                        'inputId' => "contact_family_field_{$field->id}",
+                                                        'isRequired' => (bool) $field->pivot->is_required,
+                                                    ])
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @endif
+                                </div>
+                            @endforeach
                         </div>
                     </x-section-card>
 
@@ -388,112 +455,7 @@
     const statusBar = document.getElementById('activity-save-bar-status');
     const hasErrors = @json($errors->any());
 
-    // Global participant data for time tracking component
-    window.activityParticipants = {};
-
     if (!form) return;
-
-    // ============================================================================
-    // Organization & State Selection Preservation across HTMX swaps
-    // ============================================================================
-    (function() {
-        let preservedOrgIds = [];
-        let preservedStateIds = [];
-        
-        // Before HTMX swap, capture current selected values from token pickers
-        document.body.addEventListener('htmx:beforeRequest', function(event) {
-            const target = event.detail.target;
-            if (target.id === 'org-state-container' || target.closest('#org-state-container')) {
-                const orgPicker = document.getElementById('activity-organizations-picker');
-                const statePicker = document.getElementById('activity-states-picker');
-                
-                if (orgPicker) {
-                    const orgInputs = orgPicker.querySelectorAll('input[name="organization_ids[]"]');
-                    preservedOrgIds = Array.from(orgInputs).map(input => input.value);
-                }
-                
-                if (statePicker) {
-                    const stateInputs = statePicker.querySelectorAll('input[name="state_ids[]"]');
-                    preservedStateIds = Array.from(stateInputs).map(input => input.value);
-                }
-            }
-        });
-        
-        // After HTMX settles, restore selections
-        document.body.addEventListener('htmx:afterSettle', function(event) {
-            const target = event.target;
-            if (target.id === 'org-state-container' || target.closest('#org-state-container')) {
-                // Wait for token pickers to be fully initialized before setting values
-                function waitForPickersAndSet() {
-                    const orgPicker = document.getElementById('activity-organizations-picker');
-                    const statePicker = document.getElementById('activity-states-picker');
-                    
-                    // Check if pickers are initialized
-                    const orgReady = orgPicker && orgPicker.dataset.tokenPickerInitialized === 'true';
-                    const stateReady = statePicker && statePicker.dataset.tokenPickerInitialized === 'true';
-                    
-                    if (!orgReady || !stateReady) {
-                        // Not ready yet, try again shortly
-                        setTimeout(waitForPickersAndSet, 50);
-                        return;
-                    }
-                    
-                    // Get server-provided IDs from data element
-                    const dataElement = document.getElementById('org-state-data');
-                    const serverOrgIds = dataElement ? JSON.parse(dataElement.dataset.orgIds || '[]') : [];
-                    const serverStateIds = dataElement ? JSON.parse(dataElement.dataset.stateIds || '[]') : [];
-                    
-                    // MERGE preserved selections with server-provided selections
-                    const orgIdsToSet = [...new Set([...preservedOrgIds, ...serverOrgIds])];
-                    const stateIdsToSet = [...new Set([...preservedStateIds, ...serverStateIds])];
-                    
-                    console.log('Setting org IDs:', orgIdsToSet);
-                    console.log('Setting state IDs:', stateIdsToSet);
-                    
-                    if (orgPicker && orgIdsToSet.length > 0) {
-                        orgPicker.dispatchEvent(new CustomEvent('token-picker:set', { 
-                            detail: orgIdsToSet,
-                            bubbles: true
-                        }));
-                    }
-                    
-                    if (statePicker && stateIdsToSet.length > 0) {
-                        statePicker.dispatchEvent(new CustomEvent('token-picker:set', { 
-                            detail: stateIdsToSet,
-                            bubbles: true
-                        }));
-                    }
-                }
-                
-                // Start checking for initialized pickers
-                setTimeout(waitForPickersAndSet, 50);
-            }
-        });
-    })();
-
-    // ============================================================================
-    // Workaround for token picker dropdown not showing reliably on first focus
-    // ============================================================================
-    document.addEventListener('click', function(event) {
-        const searchInput = event.target.closest('[data-token-search]');
-        if (searchInput) {
-            const picker = searchInput.closest('[data-token-picker]');
-            if (picker) {
-                const dropdown = picker.querySelector('[data-token-dropdown]');
-                if (dropdown && dropdown.classList.contains('d-none')) {
-                    // Trigger focus to ensure dropdown appears
-                    searchInput.focus();
-                    // Small delay then check if dropdown appeared
-                    setTimeout(() => {
-                        if (dropdown.classList.contains('d-none')) {
-                            // Force dropdown to show if it didn't appear
-                            dropdown.classList.remove('d-none');
-                        }
-                    }, 10);
-                }
-            }
-        }
-    }, true);
 
     // Time tracking mode UI management
     function updateTimeTrackingUI() {
@@ -551,63 +513,54 @@
         });
     }
 
+    function updateAgreementLoggingGroups() {
+        const selected = new Set(selectedValues('agreement_ids[]'));
+        let visibleGroups = 0;
+
+        document.querySelectorAll('[data-agreement-logging-group]').forEach(function (group) {
+            const visible = selected.has(group.dataset.agreementLoggingGroup);
+            group.classList.toggle('d-none', !visible);
+            group.querySelectorAll('input, textarea, select').forEach(function (field) {
+                field.disabled = !visible;
+            });
+            visibleGroups += visible ? 1 : 0;
+        });
+
+        document.getElementById('agreement-logging-empty')?.classList.toggle('d-none', visibleGroups > 0);
+    }
+
+    function updateContactFamilyLoggingGroups() {
+        const familyId = document.getElementById('contact_family_id')?.value;
+
+        document.querySelectorAll('[data-contact-family-logging-group]').forEach(function (group) {
+            const visible = group.dataset.contactFamilyLoggingGroup === familyId;
+            group.classList.toggle('d-none', !visible);
+            group.querySelectorAll('input, textarea, select').forEach(function (field) {
+                field.disabled = !visible;
+            });
+        });
+    }
+
     function loadParticipants() {
-        const agreementIds = selectedValues('agreement_ids[]');
+        const agreementId = firstSelectedAgreementId();
         const container = document.getElementById('participants-container');
         if (!container) return;
 
-        if (agreementIds.length === 0) {
+        if (!agreementId) {
             container.innerHTML = '<small class="text-muted">Select an agreement first to load team members.</small>';
-            window.activityParticipants = {};
-            document.dispatchEvent(new CustomEvent('participants-updated'));
             return;
         }
 
-        // Get currently checked participants from the form (if any exist in DOM)
-        const currentlySelected = Array.from(
-            document.querySelectorAll('input[name="participant_user_ids[]"]:checked')
-        ).map(input => input.value);
-
-        // Use currently selected if available, otherwise use initial selections
-        const participantsToSelect = currentlySelected.length > 0 ? currentlySelected : selectedParticipants;
-
-        // Pass ALL agreement IDs to the HTMX participant checkboxes endpoint
         const params = new URLSearchParams();
-        agreementIds.forEach(id => params.append('agreement_ids[]', id));
-        
-        // Pass selected participant IDs to pre-check them
-        participantsToSelect.forEach(id => params.append('participant_user_ids[]', id));
-        
+        params.set('agreement_id', agreementId);
+        selectedParticipants.forEach(function (id) {
+            params.append('participant_user_ids[]', id);
+        });
+
         htmx.ajax('GET', participantsUrl + '?' + params.toString(), {
             target: '#participants-container',
             swap: 'innerHTML'
         });
-
-        // Fetch participant data for ALL selected agreements for the time tracking component
-        fetchParticipantData(agreementIds);
-    }
-
-    function fetchParticipantData(agreementIds) {
-        // Fetch users from all selected agreements for the time tracking component
-        const params = new URLSearchParams();
-        agreementIds.forEach(id => params.append('agreement_ids[]', id));
-        
-        fetch(`/api/agreements-users?${params.toString()}`)
-            .then(response => response.json())
-            .then(data => {
-                window.activityParticipants = {};
-                if (data.users && Array.isArray(data.users)) {
-                    data.users.forEach(user => {
-                        window.activityParticipants[user.id] = user.name;
-                    });
-                }
-                document.dispatchEvent(new CustomEvent('participants-updated'));
-            })
-            .catch(error => {
-                console.error('Error fetching participant data:', error);
-                window.activityParticipants = {};
-                document.dispatchEvent(new CustomEvent('participants-updated'));
-            });
     }
 
     function updateActivityTypeState() {
@@ -624,13 +577,9 @@
 
     document.getElementById('activity-agreements-picker')?.addEventListener('token-picker:change', function () {
         updateActivityLoggingFields();
+        updateAgreementLoggingGroups();
         loadParticipants();
         markDirty();
-    });
-
-    // Load participants when agreements picker is initialized with preselected values
-    document.getElementById('activity-agreements-picker')?.addEventListener('token-picker:initialized', function () {
-        loadParticipants();
     });
 
     ['activity-organizations-picker', 'activity-states-picker', 'activity-programs-picker'].forEach(function (id) {
@@ -645,6 +594,7 @@
                 selectedType.value = '';
             }
             updateActivityTypeState();
+            updateContactFamilyLoggingGroups();
         }
         markDirty();
     });
@@ -677,8 +627,12 @@
 
     updateActivityTypeState();
     updateActivityLoggingFields();
+    updateAgreementLoggingGroups();
+    updateContactFamilyLoggingGroups();
     loadParticipants();
     updateTimeTrackingUI();
+
+    document.querySelector('#activity-agreements-picker [data-token-search]')?.focus();
 })();
 </script>
 @endsection

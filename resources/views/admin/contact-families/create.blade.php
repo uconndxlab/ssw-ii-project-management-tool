@@ -3,6 +3,10 @@
 @section('title', 'Create Contact Family')
 
 @section('content')
+@php
+    $selectedContactFamilyLoggingFieldIds = old('contact_family_logging_field_ids', []);
+    $requiredContactFamilyLoggingFieldIds = old('required_contact_family_logging_field_ids', []);
+@endphp
 <div class="row mb-4">
     <div class="col-12">
         <h1>Create Contact Family</h1>
@@ -68,57 +72,43 @@
                         <div class="form-text">Only active contact families appear in activity forms.</div>
                     </div>
 
-                    <hr class="my-4">
-
-                    <h5 class="mb-3">Activity Logging Fields</h5>
-                    <p class="text-muted small mb-3">✅ Select fields that should be available when logging activities for this contact family:</p>
-                    
-                    @foreach($loggingFields as $field)
-                        <div class="border-bottom pb-2 mb-2">
-                            <div class="form-check">
-                                <input class="form-check-input logging-field-checkbox"
-                                       type="checkbox"
-                                       name="logging_field_ids[]"
-                                       id="logging_field_{{ $field->id }}"
-                                       value="{{ $field->id }}"
-                                       {{ in_array($field->id, old('logging_field_ids', [])) ? 'checked' : '' }}
-                                       onchange="toggleRequiredCheckbox({{ $field->id }})">
-                                <label class="form-check-label fw-semibold" for="logging_field_{{ $field->id }}">
-                                    {{ $field->name }}
-                                    <span class="badge bg-secondary text-uppercase small">{{ $field->field_type }}</span>
-                                </label>
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <h5 class="mb-1">Classification Logging Fields</h5>
+                                <p class="text-muted small mb-0">These fields appear in the activity classification area when this contact family is selected.</p>
                             </div>
-                            @if($field->help_text)
-                                <small class="text-muted d-block ms-4">{{ $field->help_text }}</small>
-                            @endif
-                            <div class="form-check ms-4 mt-1" id="required_{{ $field->id }}" style="display: {{ in_array($field->id, old('logging_field_ids', [])) ? 'block' : 'none' }};">
-                                <input class="form-check-input"
-                                       type="checkbox"
-                                       name="required_logging_field_ids[]"
-                                       id="required_logging_field_{{ $field->id }}"
-                                       value="{{ $field->id }}"
-                                       {{ in_array($field->id, old('required_logging_field_ids', [])) ? 'checked' : '' }}>
-                                <label class="form-check-label small text-muted" for="required_logging_field_{{ $field->id }}">
-                                    Make this field required
-                                </label>
-                            </div>
+                            <a href="{{ route('contact-family-logging-fields.index') }}" class="btn btn-sm btn-outline-secondary">Manage Contact Family Fields</a>
                         </div>
-                    @endforeach
 
-                    <script>
-                    function toggleRequiredCheckbox(fieldId) {
-                        const checkbox = document.getElementById('logging_field_' + fieldId);
-                        const requiredDiv = document.getElementById('required_' + fieldId);
-                        const requiredCheckbox = document.getElementById('required_logging_field_' + fieldId);
-                        
-                        if (checkbox.checked) {
-                            requiredDiv.style.display = 'block';
-                        } else {
-                            requiredDiv.style.display = 'none';
-                            requiredCheckbox.checked = false;
-                        }
-                    }
-                    </script>
+                        @if($contactFamilyLoggingFields->isEmpty())
+                            <div class="alert alert-light border mb-0">No contact family logging fields have been defined yet.</div>
+                        @else
+                            <div class="border rounded">
+                                @foreach($contactFamilyLoggingFields as $field)
+                                    <label class="d-flex align-items-start gap-3 px-3 py-2 border-bottom {{ $loop->last ? 'border-bottom-0' : '' }}">
+                                        <input class="form-check-input mt-1"
+                                               type="checkbox"
+                                               name="contact_family_logging_field_ids[]"
+                                               value="{{ $field->id }}"
+                                               {{ in_array($field->id, $selectedContactFamilyLoggingFieldIds) ? 'checked' : '' }}>
+                                        <div class="flex-grow-1">
+                                            <div class="fw-semibold">{{ $field->name }}</div>
+                                            <div class="small text-muted">{{ ucfirst($field->field_type) }}{{ $field->help_text ? ' · ' . $field->help_text : '' }}</div>
+                                        </div>
+                                        <div class="form-check m-0">
+                                            <input class="form-check-input"
+                                                   type="checkbox"
+                                                   name="required_contact_family_logging_field_ids[]"
+                                                   value="{{ $field->id }}"
+                                                   {{ in_array($field->id, $requiredContactFamilyLoggingFieldIds) ? 'checked' : '' }}>
+                                            <label class="form-check-label small">Required</label>
+                                        </div>
+                                    </label>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
 
                 </form>
             </div>

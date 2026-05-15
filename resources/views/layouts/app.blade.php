@@ -11,14 +11,6 @@
     
     <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const token = document.querySelector('meta[name="csrf-token"]')?.content;
-            if (token) {
-                document.body.setAttribute('hx-headers', JSON.stringify({'X-CSRF-TOKEN': token}));
-            }
-        });
-    </script>
 </head>
 <body>
     @auth
@@ -45,13 +37,20 @@
                             Admin
                         </a>
                         <ul class="dropdown-menu">
+                            <li><h6 class="dropdown-header">Reference Data</h6></li>
                             <li><a class="dropdown-item" href="{{ route('states.index') }}">States</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Agreement Setup</h6></li>
                             <li><a class="dropdown-item" href="{{ route('projects.index') }}">Projects</a></li>
                             <li><a class="dropdown-item" href="{{ route('programs.index') }}">Programs</a></li>
-                            <li><a class="dropdown-item" href="{{ route('contact-families.index') }}">Contact Families</a></li>
-                            <li><a class="dropdown-item" href="{{ route('activity-types.index') }}">Activity Types</a></li>
-                            <li><a class="dropdown-item" href="{{ route('logging-fields.index') }}">Logging Fields</a></li>
+                            <li><a class="dropdown-item" href="{{ route('agreement-logging-fields.index') }}">Agreement Logging Fields</a></li>
                             <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Activity Setup</h6></li>
+                            <li><a class="dropdown-item" href="{{ route('contact-families.index') }}">Contact Families</a></li>
+                            <li><a class="dropdown-item" href="{{ route('contact-family-logging-fields.index') }}">Contact Family Logging Fields</a></li>
+                            <li><a class="dropdown-item" href="{{ route('activity-types.index') }}">Activity Types</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">People</h6></li>
                             <li><a class="dropdown-item" href="{{ route('teams.index') }}">Teams</a></li>
                             <li><a class="dropdown-item" href="{{ route('admin.users.index') }}">Users</a></li>
                         </ul>

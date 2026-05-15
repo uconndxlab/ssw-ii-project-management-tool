@@ -281,6 +281,67 @@
             </div>
         </div>
         @endif
+
+        @if(!empty($activity->logging_field_data['agreements']) || !empty($activity->logging_field_data['contact_family']))
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0">Dynamic Logging Fields</h5>
+            </div>
+            <div class="card-body">
+                @if(!empty($activity->logging_field_data['agreements']))
+                    <div class="mb-4">
+                        <h6 class="mb-3">Agreement Fields</h6>
+                        @foreach($activity->agreements as $agreement)
+                            @php
+                                $agreementValues = $activity->logging_field_data['agreements'][$agreement->id] ?? [];
+                            @endphp
+                            @if(!empty($agreementValues))
+                                <div class="border rounded p-3 mb-3">
+                                    <div class="fw-semibold mb-2">{{ $agreement->name }}</div>
+                                    <div class="row g-2">
+                                        @foreach($agreement->agreementLoggingFields as $field)
+                                            @php
+                                                $value = $agreementValues[$field->id] ?? null;
+                                            @endphp
+                                            @if($value !== null && $value !== '')
+                                                <div class="col-md-6">
+                                                    <div class="small text-muted">{{ $field->name }}</div>
+                                                    <div>
+                                                        {{ is_bool($value) ? ($value ? 'Yes' : 'No') : $value }}
+                                                    </div>
+                                                </div>
+                                            @endif
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
+                        @endforeach
+                    </div>
+                @endif
+
+                @if(!empty($activity->logging_field_data['contact_family']))
+                    <div>
+                        <h6 class="mb-3">Contact Family Fields</h6>
+                        <div class="row g-2">
+                            @foreach($activity->activityType->contactFamily->contactFamilyLoggingFields as $field)
+                                @php
+                                    $value = $activity->logging_field_data['contact_family'][$field->id] ?? null;
+                                @endphp
+                                @if($value !== null && $value !== '')
+                                    <div class="col-md-6">
+                                        <div class="small text-muted">{{ $field->name }}</div>
+                                        <div>
+                                            {{ is_bool($value) ? ($value ? 'Yes' : 'No') : $value }}
+                                        </div>
+                                    </div>
+                                @endif
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+            </div>
+        </div>
+        @endif
     </div>
 </div>
 @endsection

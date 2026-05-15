@@ -9,11 +9,12 @@ use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ProgramController;
 use App\Http\Controllers\ContactFamilyController;
+use App\Http\Controllers\ContactFamilyLoggingFieldController;
 use App\Http\Controllers\ActivityTypeController;
+use App\Http\Controllers\AgreementLoggingFieldController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\ProjectController;
-use App\Http\Controllers\LoggingFieldController;
 use Illuminate\Support\Facades\Route;
 
 // Guest routes
@@ -39,23 +40,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/agreements/{agreement}/add-deliverable', [AgreementController::class, 'addDeliverable'])->name('agreements.add-deliverable');
     Route::delete('/agreements/{agreement}/remove-deliverable/{deliverable}', [AgreementController::class, 'removeDeliverable'])->name('agreements.remove-deliverable');
     
-    // Agreement attachment routes
-    Route::get('/agreements/{agreement}/attachments/{attachment}/download', [AgreementController::class, 'downloadAttachment'])->name('agreements.attachments.download');
-    Route::delete('/agreements/{agreement}/attachments/{attachment}', [AgreementController::class, 'destroyAttachment'])->name('agreements.attachments.destroy');
-    
     // HTMX endpoint for activity participant selection
     Route::get('/activities/participants-for-agreement', [ActivityController::class, 'getParticipantsForAgreement'])
         ->name('activities.participants-for-agreement');
-    
-    // API endpoint for getting agreement users (for participant time tracking)
-    Route::get('/api/agreements/{agreement}/users', [ActivityController::class, 'getAgreementUsers'])
-        ->name('api.agreements.users');
-    Route::get('/api/agreements-users', [ActivityController::class, 'getAgreementsUsers'])
-        ->name('api.agreements-users');
-    
-    // HTMX endpoint for filtering organizations and states by agreements
-    Route::get('/activities/orgs-states-for-agreements', [ActivityController::class, 'getOrganizationsAndStatesForAgreements'])
-        ->name('activities.orgs-states-for-agreements');
 
     // Activities - visible to all authenticated users (with visibility filtering in controller)
     Route::get('/activities', [ActivityController::class, 'index'])->name('activities.index');
@@ -80,9 +67,11 @@ Route::middleware('auth')->group(function () {
 
     // Admin routes
     Route::middleware('role:admin')->group(function () {
+        Route::redirect('/logging-fields', '/agreement-logging-fields')->name('logging-fields.index');
         Route::resource('contact-families', ContactFamilyController::class)->except(['show']);
+        Route::resource('contact-family-logging-fields', ContactFamilyLoggingFieldController::class);
+        Route::resource('agreement-logging-fields', AgreementLoggingFieldController::class);
         Route::resource('activity-types', ActivityTypeController::class)->except(['show']);
-        Route::resource('logging-fields', LoggingFieldController::class);
         Route::resource('states', StateController::class);
         Route::resource('organizations', OrganizationController::class)->except(['index', 'show', 'create']);
         Route::resource('projects', ProjectController::class);

@@ -3,383 +3,366 @@
 @section('title', 'Create Agreement')
 
 @section('content')
-<div class="container-fluid py-4">
-    <div class="row g-4 mb-2">
-        <div class="col-12">
-            <h1 class="h3 mb-1">Create Agreement</h1>
-            <p class="text-muted mb-0">Configure contract metadata, staffing, reporting needs, and files.</p>
-        </div>
+@php
+    $activityLoggingConfig = old('activity_logging_config', [
+        'event_hours' => true,
+        'prep_hours' => true,
+        'followup_hours' => false,
+        'participant_count' => true,
+        'external_attendees' => true,
+        'summary' => true,
+        'follow_up' => true,
+        'strengths' => false,
+        'recommendations' => false,
+    ]);
+    $selectedAgreementLoggingFieldIds = old('agreement_logging_field_ids', []);
+    $requiredAgreementLoggingFieldIds = old('required_agreement_logging_field_ids', []);
+@endphp
+<div class="row mb-4">
+    <div class="col-12">
+        <h1>Create Agreement</h1>
     </div>
+</div>
 
-    @if ($errors->any())
-        <div class="alert alert-danger py-2">
-            <strong>Please fix the highlighted fields.</strong>
-        </div>
-    @endif
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                @if ($errors->any())
+                    <div class="alert alert-danger">
+                        <ul class="mb-0">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
 
-    <form method="POST" action="{{ route('agreements.store') }}" id="agreements-create-form" enctype="multipart/form-data">
-        @csrf
+                <form method="POST" action="{{ route('agreements.store') }}" id="agreements-create-form">
+                    @csrf
 
-        <div class="row g-4">
-            <div class="col-lg-8">
-                <div class="d-grid gap-4">
-                    <!-- Basic Information -->
-                    <x-section-card title="1) Basic Information" subtitle="Start with the agreement name.">
-                        <div class="mb-3">
-                            <label for="name" class="form-label fw-semibold">Agreement Name <span class="text-danger">*</span></label>
-                            <input type="text" 
-                                   class="form-control @error('name') is-invalid @enderror" 
-                                   id="name" 
-                                   name="name" 
-                                   value="{{ old('name') }}" 
-                                   required>
-                            @error('name')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </x-section-card>
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Agreement Name</label>
+                        <input type="text" 
+                               class="form-control @error('name') is-invalid @enderror" 
+                               id="name" 
+                               name="name" 
+                               value="{{ old('name') }}" 
+                               required>
+                        @error('name')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
 
-                    <!-- Relationships -->
-                    <x-section-card title="2) Relationships" subtitle="Link organizations and states to this agreement.">
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-semibold">Organizations</label>
-                        <x-organization-picker
-                            picker-id="agreement-organizations"
-                            name="organization_ids[]"
-                            :organizations="$organizations"
-                            :selected-ids="old('organization_ids', [])"
-                        />
-                                <small class="text-muted">Select one or more organizations</small>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Organizations</label>
+                                <x-organization-picker
+                                    picker-id="agreement-organizations"
+                                    name="organization_ids[]"
+                                    :organizations="$organizations"
+                                    :selected-ids="old('organization_ids', [])"
+                                />
                                 @error('organization_ids')
                                     <div class="text-danger small mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
+                        </div>
 
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-semibold">States</label>
-                        <x-state-picker
-                            picker-id="agreement-states"
-                            name="state_ids[]"
-                            :states="$states"
-                            :selected-ids="old('state_ids', [])"
-                        />
-                                <small class="text-muted">Select one or more states</small>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">States</label>
+                                <x-state-picker
+                                    picker-id="agreement-states"
+                                    name="state_ids[]"
+                                    :states="$states"
+                                    :selected-ids="old('state_ids', [])"
+                                />
                                 @error('state_ids')
                                     <div class="text-danger small mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
                         </div>
-                    </x-section-card>
+                    </div>
 
-                    <!-- Programs & Projects -->
-                    <x-section-card title="3) Programs & Projects" subtitle="Select a project to auto-select all programs, or manually cherry-pick programs.">
-                        <div class="mb-3">
-                            <label for="project_id" class="form-label fw-semibold">Project (optional)</label>
-                            <select id="project_id" name="project_id" class="form-select @error('project_id') is-invalid @enderror">
-                                <option value="">No project selected</option>
-                                @foreach($projects as $project)
-                                    <option value="{{ $project->id }}" {{ old('project_id') == $project->id ? 'selected' : '' }}>{{ $project->name }}</option>
-                                @endforeach
-                            </select>
-                            <small class="text-muted">Selecting a project will check all of its programs automatically.</small>
-                            @error('project_id')
-                                <div class="invalid-feedback d-block">{{ $message }}</div>
-                            @enderror
-                        </div>
+                    <div class="mb-3">
+                        <label for="abstract" class="form-label">Abstract</label>
+                        <textarea class="form-control @error('abstract') is-invalid @enderror" 
+                                  id="abstract" 
+                                  name="abstract" 
+                                  rows="4">{{ old('abstract') }}</textarea>
+                        @error('abstract')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
 
-                        <label class="form-label fw-semibold">Programs</label>
-                        <div class="border rounded p-3 bg-light" id="program-checkboxes">
-                            @foreach($programsByProject as $projectId => $programs)
-                                @php
-                                    $project = $projectId ? $projects->find($projectId) : null;
-                                    $projectName = $project ? $project->name : 'Unassigned Programs';
-                                @endphp
-                                <div class="mb-2">
-                                    <div class="small text-muted fw-semibold mb-1">{{ $projectName }}</div>
-                                    @foreach($programs->sortBy('name') as $program)
-                                        <div class="form-check mb-1">
-                                            <input class="form-check-input agreement-program-checkbox"
-                                                   type="checkbox"
-                                                   name="program_ids[]"
-                                                   id="program_{{ $program->id }}"
-                                                   value="{{ $program->id }}"
-                                                   data-project-id="{{ $program->project_id }}"
-                                                   {{ in_array($program->id, old('program_ids', [])) ? 'checked' : '' }}>
-                                            <label class="form-check-label" for="program_{{ $program->id }}">{{ $program->name }}</label>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            @endforeach
-                        </div>
-                    </x-section-card>
-
-                    <!-- Staffing -->
-                    <x-section-card title="4) Staffing" subtitle="Assign individual users and teams who can access this agreement.">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">Assign Users</label>
-                                <x-user-picker
-                                    picker-id="agreement-create-users"
-                                    name="user_ids[]"
-                                    :users="$users"
-                                    :selected-ids="old('user_ids', [])"
-                                    search-placeholder="Search to assign users..."
-                                    :show-role="true"
-                                />
-                                <small class="text-muted">Individual users assigned to this agreement</small>
-                            </div>
-
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">Assign Teams</label>
-                                <x-team-picker
-                                    picker-id="agreement-create-teams"
-                                    name="team_ids[]"
-                                    :teams="$teams"
-                                    :selected-ids="old('team_ids', [])"
-                                    search-placeholder="Search to assign teams..."
-                                />
-                                <small class="text-muted">All users in assigned teams will have access</small>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="start_date" class="form-label">Start Date</label>
+                                <input type="date" 
+                                       class="form-control @error('start_date') is-invalid @enderror" 
+                                       id="start_date" 
+                                       name="start_date" 
+                                       value="{{ old('start_date') }}">
+                                @error('start_date')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
                             </div>
                         </div>
-                    </x-section-card>
 
-                    <!-- Scope of Work -->
-                    <x-section-card title="5) Scope of Work" subtitle="Describe the agreement's objectives, deliverables, and details.">
-                        <div class="mb-3">
-                            <label for="abstract" class="form-label fw-semibold">Description</label>
-                            <textarea class="form-control @error('abstract') is-invalid @enderror" 
-                                      id="abstract" 
-                                      name="abstract" 
-                                      rows="6"
-                                      placeholder="Describe the scope of work, deliverables, or other relevant details...">{{ old('abstract') }}</textarea>
-                            <small class="text-muted">Provide details about the agreement's scope, objectives, and deliverables.</small>
-                            @error('abstract')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="end_date" class="form-label">End Date</label>
+                                <input type="date" 
+                                       class="form-control @error('end_date') is-invalid @enderror" 
+                                       id="end_date" 
+                                       name="end_date" 
+                                       value="{{ old('end_date') }}">
+                                @error('end_date')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="original_end_date" class="form-label">Original End Date</label>
+                                <input type="date" 
+                                       class="form-control @error('original_end_date') is-invalid @enderror" 
+                                       id="original_end_date" 
+                                       name="original_end_date" 
+                                       value="{{ old('original_end_date') }}">
+                                @error('original_end_date')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                <small class="text-muted">For tracking agreement extensions</small>
+                            </div>
                         </div>
 
-                        <div class="mb-3">
-                            <label for="certification_candidates" class="form-label fw-semibold">Certification Candidates</label>
-                            <textarea class="form-control @error('certification_candidates') is-invalid @enderror" 
-                                      id="certification_candidates" 
-                                      name="certification_candidates" 
-                                      rows="3"
-                                      placeholder="List certification candidates if applicable...">{{ old('certification_candidates') }}</textarea>
-                            <small class="text-muted">Optional: List any certification candidates associated with this agreement.</small>
-                            @error('certification_candidates')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="extended_end_date" class="form-label">Extended End Date</label>
+                                <input type="date" 
+                                       class="form-control @error('extended_end_date') is-invalid @enderror" 
+                                       id="extended_end_date" 
+                                       name="extended_end_date" 
+                                       value="{{ old('extended_end_date') }}">
+                                @error('extended_end_date')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
                         </div>
-                    </x-section-card>
+                    </div>
 
-                    <!-- Deliverables -->
-                    <x-section-card title="6) Deliverables" subtitle="Define required deliverables and track progress.">
-                        <div class="alert alert-info small mb-0">
-                            💡 Save the agreement first, then you'll be able to add deliverables on the next screen.
-                        </div>
-                    </x-section-card>
-                </div>
-            </div>
+                    <div class="mb-3">
+                        <label for="certification_candidates" class="form-label">Certification Candidates</label>
+                        <textarea class="form-control @error('certification_candidates') is-invalid @enderror" 
+                                  id="certification_candidates" 
+                                  name="certification_candidates" 
+                                  rows="3">{{ old('certification_candidates') }}</textarea>
+                        @error('certification_candidates')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                        <small class="text-muted">List of certification candidates (placeholder)</small>
+                    </div>
 
-            <div class="col-lg-4">
-                <div class="d-grid gap-4">
-                    <!-- Dates -->
-                    <x-section-card title="7) Dates" subtitle="Contract timeline.">
-                        <div class="mb-3">
-                            <label for="start_date" class="form-label fw-semibold">Start Date</label>
-                            <input type="date" 
-                                   class="form-control @error('start_date') is-invalid @enderror" 
-                                   id="start_date" 
-                                   name="start_date" 
-                                   value="{{ old('start_date') }}">
-                            @error('start_date')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
+                    <div class="mb-4">
+                        <h5 class="mb-3">Activity Logging Fields</h5>
 
-                        <div class="mb-3">
-                            <label for="end_date" class="form-label fw-semibold">End Date</label>
-                            <input type="date" 
-                                   class="form-control @error('end_date') is-invalid @enderror" 
-                                   id="end_date" 
-                                   name="end_date" 
-                                   value="{{ old('end_date') }}">
-                            @error('end_date')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="extension_start_date" class="form-label">Extension Start</label>
-                            <input type="date" 
-                                   class="form-control @error('extension_start_date') is-invalid @enderror" 
-                                   id="extension_start_date" 
-                                   name="extension_start_date" 
-                                   value="{{ old('extension_start_date') }}">
-                            <small class="text-muted">Optional</small>
-                            @error('extension_start_date')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="extension_end_date" class="form-label">Extension End</label>
-                            <input type="date" 
-                                   class="form-control @error('extension_end_date') is-invalid @enderror" 
-                                   id="extension_end_date" 
-                                   name="extension_end_date" 
-                                   value="{{ old('extension_end_date') }}">
-                            <small class="text-muted">Optional</small>
-                            @error('extension_end_date')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </x-section-card>
-
-                    <!-- Reporting / Logging Fields -->
-                    <x-section-card title="8) Reporting / Logging" subtitle="Activity logging configuration.">
-                        <p class="text-muted small mb-3">✅ Select fields to enable for activity logging:</p>
-                        
-                        @foreach($loggingFields as $field)
-                            <div class="border-bottom pb-2 mb-2">
-                                <div class="form-check">
-                                    <input class="form-check-input logging-field-checkbox"
-                                           type="checkbox"
-                                           name="logging_field_ids[]"
-                                           id="logging_field_{{ $field->id }}"
-                                           value="{{ $field->id }}"
-                                           {{ in_array($field->id, old('logging_field_ids', [])) ? 'checked' : '' }}
-                                           onchange="toggleRequiredCheckbox({{ $field->id }})">
-                                    <label class="form-check-label fw-semibold" for="logging_field_{{ $field->id }}">
-                                        {{ $field->name }}
-                                        <span class="badge bg-secondary text-uppercase small">{{ $field->field_type }}</span>
-                                    </label>
-                                </div>
-                                @if($field->help_text)
-                                    <small class="text-muted d-block ms-4">{{ $field->help_text }}</small>
-                                @endif
-                                <div class="form-check ms-4 mt-1" id="required_{{ $field->id }}" style="display: {{ in_array($field->id, old('logging_field_ids', [])) ? 'block' : 'none' }};">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check mb-2">
                                     <input class="form-check-input"
                                            type="checkbox"
-                                           name="required_logging_field_ids[]"
-                                           id="required_logging_field_{{ $field->id }}"
-                                           value="{{ $field->id }}"
-                                           {{ in_array($field->id, old('required_logging_field_ids', [])) ? 'checked' : '' }}>
-                                    <label class="form-check-label small text-muted" for="required_logging_field_{{ $field->id }}">
-                                        Make this field required
+                                           name="activity_logging_config[event_hours]"
+                                           id="activity_logging_config_event_hours"
+                                           value="1"
+                                           {{ !empty($activityLoggingConfig['event_hours']) ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="activity_logging_config_event_hours">
+                                        Event Hours
+                                    </label>
+                                </div>
+
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           name="activity_logging_config[prep_hours]"
+                                           id="activity_logging_config_prep_hours"
+                                           value="1"
+                                           {{ !empty($activityLoggingConfig['prep_hours']) ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="activity_logging_config_prep_hours">
+                                        Prep Hours
+                                    </label>
+                                </div>
+
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           name="activity_logging_config[followup_hours]"
+                                           id="activity_logging_config_followup_hours"
+                                           value="1"
+                                           {{ !empty($activityLoggingConfig['followup_hours']) ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="activity_logging_config_followup_hours">
+                                        Follow-up Hours
+                                    </label>
+                                </div>
+
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           name="activity_logging_config[participant_count]"
+                                           id="activity_logging_config_participant_count"
+                                           value="1"
+                                           {{ !empty($activityLoggingConfig['participant_count']) ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="activity_logging_config_participant_count">
+                                        Participants
+                                    </label>
+                                </div>
+
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           name="activity_logging_config[external_attendees]"
+                                           id="activity_logging_config_external_attendees"
+                                           value="1"
+                                           {{ !empty($activityLoggingConfig['external_attendees']) ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="activity_logging_config_external_attendees">
+                                        External Attendees
                                     </label>
                                 </div>
                             </div>
-                        @endforeach
 
-                        <script>
-                        function toggleRequiredCheckbox(fieldId) {
-                            const checkbox = document.getElementById('logging_field_' + fieldId);
-                            const requiredDiv = document.getElementById('required_' + fieldId);
-                            const requiredCheckbox = document.getElementById('required_logging_field_' + fieldId);
-                            
-                            if (checkbox.checked) {
-                                requiredDiv.style.display = 'block';
-                            } else {
-                                requiredDiv.style.display = 'none';
-                                requiredCheckbox.checked = false;
-                            }
-                        }
-                        </script>
+                            <div class="col-md-6">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           name="activity_logging_config[summary]"
+                                           id="activity_logging_config_summary"
+                                           value="1"
+                                           {{ !empty($activityLoggingConfig['summary']) ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="activity_logging_config_summary">
+                                        Summary
+                                    </label>
+                                </div>
 
-                        <hr class="my-3">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           name="activity_logging_config[follow_up]"
+                                           id="activity_logging_config_follow_up"
+                                           value="1"
+                                           {{ !empty($activityLoggingConfig['follow_up']) ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="activity_logging_config_follow_up">
+                                        Follow-Up
+                                    </label>
+                                </div>
 
-                        <label class="form-label fw-semibold">Time Tracking Mode</label>
-                        <div class="form-check">
-                            <input class="form-check-input" 
-                                   type="radio" 
-                                   name="time_tracking_mode" 
-                                   id="time_tracking_engagement" 
-                                   value="engagement"
-                                   {{ old('time_tracking_mode', 'engagement') === 'engagement' ? 'checked' : '' }}>
-                            <label class="form-check-label" for="time_tracking_engagement">
-                                Time by Engagement
-                            </label>
-                            <small class="d-block text-muted">Track time at the engagement/activity level</small>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           name="activity_logging_config[strengths]"
+                                           id="activity_logging_config_strengths"
+                                           value="1"
+                                           {{ !empty($activityLoggingConfig['strengths']) ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="activity_logging_config_strengths">
+                                        Strengths
+                                    </label>
+                                </div>
+
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           name="activity_logging_config[recommendations]"
+                                           id="activity_logging_config_recommendations"
+                                           value="1"
+                                           {{ !empty($activityLoggingConfig['recommendations']) ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="activity_logging_config_recommendations">
+                                        Recommendations
+                                    </label>
+                                </div>
+                            </div>
                         </div>
-                        <div class="form-check mt-2">
-                            <input class="form-check-input" 
-                                   type="radio" 
-                                   name="time_tracking_mode" 
-                                   id="time_tracking_participant" 
-                                   value="participant"
-                                   {{ old('time_tracking_mode') === 'participant' ? 'checked' : '' }}>
-                            <label class="form-check-label" for="time_tracking_participant">
-                                Time by Participant
-                            </label>
-                            <small class="d-block text-muted">Track time per participant</small>
-                        </div>
-                    </x-section-card>
 
-                    <!-- Attachments -->
-                    <x-section-card title="9) Attachments" subtitle="📎 Upload documents.">
-                        <div class="mb-3">
-                            <label for="attachments" class="form-label fw-semibold">Upload Files</label>
-                            <input type="file" 
-                                   class="form-control @error('attachments.*') is-invalid @enderror" 
-                                   id="attachments" 
-                                   name="attachments[]" 
-                                   multiple
-                                   accept=".pdf,.doc,.docx,.xls,.xlsx,.txt">
-                            <small class="text-muted">PDFs, documents, etc.</small>
-                            @error('attachments.*')
-                                <div class="invalid-feedback d-block">{{ $message }}</div>
-                            @enderror
+                        <small class="text-muted">
+                            Select which fields should appear when logging activities for this agreement.
+                        </small>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <h5 class="mb-1">Agreement-Specific Logging Fields</h5>
+                                <p class="text-muted small mb-0">These fields will be emphasized when activity is logged against this agreement.</p>
+                            </div>
+                            <a href="{{ route('agreement-logging-fields.index') }}" class="btn btn-sm btn-outline-secondary">Manage Agreement Fields</a>
                         </div>
-                    </x-section-card>
-                </div>
+
+                        @if($agreementLoggingFields->isEmpty())
+                            <div class="alert alert-light border mb-0">No agreement logging fields have been defined yet.</div>
+                        @else
+                            <div class="border rounded">
+                                @foreach($agreementLoggingFields as $field)
+                                    <label class="d-flex align-items-start gap-3 px-3 py-2 border-bottom {{ $loop->last ? 'border-bottom-0' : '' }}">
+                                        <input class="form-check-input mt-1"
+                                               type="checkbox"
+                                               name="agreement_logging_field_ids[]"
+                                               value="{{ $field->id }}"
+                                               {{ in_array($field->id, $selectedAgreementLoggingFieldIds) ? 'checked' : '' }}>
+                                        <div class="flex-grow-1">
+                                            <div class="fw-semibold">{{ $field->name }}</div>
+                                            <div class="small text-muted">{{ ucfirst($field->field_type) }}{{ $field->help_text ? ' · ' . $field->help_text : '' }}</div>
+                                        </div>
+                                        <div class="form-check m-0">
+                                            <input class="form-check-input"
+                                                   type="checkbox"
+                                                   name="required_agreement_logging_field_ids[]"
+                                                   value="{{ $field->id }}"
+                                                   {{ in_array($field->id, $requiredAgreementLoggingFieldIds) ? 'checked' : '' }}>
+                                            <label class="form-check-label small">Required</label>
+                                        </div>
+                                    </label>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Assign Users</label>
+
+                        <x-user-picker
+                            picker-id="agreement-create-users"
+                            name="user_ids[]"
+                            :users="$users"
+                            :selected-ids="old('user_ids', [])"
+                            search-placeholder="Search to assign users..."
+                            :show-role="true"
+                        />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Assign Teams</label>
+
+                        <x-team-picker
+                            picker-id="agreement-create-teams"
+                            name="team_ids[]"
+                            :teams="$teams"
+                            :selected-ids="old('team_ids', [])"
+                            search-placeholder="Search to assign teams..."
+                        />
+
+                        <small class="text-muted">
+                            All users in assigned teams will have access to this agreement.
+                        </small>
+                    </div>
+
+                </form>
             </div>
         </div>
-    </form>
+    </div>
 </div>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const projectSelect = document.getElementById('project_id');
-        const programCheckboxes = document.querySelectorAll('.agreement-program-checkbox');
-
-        if (projectSelect) {
-            projectSelect.addEventListener('change', function () {
-                const selectedProjectId = this.value;
-                if (!selectedProjectId) return;
-
-                programCheckboxes.forEach((checkbox) => {
-                    if (checkbox.dataset.projectId === selectedProjectId) {
-                        checkbox.checked = true;
-                    }
-                });
-            });
-        }
-
-        // Auto-select state when an organization is checked
-        document.addEventListener('change', function (e) {
-            const checkbox = e.target;
-            if (!checkbox.matches('input[type="checkbox"][data-state-id]')) return;
-
-            const stateId = checkbox.dataset.stateId;
-            if (!stateId) return;
-
-            const stateCheckbox = document.querySelector(
-                'input[type="checkbox"][name="state_ids[]"][value="' + stateId + '"]'
-            );
-            if (stateCheckbox && checkbox.checked) {
-                stateCheckbox.checked = true;
-                stateCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-        });
-    });
-</script>
-
-<!-- Sticky Save Bar -->
-<x-save-bar 
-    form-id="agreements-create-form" 
-    cancel-url="{{ route('agreements.index') }}" 
-    save-label="Create Agreement" />
-
+<x-save-bar form-id="agreements-create-form" cancel-url="{{ route('agreements.index') }}" save-label="Create Agreement" />
 @endsection
