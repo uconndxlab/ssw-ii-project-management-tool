@@ -172,13 +172,20 @@
                             @enderror
                         </div>
                     </x-section-card>
+
+                    <!-- Deliverables -->
+                    <x-section-card title="6) Deliverables" subtitle="Define required deliverables and track progress.">
+                        <div class="alert alert-info small mb-0">
+                            💡 Save the agreement first, then you'll be able to add deliverables on the next screen.
+                        </div>
+                    </x-section-card>
                 </div>
             </div>
 
             <div class="col-lg-4">
                 <div class="d-grid gap-4">
                     <!-- Dates -->
-                    <x-section-card title="6) Dates" subtitle="Contract timeline.">
+                    <x-section-card title="7) Dates" subtitle="Contract timeline.">
                         <div class="mb-3">
                             <label for="start_date" class="form-label fw-semibold">Start Date</label>
                             <input type="date" 
@@ -231,7 +238,7 @@
                     </x-section-card>
 
                     <!-- Reporting / Logging Fields -->
-                    <x-section-card title="7) Reporting / Logging" subtitle="Activity logging configuration.">
+                    <x-section-card title="8) Reporting / Logging" subtitle="Activity logging configuration.">
                         <p class="text-muted small mb-3">✅ Select fields to enable for activity logging:</p>
                         
                         @foreach($loggingFields as $field)
@@ -311,7 +318,7 @@
                     </x-section-card>
 
                     <!-- Attachments -->
-                    <x-section-card title="8) Attachments" subtitle="📎 Upload documents.">
+                    <x-section-card title="9) Attachments" subtitle="📎 Upload documents.">
                         <div class="mb-3">
                             <label for="attachments" class="form-label fw-semibold">Upload Files</label>
                             <input type="file" 
@@ -337,17 +344,34 @@
         const projectSelect = document.getElementById('project_id');
         const programCheckboxes = document.querySelectorAll('.agreement-program-checkbox');
 
-        if (!projectSelect) return;
+        if (projectSelect) {
+            projectSelect.addEventListener('change', function () {
+                const selectedProjectId = this.value;
+                if (!selectedProjectId) return;
 
-        projectSelect.addEventListener('change', function () {
-            const selectedProjectId = this.value;
-            if (!selectedProjectId) return;
-
-            programCheckboxes.forEach((checkbox) => {
-                if (checkbox.dataset.projectId === selectedProjectId) {
-                    checkbox.checked = true;
-                }
+                programCheckboxes.forEach((checkbox) => {
+                    if (checkbox.dataset.projectId === selectedProjectId) {
+                        checkbox.checked = true;
+                    }
+                });
             });
+        }
+
+        // Auto-select state when an organization is checked
+        document.addEventListener('change', function (e) {
+            const checkbox = e.target;
+            if (!checkbox.matches('input[type="checkbox"][data-state-id]')) return;
+
+            const stateId = checkbox.dataset.stateId;
+            if (!stateId) return;
+
+            const stateCheckbox = document.querySelector(
+                'input[type="checkbox"][name="state_ids[]"][value="' + stateId + '"]'
+            );
+            if (stateCheckbox && checkbox.checked) {
+                stateCheckbox.checked = true;
+                stateCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+            }
         });
     });
 </script>

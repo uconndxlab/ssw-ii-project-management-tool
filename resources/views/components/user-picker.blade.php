@@ -24,16 +24,20 @@
         >
     </div>
 
+    <div data-user-picker-chips class="d-flex flex-wrap gap-1 mb-2"></div>
+
     <div class="border rounded p-3" style="max-height: {{ $height }}; overflow-y: auto;" data-user-picker-list>
         @forelse($users as $user)
             @php
                 $searchText = strtolower(trim($user->name . ' ' . ($user->email ?? '') . ' ' . ($user->role ?? '')));
+                $chipLabel = $user->name . ($showRole && !empty($user->role) ? ' (' . ucfirst($user->role) . ')' : '');
             @endphp
 
             <div
                 class="form-check mb-2"
                 data-user-picker-item
                 data-user-search="{{ $searchText }}"
+                data-user-label="{{ $chipLabel }}"
             >
                 <input
                     class="form-check-input"
@@ -65,6 +69,37 @@
 
 @once
     <script>
+        function syncUserPickerChips(picker) {
+            const chipsContainer = picker.querySelector('[data-user-picker-chips]');
+            if (!chipsContainer) return;
+
+            chipsContainer.innerHTML = '';
+
+            picker.querySelectorAll('[data-user-picker-item] input[type="checkbox"]:checked').forEach(function (cb) {
+                const item = cb.closest('[data-user-picker-item]');
+                const label = item ? item.dataset.userLabel : cb.value;
+
+                const chip = document.createElement('span');
+                chip.className = 'badge rounded-pill d-inline-flex align-items-center gap-1 px-2 py-1';
+                chip.style.cssText = 'background-color:#0d6efd22;color:#0d6efd;border:1px solid #0d6efd55;font-size:.75rem;font-weight:500;cursor:default;';
+                chip.innerHTML = '<span>' + label + '</span>';
+
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.setAttribute('aria-label', 'Remove ' + label);
+                btn.style.cssText = 'background:none;border:none;padding:0;line-height:1;cursor:pointer;color:#0d6efd;font-size:.85rem;';
+                btn.innerHTML = '&times;';
+                btn.addEventListener('click', function () {
+                    cb.checked = false;
+                    cb.dispatchEvent(new Event('change', { bubbles: true }));
+                    syncUserPickerChips(picker);
+                });
+
+                chip.appendChild(btn);
+                chipsContainer.appendChild(chip);
+            });
+        }
+
         function applyUserPickerFilter(picker) {
             const searchInput = picker.querySelector('[data-user-picker-search]');
             const items = picker.querySelectorAll('[data-user-picker-item]');
@@ -114,8 +149,15 @@
                     }
                 });
 
+                picker.querySelectorAll('[data-user-picker-item] input[type="checkbox"]').forEach(function (cb) {
+                    cb.addEventListener('change', function () {
+                        syncUserPickerChips(picker);
+                    });
+                });
+
                 picker.dataset.userPickerInitialized = 'true';
                 applyUserPickerFilter(picker);
+                syncUserPickerChips(picker);
             });
         }
 

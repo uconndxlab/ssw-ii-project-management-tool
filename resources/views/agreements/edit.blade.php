@@ -208,10 +208,7 @@
                     <x-section-card title="6) Deliverables" subtitle="Define required deliverables and track progress.">
                         <div class="mb-3">
                             <h6 class="mb-3">Add Deliverable</h6>
-                            <form hx-post="{{ route('agreements.add-deliverable', $agreement) }}"
-                                  hx-target="#deliverable-list"
-                                  hx-swap="innerHTML"
-                                  class="border rounded p-3 bg-light mb-3">
+                            <div id="deliverable-form" class="border rounded p-3 bg-light mb-3">
                                 @csrf
                                 
                                 <div class="row g-2">
@@ -274,16 +271,17 @@
                                               placeholder="Optional notes about this deliverable..."></textarea>
                                 </div>
                                 
-                                <button type="submit" class="btn btn-sm btn-primary mt-2">
+                                <button type="button"
+                                        id="add-deliverable-btn"
+                                        class="btn btn-sm btn-primary mt-2">
                                     + Add Deliverable
                                 </button>
-                            </form>
+                            </div>
                         </div>
                         
-                        @if($agreement->deliverables->isNotEmpty())
                         <div class="table-responsive">
-                            <table class="table table-sm table-hover mb-0">
-                                <thead class="table-light">
+                            <table class="table table-sm table-hover mb-0" id="deliverable-table">
+                                <thead class="table-light" id="deliverable-thead" @if($agreement->deliverables->isEmpty()) style="display:none" @endif>
                                     <tr>
                                         <th class="small">Activity Type</th>
                                         <th class="small">Contact Family</th>
@@ -294,15 +292,15 @@
                                     </tr>
                                 </thead>
                                 <tbody id="deliverable-list">
-                                    @include('agreements.partials.deliverable-list', ['agreement' => $agreement])
+                                    @if($agreement->deliverables->isNotEmpty())
+                                        @include('agreements.partials.deliverable-list', ['agreement' => $agreement])
+                                    @endif
                                 </tbody>
                             </table>
                         </div>
-                        @else
-                        <div class="alert alert-info small mb-0">
+                        <div id="deliverable-empty" class="alert alert-info small mb-0 mt-2" @if($agreement->deliverables->isNotEmpty()) style="display:none" @endif>
                             No deliverables defined yet. Add one using the form above.
                         </div>
-                        @endif
                     </x-section-card>
                 </div>
             </div>
@@ -497,20 +495,78 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        const addDeliverableBtn = document.getElementById('add-deliverable-btn');
+        if (addDeliverableBtn) {
+            addDeliverableBtn.addEventListener('click', function () {
+                const form = document.getElementById('deliverable-form');
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+
+                const body = new URLSearchParams({
+                    _token: csrfToken,
+                    contact_family_id: form.querySelector('[name="contact_family_id"]')?.value ?? '',
+                    activity_type_id: form.querySelector('[name="activity_type_id"]')?.value ?? '',
+                    required_hours: form.querySelector('[name="required_hours"]')?.value ?? '',
+                    required_activities: form.querySelector('[name="required_activities"]')?.value ?? '',
+                    notes: form.querySelector('[name="notes"]')?.value ?? '',
+                });
+
+                fetch('{{ route('agreements.add-deliverable', $agreement) }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-TOKEN': csrfToken },
+                    body: body.toString(),
+                })
+                .then(res => res.text())
+                .then(html => {
+                    document.getElementById('deliverable-list').innerHTML = html;
+
+                    // Show table header, hide empty message
+                    const thead = document.getElementById('deliverable-thead');
+                    const empty = document.getElementById('deliverable-empty');
+                    if (thead) thead.style.display = '';
+                    if (empty) empty.style.display = 'none';
+
+                    // Reset fields
+                    form.querySelectorAll('input[type="number"], textarea').forEach(el => el.value = '');
+                    form.querySelector('[name="contact_family_id"]').value = '';
+                    const activitySelect = document.getElementById('deliverable_activity_type_id');
+                    if (activitySelect) {
+                        activitySelect.innerHTML = '<option value="">Select contact family first...</option>';
+                    }
+                })
+                .catch(err => console.error('Failed to add deliverable:', err));
+            });
+        }
         const projectSelect = document.getElementById('project_id');
         const programCheckboxes = document.querySelectorAll('.agreement-program-checkbox');
 
-        if (!projectSelect) return;
+        if (projectSelect) {
+            projectSelect.addEventListener('change', function () {
+                const selectedProjectId = this.value;
+                if (!selectedProjectId) return;
 
-        projectSelect.addEventListener('change', function () {
-            const selectedProjectId = this.value;
-            if (!selectedProjectId) return;
-
-            programCheckboxes.forEach((checkbox) => {
-                if (checkbox.dataset.projectId === selectedProjectId) {
-                    checkbox.checked = true;
-                }
+                programCheckboxes.forEach((checkbox) => {
+                    if (checkbox.dataset.projectId === selectedProjectId) {
+                        checkbox.checked = true;
+                    }
+                });
             });
+        }
+
+        // Auto-select state when an organization is checked
+        document.addEventListener('change', function (e) {
+            const checkbox = e.target;
+            if (!checkbox.matches('input[type="checkbox"][data-state-id]')) return;
+
+            const stateId = checkbox.dataset.stateId;
+            if (!stateId) return;
+
+            const stateCheckbox = document.querySelector(
+                'input[type="checkbox"][name="state_ids[]"][value="' + stateId + '"]'
+            );
+            if (stateCheckbox && checkbox.checked) {
+                stateCheckbox.checked = true;
+                stateCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+            }
         });
     });
 </script>

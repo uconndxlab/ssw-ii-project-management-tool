@@ -23,6 +23,8 @@
         >
     </div>
 
+    <div data-state-picker-chips class="d-flex flex-wrap gap-1 mb-2"></div>
+
     <div class="border rounded p-3" style="max-height: {{ $height }}; overflow-y: auto;" data-state-picker-list>
         @forelse($states as $state)
             @php
@@ -33,6 +35,7 @@
                 class="form-check mb-2"
                 data-state-picker-item
                 data-state-search="{{ $searchText }}"
+                data-state-label="{{ $state->name }}"
             >
                 <input
                     class="form-check-input"
@@ -61,6 +64,37 @@
 
 @once
     <script>
+        function syncStatePickerChips(picker) {
+            const chipsContainer = picker.querySelector('[data-state-picker-chips]');
+            if (!chipsContainer) return;
+
+            chipsContainer.innerHTML = '';
+
+            picker.querySelectorAll('[data-state-picker-item] input[type="checkbox"]:checked').forEach(function (cb) {
+                const item = cb.closest('[data-state-picker-item]');
+                const label = item ? item.dataset.stateLabel : cb.value;
+
+                const chip = document.createElement('span');
+                chip.className = 'badge rounded-pill d-inline-flex align-items-center gap-1 px-2 py-1';
+                chip.style.cssText = 'background-color:#0d6efd22;color:#0d6efd;border:1px solid #0d6efd55;font-size:.75rem;font-weight:500;cursor:default;';
+                chip.innerHTML = '<span>' + label + '</span>';
+
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.setAttribute('aria-label', 'Remove ' + label);
+                btn.style.cssText = 'background:none;border:none;padding:0;line-height:1;cursor:pointer;color:#0d6efd;font-size:.85rem;';
+                btn.innerHTML = '&times;';
+                btn.addEventListener('click', function () {
+                    cb.checked = false;
+                    cb.dispatchEvent(new Event('change', { bubbles: true }));
+                    syncStatePickerChips(picker);
+                });
+
+                chip.appendChild(btn);
+                chipsContainer.appendChild(chip);
+            });
+        }
+
         function applyStatePickerFilter(picker) {
             const searchInput = picker.querySelector('[data-state-picker-search]');
             const items = picker.querySelectorAll('[data-state-picker-item]');
@@ -110,8 +144,15 @@
                     }
                 });
 
+                picker.querySelectorAll('[data-state-picker-item] input[type="checkbox"]').forEach(function (cb) {
+                    cb.addEventListener('change', function () {
+                        syncStatePickerChips(picker);
+                    });
+                });
+
                 picker.dataset.statePickerInitialized = 'true';
                 applyStatePickerFilter(picker);
+                syncStatePickerChips(picker);
             });
         }
 

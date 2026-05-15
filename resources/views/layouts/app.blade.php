@@ -11,6 +11,14 @@
     
     <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const token = document.querySelector('meta[name="csrf-token"]')?.content;
+            if (token) {
+                document.body.setAttribute('hx-headers', JSON.stringify({'X-CSRF-TOKEN': token}));
+            }
+        });
+    </script>
 </head>
 <body>
     @auth

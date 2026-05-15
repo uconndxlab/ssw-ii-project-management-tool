@@ -258,8 +258,8 @@ class AgreementController extends Controller
         }
 
         return redirect()
-            ->route('agreements.index')
-            ->with('success', 'Agreement created successfully.');
+            ->route('agreements.edit', $agreement)
+            ->with('success', 'Agreement created. You can now add deliverables below.');
     }
 
     public function show(Agreement $agreement)
