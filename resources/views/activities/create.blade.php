@@ -21,7 +21,12 @@
         return [
             $agreement->id => array_merge(
                 $defaultActivityLoggingConfig,
-                $agreement->activity_logging_config ?? []
+                $agreement->activity_logging_config ?? [],
+                [
+                    'time_tracking_mode' => $agreement->time_tracking_mode ?? 'engagement',
+                    'organization_ids' => $agreement->organizations->pluck('id')->map(fn($id) => (string) $id)->values()->all(),
+                    'state_ids' => $agreement->states->pluck('id')->map(fn($id) => (string) $id)->values()->all(),
+                ]
             )
         ];
     });
@@ -279,57 +284,6 @@
                             @enderror
                         </div>
 
-                        <div class="row g-2">
-                            <div class="col-12" data-config-key="event_hours">
-                                <label for="event_hours" class="form-label fw-semibold">Event Hours <span class="text-danger">*</span></label>
-                                <input type="number"
-                                       class="form-control @error('event_hours') is-invalid @enderror"
-                                       id="event_hours"
-                                       name="event_hours"
-                                       step="0.25"
-                                       min="0"
-                                       max="9999.99"
-                                       data-required-when-enabled="true"
-                                       value="{{ old('event_hours', $prefill['event_hours'] ?? '') }}">
-                                <x-numeric-quick-chips for="event_hours" />
-                                @error('event_hours')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <div class="col-6" data-config-key="prep_hours">
-                                <label for="prep_hours" class="form-label">Prep Hours</label>
-                                <input type="number"
-                                       class="form-control @error('prep_hours') is-invalid @enderror"
-                                       id="prep_hours"
-                                       name="prep_hours"
-                                       step="0.25"
-                                       min="0"
-                                       max="9999.99"
-                                       value="{{ old('prep_hours', $prefill['prep_hours'] ?? 0) }}">
-                                <x-numeric-quick-chips for="prep_hours" />
-                                @error('prep_hours')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <div class="col-6" data-config-key="followup_hours">
-                                <label for="followup_hours" class="form-label">Follow-Up Hours</label>
-                                <input type="number"
-                                       class="form-control @error('followup_hours') is-invalid @enderror"
-                                       id="followup_hours"
-                                       name="followup_hours"
-                                       step="0.25"
-                                       min="0"
-                                       max="9999.99"
-                                       value="{{ old('followup_hours', $prefill['followup_hours'] ?? 0) }}">
-                                <x-numeric-quick-chips for="followup_hours" />
-                                @error('followup_hours')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-
                         <div class="mt-3" data-config-key="participant_count">
                             <label for="participant_count" class="form-label">Participant Count</label>
                             <input type="number"
@@ -373,46 +327,71 @@
                         </div>
                     </x-section-card>
 
-                    <x-section-card title="5) Time Tracking" subtitle="Choose how to track time for this activity.">
-                        <fieldset>
-                            <legend class="form-label fw-semibold mb-2">Time Tracking Method</legend>
-                            
-                            <div class="mb-3">
-                                <div class="form-check">
-                                    <input class="form-check-input"
-                                           type="radio"
-                                           id="time_tracking_engagement"
-                                           name="time_tracking_mode"
-                                           value="engagement"
-                                           {{ old('time_tracking_mode', $prefill['time_tracking_mode'] ?? 'engagement') === 'engagement' ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="time_tracking_engagement">
-                                        <strong>Time by Engagement</strong>
-                                        <small class="text-muted d-block">One total time value for the entire activity.</small>
-                                    </label>
+                    <x-section-card title="5) Time Tracking" subtitle="Determined by the selected agreement.">
+                        <input type="hidden" name="time_tracking_mode" id="time_tracking_mode_input" value="{{ old('time_tracking_mode', $prefill['time_tracking_mode'] ?? 'engagement') }}">
+                        <div id="time-tracking-mode-display" class="mb-3">
+                            <span class="badge bg-secondary">Time by Engagement</span>
+                            <small class="text-muted ms-2">One total time value for the entire activity.</small>
+                        </div>
+
+                        <!-- Engagement time entry (shown when mode = engagement) -->
+                        <div id="engagement-time-section">
+                            <div class="row g-2">
+                                <div class="col-12" data-config-key="event_hours">
+                                    <label for="event_hours" class="form-label fw-semibold">Event Hours <span class="text-danger">*</span></label>
+                                    <input type="number"
+                                           class="form-control @error('event_hours') is-invalid @enderror"
+                                           id="event_hours"
+                                           name="event_hours"
+                                           step="0.25"
+                                           min="0"
+                                           max="9999.99"
+                                           data-required-when-enabled="true"
+                                           value="{{ old('event_hours', $prefill['event_hours'] ?? '') }}">
+                                    <x-numeric-quick-chips for="event_hours" />
+                                    @error('event_hours')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+
+                                <div class="col-6" data-config-key="prep_hours">
+                                    <label for="prep_hours" class="form-label">Prep Hours</label>
+                                    <input type="number"
+                                           class="form-control @error('prep_hours') is-invalid @enderror"
+                                           id="prep_hours"
+                                           name="prep_hours"
+                                           step="0.25"
+                                           min="0"
+                                           max="9999.99"
+                                           value="{{ old('prep_hours', $prefill['prep_hours'] ?? 0) }}">
+                                    <x-numeric-quick-chips for="prep_hours" />
+                                    @error('prep_hours')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+
+                                <div class="col-6" data-config-key="followup_hours">
+                                    <label for="followup_hours" class="form-label">Follow-Up Hours</label>
+                                    <input type="number"
+                                           class="form-control @error('followup_hours') is-invalid @enderror"
+                                           id="followup_hours"
+                                           name="followup_hours"
+                                           step="0.25"
+                                           min="0"
+                                           max="9999.99"
+                                           value="{{ old('followup_hours', $prefill['followup_hours'] ?? 0) }}">
+                                    <x-numeric-quick-chips for="followup_hours" />
+                                    @error('followup_hours')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
                                 </div>
                             </div>
+                        </div>
 
-                            <div class="mb-3">
-                                <div class="form-check">
-                                    <input class="form-check-input"
-                                           type="radio"
-                                           id="time_tracking_participant"
-                                           name="time_tracking_mode"
-                                           value="participant"
-                                           {{ old('time_tracking_mode', $prefill['time_tracking_mode'] ?? 'engagement') === 'participant' ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="time_tracking_participant">
-                                        <strong>Time by Participant</strong>
-                                        <small class="text-muted d-block">Track individual time per team member.</small>
-                                    </label>
-                                </div>
-                            </div>
-                        </fieldset>
-
-                        <!-- Participant times section (shown when participant mode is selected) -->
-                        <div id="participant-times-section" class="d-none mt-4">
-                            <hr class="my-3">
+                        <!-- Participant time entry (shown when mode = participant) -->
+                        <div id="participant-times-section" class="d-none">
                             <label class="form-label fw-semibold mb-3">Participant Time Tracking</label>
-                            
+
                             <x-participant-time-rows />
 
                             <div class="alert alert-info alert-sm mt-3" role="alert">
@@ -458,26 +437,24 @@
     if (!form) return;
 
     // Time tracking mode UI management
-    function updateTimeTrackingUI() {
-        const mode = document.querySelector('input[name="time_tracking_mode"]:checked')?.value || 'engagement';
-        const participantTimesSection = document.getElementById('participant-times-section');
-        
-        if (participantTimesSection) {
-            if (mode === 'participant') {
-                participantTimesSection.classList.remove('d-none');
+    function updateTimeTrackingUI(mode) {
+        if (!mode) {
+            mode = document.getElementById('time_tracking_mode_input')?.value || 'engagement';
+        }
+        const isParticipant = mode === 'participant';
+
+        document.getElementById('participant-times-section')?.classList.toggle('d-none', !isParticipant);
+        document.getElementById('engagement-time-section')?.classList.toggle('d-none', isParticipant);
+
+        const display = document.getElementById('time-tracking-mode-display');
+        if (display) {
+            if (isParticipant) {
+                display.innerHTML = '<span class="badge bg-info text-dark">Time by Participant</span><small class="text-muted ms-2">Individual hours tracked per team member.</small>';
             } else {
-                participantTimesSection.classList.add('d-none');
+                display.innerHTML = '<span class="badge bg-secondary">Time by Engagement</span><small class="text-muted ms-2">One total time value for the entire activity.</small>';
             }
         }
     }
-
-    // Listen to time tracking mode changes
-    document.querySelectorAll('input[name="time_tracking_mode"]').forEach(radio => {
-        radio.addEventListener('change', function () {
-            updateTimeTrackingUI();
-            markDirty();
-        });
-    });
 
     function setStatus(html) {
         statusTop.innerHTML = html;
@@ -495,6 +472,26 @@
     function updateActivityLoggingFields() {
         const agreementId = firstSelectedAgreementId();
         const config = agreementActivityConfigs[agreementId] || defaultActivityLoggingConfig;
+
+        // Sync time tracking mode from agreement
+        const mode = config.time_tracking_mode || 'engagement';
+        const modeInput = document.getElementById('time_tracking_mode_input');
+        if (modeInput) modeInput.value = mode;
+        updateTimeTrackingUI(mode);
+
+        // Auto-populate orgs and states from agreement if pickers are currently empty
+        if (agreementId && config.organization_ids) {
+            const orgPicker = document.getElementById('activity-organizations-picker');
+            if (orgPicker && !selectedValues('organization_ids[]').length) {
+                orgPicker.dispatchEvent(new CustomEvent('token-picker:set', { detail: config.organization_ids }));
+            }
+        }
+        if (agreementId && config.state_ids) {
+            const statePicker = document.getElementById('activity-states-picker');
+            if (statePicker && !selectedValues('state_ids[]').length) {
+                statePicker.dispatchEvent(new CustomEvent('token-picker:set', { detail: config.state_ids }));
+            }
+        }
 
         document.querySelectorAll('[data-config-key]').forEach(function (wrapper) {
             const key = wrapper.dataset.configKey;
@@ -541,6 +538,18 @@
         });
     }
 
+    function buildParticipantMap() {
+        var container = document.getElementById('participants-container');
+        if (!container) return;
+        var map = {};
+        container.querySelectorAll('[data-user-picker-item]').forEach(function (item) {
+            var cb = item.querySelector('input[type="checkbox"]');
+            if (cb && item.dataset.userLabel) map[cb.value] = item.dataset.userLabel;
+        });
+        window.activityParticipants = map;
+        document.dispatchEvent(new CustomEvent('participants-updated'));
+    }
+
     function loadParticipants() {
         const agreementId = firstSelectedAgreementId();
         const container = document.getElementById('participants-container');
@@ -554,6 +563,8 @@
         htmx.ajax('GET', participantsUrl + '?agreement_id=' + encodeURIComponent(agreementId), {
             target: '#participants-container',
             swap: 'innerHTML'
+        }).then(function () {
+            buildParticipantMap();
         });
     }
 
@@ -634,12 +645,22 @@
         });
     }
 
-    document.getElementById('activity-agreements-picker')?.addEventListener('token-picker:change', function () {
-        updateActivityLoggingFields();
-        updateAgreementLoggingGroups();
-        loadParticipants();
-        markDirty();
-    });
+    const agreementsPicker = document.getElementById('activity-agreements-picker');
+    if (agreementsPicker) {
+        agreementsPicker.addEventListener('token-picker:change', function () {
+            updateActivityLoggingFields();
+            updateAgreementLoggingGroups();
+            loadParticipants();
+            markDirty();
+        });
+        // Re-run on initialization so pre-selected agreements (e.g. ?agreement_id=2)
+        // trigger the same updates as a manual selection would.
+        agreementsPicker.addEventListener('token-picker:initialized', function () {
+            updateActivityLoggingFields();
+            updateAgreementLoggingGroups();
+            loadParticipants();
+        });
+    }
 
     ['activity-organizations-picker', 'activity-states-picker', 'activity-programs-picker'].forEach(function (id) {
         document.getElementById(id)?.addEventListener('token-picker:change', markDirty);
@@ -689,7 +710,8 @@
     updateActivityLoggingFields();
     updateAgreementLoggingGroups();
     updateContactFamilyLoggingGroups();
-    loadParticipants();
+    // loadParticipants() is called by token-picker:initialized when agreement is pre-selected,
+    // or by token-picker:change when user picks one. No need to call it here before DOM is ready.
     renderTemplates();
     updateTimeTrackingUI();
 

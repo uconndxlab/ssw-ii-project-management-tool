@@ -225,8 +225,8 @@ class ActivityController extends Controller
             ->orderBy('name')
             ->get();
         
-        // Pre-load users for each agreement for participant selection
-        $agreements->load('users');
+        // Pre-load users, organizations, and states for each agreement
+        $agreements->load(['users', 'organizations', 'states']);
         
         // Get pre-selected agreement if provided
         $preselectedAgreementId = $request->query('agreement_id');
@@ -262,7 +262,6 @@ class ActivityController extends Controller
             'participant_user_ids' => ['nullable', 'array'],
             'participant_user_ids.*' => ['exists:users,id'],
             'internal_only' => ['nullable', 'boolean'],
-            'time_tracking_mode' => ['required', 'in:engagement,participant'],
             'participant_times' => ['nullable', 'array'],
             'participant_times.*.user_id' => ['exists:users,id'],
             'participant_times.*.hours' => ['numeric', 'min:0.25', 'max:24'],
@@ -276,6 +275,7 @@ class ActivityController extends Controller
             ->findOrFail($baseValidated['contact_family_id']);
 
         $agreement = $agreements->first();
+        $timeTrackingMode = $agreement?->time_tracking_mode ?? 'engagement';
         $config = $agreement ? $this->getAgreementActivityLoggingConfig($agreement) : [];
 
         $validated = array_merge(
@@ -292,7 +292,7 @@ class ActivityController extends Controller
         }
 
         // Verify participant time users exist if using participant mode
-        if ($validated['time_tracking_mode'] === 'participant' && !empty($validated['participant_times'])) {
+        if ($timeTrackingMode === 'participant' && !empty($validated['participant_times'])) {
             $participantTimeUserIds = array_column($validated['participant_times'], 'user_id');
             if (!empty($validated['agreement_ids'])) {
                 $this->verifyParticipantsInAgreement($validated['agreement_ids'][0], $participantTimeUserIds);
@@ -305,7 +305,7 @@ class ActivityController extends Controller
             'activity_type_id' => $validated['activity_type_id'],
             'logging_field_data' => $this->extractLoggingFieldData($validated, $agreements, $contactFamily),
             'internal_only' => $validated['internal_only'] ?? false,
-            'time_tracking_mode' => $validated['time_tracking_mode'] ?? 'engagement',
+            'time_tracking_mode' => $timeTrackingMode,
 
             'event_hours' => !empty($config['event_hours']) ? ($validated['event_hours'] ?? 0) : 0,
             'prep_hours' => !empty($config['prep_hours']) ? ($validated['prep_hours'] ?? 0) : 0,
@@ -467,7 +467,6 @@ class ActivityController extends Controller
             'participant_user_ids' => ['nullable', 'array'],
             'participant_user_ids.*' => ['exists:users,id'],
             'internal_only' => ['nullable', 'boolean'],
-            'time_tracking_mode' => ['required', 'in:engagement,participant'],
             'participant_times' => ['nullable', 'array'],
             'participant_times.*.user_id' => ['exists:users,id'],
             'participant_times.*.hours' => ['numeric', 'min:0.25', 'max:24'],
@@ -481,6 +480,7 @@ class ActivityController extends Controller
             ->findOrFail($baseValidated['contact_family_id']);
 
         $agreement = $agreements->first();
+        $timeTrackingMode = $agreement?->time_tracking_mode ?? 'engagement';
         $config = $agreement ? $this->getAgreementActivityLoggingConfig($agreement) : [];
 
         $validated = array_merge(
@@ -496,7 +496,7 @@ class ActivityController extends Controller
         }
 
         // Verify participant time users exist if using participant mode
-        if ($validated['time_tracking_mode'] === 'participant' && !empty($validated['participant_times'])) {
+        if ($timeTrackingMode === 'participant' && !empty($validated['participant_times'])) {
             $participantTimeUserIds = array_column($validated['participant_times'], 'user_id');
             if (!empty($validated['agreement_ids'])) {
                 $this->verifyParticipantsInAgreement($validated['agreement_ids'][0], $participantTimeUserIds);
@@ -508,7 +508,7 @@ class ActivityController extends Controller
             'activity_type_id' => $validated['activity_type_id'],
             'logging_field_data' => $this->extractLoggingFieldData($validated, $agreements, $contactFamily),
             'internal_only' => $validated['internal_only'] ?? false,
-            'time_tracking_mode' => $validated['time_tracking_mode'] ?? 'engagement',
+            'time_tracking_mode' => $timeTrackingMode,
 
             'event_hours' => !empty($config['event_hours']) ? ($validated['event_hours'] ?? 0) : 0,
             'prep_hours' => !empty($config['prep_hours']) ? ($validated['prep_hours'] ?? 0) : 0,
@@ -703,6 +703,7 @@ class ActivityController extends Controller
         }
         
         return view('activities.partials.participant-checkboxes', [
+            'users' => $agreement->users,
             'agreement' => $agreement,
             'selectedIds' => $selectedIds,
             'pickerId' => 'activity-participants-' . $agreement->id,

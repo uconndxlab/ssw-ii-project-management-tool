@@ -12,13 +12,15 @@ class Agreement extends Model
 {
     protected $fillable = [
         'name',
+        'project_id',
         'abstract',
         'start_date',
         'end_date',
-        'original_end_date',
-        'extended_end_date',
+        'extension_start_date',
+        'extension_end_date',
         'certification_candidates',
         'activity_logging_config',
+        'time_tracking_mode',
     ];
 
     protected function casts(): array
@@ -69,6 +71,16 @@ class Agreement extends Model
     public function loggingFields(): BelongsToMany
     {
         return $this->agreementLoggingFields();
+    }
+
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(AgreementAttachment::class);
+    }
+
+    public function programs(): BelongsToMany
+    {
+        return $this->belongsToMany(Program::class, 'agreement_program')->withTimestamps();
     }
 
     public function deliverables(): HasMany

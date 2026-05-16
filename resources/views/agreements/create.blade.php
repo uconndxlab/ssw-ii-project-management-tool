@@ -171,6 +171,29 @@
                     </div>
 
                     <div class="mb-4">
+                        <h5 class="mb-1">Time Tracking Method</h5>
+                        <p class="text-muted small mb-2">How time is recorded for all activities under this agreement.</p>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" id="time_tracking_engagement"
+                                   name="time_tracking_mode" value="engagement"
+                                   {{ old('time_tracking_mode', 'engagement') === 'engagement' ? 'checked' : '' }}>
+                            <label class="form-check-label" for="time_tracking_engagement">
+                                <strong>Time by Engagement</strong>
+                                <small class="text-muted d-block">One total time value for the entire activity.</small>
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" id="time_tracking_participant"
+                                   name="time_tracking_mode" value="participant"
+                                   {{ old('time_tracking_mode', 'engagement') === 'participant' ? 'checked' : '' }}>
+                            <label class="form-check-label" for="time_tracking_participant">
+                                <strong>Time by Participant</strong>
+                                <small class="text-muted d-block">Track individual time per team member.</small>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
                         <h5 class="mb-3">Activity Logging Fields</h5>
 
                         <div class="row">
