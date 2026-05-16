@@ -43,7 +43,7 @@
                     name="{{ $name }}"
                     value="{{ $organization->id }}"
                     id="{{ $pickerId }}_organization_{{ $organization->id }}"
-                    data-state-id="{{ $organization->state_id }}"
+                    data-state-ids="{{ json_encode($organization->states->pluck('id')) }}"
                     {{ in_array((int) $organization->id, $selectedIds, true) ? 'checked' : '' }}
                 >
                 <label class="form-check-label" for="{{ $pickerId }}_organization_{{ $organization->id }}">

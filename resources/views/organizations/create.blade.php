@@ -40,20 +40,15 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="state_id" class="form-label">State</label>
-                        <select class="form-select @error('state_id') is-invalid @enderror" 
-                                id="state_id" 
-                                name="state_id" 
-                                required>
-                            <option value="">Select state...</option>
-                            @foreach($states as $state)
-                                <option value="{{ $state->id }}" {{ old('state_id') == $state->id ? 'selected' : '' }}>
-                                    {{ $state->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('state_id')
-                            <div class="invalid-feedback">{{ $message }}</div>
+                        <label class="form-label">State(s)</label>
+                        <x-state-picker
+                            picker-id="organization-states"
+                            name="state_ids[]"
+                            :states="$states"
+                            :selected-ids="old('state_ids', [])"
+                        />
+                        @error('state_ids')
+                            <div class="text-danger small mt-1">{{ $message }}</div>
                         @enderror
                     </div>
 

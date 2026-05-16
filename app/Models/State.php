@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class State extends Model
 {
@@ -18,9 +17,9 @@ class State extends Model
         'is_territory' => 'boolean',
     ];
 
-    public function organizations(): HasMany
+    public function organizations(): BelongsToMany
     {
-        return $this->hasMany(Organization::class);
+        return $this->belongsToMany(Organization::class, 'organization_state')->withTimestamps();
     }
 
     public function agreements(): BelongsToMany

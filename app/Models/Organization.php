@@ -3,19 +3,17 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Organization extends Model
 {
     protected $fillable = [
         'name',
-        'state_id',
     ];
 
-    public function state(): BelongsTo
+    public function states(): BelongsToMany
     {
-        return $this->belongsTo(State::class);
+        return $this->belongsToMany(State::class, 'organization_state')->withTimestamps();
     }
 
     public function agreements(): BelongsToMany

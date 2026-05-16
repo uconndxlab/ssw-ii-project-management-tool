@@ -17,11 +17,15 @@
             <dt class="col-5 text-muted fw-normal small">Name</dt>
             <dd class="col-7 mb-2 fw-semibold">{{ $organization->name }}</dd>
 
-            <dt class="col-5 text-muted fw-normal small">State</dt>
+            <dt class="col-5 text-muted fw-normal small">State(s)</dt>
             <dd class="col-7 mb-2">
-                <a href="{{ route('states.show', $organization->state) }}" class="text-decoration-none">
-                    {{ $organization->state->name }}
-                </a>
+                @forelse($organization->states as $state)
+                    <a href="{{ route('states.show', $state) }}" class="badge bg-info text-dark text-decoration-none me-1">
+                        {{ $state->name }}
+                    </a>
+                @empty
+                    <span class="text-muted">—</span>
+                @endforelse
             </dd>
 
             <dt class="col-5 text-muted fw-normal small">Agreements</dt>

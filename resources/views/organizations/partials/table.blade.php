@@ -18,13 +18,7 @@
                             Name{!! $icon('name') !!}
                         </a>
                     </th>
-                    <th>
-                        <a class="text-decoration-none fw-semibold text-dark"
-                           href="{{ $url('state') }}"
-                           hx-get="{{ $url('state') }}" hx-target="#organizations-table" hx-push-url="true">
-                            State{!! $icon('state') !!}
-                        </a>
-                    </th>
+                    <th>State(s)</th>
                     <th>
                         <a class="text-decoration-none fw-semibold text-dark"
                            href="{{ $url('agreements') }}"
@@ -50,7 +44,12 @@
                             {{ $organization->name }}
                         </a>
                     </td>
-                    <td class="text-muted small">{{ $organization->state->name ?? '—' }}</td>
+                    <td>
+                        @foreach($organization->states as $state)
+                            <span class="badge bg-info text-dark me-1">{{ $state->name }}</span>
+                        @endforeach
+                        @if($organization->states->isEmpty())<span class="text-muted">—</span>@endif
+                    </td>
                     <td>
                         <span class="badge bg-secondary">{{ $organization->agreements_count ?? $organization->agreements->count() }}</span>
                     </td>

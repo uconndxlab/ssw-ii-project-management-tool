@@ -234,10 +234,9 @@ class DemoSeeder extends Seeder
         $organizations = [];
         foreach ($orgData as $index => $name) {
             $state = $states[array_rand($states)];
-            $organizations[] = Organization::firstOrCreate(
-                ['name' => $name],
-                ['state_id' => $state->id]
-            );
+            $org = Organization::firstOrCreate(['name' => $name]);
+            $org->states()->sync([$state->id]);
+            $organizations[] = $org->fresh();
         }
         
         return $organizations;
@@ -307,7 +306,7 @@ class DemoSeeder extends Seeder
             $state = collect($states)->firstWhere('name', $data['state']);
             
             // Find organizations in this state, or pick a random one if none exist
-            $stateOrgs = collect($organizations)->where('state_id', $state->id);
+            $stateOrgs = collect($organizations)->filter(fn($org) => $org->states->pluck('id')->contains($state->id));
             $org = $stateOrgs->isNotEmpty() ? $stateOrgs->random() : collect($organizations)->random();
             
             $startDate = Carbon::now()->subMonths(rand(6, 18));

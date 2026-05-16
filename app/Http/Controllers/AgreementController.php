@@ -141,7 +141,7 @@ class AgreementController extends Controller
         abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can create agreements.');
 
         $states = State::orderBy('name')->get();
-        $organizations = Organization::orderBy('name')->get();
+        $organizations = Organization::with('states')->orderBy('name')->get();
         $users = User::orderBy('name')->get();
         $teams = Team::where('active', true)->orderBy('name')->get();
         $projects = Project::where('active', true)->with('programs')->orderBy('name')->get();
@@ -344,7 +344,7 @@ class AgreementController extends Controller
         abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can edit agreements.');
 
         $states = State::orderBy('name')->get();
-        $organizations = Organization::orderBy('name')->get();
+        $organizations = Organization::with('states')->orderBy('name')->get();
         $users = User::orderBy('name')->get();
         $teams = Team::where('active', true)->orderBy('name')->get();
         $contactFamilies = ContactFamily::where('active', true)->orderBy('sort_order')->orderBy('name')->get();

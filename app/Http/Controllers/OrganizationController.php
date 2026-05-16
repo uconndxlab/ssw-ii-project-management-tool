@@ -12,14 +12,14 @@ class OrganizationController extends Controller
     {
         $states = State::orderBy('name')->get(['id', 'name']);
 
-        $query = Organization::with(['state', 'agreements']);
+        $query = Organization::with(['states', 'agreements']);
 
         // Search
         $search = trim((string) $request->input('search', ''));
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                    ->orWhereHas('state', function ($stateQuery) use ($search) {
+                    ->orWhereHas('states', function ($stateQuery) use ($search) {
                         $stateQuery->where('name', 'like', "%{$search}%");
                     });
             });
@@ -27,7 +27,7 @@ class OrganizationController extends Controller
 
         // Filter
         if ($request->filled('state_id')) {
-            $query->where('state_id', $request->integer('state_id'));
+            $query->whereHas('states', fn ($q) => $q->where('states.id', $request->integer('state_id')));
         }
 
         // Sorting
@@ -35,12 +35,6 @@ class OrganizationController extends Controller
         $direction = $request->input('direction', 'asc') === 'desc' ? 'desc' : 'asc';
 
         switch ($sort) {
-            case 'state':
-                $query->join('states', 'organizations.state_id', '=', 'states.id')
-                    ->select('organizations.*')
-                    ->orderBy('states.name', $direction);
-                break;
-
             case 'agreements':
                 $query->withCount('agreements')->orderBy('agreements_count', $direction);
                 break;
@@ -130,10 +124,12 @@ class OrganizationController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'state_id' => ['required', 'exists:states,id'],
+            'state_ids' => ['required', 'array', 'min:1'],
+            'state_ids.*' => ['exists:states,id'],
         ]);
 
-        Organization::create($validated);
+        $organization = Organization::create(['name' => $validated['name']]);
+        $organization->states()->sync($validated['state_ids']);
 
         return redirect()
             ->route('organizations.index')
@@ -151,10 +147,12 @@ class OrganizationController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'state_id' => ['required', 'exists:states,id'],
+            'state_ids' => ['required', 'array', 'min:1'],
+            'state_ids.*' => ['exists:states,id'],
         ]);
 
-        $organization->update($validated);
+        $organization->update(['name' => $validated['name']]);
+        $organization->states()->sync($validated['state_ids']);
 
         return redirect()
             ->route('organizations.index')
