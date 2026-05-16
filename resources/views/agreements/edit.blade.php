@@ -539,4 +539,37 @@
     </div>
 </div>
 <x-save-bar form-id="agreements-edit-form" cancel-url="{{ route('agreements.index') }}" save-label="Save Agreement" :last-saved-at="$agreement->updated_at" />
+
+{{-- Modal for inline deliverable editing --}}
+<div class="modal fade" id="deliverableEditModal" tabindex="-1" aria-labelledby="deliverableEditModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deliverableEditModalLabel">Edit Deliverable</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="deliverable-edit-modal-body">
+                {{-- Loaded via HTMX --}}
+            </div>
+        </div>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+    // Open modal when HTMX loads the edit form into it
+    document.body.addEventListener('htmx:afterSwap', function (evt) {
+        if (evt.detail.target.id === 'deliverable-edit-modal-body') {
+            var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('deliverableEditModal'));
+            modal.show();
+        }
+    });
+    // Close modal when server sends HX-Trigger: closeDeliverableModal
+    document.body.addEventListener('closeDeliverableModal', function () {
+        var modal = bootstrap.Modal.getInstance(document.getElementById('deliverableEditModal'));
+        if (modal) modal.hide();
+    });
+</script>
+@endpush
+
 @endsection

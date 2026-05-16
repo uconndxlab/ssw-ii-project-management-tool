@@ -536,6 +536,50 @@ class AgreementController extends Controller
         return view('agreements.partials.deliverable-list', compact('agreement'));
     }
 
+    public function editDeliverable(Request $request, Agreement $agreement, AgreementDeliverable $deliverable)
+    {
+        abort_unless(Auth::user()->isAdmin(), 403);
+        abort_unless($deliverable->agreement_id === $agreement->id, 403);
+
+        $contactFamilies = ContactFamily::where('active', true)->orderBy('sort_order')->orderBy('name')->get();
+        $activityTypes = $deliverable->contact_family_id
+            ? ActivityType::where('contact_family_id', $deliverable->contact_family_id)->where('active', true)->orderBy('sort_order')->orderBy('name')->get()
+            : collect();
+
+        return view('agreements.partials.deliverable-row-edit', compact('agreement', 'deliverable', 'contactFamilies', 'activityTypes'));
+    }
+
+    public function updateDeliverable(Request $request, Agreement $agreement, AgreementDeliverable $deliverable)
+    {
+        abort_unless(Auth::user()->isAdmin(), 403);
+        abort_unless($deliverable->agreement_id === $agreement->id, 403);
+
+        $validated = $request->validate([
+            'activity_type_id'    => ['nullable', 'exists:activity_types,id'],
+            'contact_family_id'   => ['nullable', 'exists:contact_families,id'],
+            'required_hours'      => ['nullable', 'numeric', 'min:0', 'max:99999'],
+            'required_activities' => ['nullable', 'integer', 'min:0', 'max:99999'],
+            'notes'               => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $deliverable->update($validated);
+        $agreement->load('deliverables.activityType.contactFamily');
+
+        return response()
+            ->view('agreements.partials.deliverable-list', compact('agreement'))
+            ->header('HX-Trigger', 'closeDeliverableModal');
+    }
+
+    public function showDeliverableRow(Request $request, Agreement $agreement, AgreementDeliverable $deliverable)
+    {
+        abort_unless(Auth::user()->isAdmin(), 403);
+        abort_unless($deliverable->agreement_id === $agreement->id, 403);
+
+        $agreement->load('deliverables.activityType.contactFamily');
+
+        return view('agreements.partials.deliverable-list', compact('agreement'));
+    }
+
     protected function normalizeActivityLoggingConfig(?array $submittedConfig = []): array
     {
         $defaultActivityLoggingConfig = [

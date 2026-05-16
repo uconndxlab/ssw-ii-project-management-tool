@@ -99,6 +99,15 @@
 
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Attach CSRF token to every HTMX request globally
+        document.addEventListener('htmx:configRequest', function (evt) {
+            var meta = document.querySelector('meta[name="csrf-token"]');
+            if (meta) evt.detail.headers['X-CSRF-TOKEN'] = meta.getAttribute('content');
+        });
+    </script>
+
     @stack('scripts')
 </body>
 </html>
