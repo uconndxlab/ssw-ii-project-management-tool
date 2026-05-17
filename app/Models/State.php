@@ -3,28 +3,39 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class State extends Model
 {
     protected $fillable = [
         'name',
+        'code',
+        'is_territory',
     ];
 
-    public function organizations(): HasMany
+    protected $casts = [
+        'is_territory' => 'boolean',
+    ];
+
+    public function organizations(): BelongsToMany
     {
-        return $this->hasMany(Organization::class);
+        return $this->belongsToMany(Organization::class, 'organization_state')->withTimestamps();
     }
 
-    public function agreements(): HasMany
+    public function agreements(): BelongsToMany
     {
-        return $this->hasMany(Agreement::class);
+        return $this->belongsToMany(Agreement::class, 'agreement_state')->withTimestamps();
+    }
+
+    public function activities(): BelongsToMany
+    {
+        return $this->belongsToMany(Activity::class, 'activity_state')->withTimestamps();
     }
 
     /**
      * Legacy accessor for backwards compatibility during migration
      */
-    public function projects(): HasMany
+    public function projects(): BelongsToMany
     {
         return $this->agreements();
     }

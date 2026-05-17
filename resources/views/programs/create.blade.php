@@ -23,7 +23,7 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('programs.store') }}">
+                <form method="POST" action="{{ route('programs.store') }}" id="programs-create-form">
                     @csrf
 
                     <div class="mb-3">
@@ -35,6 +35,24 @@
                                value="{{ old('name') }}" 
                                required>
                         @error('name')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="project_id" class="form-label">Project</label>
+                        <select class="form-select @error('project_id') is-invalid @enderror" 
+                                id="project_id" 
+                                name="project_id" 
+                                required>
+                            <option value="">Select project...</option>
+                            @foreach($projects as $project)
+                                <option value="{{ $project->id }}" {{ old('project_id') == $project->id ? 'selected' : '' }}>
+                                    {{ $project->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('project_id')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
@@ -53,13 +71,10 @@
                         </div>
                     </div>
 
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">Create Program</button>
-                        <a href="{{ route('programs.index') }}" class="btn btn-secondary">Cancel</a>
-                    </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+<x-save-bar form-id="programs-create-form" cancel-url="{{ route('programs.index') }}" save-label="Create Program" />
 @endsection

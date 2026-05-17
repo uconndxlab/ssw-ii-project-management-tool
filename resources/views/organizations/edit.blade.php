@@ -23,7 +23,7 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('organizations.update', $organization) }}">
+                <form method="POST" action="{{ route('organizations.update', $organization) }}" id="organizations-edit-form">
                     @csrf
                     @method('PUT')
 
@@ -41,31 +41,22 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="state_id" class="form-label">State</label>
-                        <select class="form-select @error('state_id') is-invalid @enderror" 
-                                id="state_id" 
-                                name="state_id" 
-                                required>
-                            <option value="">Select state...</option>
-                            @foreach($states as $state)
-                                <option value="{{ $state->id }}" 
-                                    {{ old('state_id', $organization->state_id) == $state->id ? 'selected' : '' }}>
-                                    {{ $state->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('state_id')
-                            <div class="invalid-feedback">{{ $message }}</div>
+                        <label class="form-label">State(s)</label>
+                        <x-state-picker
+                            picker-id="organization-states"
+                            name="state_ids[]"
+                            :states="$states"
+                            :selected-ids="old('state_ids', $organization->states->pluck('id')->toArray())"
+                        />
+                        @error('state_ids')
+                            <div class="text-danger small mt-1">{{ $message }}</div>
                         @enderror
                     </div>
 
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">Update Organization</button>
-                        <a href="{{ route('organizations.index') }}" class="btn btn-secondary">Cancel</a>
-                    </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+<x-save-bar form-id="organizations-edit-form" cancel-url="{{ route('organizations.index') }}" save-label="Save Organization" :last-saved-at="$organization->updated_at" />
 @endsection

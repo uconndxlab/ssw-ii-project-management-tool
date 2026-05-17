@@ -3,315 +3,269 @@
 @section('title', $agreement->name)
 
 @section('content')
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center">
-            <div>
-                <h1>{{ $agreement->name }}</h1>
-                <p class="text-muted mb-0">{{ $agreement->organization->name }} • {{ $agreement->state->name }}</p>
-            </div>
-            <div>
-                <a href="{{ route('activities.create') }}?agreement_id={{ $agreement->id }}" class="btn btn-success">Log Activity</a>
-                @if(auth()->user()->isAdmin())
-                <a href="{{ route('agreements.edit', $agreement) }}" class="btn btn-outline-primary">Edit Agreement</a>
-                @endif
-            </div>
-        </div>
-    </div>
-</div>
 
-<!-- Agreement Info & Stats Row -->
-<div class="row mb-4">
-    <!-- Agreement Details -->
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">Agreement Details</h5>
+@php
+    $defaultActivityLoggingConfig = [
+        'event_hours' => true,
+        'prep_hours' => true,
+        'followup_hours' => false,
+        'participant_count' => true,
+        'external_attendees' => true,
+        'summary' => true,
+        'follow_up' => true,
+        'strengths' => false,
+        'recommendations' => false,
+    ];
+
+    $activityLoggingConfig = $agreement->activity_logging_config ?? $defaultActivityLoggingConfig;
+
+    $activityLoggingLabels = [
+        'event_hours' => 'Event Hours',
+        'prep_hours' => 'Prep Hours',
+        'followup_hours' => 'Follow-up Hours',
+        'participant_count' => 'Participants',
+        'external_attendees' => 'External Attendees',
+        'summary' => 'Summary',
+        'follow_up' => 'Follow-Up',
+        'strengths' => 'Strengths',
+        'recommendations' => 'Recommendations',
+    ];
+
+    $enabledActivityLoggingFields = collect($activityLoggingLabels)
+        ->filter(fn ($label, $key) => !empty($activityLoggingConfig[$key]))
+        ->values();
+@endphp
+
+<x-entity-show
+    title="{{ $agreement->name }}"
+    type="Agreement"
+    typeBadgeClass="bg-success"
+    editRoute="{{ auth()->user()->isAdmin() ? route('agreements.edit', $agreement) : null }}"
+    backRoute="{{ route('agreements.index') }}"
+    backLabel="All Agreements"
+>
+    {{-- ── Summary ─────────────────────────────────────────────────────── --}}
+    <x-slot:summary>
+        <dl class="row mb-0">
+            <dt class="col-5 text-muted fw-normal small">Start Date</dt>
+            <dd class="col-7 mb-2">{{ $agreement->start_date?->format('M d, Y') ?? '—' }}</dd>
+
+            <dt class="col-5 text-muted fw-normal small">End Date</dt>
+            <dd class="col-7 mb-2">{{ $agreement->end_date?->format('M d, Y') ?? '—' }}</dd>
+
+            @if($agreement->original_end_date || $agreement->extended_end_date)
+            <dt class="col-5 text-muted fw-normal small">Original End</dt>
+            <dd class="col-7 mb-2 small">{{ $agreement->original_end_date?->format('M d, Y') ?? '—' }}</dd>
+
+            <dt class="col-5 text-muted fw-normal small">Extended End</dt>
+            <dd class="col-7 mb-2 small">{{ $agreement->extended_end_date?->format('M d, Y') ?? '—' }}</dd>
+            @endif
+
+            <dt class="col-5 text-muted fw-normal small">Organizations</dt>
+            <dd class="col-7 mb-2">
+                @forelse($agreement->organizations as $org)
+                    <a href="{{ route('organizations.show', $org) }}" class="badge bg-secondary text-decoration-none me-1 mb-1">
+                        {{ $org->name }}
+                    </a>
+                @empty
+                    <span class="text-muted small">None</span>
+                @endforelse
+            </dd>
+
+            <dt class="col-5 text-muted fw-normal small">States</dt>
+            <dd class="col-7 mb-2">
+                @forelse($agreement->states as $state)
+                    <a href="{{ route('states.show', $state) }}" class="badge bg-info text-dark text-decoration-none me-1 mb-1">
+                        {{ $state->name }}
+                    </a>
+                @empty
+                    <span class="text-muted small">None</span>
+                @endforelse
+            </dd>
+
+            <dt class="col-5 text-muted fw-normal small">Activities</dt>
+            <dd class="col-7 mb-0">
+                <span class="badge bg-primary rounded-pill">{{ $lifetimeTotals['activities'] }}</span>
+                <small class="text-muted d-block">{{ number_format($lifetimeTotals['hours'], 1) }} hrs lifetime</small>
+            </dd>
+        </dl>
+
+        @if($agreement->abstract)
+            <hr>
+            <h6 class="text-muted fw-normal small mb-1">Abstract</h6>
+            <p class="small mb-0">{{ $agreement->abstract }}</p>
+        @endif
+
+        @if($enabledActivityLoggingFields->isNotEmpty())
+            <hr>
+            <h6 class="text-muted fw-normal small mb-2">Logging Fields</h6>
+            <div class="d-flex flex-wrap gap-1">
+                @foreach($enabledActivityLoggingFields as $fieldLabel)
+                    <span class="badge bg-light text-dark border">{{ $fieldLabel }}</span>
+                @endforeach
             </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <h6 class="text-muted small mb-1">Organization</h6>
-                        <p class="mb-0">
-                            <a href="{{ route('organizations.show', $agreement->organization) }}">{{ $agreement->organization->name }}</a>
-                        </p>
+        @endif
+
+        <hr>
+        <a href="{{ route('activities.create') }}?agreement_id={{ $agreement->id }}" class="btn btn-sm btn-success w-100">
+            Log Activity
+        </a>
+    </x-slot:summary>
+
+    {{-- ── Relationships ───────────────────────────────────────────────── --}}
+    <x-slot:relationships>
+        <div class="row g-4">
+            {{-- Assigned Staff --}}
+            <div class="col-md-5">
+                <h6 class="fw-semibold mb-3">Assigned Staff</h6>
+                @php
+                    $usersBySource = $agreement->getUsersBySource();
+                    $directUsers = $usersBySource['direct'];
+                    $teamGroups = $usersBySource['teams'];
+                    $hasAnyUsers = $directUsers->isNotEmpty() || !empty($teamGroups);
+                @endphp
+
+                @if($hasAnyUsers)
+                    @foreach($directUsers as $user)
+                    <div class="py-2 border-bottom">
+                        <a href="{{ route('users.show', $user) }}" class="fw-semibold text-decoration-none d-block">
+                            {{ $user->name }}
+                        </a>
+                        <small class="text-muted">{{ ucfirst($user->role) }}</small>
+                        @if(!empty($user->also_in_teams))
+                            @foreach($user->also_in_teams as $teamName)
+                                <span class="badge bg-info text-dark ms-1">{{ $teamName }}</span>
+                            @endforeach
+                        @endif
                     </div>
-                    <div class="col-md-6 mb-3">
-                        <h6 class="text-muted small mb-1">State</h6>
-                        <p class="mb-0">{{ $agreement->state->name }}</p>
-                    </div>
-                </div>
-                
-                @if($agreement->abstract)
-                <div class="row">
-                    <div class="col-12 mb-3">
-                        <h6 class="text-muted small mb-1">Abstract</h6>
-                        <p class="mb-0">{{ $agreement->abstract }}</p>
-                    </div>
-                </div>
-                @endif
-                
-                <div class="row">
-                    <div class="col-md-6 mb-2">
-                        <h6 class="text-muted small mb-1">Start Date</h6>
-                        <p class="mb-0">{{ $agreement->start_date?->format('M d, Y') ?? 'Not set' }}</p>
-                    </div>
-                    <div class="col-md-6 mb-2">
-                        <h6 class="text-muted small mb-1">End Date</h6>
-                        <p class="mb-0">{{ $agreement->end_date?->format('M d, Y') ?? 'Not set' }}</p>
-                    </div>
-                    @if($agreement->original_end_date || $agreement->extended_end_date)
-                    <div class="col-md-6">
-                        <h6 class="text-muted small mb-1">Original End Date</h6>
-                        <p class="mb-0">{{ $agreement->original_end_date?->format('M d, Y') ?? '—' }}</p>
-                    </div>
-                    <div class="col-md-6">
-                        <h6 class="text-muted small mb-1">Extended End Date</h6>
-                        <p class="mb-0">{{ $agreement->extended_end_date?->format('M d, Y') ?? '—' }}</p>
-                    </div>
-                    @endif
-                </div>
-                
-                @if($programs->isNotEmpty())
-                <div class="mt-3">
-                    <h6 class="text-muted small mb-2">Programs Represented</h6>
-                    <div class="d-flex flex-wrap gap-2">
-                        @foreach($programs as $program)
-                            <span class="badge bg-info">{{ $program->name }}</span>
+                    @endforeach
+                    @foreach($teamGroups as $teamName => $teamUsers)
+                        <div class="py-1 bg-light px-2 rounded mt-2 mb-1">
+                            <small class="fw-semibold text-primary">Team: {{ $teamName }}</small>
+                        </div>
+                        @foreach($teamUsers as $user)
+                        <div class="py-2 border-bottom ps-3">
+                            <a href="{{ route('users.show', $user) }}" class="fw-semibold text-decoration-none d-block">
+                                {{ $user->name }}
+                            </a>
+                            <small class="text-muted">{{ ucfirst($user->role) }}</small>
+                        </div>
                         @endforeach
-                    </div>
-                </div>
+                    @endforeach
+                @else
+                    <p class="text-muted small mb-0">No staff assigned.</p>
+                @endif
+
+                @if($agreement->certification_candidates)
+                    <hr>
+                    <h6 class="fw-semibold mb-2">Certification Candidates</h6>
+                    <p class="small mb-0" style="white-space: pre-line;">{{ $agreement->certification_candidates }}</p>
                 @endif
             </div>
-        </div>
-    </div>
-    
-    <!-- Stats Summary -->
-    <div class="col-md-4 d-none">
-        <div class="card mb-3">
-            <div class="card-body">
-                <h6 class="text-muted small mb-3">Lifetime Totals</h6>
-                <div class="mb-3">
-                    <h3 class="mb-0">{{ $lifetimeTotals['activities'] }}</h3>
-                    <small class="text-muted">Total Activities</small>
-                </div>
-                <div class="mb-3">
-                    <h3 class="mb-0">{{ number_format($lifetimeTotals['hours'], 1) }}</h3>
-                    <small class="text-muted">Total Hours</small>
-                </div>
-                <div>
-                    <h3 class="mb-0">{{ number_format($lifetimeTotals['participants']) }}</h3>
-                    <small class="text-muted">Total Participants</small>
-                </div>
-            </div>
-        </div>
-        
-        <div class="card d-none">
-            <div class="card-body">
-                <h6 class="text-muted small mb-3">Year-to-Date ({{ now()->year }})</h6>
-                <div class="mb-3">
-                    <h3 class="mb-0">{{ $ytdTotals['activities'] }}</h3>
-                    <small class="text-muted">Activities</small>
-                </div>
-                <div class="mb-3">
-                    <h3 class="mb-0">{{ number_format($ytdTotals['hours'], 1) }}</h3>
-                    <small class="text-muted">Hours</small>
-                </div>
-                <div>
-                    <h3 class="mb-0">{{ number_format($ytdTotals['participants']) }}</h3>
-                    <small class="text-muted">Participants</small>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
-<!-- Deliverable Progress & Staff Row -->
-<div class="row mb-4">
-    <!-- Deliverable Progress -->
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">Deliverable Progress</h5>
-            </div>
-            <div class="card-body">
+            {{-- Deliverable Progress --}}
+            <div class="col-md-7">
+                <h6 class="fw-semibold mb-3">Deliverable Progress</h6>
                 @if($deliverableProgress->isNotEmpty())
                     @foreach($deliverableProgress as $progress)
                     <div class="mb-4 {{ !$loop->last ? 'pb-3 border-bottom' : '' }}">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <div>
-                                <strong class="d-block">{{ $progress['deliverable']->activityType?->name ?? 'Unspecified Activity Type' }}</strong>
-                                @if($progress['deliverable']->contactFamily)
-                                <small class="text-muted">{{ $progress['deliverable']->contactFamily->name }}</small>
-                                @endif
-                            </div>
-                        </div>
-                        
+                        <strong class="d-block">{{ $progress['deliverable']->activityType?->name ?? 'Unspecified Activity Type' }}</strong>
+                        @if($progress['deliverable']->contactFamily)
+                            <small class="text-muted">{{ $progress['deliverable']->contactFamily->name }}</small>
+                        @endif
+
                         @if($progress['deliverable']->required_hours)
-                        <div class="mb-2">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="small text-muted">Hours Required</span>
-                                <span class="small">
-                                    <strong>{{ number_format($progress['completed_hours'], 1) }}</strong> / {{ number_format($progress['deliverable']->required_hours, 1) }}
-                                </span>
+                        <div class="mt-2">
+                            <div class="d-flex justify-content-between mb-1">
+                                <small class="text-muted">Hours</small>
+                                <small><strong>{{ number_format($progress['completed_hours'], 1) }}</strong> / {{ number_format($progress['deliverable']->required_hours, 1) }}</small>
                             </div>
-                            @php
-                                $hoursPercent = $progress['deliverable']->required_hours > 0 
-                                    ? min(100, ($progress['completed_hours'] / $progress['deliverable']->required_hours) * 100) 
-                                    : 0;
-                            @endphp
-                            <div class="progress" style="height: 8px;">
-                                <div class="progress-bar {{ $hoursPercent >= 100 ? 'bg-success' : 'bg-primary' }}" 
-                                     role="progressbar"
-                                     style="width: {{ $hoursPercent }}%"
-                                     aria-valuenow="{{ $hoursPercent }}"
-                                     aria-valuemin="0" 
-                                     aria-valuemax="100"></div>
-                            </div>
+                            @php $hp = $progress['deliverable']->required_hours > 0 ? min(100, ($progress['completed_hours'] / $progress['deliverable']->required_hours) * 100) : 0; @endphp
+                            <div class="progress" style="height:6px;"><div class="progress-bar {{ $hp >= 100 ? 'bg-success' : 'bg-primary' }}" style="width:{{ $hp }}%"></div></div>
                         </div>
                         @endif
-                        
+
                         @if($progress['deliverable']->required_activities)
-                        <div class="mb-2">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="small text-muted">Activities Required</span>
-                                <span class="small">
-                                    <strong>{{ $progress['completed_activities'] }}</strong> / {{ $progress['deliverable']->required_activities }}
-                                </span>
+                        <div class="mt-2">
+                            <div class="d-flex justify-content-between mb-1">
+                                <small class="text-muted">Activities</small>
+                                <small><strong>{{ $progress['completed_activities'] }}</strong> / {{ $progress['deliverable']->required_activities }}</small>
                             </div>
-                            @php
-                                $activitiesPercent = $progress['deliverable']->required_activities > 0 
-                                    ? min(100, ($progress['completed_activities'] / $progress['deliverable']->required_activities) * 100) 
-                                    : 0;
-                            @endphp
-                            <div class="progress" style="height: 8px;">
-                                <div class="progress-bar {{ $activitiesPercent >= 100 ? 'bg-success' : 'bg-primary' }}" 
-                                     role="progressbar"
-                                     style="width: {{ $activitiesPercent }}%"
-                                     aria-valuenow="{{ $activitiesPercent }}"
-                                     aria-valuemin="0" 
-                                     aria-valuemax="100"></div>
-                            </div>
+                            @php $ap = $progress['deliverable']->required_activities > 0 ? min(100, ($progress['completed_activities'] / $progress['deliverable']->required_activities) * 100) : 0; @endphp
+                            <div class="progress" style="height:6px;"><div class="progress-bar {{ $ap >= 100 ? 'bg-success' : 'bg-primary' }}" style="width:{{ $ap }}%"></div></div>
                         </div>
                         @endif
-                        
+
                         @if($progress['deliverable']->notes)
-                        <div class="small text-muted mt-2">
-                            <em>{{ $progress['deliverable']->notes }}</em>
-                        </div>
-                        @endif
-                        
-                        @if(!$progress['deliverable']->required_hours && !$progress['deliverable']->required_activities)
-                        <div class="small text-muted">
-                            <em>No specific requirements defined</em>
-                        </div>
+                            <small class="text-muted fst-italic mt-1 d-block">{{ $progress['deliverable']->notes }}</small>
                         @endif
                     </div>
                     @endforeach
                 @else
-                    <p class="text-muted mb-0">No deliverables defined for this agreement.</p>
+                    <p class="text-muted small mb-0">No deliverables defined for this agreement.</p>
                 @endif
-            </div>
-        </div>
-    </div>
-    
-    <!-- Assigned Staff & Certification Candidates -->
-    <div class="col-md-4">
-        <!-- Assigned Staff -->
-        <div class="card mb-3">
-            <div class="card-header">
-                <h5 class="mb-0">Assigned Staff</h5>
-            </div>
-            <div class="card-body">
-                @if($agreement->users->isNotEmpty())
-                    <div class="list-group list-group-flush">
-                        @foreach($agreement->users as $user)
-                        <div class="list-group-item px-0 py-2">
-                            <strong class="d-block">{{ $user->name }}</strong>
-                            <small class="text-muted">{{ ucfirst($user->role) }}</small>
-                        </div>
+
+                @if($programs->isNotEmpty())
+                    <hr>
+                    <h6 class="fw-semibold mb-2">Programs Represented</h6>
+                    <div class="d-flex flex-wrap gap-1">
+                        @foreach($programs as $program)
+                            <a href="{{ route('programs.show', $program) }}" class="badge bg-warning text-dark text-decoration-none">
+                                {{ $program->name }}
+                            </a>
                         @endforeach
                     </div>
-                @else
-                    <p class="text-muted mb-0">No team members assigned</p>
                 @endif
             </div>
         </div>
-        
-        <!-- Certification Candidates -->
-        @if($agreement->certification_candidates)
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">Certification Candidates</h5>
-            </div>
-            <div class="card-body">
-                <p class="mb-0" style="white-space: pre-line;">{{ $agreement->certification_candidates }}</p>
-            </div>
-        </div>
-        @endif
-    </div>
-</div>
+    </x-slot:relationships>
 
-<!-- Recent Activity Section -->
-<div class="row">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Recent Activity</h5>
+    {{-- ── Recent Activity ─────────────────────────────────────────────── --}}
+    <x-slot:activity>
+        @if($recentActivities->isNotEmpty())
+            <div class="d-flex justify-content-end mb-2">
                 <a href="{{ route('activities.index') }}?agreement_id={{ $agreement->id }}" class="btn btn-sm btn-outline-secondary">
                     View All Activities
                 </a>
             </div>
-            <div class="card-body">
-                @if($recentActivities->isNotEmpty())
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Contact Family</th>
-                                <th>Activity Type</th>
-                                <th>Event Hours</th>
-                                <th>Total Hours</th>
-                                <th>Participants</th>
-                                <th>Logged By</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($recentActivities as $activity)
-                            <tr>
-                                <td><a href="{{ route('activities.show', $activity) }}" class="text-decoration-none text-dark d-block">{{ $activity->engagement_date->format('M d, Y') }}</a></td>
-                                <td><span class="badge bg-primary">{{ $activity->activityType->contactFamily->name }}</span></td>
-                                <td>{{ $activity->activityType->name }}</td>
-                                <td>{{ number_format($activity->event_hours, 2) }}</td>
-                                <td>{{ number_format($activity->total_hours, 2) }}</td>
-                                <td>
-                                    @if($activity->participant_count)
-                                        {{ $activity->participant_count }}
-                                    @else
-                                        <span class="text-muted">—</span>
-                                    @endif
-                                </td>
-                                <td>{{ $activity->user->name }}</td>
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-                @else
-                <div class="text-center py-4 text-muted">
-                    <p class="mb-3">No activities logged for this agreement yet.</p>
-                    <a href="{{ route('activities.create') }}" class="btn btn-primary">Log First Activity</a>
-                </div>
-                @endif
+            <div class="table-responsive">
+                <table class="table table-hover table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>Contact Family</th>
+                            <th>Activity Type</th>
+                            <th class="text-end">Hrs</th>
+                            <th>Participants</th>
+                            <th>Logged By</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($recentActivities as $activity)
+                        <tr>
+                            <td>
+                                <a href="{{ route('activities.show', $activity) }}" class="text-decoration-none text-dark">
+                                    {{ $activity->engagement_date->format('M d, Y') }}
+                                </a>
+                            </td>
+                            <td><span class="badge bg-primary">{{ $activity->activityType->contactFamily->name }}</span></td>
+                            <td class="small">{{ $activity->activityType->name }}</td>
+                            <td class="text-end">{{ number_format($activity->total_hours, 1) }}</td>
+                            <td>{{ $activity->participant_count ?? '—' }}</td>
+                            <td class="small text-muted">{{ $activity->user->name }}</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
-        </div>
-    </div>
-</div>
-
-<div class="row mt-3">
-    <div class="col-12">
-        <a href="{{ route('agreements.index') }}" class="btn btn-outline-secondary">Back to Agreements</a>
-    </div>
-</div>
+        @else
+            <div class="text-center py-3">
+                <p class="text-muted mb-2">No activities logged for this agreement yet.</p>
+                <a href="{{ route('activities.create') }}?agreement_id={{ $agreement->id }}" class="btn btn-sm btn-success">
+                    Log First Activity
+                </a>
+            </div>
+        @endif
+    </x-slot:activity>
+</x-entity-show>
 @endsection

@@ -59,11 +59,27 @@
                 <div class="list-group list-group-flush">
                     @foreach($myAgreements as $agreement)
                     <a href="{{ route('agreements.show', $agreement) }}" class="list-group-item list-group-item-action">
-                        <div class="d-flex w-100 justify-content-between">
-                            <h6 class="mb-1">{{ $agreement->name }}</h6>
+                        <div class="d-flex justify-content-between align-items-start">
+
+                            <!-- Left side -->
+                            <div>
+                                <h6 class="mb-1">{{ $agreement->name }}</h6>
+                                <p class="mb-1 small text-muted">{{ $agreement->organization->name }}</p>
+                                <div class="small text-muted">{{ $agreement->state->name }}</div>
+                            </div>
+
+                            <!-- Right side -->
+                            <div class="text-end small text-muted">
+                                <div>Activities: {{ $agreement->activities_count }}</div>
+                                <div>
+                                    Last Activity:
+                                    {{ $agreement->activities_max_engagement_date
+                                        ? \Carbon\Carbon::parse($agreement->activities_max_engagement_date)->format('M d, Y')
+                                        : '—' }}
+                                </div>
+                            </div>
+
                         </div>
-                        <p class="mb-1 small text-muted">{{ $agreement->organization->name }}</p>
-                        <small class="text-muted">{{ $agreement->state->name }}</small>
                     </a>
                     @endforeach
                 </div>
@@ -90,6 +106,7 @@
                                 <th>Date</th>
                                 <th>Activity</th>
                                 <th>Hours</th>
+                                <th>Users</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -97,10 +114,25 @@
                             <tr>
                                 <td><a href="{{ route('activities.show', $activity) }}" class="text-decoration-none text-dark d-block">{{ $activity->engagement_date->format('M d') }}</a></td>
                                 <td>
-                                    <div class="small"><strong>{{ $activity->agreement->name }}</strong></div>
+                                    <div class="small">
+                                        @forelse($activity->agreements as $agreement)
+                                            <span class="badge bg-secondary me-1 mb-1">{{ $agreement->name }}</span>
+                                        @empty
+                                            <span class="text-muted small">None</span>
+                                        @endforelse
+                                    </div>
                                     <div class="small text-muted">{{ $activity->activityType->name }}</div>
                                 </td>
                                 <td>{{ number_format($activity->total_hours, 1) }}</td>
+                                <td>
+                                    <div class="small text-muted">
+                                        @if($activity->participants->isNotEmpty())
+                                            {{ $activity->participants->pluck('name')->implode(', ') }}
+                                        @else
+                                            —
+                                        @endif
+                                    </div>
+                                </td>
                             </tr>
                             @endforeach
                         </tbody>

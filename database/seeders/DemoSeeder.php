@@ -8,12 +8,15 @@ use Illuminate\Support\Facades\DB;
 use App\Models\User;
 use App\Models\State;
 use App\Models\Organization;
+use App\Models\Project;
 use App\Models\Program;
 use App\Models\ContactFamily;
 use App\Models\ActivityType;
 use App\Models\Agreement;
 use App\Models\AgreementDeliverable;
 use App\Models\Activity;
+use App\Models\AgreementLoggingField;
+use App\Models\ContactFamilyLoggingField;
 use Carbon\Carbon;
 
 class DemoSeeder extends Seeder
@@ -30,24 +33,30 @@ class DemoSeeder extends Seeder
             // 2. Create Users
             $users = $this->createUsers();
             
-            // 3. Create Programs
-            $programs = $this->createPrograms();
+            // 3. Create Project
+            $project = $this->createProject();
             
-            // 4. Create Contact Families & Activity Types
+            // 4. Create Programs
+            $programs = $this->createPrograms($project);
+            
+            // 5. Create Contact Families & Activity Types
             $activityTypes = $this->createContactFamiliesAndActivityTypes();
             
-            // 5. Create Organizations
+            // 6. Create Organizations
             $organizations = $this->createOrganizations($states);
             
-            // 6. Create Agreements
+            // 7. Create Agreements
             $agreements = $this->createAgreements($states, $organizations, $users);
             
-            // 7. Create Deliverables for Agreements
+            // 7b. Attach logging fields to agreements and contact families
+            $this->attachLoggingFields($agreements);
+
+            // 8. Create Deliverables for Agreements
             $this->createDeliverables($agreements, $activityTypes);
-            
-            // 8. Create Activities
+
+            // 9. Create Activities
             $this->createActivities($agreements, $activityTypes, $programs);
-            
+
             $this->command->info('Demo data seeded successfully!');
         });
     }
@@ -56,19 +65,18 @@ class DemoSeeder extends Seeder
     {
         $stateNames = ['Kansas', 'Indiana', 'Louisiana', 'Connecticut', 'Massachusetts', 'Ohio'];
         $states = [];
-        
+
         foreach ($stateNames as $name) {
             $states[] = State::firstOrCreate(['name' => $name]);
         }
-        
+
         return $states;
     }
 
     private function createUsers(): array
     {
         $users = [];
-        
-        // Admin
+
         $users[] = User::firstOrCreate(
             ['email' => 'admin@example.com'],
             [
@@ -77,8 +85,7 @@ class DemoSeeder extends Seeder
                 'role' => 'admin',
             ]
         );
-        
-        // Staff
+
         $users[] = User::firstOrCreate(
             ['email' => 'staff1@example.com'],
             [
@@ -87,7 +94,7 @@ class DemoSeeder extends Seeder
                 'role' => 'staff',
             ]
         );
-        
+
         $users[] = User::firstOrCreate(
             ['email' => 'staff2@example.com'],
             [
@@ -96,8 +103,7 @@ class DemoSeeder extends Seeder
                 'role' => 'staff',
             ]
         );
-        
-        // Consultants
+
         $users[] = User::firstOrCreate(
             ['email' => 'consultant1@example.com'],
             [
@@ -106,7 +112,7 @@ class DemoSeeder extends Seeder
                 'role' => 'consultant',
             ]
         );
-        
+
         $users[] = User::firstOrCreate(
             ['email' => 'consultant2@example.com'],
             [
@@ -115,22 +121,36 @@ class DemoSeeder extends Seeder
                 'role' => 'consultant',
             ]
         );
-        
+
         return $users;
     }
 
-    private function createPrograms(): array
+    private function createProject()
+    {
+        return Project::firstOrCreate(
+            ['name' => 'SSW II Project'],
+            [
+                'description' => 'Main project for SSW II programs',
+                'active' => true,
+            ]
+        );
+    }
+
+    private function createPrograms($project): array
     {
         $programNames = ['MRSS', 'FOCUS', 'NWIC', 'PEARLS', 'NTTAC', 'TAN2'];
         $programs = [];
-        
+
         foreach ($programNames as $name) {
             $programs[] = Program::firstOrCreate(
                 ['name' => $name],
-                ['active' => true]
+                [
+                    'active' => true,
+                    'project_id' => $project->id,
+                ]
             );
         }
-        
+
         return $programs;
     }
 
@@ -166,16 +186,16 @@ class DemoSeeder extends Seeder
                 'Dashboard Development Support',
             ],
         ];
-        
+
         $activityTypes = [];
         $sortOrder = 0;
-        
+
         foreach ($taxonomyData as $familyName => $typeNames) {
             $family = ContactFamily::firstOrCreate(
                 ['name' => $familyName],
                 ['active' => true, 'sort_order' => $sortOrder++]
             );
-            
+
             $typeSortOrder = 0;
             foreach ($typeNames as $typeName) {
                 $activityTypes[] = ActivityType::firstOrCreate(
@@ -190,7 +210,7 @@ class DemoSeeder extends Seeder
                 );
             }
         }
-        
+
         return $activityTypes;
     }
 
@@ -214,10 +234,9 @@ class DemoSeeder extends Seeder
         $organizations = [];
         foreach ($orgData as $index => $name) {
             $state = $states[array_rand($states)];
-            $organizations[] = Organization::firstOrCreate(
-                ['name' => $name],
-                ['state_id' => $state->id]
-            );
+            $org = Organization::firstOrCreate(['name' => $name]);
+            $org->states()->sync([$state->id]);
+            $organizations[] = $org->fresh();
         }
         
         return $organizations;
@@ -287,7 +306,7 @@ class DemoSeeder extends Seeder
             $state = collect($states)->firstWhere('name', $data['state']);
             
             // Find organizations in this state, or pick a random one if none exist
-            $stateOrgs = collect($organizations)->where('state_id', $state->id);
+            $stateOrgs = collect($organizations)->filter(fn($org) => $org->states->pluck('id')->contains($state->id));
             $org = $stateOrgs->isNotEmpty() ? $stateOrgs->random() : collect($organizations)->random();
             
             $startDate = Carbon::now()->subMonths(rand(6, 18));
@@ -295,27 +314,30 @@ class DemoSeeder extends Seeder
             
             // Some agreements have extensions
             $hasExtension = rand(0, 10) > 7; // 30% chance
-            $originalEndDate = null;
-            $extendedEndDate = null;
+            $extensionStartDate = null;
+            $extensionEndDate = null;
             
             if ($hasExtension) {
-                $originalEndDate = $endDate->copy()->subMonths(rand(6, 12));
-                $extendedEndDate = $endDate;
+                // Original end date logic: extension starts around the original end, extends further
+                $extensionStartDate = $endDate->copy()->subMonths(rand(3, 6));
+                $extensionEndDate = $endDate;
             }
             
             $agreement = Agreement::firstOrCreate(
                 ['name' => $data['name']],
                 [
-                    'organization_id' => $org->id,
-                    'state_id' => $state->id,
                     'abstract' => $data['abstract'],
                     'start_date' => $startDate,
                     'end_date' => $endDate,
-                    'original_end_date' => $originalEndDate,
-                    'extended_end_date' => $extendedEndDate,
+                    'extension_start_date' => $extensionStartDate,
+                    'extension_end_date' => $extensionEndDate,
                     'certification_candidates' => $data['certification_candidates'],
                 ]
             );
+            
+            // Attach organization and state
+            $agreement->organizations()->syncWithoutDetaching([$org->id]);
+            $agreement->states()->syncWithoutDetaching([$state->id]);
             
             // Assign 2-3 users to each agreement
             $nonAdminUsers = collect($users)->where('role', '!=', 'admin');
@@ -455,7 +477,6 @@ class DemoSeeder extends Seeder
             $userId = $agreementUserIds[array_rand($agreementUserIds)];
             
             $activity = Activity::create([
-                'agreement_id' => $agreement->id,
                 'user_id' => $userId,
                 'engagement_date' => Carbon::now()->subDays(rand(1, 180)),
                 'activity_type_id' => $activityType->id,
@@ -469,6 +490,19 @@ class DemoSeeder extends Seeder
                 'recommendations' => $narrative['recommendations'],
             ]);
             
+            // Attach agreement
+            $activity->agreements()->attach($agreement->id);
+            
+            // Attach organizations and states from the agreement
+            $agreementOrgs = $agreement->organizations()->pluck('organizations.id');
+            $agreementStates = $agreement->states()->pluck('states.id');
+            if ($agreementOrgs->isNotEmpty()) {
+                $activity->organizations()->sync($agreementOrgs);
+            }
+            if ($agreementStates->isNotEmpty()) {
+                $activity->states()->sync($agreementStates);
+            }
+            
             // Attach 1-2 programs
             $programCount = rand(1, 2);
             $selectedPrograms = collect($programs)->random($programCount)->pluck('id');
@@ -479,5 +513,76 @@ class DemoSeeder extends Seeder
             $selectedParticipants = collect($agreementUserIds)->random($participantCount);
             $activity->participants()->sync($selectedParticipants);
         }
+    }
+
+    private function attachLoggingFields(array $agreements): void
+    {
+        $agreementLoggingFields = AgreementLoggingField::all();
+        $contactFamilyLoggingFields = ContactFamilyLoggingField::all();
+
+        if ($agreementLoggingFields->isEmpty() && $contactFamilyLoggingFields->isEmpty()) {
+            $this->command->warn('No logging fields found. Skipping pivot table population.');
+            return;
+        }
+
+        $travelMiles = $agreementLoggingFields->firstWhere('name', 'Travel Miles');
+        $materialsCost = $agreementLoggingFields->firstWhere('name', 'Materials Cost');
+        $deliverablesCompleted = $agreementLoggingFields->firstWhere('name', 'Deliverables Completed');
+        $outcomeNotes = $agreementLoggingFields->firstWhere('name', 'Agreement Outcome Notes');
+        $deliverableType = $agreementLoggingFields->firstWhere('name', 'Deliverable Type');
+
+        $sessionFormat = $contactFamilyLoggingFields->firstWhere('name', 'Session Format');
+        $audienceSegment = $contactFamilyLoggingFields->firstWhere('name', 'Audience Segment');
+        $resourceShared = $contactFamilyLoggingFields->firstWhere('name', 'Resource Shared');
+        $classificationNotes = $contactFamilyLoggingFields->firstWhere('name', 'Classification Notes');
+
+        foreach ($agreements as $index => $agreement) {
+            $fieldsToAttach = [];
+
+            if ($index % 3 === 0) {
+                if ($travelMiles) $fieldsToAttach[$travelMiles->id] = ['is_required' => true];
+                if ($outcomeNotes) $fieldsToAttach[$outcomeNotes->id] = ['is_required' => true];
+                if ($deliverableType) $fieldsToAttach[$deliverableType->id] = ['is_required' => false];
+            } elseif ($index % 3 === 1) {
+                if ($materialsCost) $fieldsToAttach[$materialsCost->id] = ['is_required' => true];
+                if ($outcomeNotes) $fieldsToAttach[$outcomeNotes->id] = ['is_required' => true];
+                if ($deliverablesCompleted) $fieldsToAttach[$deliverablesCompleted->id] = ['is_required' => false];
+            } else {
+                if ($travelMiles) $fieldsToAttach[$travelMiles->id] = ['is_required' => false];
+                if ($materialsCost) $fieldsToAttach[$materialsCost->id] = ['is_required' => false];
+                if ($deliverablesCompleted) $fieldsToAttach[$deliverablesCompleted->id] = ['is_required' => true];
+            }
+
+            if (!empty($fieldsToAttach)) {
+                $agreement->agreementLoggingFields()->sync($fieldsToAttach);
+            }
+        }
+
+        $contactFamilies = ContactFamily::all();
+        foreach ($contactFamilies as $family) {
+            $fieldsToAttach = [];
+
+            if (str_contains($family->name, 'Training')) {
+                if ($sessionFormat) $fieldsToAttach[$sessionFormat->id] = ['is_required' => true];
+                if ($audienceSegment) $fieldsToAttach[$audienceSegment->id] = ['is_required' => true];
+                if ($resourceShared) $fieldsToAttach[$resourceShared->id] = ['is_required' => false];
+            } elseif (str_contains($family->name, 'Coaching')) {
+                if ($sessionFormat) $fieldsToAttach[$sessionFormat->id] = ['is_required' => true];
+                if ($classificationNotes) $fieldsToAttach[$classificationNotes->id] = ['is_required' => true];
+            } elseif (str_contains($family->name, 'Webinar') || str_contains($family->name, 'Presentation')) {
+                if ($sessionFormat) $fieldsToAttach[$sessionFormat->id] = ['is_required' => true];
+                if ($audienceSegment) $fieldsToAttach[$audienceSegment->id] = ['is_required' => false];
+                if ($resourceShared) $fieldsToAttach[$resourceShared->id] = ['is_required' => false];
+            } else {
+                if ($audienceSegment) $fieldsToAttach[$audienceSegment->id] = ['is_required' => true];
+                if ($classificationNotes) $fieldsToAttach[$classificationNotes->id] = ['is_required' => false];
+            }
+
+            if (!empty($fieldsToAttach)) {
+                $family->contactFamilyLoggingFields()->sync($fieldsToAttach);
+            }
+        }
+
+        $this->command->info('Logging fields attached to agreements and contact families.');
     }
 }

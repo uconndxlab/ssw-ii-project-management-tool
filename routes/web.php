@@ -9,8 +9,12 @@ use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ProgramController;
 use App\Http\Controllers\ContactFamilyController;
+use App\Http\Controllers\ContactFamilyLoggingFieldController;
 use App\Http\Controllers\ActivityTypeController;
+use App\Http\Controllers\AgreementLoggingFieldController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\TeamController;
+use App\Http\Controllers\ProjectController;
 use Illuminate\Support\Facades\Route;
 
 // Guest routes
@@ -35,7 +39,14 @@ Route::middleware('auth')->group(function () {
     // HTMX endpoints for agreement deliverable management
     Route::post('/agreements/{agreement}/add-deliverable', [AgreementController::class, 'addDeliverable'])->name('agreements.add-deliverable');
     Route::delete('/agreements/{agreement}/remove-deliverable/{deliverable}', [AgreementController::class, 'removeDeliverable'])->name('agreements.remove-deliverable');
+    Route::get('/agreements/{agreement}/deliverables/{deliverable}/edit-form', [AgreementController::class, 'editDeliverable'])->name('agreements.edit-deliverable');
+    Route::patch('/agreements/{agreement}/deliverables/{deliverable}', [AgreementController::class, 'updateDeliverable'])->name('agreements.update-deliverable');
+    Route::get('/agreements/{agreement}/deliverables/{deliverable}/row', [AgreementController::class, 'showDeliverableRow'])->name('agreements.show-deliverable-row');
     
+    // HTMX endpoint for activity participant selection
+    Route::get('/activities/participants-for-agreement', [ActivityController::class, 'getParticipantsForAgreement'])
+        ->name('activities.participants-for-agreement');
+
     // Activities - visible to all authenticated users (with visibility filtering in controller)
     Route::get('/activities', [ActivityController::class, 'index'])->name('activities.index');
     Route::get('/activities/create', [ActivityController::class, 'create'])->name('activities.create');
@@ -45,27 +56,33 @@ Route::middleware('auth')->group(function () {
     Route::put('/activities/{activity}', [ActivityController::class, 'update'])->name('activities.update');
     Route::delete('/activities/{activity}', [ActivityController::class, 'destroy'])->name('activities.destroy');
     
-    // HTMX endpoint for activity participant selection
-    Route::get('/activities/participants-for-agreement', [ActivityController::class, 'getParticipantsForAgreement'])
-        ->name('activities.participants-for-agreement');
-    
     // HTMX endpoint for filtering activity types by contact family
     Route::get('/activity-types/by-family', [ActivityTypeController::class, 'getByFamily'])->name('activity-types.by-family');
     
     // Reports
-    Route::get('/reports/activities', [ReportController::class, 'activities'])->name('reports.activities');
+    // Route::get('/reports/activities', [ReportController::class, 'activities'])->name('reports.activities');
     
     // Organizations - viewable by all, admin-only for create/edit/delete
     Route::get('/organizations', [OrganizationController::class, 'index'])->name('organizations.index');
+    // Register /create before the {organization} wildcard to prevent route swallowing
+    Route::get('/organizations/create', [OrganizationController::class, 'create'])->name('organizations.create')->middleware('role:admin');
     Route::get('/organizations/{organization}', [OrganizationController::class, 'show'])->name('organizations.show');
-    
+
     // Admin routes
     Route::middleware('role:admin')->group(function () {
+        Route::redirect('/logging-fields', '/agreement-logging-fields')->name('logging-fields.index');
         Route::resource('contact-families', ContactFamilyController::class)->except(['show']);
+        Route::resource('contact-family-logging-fields', ContactFamilyLoggingFieldController::class);
+        Route::resource('agreement-logging-fields', AgreementLoggingFieldController::class);
         Route::resource('activity-types', ActivityTypeController::class)->except(['show']);
         Route::resource('states', StateController::class);
-        Route::resource('organizations', OrganizationController::class)->except(['index', 'show']);
+        Route::resource('organizations', OrganizationController::class)->except(['index', 'show', 'create']);
+        Route::resource('projects', ProjectController::class);
         Route::resource('programs', ProgramController::class);
+        Route::resource('teams', TeamController::class);
+
+        // User show page (admin-only)
+        Route::get('/users/{user}', [AdminUserController::class, 'show'])->name('users.show');
     });
     
     // Admin user management

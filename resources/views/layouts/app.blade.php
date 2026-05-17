@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ config('app.name') }} - @yield('title', 'Dashboard')</title>
+    <title>{{ config('app.name') }} - @yield('title', 'Home')</title>
     
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -23,7 +23,7 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ route('dashboard') }}">Dashboard</a>
+                        <a class="nav-link" href="{{ route('dashboard') }}">Home</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ route('agreements.index') }}">Agreements</a>
@@ -31,20 +31,27 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ route('organizations.index') }}">Organizations</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ route('reports.activities') }}">Reporting</a>
-                    </li>
                     @if(auth()->user()->isAdmin())
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown">
                             Admin
                         </a>
                         <ul class="dropdown-menu">
+                            <li><h6 class="dropdown-header">Reference Data</h6></li>
                             <li><a class="dropdown-item" href="{{ route('states.index') }}">States</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Agreement Setup</h6></li>
+                            <li><a class="dropdown-item" href="{{ route('projects.index') }}">Projects</a></li>
                             <li><a class="dropdown-item" href="{{ route('programs.index') }}">Programs</a></li>
+                            <li><a class="dropdown-item" href="{{ route('agreement-logging-fields.index') }}">Agreement Logging Fields</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Activity Setup</h6></li>
                             <li><a class="dropdown-item" href="{{ route('contact-families.index') }}">Contact Families</a></li>
+                            <li><a class="dropdown-item" href="{{ route('contact-family-logging-fields.index') }}">Contact Family Logging Fields</a></li>
                             <li><a class="dropdown-item" href="{{ route('activity-types.index') }}">Activity Types</a></li>
                             <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">People</h6></li>
+                            <li><a class="dropdown-item" href="{{ route('teams.index') }}">Teams</a></li>
                             <li><a class="dropdown-item" href="{{ route('admin.users.index') }}">Users</a></li>
                         </ul>
                     </li>
@@ -92,5 +99,15 @@
 
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Attach CSRF token to every HTMX request globally
+        document.addEventListener('htmx:configRequest', function (evt) {
+            var meta = document.querySelector('meta[name="csrf-token"]');
+            if (meta) evt.detail.headers['X-CSRF-TOKEN'] = meta.getAttribute('content');
+        });
+    </script>
+
+    @stack('scripts')
 </body>
 </html>

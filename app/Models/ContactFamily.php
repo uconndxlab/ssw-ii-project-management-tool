@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class ContactFamily extends Model
 {
@@ -24,6 +25,20 @@ class ContactFamily extends Model
     public function activityTypes(): HasMany
     {
         return $this->hasMany(ActivityType::class)->orderBy('sort_order')->orderBy('name');
+    }
+
+    public function contactFamilyLoggingFields(): BelongsToMany
+    {
+        return $this->belongsToMany(ContactFamilyLoggingField::class, 'contact_family_logging_field_assignments')
+            ->withPivot('is_required')
+            ->withTimestamps()
+            ->orderBy('sort_order')
+            ->orderBy('name');
+    }
+
+    public function loggingFields(): BelongsToMany
+    {
+        return $this->contactFamilyLoggingFields();
     }
 
     /**

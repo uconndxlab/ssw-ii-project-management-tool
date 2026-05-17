@@ -3,6 +3,21 @@
 @section('title', 'Create Agreement')
 
 @section('content')
+@php
+    $activityLoggingConfig = old('activity_logging_config', [
+        'event_hours' => true,
+        'prep_hours' => true,
+        'followup_hours' => false,
+        'participant_count' => true,
+        'external_attendees' => true,
+        'summary' => true,
+        'follow_up' => true,
+        'strengths' => false,
+        'recommendations' => false,
+    ]);
+    $selectedAgreementLoggingFieldIds = old('agreement_logging_field_ids', []);
+    $requiredAgreementLoggingFieldIds = old('required_agreement_logging_field_ids', []);
+@endphp
 <div class="row mb-4">
     <div class="col-12">
         <h1>Create Agreement</h1>
@@ -23,7 +38,7 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('agreements.store') }}">
+                <form method="POST" action="{{ route('agreements.store') }}" id="agreements-create-form">
                     @csrf
 
                     <div class="mb-3">
@@ -42,40 +57,30 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="organization_id" class="form-label">Organization</label>
-                                <select class="form-select @error('organization_id') is-invalid @enderror" 
-                                        id="organization_id" 
-                                        name="organization_id" 
-                                        required>
-                                    <option value="">Select organization...</option>
-                                    @foreach($organizations as $organization)
-                                        <option value="{{ $organization->id }}" {{ old('organization_id') == $organization->id ? 'selected' : '' }}>
-                                            {{ $organization->name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @error('organization_id')
-                                    <div class="invalid-feedback">{{ $message }}</div>
+                                <label class="form-label">Organizations</label>
+                                <x-organization-picker
+                                    picker-id="agreement-organizations"
+                                    name="organization_ids[]"
+                                    :organizations="$organizations"
+                                    :selected-ids="old('organization_ids', [])"
+                                />
+                                @error('organization_ids')
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
                         </div>
 
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="state_id" class="form-label">State</label>
-                                <select class="form-select @error('state_id') is-invalid @enderror" 
-                                        id="state_id" 
-                                        name="state_id" 
-                                        required>
-                                    <option value="">Select state...</option>
-                                    @foreach($states as $state)
-                                        <option value="{{ $state->id }}" {{ old('state_id') == $state->id ? 'selected' : '' }}>
-                                            {{ $state->name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @error('state_id')
-                                    <div class="invalid-feedback">{{ $message }}</div>
+                                <label class="form-label">States</label>
+                                <x-state-picker
+                                    picker-id="agreement-states"
+                                    name="state_ids[]"
+                                    :states="$states"
+                                    :selected-ids="old('state_ids', [])"
+                                />
+                                @error('state_ids')
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
                         </div>
@@ -165,32 +170,222 @@
                         <small class="text-muted">List of certification candidates (placeholder)</small>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Assign Users</label>
-                        <div class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
-                            @foreach($users as $user)
-                            <div class="form-check">
-                                <input class="form-check-input" 
-                                       type="checkbox" 
-                                       name="user_ids[]" 
-                                       value="{{ $user->id }}" 
-                                       id="user_{{ $user->id }}"
-                                       {{ in_array($user->id, old('user_ids', [])) ? 'checked' : '' }}>
-                                <label class="form-check-label" for="user_{{ $user->id }}">
-                                    {{ $user->name }} ({{ ucfirst($user->role) }})
-                                </label>
-                            </div>
-                            @endforeach
+                    <div class="mb-4">
+                        <h5 class="mb-1">Time Tracking Method</h5>
+                        <p class="text-muted small mb-2">How time is recorded for all activities under this agreement.</p>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" id="time_tracking_engagement"
+                                   name="time_tracking_mode" value="engagement"
+                                   {{ old('time_tracking_mode', 'engagement') === 'engagement' ? 'checked' : '' }}>
+                            <label class="form-check-label" for="time_tracking_engagement">
+                                <strong>Time by Engagement</strong>
+                                <small class="text-muted d-block">One total time value for the entire activity.</small>
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" id="time_tracking_participant"
+                                   name="time_tracking_mode" value="participant"
+                                   {{ old('time_tracking_mode', 'engagement') === 'participant' ? 'checked' : '' }}>
+                            <label class="form-check-label" for="time_tracking_participant">
+                                <strong>Time by Participant</strong>
+                                <small class="text-muted d-block">Track individual time per team member.</small>
+                            </label>
                         </div>
                     </div>
 
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">Create Agreement</button>
-                        <a href="{{ route('agreements.index') }}" class="btn btn-secondary">Cancel</a>
+                    <div class="mb-4">
+                        <h5 class="mb-3">Activity Logging Fields</h5>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           name="activity_logging_config[event_hours]"
+                                           id="activity_logging_config_event_hours"
+                                           value="1"
+                                           {{ !empty($activityLoggingConfig['event_hours']) ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="activity_logging_config_event_hours">
+                                        Event Hours
+                                    </label>
+                                </div>
+
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           name="activity_logging_config[prep_hours]"
+                                           id="activity_logging_config_prep_hours"
+                                           value="1"
+                                           {{ !empty($activityLoggingConfig['prep_hours']) ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="activity_logging_config_prep_hours">
+                                        Prep Hours
+                                    </label>
+                                </div>
+
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           name="activity_logging_config[followup_hours]"
+                                           id="activity_logging_config_followup_hours"
+                                           value="1"
+                                           {{ !empty($activityLoggingConfig['followup_hours']) ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="activity_logging_config_followup_hours">
+                                        Follow-up Hours
+                                    </label>
+                                </div>
+
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           name="activity_logging_config[participant_count]"
+                                           id="activity_logging_config_participant_count"
+                                           value="1"
+                                           {{ !empty($activityLoggingConfig['participant_count']) ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="activity_logging_config_participant_count">
+                                        Participants
+                                    </label>
+                                </div>
+
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           name="activity_logging_config[external_attendees]"
+                                           id="activity_logging_config_external_attendees"
+                                           value="1"
+                                           {{ !empty($activityLoggingConfig['external_attendees']) ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="activity_logging_config_external_attendees">
+                                        External Attendees
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           name="activity_logging_config[summary]"
+                                           id="activity_logging_config_summary"
+                                           value="1"
+                                           {{ !empty($activityLoggingConfig['summary']) ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="activity_logging_config_summary">
+                                        Summary
+                                    </label>
+                                </div>
+
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           name="activity_logging_config[follow_up]"
+                                           id="activity_logging_config_follow_up"
+                                           value="1"
+                                           {{ !empty($activityLoggingConfig['follow_up']) ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="activity_logging_config_follow_up">
+                                        Follow-Up
+                                    </label>
+                                </div>
+
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           name="activity_logging_config[strengths]"
+                                           id="activity_logging_config_strengths"
+                                           value="1"
+                                           {{ !empty($activityLoggingConfig['strengths']) ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="activity_logging_config_strengths">
+                                        Strengths
+                                    </label>
+                                </div>
+
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           name="activity_logging_config[recommendations]"
+                                           id="activity_logging_config_recommendations"
+                                           value="1"
+                                           {{ !empty($activityLoggingConfig['recommendations']) ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="activity_logging_config_recommendations">
+                                        Recommendations
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <small class="text-muted">
+                            Select which fields should appear when logging activities for this agreement.
+                        </small>
                     </div>
+
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <h5 class="mb-1">Agreement-Specific Logging Fields</h5>
+                                <p class="text-muted small mb-0">These fields will be emphasized when activity is logged against this agreement.</p>
+                            </div>
+                            <a href="{{ route('agreement-logging-fields.index') }}" class="btn btn-sm btn-outline-secondary">Manage Agreement Fields</a>
+                        </div>
+
+                        @if($agreementLoggingFields->isEmpty())
+                            <div class="alert alert-light border mb-0">No agreement logging fields have been defined yet.</div>
+                        @else
+                            <div class="border rounded">
+                                @foreach($agreementLoggingFields as $field)
+                                    <label class="d-flex align-items-start gap-3 px-3 py-2 border-bottom {{ $loop->last ? 'border-bottom-0' : '' }}">
+                                        <input class="form-check-input mt-1"
+                                               type="checkbox"
+                                               name="agreement_logging_field_ids[]"
+                                               value="{{ $field->id }}"
+                                               {{ in_array($field->id, $selectedAgreementLoggingFieldIds) ? 'checked' : '' }}>
+                                        <div class="flex-grow-1">
+                                            <div class="fw-semibold">{{ $field->name }}</div>
+                                            <div class="small text-muted">{{ ucfirst($field->field_type) }}{{ $field->help_text ? ' · ' . $field->help_text : '' }}</div>
+                                        </div>
+                                        <div class="form-check m-0">
+                                            <input class="form-check-input"
+                                                   type="checkbox"
+                                                   name="required_agreement_logging_field_ids[]"
+                                                   value="{{ $field->id }}"
+                                                   {{ in_array($field->id, $requiredAgreementLoggingFieldIds) ? 'checked' : '' }}>
+                                            <label class="form-check-label small">Required</label>
+                                        </div>
+                                    </label>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Assign Users</label>
+
+                        <x-user-picker
+                            picker-id="agreement-create-users"
+                            name="user_ids[]"
+                            :users="$users"
+                            :selected-ids="old('user_ids', [])"
+                            search-placeholder="Search to assign users..."
+                            :show-role="true"
+                        />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Assign Teams</label>
+
+                        <x-team-picker
+                            picker-id="agreement-create-teams"
+                            name="team_ids[]"
+                            :teams="$teams"
+                            :selected-ids="old('team_ids', [])"
+                            search-placeholder="Search to assign teams..."
+                        />
+
+                        <small class="text-muted">
+                            All users in assigned teams will have access to this agreement.
+                        </small>
+                    </div>
+
                 </form>
             </div>
         </div>
     </div>
 </div>
+<x-save-bar form-id="agreements-create-form" cancel-url="{{ route('agreements.index') }}" save-label="Create Agreement" />
 @endsection

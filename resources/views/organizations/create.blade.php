@@ -23,7 +23,7 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('organizations.store') }}">
+                <form method="POST" action="{{ route('organizations.store') }}" id="organizations-create-form">
                     @csrf
 
                     <div class="mb-3">
@@ -40,30 +40,22 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="state_id" class="form-label">State</label>
-                        <select class="form-select @error('state_id') is-invalid @enderror" 
-                                id="state_id" 
-                                name="state_id" 
-                                required>
-                            <option value="">Select state...</option>
-                            @foreach($states as $state)
-                                <option value="{{ $state->id }}" {{ old('state_id') == $state->id ? 'selected' : '' }}>
-                                    {{ $state->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('state_id')
-                            <div class="invalid-feedback">{{ $message }}</div>
+                        <label class="form-label">State(s)</label>
+                        <x-state-picker
+                            picker-id="organization-states"
+                            name="state_ids[]"
+                            :states="$states"
+                            :selected-ids="old('state_ids', [])"
+                        />
+                        @error('state_ids')
+                            <div class="text-danger small mt-1">{{ $message }}</div>
                         @enderror
                     </div>
 
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">Create Organization</button>
-                        <a href="{{ route('organizations.index') }}" class="btn btn-secondary">Cancel</a>
-                    </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+<x-save-bar form-id="organizations-create-form" cancel-url="{{ route('organizations.index') }}" save-label="Create Organization" />
 @endsection

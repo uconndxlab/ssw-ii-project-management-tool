@@ -8,21 +8,77 @@ use Illuminate\Http\Request;
 
 class OrganizationController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $organizations = Organization::with(['state', 'agreements'])->orderBy('name')->paginate(20);
-        
-        return view('organizations.index', compact('organizations'));
+        $states = State::orderBy('name')->get(['id', 'name']);
+
+        $query = Organization::with(['states', 'agreements']);
+
+        // Search
+        $search = trim((string) $request->input('search', ''));
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhereHas('states', function ($stateQuery) use ($search) {
+                        $stateQuery->where('name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        // Filter
+        if ($request->filled('state_id')) {
+            $query->whereHas('states', fn ($q) => $q->where('states.id', $request->integer('state_id')));
+        }
+
+        // Sorting
+        $sort = $request->input('sort', 'name');
+        $direction = $request->input('direction', 'asc') === 'desc' ? 'desc' : 'asc';
+
+        switch ($sort) {
+            case 'agreements':
+                $query->withCount('agreements')->orderBy('agreements_count', $direction);
+                break;
+
+            case 'created':
+                $query->orderBy('created_at', $direction);
+                break;
+
+            case 'name':
+            default:
+                $query->orderBy('name', $direction);
+                break;
+        }
+
+        $organizations = $query->paginate(20)->withQueryString();
+
+        // HTMX: filters only
+        if ($request->header('HX-Request') === 'true' && $request->input('partial') === 'filters') {
+            return view('organizations.partials.filters', compact('states', 'sort', 'direction'));
+        }
+
+        // HTMX: table only
+        if ($request->header('HX-Request') === 'true') {
+            return view('organizations.partials.table', compact('organizations', 'sort', 'direction'));
+        }
+
+        return view('organizations.index', compact(
+            'organizations',
+            'states',
+            'sort',
+            'direction'
+        ));
     }
 
     public function show(Organization $organization)
     {
         // Load agreements with relationships
-        $agreements = $organization->agreements()->with(['state', 'users'])->get();
+        $agreements = $organization->agreements()->with(['states', 'users'])->get();
         
         // Get all activities for this organization's agreements
-        $allActivities = \App\Models\Activity::whereIn('agreement_id', $agreements->pluck('id'))
-            ->with(['activityType.contactFamily', 'user', 'agreement'])
+        $allActivities = \App\Models\Activity::whereHas('agreements', function($query) use ($agreements) {
+                $query->whereIn('agreements.id', $agreements->pluck('id'));
+            })
+            ->with(['activityType.contactFamily', 'user', 'agreements'])
             ->orderByDesc('engagement_date')
             ->get();
         
@@ -68,10 +124,12 @@ class OrganizationController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'state_id' => ['required', 'exists:states,id'],
+            'state_ids' => ['required', 'array', 'min:1'],
+            'state_ids.*' => ['exists:states,id'],
         ]);
 
-        Organization::create($validated);
+        $organization = Organization::create(['name' => $validated['name']]);
+        $organization->states()->sync($validated['state_ids']);
 
         return redirect()
             ->route('organizations.index')
@@ -89,10 +147,12 @@ class OrganizationController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'state_id' => ['required', 'exists:states,id'],
+            'state_ids' => ['required', 'array', 'min:1'],
+            'state_ids.*' => ['exists:states,id'],
         ]);
 
-        $organization->update($validated);
+        $organization->update(['name' => $validated['name']]);
+        $organization->states()->sync($validated['state_ids']);
 
         return redirect()
             ->route('organizations.index')
