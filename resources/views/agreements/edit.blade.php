@@ -48,7 +48,7 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('agreements.update', $agreement) }}" id="agreements-edit-form">
+                <form method="POST" action="{{ route('agreements.update', $agreement) }}" id="agreements-edit-form" enctype="multipart/form-data">
                     @csrf
                     @method('PUT')
 
@@ -400,6 +400,49 @@
                     </div>
 
                 </form>
+            </div>
+        </div>
+
+        {{-- Attachments --}}
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="mb-3">Attachments</h5>
+
+                @if($agreement->attachments->isNotEmpty())
+                    <div class="mb-3">
+                        @foreach($agreement->attachments as $attachment)
+                            <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
+                                <div class="small">
+                                    <a href="{{ $attachment->download_url }}" target="_blank" class="text-decoration-none">
+                                        {{ $attachment->filename }}
+                                    </a>
+                                    <span class="text-muted ms-2">{{ $attachment->formatted_size }}</span>
+                                </div>
+                                <form method="POST"
+                                      action="{{ route('agreements.attachments.destroy', [$agreement, $attachment]) }}"
+                                      onsubmit="return confirm('Delete {{ addslashes($attachment->filename) }}?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+                                </form>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+
+                <div class="mb-0">
+                    <label class="form-label">Upload New Attachment(s)</label>
+                    <input type="file"
+                           class="form-control @error('attachments.*') is-invalid @enderror"
+                           name="attachments[]"
+                           form="agreements-edit-form"
+                           multiple
+                           accept=".pdf,.doc,.docx,.xls,.xlsx,.txt">
+                    <div class="form-text">PDF, Word, Excel, or text files. Max 10MB each. Saves with the form.</div>
+                    @error('attachments.*')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
             </div>
         </div>
 

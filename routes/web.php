@@ -42,6 +42,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/agreements/{agreement}/deliverables/{deliverable}/edit-form', [AgreementController::class, 'editDeliverable'])->name('agreements.edit-deliverable');
     Route::patch('/agreements/{agreement}/deliverables/{deliverable}', [AgreementController::class, 'updateDeliverable'])->name('agreements.update-deliverable');
     Route::get('/agreements/{agreement}/deliverables/{deliverable}/row', [AgreementController::class, 'showDeliverableRow'])->name('agreements.show-deliverable-row');
+
+    // Agreement attachment routes
+    Route::get('/agreements/{agreement}/attachments/{attachment}/download', [AgreementController::class, 'downloadAttachment'])->name('agreements.attachments.download');
+    Route::delete('/agreements/{agreement}/attachments/{attachment}', [AgreementController::class, 'destroyAttachment'])->name('agreements.attachments.destroy');
     
     // HTMX endpoint for activity participant selection
     Route::get('/activities/participants-for-agreement', [ActivityController::class, 'getParticipantsForAgreement'])

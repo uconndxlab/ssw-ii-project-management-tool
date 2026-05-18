@@ -38,7 +38,7 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('agreements.store') }}" id="agreements-create-form">
+                <form method="POST" action="{{ route('agreements.store') }}" id="agreements-create-form" enctype="multipart/form-data">
                     @csrf
 
                     <div class="mb-3">
@@ -380,6 +380,19 @@
                         <small class="text-muted">
                             All users in assigned teams will have access to this agreement.
                         </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Attachments</label>
+                        <input type="file"
+                               class="form-control @error('attachments.*') is-invalid @enderror"
+                               name="attachments[]"
+                               multiple
+                               accept=".pdf,.doc,.docx,.xls,.xlsx,.txt">
+                        <div class="form-text">PDF, Word, Excel, or text files. Max 10MB each.</div>
+                        @error('attachments.*')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
                     </div>
 
                 </form>
