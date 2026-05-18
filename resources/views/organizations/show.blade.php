@@ -94,10 +94,25 @@
                     <span class="badge bg-primary rounded-pill ms-1">{{ $teamMembers->count() }}</span>
                 </h6>
                 @forelse($teamMembers as $member)
-                    <div class="d-flex align-items-center py-1 border-bottom">
-                        <a href="{{ route('users.show', $member) }}" class="text-decoration-none small fw-semibold">
-                            {{ $member->name }}
-                        </a>
+                    <div class="py-2 border-bottom">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <a href="{{ route('users.show', $member) }}" class="text-decoration-none fw-semibold small">
+                                {{ $member->name }}
+                            </a>
+                            @if($member->role)
+                                <span class="badge bg-light text-dark border ms-2">{{ ucfirst($member->role) }}</span>
+                            @endif
+                        </div>
+                        @if($member->email)
+                            <div class="small text-muted">{{ $member->email }}</div>
+                        @endif
+                        @if($member->via_agreements?->isNotEmpty())
+                            <div class="mt-1 d-flex flex-wrap gap-1">
+                                @foreach($member->via_agreements as $agreementName)
+                                    <span class="badge bg-success-subtle text-success-emphasis" style="font-size:.7rem;">{{ $agreementName }}</span>
+                                @endforeach
+                            </div>
+                        @endif
                     </div>
                 @empty
                     <p class="text-muted small mb-0">No staff assigned.</p>

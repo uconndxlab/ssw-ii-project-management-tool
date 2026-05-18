@@ -85,8 +85,18 @@ class OrganizationController extends Controller
         // Recent activities (last 5)
         $recentActivities = $allActivities->take(5);
         
-        // Unique team members across all agreements
-        $teamMembers = $agreements->pluck('users')->flatten()->unique('id')->sortBy('name');
+        // Deduplicate staff across all agreements, collecting agreement names per user
+        $teamMembersMap = [];
+        foreach ($agreements as $agreement) {
+            foreach ($agreement->users as $user) {
+                if (!isset($teamMembersMap[$user->id])) {
+                    $teamMembersMap[$user->id] = clone $user;
+                    $teamMembersMap[$user->id]->via_agreements = collect();
+                }
+                $teamMembersMap[$user->id]->via_agreements->push($agreement->name);
+            }
+        }
+        $teamMembers = collect($teamMembersMap)->sortBy('name');
         
         // YTD activities
         $ytdActivities = $allActivities->filter(fn($e) => $e->engagement_date->year === now()->year);

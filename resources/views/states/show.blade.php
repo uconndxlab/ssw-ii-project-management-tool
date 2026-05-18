@@ -36,17 +36,17 @@
     <x-slot:relationships>
         <div class="row g-4">
             {{-- Organizations --}}
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <h6 class="fw-semibold mb-3">
                     Organizations
                     <span class="badge bg-primary rounded-pill ms-1">{{ $state->organizations->count() }}</span>
                 </h6>
                 @forelse($state->organizations as $org)
                     <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
-                        <a href="{{ route('organizations.show', $org) }}" class="text-decoration-none fw-semibold">
+                        <a href="{{ route('organizations.show', $org) }}" class="text-decoration-none fw-semibold small">
                             {{ $org->name }}
                         </a>
-                        <span class="badge bg-light text-dark">{{ $org->agreements->count() }} agreements</span>
+                        <span class="badge bg-light text-dark">{{ $org->agreements->count() }}</span>
                     </div>
                 @empty
                     <p class="text-muted small mb-0">No organizations in this state yet.</p>
@@ -54,14 +54,14 @@
             </div>
 
             {{-- Agreements --}}
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <h6 class="fw-semibold mb-3">
                     Agreements
                     <span class="badge bg-success rounded-pill ms-1">{{ $state->agreements->count() }}</span>
                 </h6>
                 @forelse($state->agreements->sortBy('name') as $agreement)
                     <div class="py-2 border-bottom">
-                        <a href="{{ route('agreements.show', $agreement) }}" class="text-decoration-none fw-semibold d-block">
+                        <a href="{{ route('agreements.show', $agreement) }}" class="text-decoration-none fw-semibold d-block small">
                             {{ $agreement->name }}
                         </a>
                         @if($agreement->organizations->isNotEmpty())
@@ -70,6 +70,38 @@
                     </div>
                 @empty
                     <p class="text-muted small mb-0">No agreements linked to this state yet.</p>
+                @endforelse
+            </div>
+
+            {{-- Staff --}}
+            <div class="col-md-4">
+                <h6 class="fw-semibold mb-3">
+                    Staff
+                    <span class="badge bg-secondary rounded-pill ms-1">{{ $staffMembers->count() }}</span>
+                </h6>
+                @forelse($staffMembers as $member)
+                    <div class="py-2 border-bottom">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <a href="{{ route('users.show', $member) }}" class="text-decoration-none fw-semibold small">
+                                {{ $member->name }}
+                            </a>
+                            @if($member->role)
+                                <span class="badge bg-light text-dark border ms-2" style="font-size:.7rem;">{{ ucfirst($member->role) }}</span>
+                            @endif
+                        </div>
+                        @if($member->email)
+                            <div class="small text-muted">{{ $member->email }}</div>
+                        @endif
+                        @if($member->via_agreements?->isNotEmpty())
+                            <div class="mt-1 d-flex flex-wrap gap-1">
+                                @foreach($member->via_agreements as $agreementName)
+                                    <span class="badge bg-success-subtle text-success-emphasis" style="font-size:.7rem;">{{ $agreementName }}</span>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+                @empty
+                    <p class="text-muted small mb-0">No staff linked to this state yet.</p>
                 @endforelse
             </div>
         </div>

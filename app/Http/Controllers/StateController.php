@@ -72,7 +72,20 @@ class StateController extends Controller
     {
         $state->load(['organizations.agreements', 'agreements.organizations', 'agreements.users']);
 
-        return view('states.show', compact('state'));
+        // Deduplicate staff across all agreements in this state, tagging agreement names
+        $staffMembersMap = [];
+        foreach ($state->agreements as $agreement) {
+            foreach ($agreement->users as $user) {
+                if (!isset($staffMembersMap[$user->id])) {
+                    $staffMembersMap[$user->id] = clone $user;
+                    $staffMembersMap[$user->id]->via_agreements = collect();
+                }
+                $staffMembersMap[$user->id]->via_agreements->push($agreement->name);
+            }
+        }
+        $staffMembers = collect($staffMembersMap)->sortBy('name');
+
+        return view('states.show', compact('state', 'staffMembers'));
     }
 
     public function edit(State $state)
