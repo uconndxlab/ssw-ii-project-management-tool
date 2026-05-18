@@ -270,7 +270,7 @@ class AgreementController extends Controller
             abort(403, 'Unauthorized access to this agreement.');
         }
 
-        $agreement->load(['organizations', 'states', 'users', 'teams.users', 'deliverables.activityType.contactFamily']);
+        $agreement->load(['organizations', 'states', 'users', 'teams.users', 'deliverables.activityType.contactFamily', 'deliverables.assignedUsers']);
         
         // Get activities for this agreement
         $activities = $agreement->activities()
@@ -355,7 +355,7 @@ class AgreementController extends Controller
             ->get()
             ->groupBy('project_id');
         $agreementLoggingFields = AgreementLoggingField::active()->ordered()->get();
-        $agreement->load(['users', 'teams', 'deliverables.activityType.contactFamily', 'organizations', 'states', 'attachments', 'agreementLoggingFields', 'programs']);
+        $agreement->load(['users', 'teams', 'deliverables.activityType.contactFamily', 'deliverables.assignedUsers', 'organizations', 'states', 'attachments', 'agreementLoggingFields', 'programs']);
         
         return view('agreements.edit', compact('agreement', 'states', 'organizations', 'users', 'teams', 'contactFamilies', 'activityTypes', 'projects', 'programsByProject', 'agreementLoggingFields'));
     }
@@ -509,15 +509,20 @@ class AgreementController extends Controller
         abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can add deliverables.');
 
         $validated = $request->validate([
-            'activity_type_id' => ['nullable', 'exists:activity_types,id'],
-            'contact_family_id' => ['nullable', 'exists:contact_families,id'],
-            'required_hours' => ['nullable', 'numeric', 'min:0'],
+            'activity_type_id'    => ['nullable', 'exists:activity_types,id'],
+            'contact_family_id'   => ['nullable', 'exists:contact_families,id'],
+            'required_hours'      => ['nullable', 'numeric', 'min:0'],
             'required_activities' => ['nullable', 'integer', 'min:0'],
-            'notes' => ['nullable', 'string'],
+            'notes'               => ['nullable', 'string'],
+            'user_ids'            => ['nullable', 'array'],
+            'user_ids.*'          => ['exists:users,id'],
         ]);
 
-        $agreement->deliverables()->create($validated);
-        $agreement->load('deliverables.activityType.contactFamily');
+        $deliverable = $agreement->deliverables()->create(
+            collect($validated)->except('user_ids')->toArray()
+        );
+        $deliverable->assignedUsers()->sync($validated['user_ids'] ?? []);
+        $agreement->load('deliverables.activityType.contactFamily.contactFamilyLoggingFields', 'deliverables.assignedUsers');
 
         return view('agreements.partials.deliverable-list', compact('agreement'));
     }
@@ -531,7 +536,7 @@ class AgreementController extends Controller
         abort_unless($deliverable->agreement_id === $agreement->id, 403, 'Invalid deliverable.');
 
         $deliverable->delete();
-        $agreement->load('deliverables.activityType.contactFamily');
+        $agreement->load('deliverables.activityType.contactFamily', 'deliverables.assignedUsers');
 
         return view('agreements.partials.deliverable-list', compact('agreement'));
     }
@@ -545,8 +550,10 @@ class AgreementController extends Controller
         $activityTypes = $deliverable->contact_family_id
             ? ActivityType::where('contact_family_id', $deliverable->contact_family_id)->where('active', true)->orderBy('sort_order')->orderBy('name')->get()
             : collect();
+        $users = User::orderBy('name')->get(['id', 'name', 'role']);
+        $assignedUserIds = $deliverable->assignedUsers()->pluck('users.id')->all();
 
-        return view('agreements.partials.deliverable-row-edit', compact('agreement', 'deliverable', 'contactFamilies', 'activityTypes'));
+        return view('agreements.partials.deliverable-row-edit', compact('agreement', 'deliverable', 'contactFamilies', 'activityTypes', 'users', 'assignedUserIds'));
     }
 
     public function updateDeliverable(Request $request, Agreement $agreement, AgreementDeliverable $deliverable)
@@ -560,10 +567,13 @@ class AgreementController extends Controller
             'required_hours'      => ['nullable', 'numeric', 'min:0', 'max:99999'],
             'required_activities' => ['nullable', 'integer', 'min:0', 'max:99999'],
             'notes'               => ['nullable', 'string', 'max:500'],
+            'user_ids'            => ['nullable', 'array'],
+            'user_ids.*'          => ['exists:users,id'],
         ]);
 
-        $deliverable->update($validated);
-        $agreement->load('deliverables.activityType.contactFamily');
+        $deliverable->update(collect($validated)->except('user_ids')->toArray());
+        $deliverable->assignedUsers()->sync($validated['user_ids'] ?? []);
+        $agreement->load('deliverables.activityType.contactFamily', 'deliverables.assignedUsers');
 
         return response()
             ->view('agreements.partials.deliverable-list', compact('agreement'))
@@ -575,7 +585,7 @@ class AgreementController extends Controller
         abort_unless(Auth::user()->isAdmin(), 403);
         abort_unless($deliverable->agreement_id === $agreement->id, 403);
 
-        $agreement->load('deliverables.activityType.contactFamily');
+        $agreement->load('deliverables.activityType.contactFamily', 'deliverables.assignedUsers');
 
         return view('agreements.partials.deliverable-list', compact('agreement'));
     }

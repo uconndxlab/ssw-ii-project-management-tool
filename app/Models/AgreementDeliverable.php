@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class AgreementDeliverable extends Model
 {
@@ -29,5 +30,10 @@ class AgreementDeliverable extends Model
     public function contactFamily(): BelongsTo
     {
         return $this->belongsTo(ContactFamily::class);
+    }
+
+    public function assignedUsers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'deliverable_user', 'agreement_deliverable_id', 'user_id')->withTimestamps();
     }
 }

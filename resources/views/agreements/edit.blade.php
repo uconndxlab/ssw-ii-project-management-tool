@@ -510,6 +510,28 @@
                                           rows="2"></textarea>
                             </div>
 
+                            <div class="mb-3">
+                                <label class="form-label">Assign Users</label>
+                                @if($users->isEmpty())
+                                    <p class="text-muted small mb-0">No users available.</p>
+                                @else
+                                    <div class="border rounded p-2" style="max-height:150px;overflow-y:auto;">
+                                        @foreach($users as $user)
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox"
+                                                       name="user_ids[]"
+                                                       value="{{ $user->id }}"
+                                                       id="new_del_user_{{ $user->id }}">
+                                                <label class="form-check-label" for="new_del_user_{{ $user->id }}">
+                                                    {{ $user->name }}
+                                                    <span class="text-muted small">{{ ucfirst($user->role) }}</span>
+                                                </label>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @endif
+                            </div>
+
                             <button type="submit" class="btn btn-sm btn-outline-primary">
                                 Add Deliverable
                             </button>
@@ -526,6 +548,7 @@
                                 <th class="text-center">Hours</th>
                                 <th class="text-center">Activities</th>
                                 <th>Notes</th>
+                                <th>Assigned</th>
                                 <th></th>
                             </tr>
                         </thead>

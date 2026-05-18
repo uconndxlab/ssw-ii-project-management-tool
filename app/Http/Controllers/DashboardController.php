@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Activity;
 use App\Models\Agreement;
+use App\Models\AgreementDeliverable;
 use App\Models\Organization;
 use App\Models\State;
 use Illuminate\Support\Facades\Auth;
@@ -67,8 +68,9 @@ class DashboardController extends Controller
         // Always define these for the view
         $myActivities = collect();
         $myAgreements = collect();
+        $myAssignedDeliverables = collect();
 
-        return view('home', compact('ytdTotals', 'recentActivities', 'agreements', 'stats', 'user', 'myActivities', 'myAgreements'));
+        return view('home', compact('ytdTotals', 'recentActivities', 'agreements', 'stats', 'user', 'myActivities', 'myAgreements', 'myAssignedDeliverables'));
     }
     
     protected function userHome($user)
@@ -106,14 +108,19 @@ class DashboardController extends Controller
             ->whereMonth('engagement_date', now()->month)
             ->count();
 
+        // Deliverables assigned to this user
+        $myAssignedDeliverables = $user->assignedDeliverables()
+            ->with(['agreement.organizations', 'activityType', 'contactFamily'])
+            ->get();
+
         // Global stats
         $stats = [
-            'active_agreements' => $myAgreements->count(),
-            'my_activities_ytd' => $myYtdActivities->count(),
-            'my_activities_this_month' => $myThisMonthActivities,
-            'my_total_hours_ytd' => $myYtdHours,
+            'active_agreements'       => $myAgreements->count(),
+            'my_activities_ytd'       => $myYtdActivities->count(),
+            'my_activities_this_month'=> $myThisMonthActivities,
+            'my_total_hours_ytd'      => $myYtdHours,
         ];
 
-        return view('home', compact('myAgreements', 'myActivities', 'stats', 'user', 'myActivities', 'myAgreements'));
+        return view('home', compact('myAgreements', 'myActivities', 'stats', 'user', 'myActivities', 'myAgreements', 'myAssignedDeliverables'));
     }
 }

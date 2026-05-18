@@ -113,11 +113,11 @@ class User extends Authenticatable
     }
 
     /**
-     * Users that report to this user.
+     * Deliverables this user is directly assigned to.
      */
-    public function subordinates(): HasMany
+    public function assignedDeliverables(): BelongsToMany
     {
-        return $this->hasMany(User::class, 'supervisor_id');
+        return $this->belongsToMany(AgreementDeliverable::class, 'deliverable_user', 'user_id', 'agreement_deliverable_id')->withTimestamps();
     }
 
 

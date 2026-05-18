@@ -1,4 +1,4 @@
-@if($myActivities?->count() > 0 || $myAgreements?->count() > 0)
+@if($myActivities?->count() > 0 || $myAgreements?->count() > 0 || $myAssignedDeliverables?->count() > 0)
 <div class="card shadow-sm mb-4">
     <div class="card-header bg-light">
         <h5 class="mb-0">My Work</h5>
@@ -60,6 +60,61 @@
             </div>
             @endif
         </div>
+
+        {{-- My Assigned Deliverables --}}
+        @if($myAssignedDeliverables && $myAssignedDeliverables->count() > 0)
+        <hr>
+        <h6 class="mb-3">My Assigned Deliverables</h6>
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Deliverable</th>
+                        <th>Agreement</th>
+                        <th>Organization</th>
+                        <th class="text-center">Req. Hours</th>
+                        <th class="text-center">Req. Activities</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($myAssignedDeliverables as $deliverable)
+                    <tr>
+                        <td>
+                            <div class="fw-semibold">{{ $deliverable->activityType?->name ?? '—' }}</div>
+                            @if($deliverable->contactFamily)
+                                <small class="text-muted">{{ $deliverable->contactFamily->name }}</small>
+                            @endif
+                        </td>
+                        <td>
+                            @if($deliverable->agreement)
+                                <a href="{{ route('agreements.show', $deliverable->agreement) }}" class="text-decoration-none">
+                                    {{ $deliverable->agreement->name }}
+                                </a>
+                            @else
+                                <span class="text-muted">—</span>
+                            @endif
+                        </td>
+                        <td class="small text-muted">
+                            @if($deliverable->agreement?->organizations?->isNotEmpty())
+                                {{ $deliverable->agreement->organizations->pluck('name')->join(', ') }}
+                            @else
+                                —
+                            @endif
+                        </td>
+                        <td class="text-center">
+                            {{ $deliverable->required_hours !== null ? number_format($deliverable->required_hours, 1) : '—' }}
+                        </td>
+                        <td class="text-center">
+                            {{ $deliverable->required_activities ?? '—' }}
+                        </td>
+                        <td class="small text-muted">{{ $deliverable->notes ?? '' }}</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+        @endif
     </div>
 </div>
 @endif

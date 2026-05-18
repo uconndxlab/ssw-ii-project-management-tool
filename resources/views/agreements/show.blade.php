@@ -174,6 +174,15 @@
                             <small class="text-muted">{{ $progress['deliverable']->contactFamily->name }}</small>
                         @endif
 
+                        @if($progress['deliverable']->assignedUsers?->isNotEmpty())
+                            <div class="mt-1 mb-1">
+                                <small class="text-muted">Assigned: </small>
+                                @foreach($progress['deliverable']->assignedUsers as $assignedUser)
+                                    <span class="badge bg-secondary me-1">{{ $assignedUser->name }}</span>
+                                @endforeach
+                            </div>
+                        @endif
+
                         @if($progress['deliverable']->required_hours)
                         <div class="mt-2">
                             <div class="d-flex justify-content-between mb-1">
