@@ -30,43 +30,21 @@ class OrganizationController extends Controller
             $query->whereHas('states', fn ($q) => $q->where('states.id', $request->integer('state_id')));
         }
 
-        // Sorting
-        $sort = $request->input('sort', 'name');
-        $direction = $request->input('direction', 'asc') === 'desc' ? 'desc' : 'asc';
-
-        switch ($sort) {
-            case 'agreements':
-                $query->withCount('agreements')->orderBy('agreements_count', $direction);
-                break;
-
-            case 'created':
-                $query->orderBy('created_at', $direction);
-                break;
-
-            case 'name':
-            default:
-                $query->orderBy('name', $direction);
-                break;
-        }
+        $query->orderBy('name');
 
         $organizations = $query->paginate(20)->withQueryString();
 
         // HTMX: filters only
         if ($request->header('HX-Request') === 'true' && $request->input('partial') === 'filters') {
-            return view('organizations.partials.filters', compact('states', 'sort', 'direction'));
+            return view('organizations.partials.filters', compact('states'));
         }
 
         // HTMX: table only
         if ($request->header('HX-Request') === 'true') {
-            return view('organizations.partials.table', compact('organizations', 'sort', 'direction'));
+            return view('organizations.partials.table', compact('organizations'));
         }
 
-        return view('organizations.index', compact(
-            'organizations',
-            'states',
-            'sort',
-            'direction'
-        ));
+        return view('organizations.index', compact('organizations', 'states'));
     }
 
     public function show(Organization $organization)

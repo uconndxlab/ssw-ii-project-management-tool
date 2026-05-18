@@ -26,27 +26,15 @@ class ProjectController extends Controller
             });
         }
 
-        $sort = $request->input('sort', 'name');
-        $direction = $request->input('direction', 'asc') === 'desc' ? 'desc' : 'asc';
-
-        switch ($sort) {
-            case 'programs':
-                $query->orderBy('programs_count', $direction);
-                break;
-            case 'active':
-                $query->orderBy('active', $direction);
-                break;
-            default:
-                $query->orderBy('name', $direction);
-        }
+        $query->orderBy('name');
 
         $projects = $query->paginate(20)->withQueryString();
 
         if ($request->header('HX-Request')) {
-            return view('projects.partials.table', compact('projects', 'sort', 'direction'));
+            return view('projects.partials.table', compact('projects'));
         }
 
-        return view('projects.index', compact('projects', 'sort', 'direction'));
+        return view('projects.index', compact('projects'));
     }
 
     public function create()

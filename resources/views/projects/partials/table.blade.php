@@ -1,38 +1,12 @@
-@php
-    $s    = $sort ?? 'name';
-    $d    = $direction ?? 'asc';
-    $flip = fn($col) => ($s === $col && $d === 'asc') ? 'desc' : 'asc';
-    $icon = fn($col) => $s === $col ? ($d === 'asc' ? ' ↑' : ' ↓') : '';
-    $url  = fn($col) => route('projects.index', array_merge(request()->query(), ['sort' => $col, 'direction' => $flip($col), 'page' => 1]));
-@endphp
-
 <div class="card shadow-sm">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>
-                        <a class="text-decoration-none fw-semibold text-dark"
-                           href="{{ $url('name') }}"
-                           hx-get="{{ $url('name') }}" hx-target="#projects-table" hx-push-url="true">
-                            Name{!! $icon('name') !!}
-                        </a>
-                    </th>
+                    <th>Name</th>
                     <th>Description</th>
-                    <th>
-                        <a class="text-decoration-none fw-semibold text-dark"
-                           href="{{ $url('programs') }}"
-                           hx-get="{{ $url('programs') }}" hx-target="#projects-table" hx-push-url="true">
-                            Programs{!! $icon('programs') !!}
-                        </a>
-                    </th>
-                    <th>
-                        <a class="text-decoration-none fw-semibold text-dark"
-                           href="{{ $url('active') }}"
-                           hx-get="{{ $url('active') }}" hx-target="#projects-table" hx-push-url="true">
-                            Status{!! $icon('active') !!}
-                        </a>
-                    </th>
+                    <th>Programs</th>
+                    <th>Status</th>
                     <th class="text-end" style="width:170px;">Actions</th>
                 </tr>
             </thead>
