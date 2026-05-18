@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminUserController;
+use App\Http\Controllers\SearchController;
 use App\Http\Controllers\StateController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\AgreementController;
@@ -26,7 +27,8 @@ Route::middleware('guest')->group(function () {
 // Authenticated routes
 Route::middleware('auth')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
-    
+    Route::get('/search', [SearchController::class, 'index'])->name('search');
+
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     
     // Agreements - visible to all authenticated users (with visibility filtering in controller)
