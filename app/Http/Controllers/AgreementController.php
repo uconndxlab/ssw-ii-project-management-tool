@@ -173,18 +173,6 @@ class AgreementController extends Controller
             'extension_start_date' => ['nullable', 'date'],
             'extension_end_date' => ['nullable', 'date', 'after_or_equal:extension_start_date'],
             'certification_candidates' => ['nullable', 'string'],
-            'time_tracking_mode' => ['required', 'in:engagement,participant'],
-
-            'activity_logging_config' => ['nullable', 'array'],
-            'activity_logging_config.event_hours' => ['nullable', 'boolean'],
-            'activity_logging_config.prep_hours' => ['nullable', 'boolean'],
-            'activity_logging_config.followup_hours' => ['nullable', 'boolean'],
-            'activity_logging_config.participant_count' => ['nullable', 'boolean'],
-            'activity_logging_config.external_attendees' => ['nullable', 'boolean'],
-            'activity_logging_config.summary' => ['nullable', 'boolean'],
-            'activity_logging_config.follow_up' => ['nullable', 'boolean'],
-            'activity_logging_config.strengths' => ['nullable', 'boolean'],
-            'activity_logging_config.recommendations' => ['nullable', 'boolean'],
 
             'user_ids' => ['nullable', 'array'],
             'user_ids.*' => ['exists:users,id'],
@@ -200,10 +188,6 @@ class AgreementController extends Controller
             'attachments.*' => ['file', 'max:10240', 'mimes:pdf,doc,docx,xls,xlsx,txt'],
         ]);
 
-        $activityLoggingConfig = $this->normalizeActivityLoggingConfig(
-            $request->input('activity_logging_config', [])
-        );
-
         $agreement = Agreement::create([
             'name' => $validated['name'],
             'project_id' => $validated['project_id'] ?? null,
@@ -213,8 +197,6 @@ class AgreementController extends Controller
             'extension_start_date' => $validated['extension_start_date'] ?? null,
             'extension_end_date' => $validated['extension_end_date'] ?? null,
             'certification_candidates' => $validated['certification_candidates'] ?? null,
-            'activity_logging_config' => $activityLoggingConfig,
-            'time_tracking_mode' => $validated['time_tracking_mode'] ?? 'engagement',
         ]);
 
         $selectedProgramIds = $validated['program_ids'] ?? [];
@@ -293,16 +275,12 @@ class AgreementController extends Controller
         // Lifetime totals
         $lifetimeTotals = [
             'activities' => $activities->count(),
-            'hours' => $activities->sum(fn($e) => $e->event_hours + ($e->prep_hours ?? 0) + ($e->followup_hours ?? 0)),
-            'participants' => $activities->sum('participant_count'),
         ];
         
         // YTD totals (current year)
         $ytdActivities = $activities->filter(fn($e) => $e->engagement_date->year === now()->year);
         $ytdTotals = [
             'activities' => $ytdActivities->count(),
-            'hours' => $ytdActivities->sum(fn($e) => $e->event_hours + ($e->prep_hours ?? 0) + ($e->followup_hours ?? 0)),
-            'participants' => $ytdActivities->sum('participant_count'),
         ];
         
         // Calculate deliverable progress (all activities lifetime)
@@ -330,7 +308,6 @@ class AgreementController extends Controller
             
             return [
                 'deliverable' => $deliverable,
-                'completed_hours' => $matchingActivities->sum(fn($a) => $a->event_hours + ($a->prep_hours ?? 0) + ($a->followup_hours ?? 0)),
                 'completed_activities' => $matchingActivities->count(),
             ];
         });
@@ -379,18 +356,6 @@ class AgreementController extends Controller
             'extension_start_date' => ['nullable', 'date'],
             'extension_end_date' => ['nullable', 'date', 'after_or_equal:extension_start_date'],
             'certification_candidates' => ['nullable', 'string'],
-            'time_tracking_mode' => ['required', 'in:engagement,participant'],
-
-            'activity_logging_config' => ['nullable', 'array'],
-            'activity_logging_config.event_hours' => ['nullable', 'boolean'],
-            'activity_logging_config.prep_hours' => ['nullable', 'boolean'],
-            'activity_logging_config.followup_hours' => ['nullable', 'boolean'],
-            'activity_logging_config.participant_count' => ['nullable', 'boolean'],
-            'activity_logging_config.external_attendees' => ['nullable', 'boolean'],
-            'activity_logging_config.summary' => ['nullable', 'boolean'],
-            'activity_logging_config.follow_up' => ['nullable', 'boolean'],
-            'activity_logging_config.strengths' => ['nullable', 'boolean'],
-            'activity_logging_config.recommendations' => ['nullable', 'boolean'],
 
             'user_ids' => ['nullable', 'array'],
             'user_ids.*' => ['exists:users,id'],
@@ -406,10 +371,6 @@ class AgreementController extends Controller
             'attachments.*' => ['file', 'max:10240', 'mimes:pdf,doc,docx,xls,xlsx,txt'],
         ]);
 
-        $activityLoggingConfig = $this->normalizeActivityLoggingConfig(
-            $request->input('activity_logging_config', [])
-        );
-
         $agreement->update([
             'name' => $validated['name'],
             'project_id' => $validated['project_id'] ?? null,
@@ -419,8 +380,6 @@ class AgreementController extends Controller
             'extension_start_date' => $validated['extension_start_date'] ?? null,
             'extension_end_date' => $validated['extension_end_date'] ?? null,
             'certification_candidates' => $validated['certification_candidates'] ?? null,
-            'activity_logging_config' => $activityLoggingConfig,
-            'time_tracking_mode' => $validated['time_tracking_mode'] ?? 'engagement',
         ]);
 
         $selectedProgramIds = $validated['program_ids'] ?? [];
@@ -588,28 +547,6 @@ class AgreementController extends Controller
         $agreement->load('deliverables.activityType.contactFamily', 'deliverables.assignedUsers');
 
         return view('agreements.partials.deliverable-list', compact('agreement'));
-    }
-
-    protected function normalizeActivityLoggingConfig(?array $submittedConfig = []): array
-    {
-        $defaultActivityLoggingConfig = [
-            'event_hours' => false,
-            'prep_hours' => false,
-            'followup_hours' => false,
-            'participant_count' => false,
-            'external_attendees' => false,
-            'summary' => false,
-            'follow_up' => false,
-            'strengths' => false,
-            'recommendations' => false,
-        ];
-
-        return array_merge(
-            $defaultActivityLoggingConfig,
-            collect($submittedConfig ?? [])
-                ->map(fn ($value) => (bool) $value)
-                ->toArray()
-        );
     }
 
     /**

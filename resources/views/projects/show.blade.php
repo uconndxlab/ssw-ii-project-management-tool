@@ -103,7 +103,7 @@
                                 @endforeach
                             </td>
                             <td>{{ $activity->activityType->name ?? '—' }}</td>
-                            <td class="text-end">{{ number_format($activity->event_hours ?? 0, 1) }}</td>
+                            <td class="text-end">—</td>
                         </tr>
                         @endforeach
                     </tbody>

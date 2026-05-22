@@ -79,22 +79,6 @@
                                     <button
                                         class="btn btn-link p-0 text-decoration-none fw-semibold"
                                         hx-get="{{ route('activities.index', array_merge(request()->query(), [
-                                            'sort' => 'total_hours',
-                                            'direction' => activity_sort_direction('total_hours', $currentSort, $currentDirection),
-                                            'page' => 1,
-                                        ])) }}"
-                                        hx-target="#activities-table"
-                                        hx-swap="innerHTML"
-                                        hx-push-url="true"
-                                    >
-                                        Total Hours {{ activity_sort_icon('total_hours', $currentSort, $currentDirection) }}
-                                    </button>
-                                </th>
-
-                                <th>
-                                    <button
-                                        class="btn btn-link p-0 text-decoration-none fw-semibold"
-                                        hx-get="{{ route('activities.index', array_merge(request()->query(), [
                                             'sort' => 'logged_by',
                                             'direction' => activity_sort_direction('logged_by', $currentSort, $currentDirection),
                                             'page' => 1,
@@ -126,7 +110,6 @@
                                             {{ $activity->activityType->name }}
                                         </span>
                                     </td>
-                                    <td>{{ number_format($activity->total_hours, 2) }}</td>
                                     <td>{{ $activity->user->name }}</td>
                                     <td>
                                         <div class="btn-group btn-group-sm">

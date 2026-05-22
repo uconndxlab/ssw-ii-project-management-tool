@@ -123,7 +123,7 @@
                                     </div>
                                     <div class="small text-muted">{{ $activity->activityType->name }}</div>
                                 </td>
-                                <td>{{ number_format($activity->total_hours, 1) }}</td>
+                                <td>{{ 0 }}</td>
                                 <td>
                                     <div class="small text-muted">
                                         @if($activity->participants->isNotEmpty())

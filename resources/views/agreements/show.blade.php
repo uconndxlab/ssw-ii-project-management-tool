@@ -4,37 +4,7 @@
 
 @section('content')
 
-@php
-    $defaultActivityLoggingConfig = [
-        'event_hours' => true,
-        'prep_hours' => true,
-        'followup_hours' => false,
-        'participant_count' => true,
-        'external_attendees' => true,
-        'summary' => true,
-        'follow_up' => true,
-        'strengths' => false,
-        'recommendations' => false,
-    ];
 
-    $activityLoggingConfig = $agreement->activity_logging_config ?? $defaultActivityLoggingConfig;
-
-    $activityLoggingLabels = [
-        'event_hours' => 'Event Hours',
-        'prep_hours' => 'Prep Hours',
-        'followup_hours' => 'Follow-up Hours',
-        'participant_count' => 'Participants',
-        'external_attendees' => 'External Attendees',
-        'summary' => 'Summary',
-        'follow_up' => 'Follow-Up',
-        'strengths' => 'Strengths',
-        'recommendations' => 'Recommendations',
-    ];
-
-    $enabledActivityLoggingFields = collect($activityLoggingLabels)
-        ->filter(fn ($label, $key) => !empty($activityLoggingConfig[$key]))
-        ->values();
-@endphp
 
 <x-entity-show
     title="{{ $agreement->name }}"
@@ -86,7 +56,6 @@
             <dt class="col-5 text-muted fw-normal small">Activities</dt>
             <dd class="col-7 mb-0">
                 <span class="badge bg-primary rounded-pill">{{ $lifetimeTotals['activities'] }}</span>
-                <small class="text-muted d-block">{{ number_format($lifetimeTotals['hours'], 1) }} hrs lifetime</small>
             </dd>
         </dl>
 
@@ -96,15 +65,7 @@
             <p class="small mb-0">{{ $agreement->abstract }}</p>
         @endif
 
-        @if($enabledActivityLoggingFields->isNotEmpty())
-            <hr>
-            <h6 class="text-muted fw-normal small mb-2">Logging Fields</h6>
-            <div class="d-flex flex-wrap gap-1">
-                @foreach($enabledActivityLoggingFields as $fieldLabel)
-                    <span class="badge bg-light text-dark border">{{ $fieldLabel }}</span>
-                @endforeach
-            </div>
-        @endif
+
 
         <hr>
         <a href="{{ route('activities.create') }}?agreement_id={{ $agreement->id }}" class="btn btn-sm btn-success w-100">
@@ -261,8 +222,6 @@
                             <th>Date</th>
                             <th>Contact Family</th>
                             <th>Activity Type</th>
-                            <th class="text-end">Hrs</th>
-                            <th>Participants</th>
                             <th>Logged By</th>
                         </tr>
                     </thead>
@@ -276,8 +235,6 @@
                             </td>
                             <td><span class="badge bg-primary">{{ $activity->activityType->contactFamily->name }}</span></td>
                             <td class="small">{{ $activity->activityType->name }}</td>
-                            <td class="text-end">{{ number_format($activity->total_hours, 1) }}</td>
-                            <td>{{ $activity->participant_count ?? '—' }}</td>
                             <td class="small text-muted">{{ $activity->user->name }}</td>
                         </tr>
                         @endforeach
