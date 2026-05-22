@@ -110,6 +110,23 @@
         <a href="{{ route('activities.create') }}?agreement_id={{ $agreement->id }}" class="btn btn-sm btn-success w-100">
             Log Activity
         </a>
+
+        @if($agreement->attachments->isNotEmpty())
+            <hr>
+            <h6 class="text-muted fw-normal small mb-2">Attachments</h6>
+            @foreach($agreement->attachments as $attachment)
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="small text-truncate me-2" title="{{ $attachment->filename }}">
+                        <i class="bi bi-file-earmark me-1"></i>{{ $attachment->filename }}
+                    </div>
+                    <a href="{{ $attachment->download_url }}"
+                       class="btn btn-sm btn-outline-primary text-nowrap"
+                       target="_blank">
+                        View / Download
+                    </a>
+                </div>
+            @endforeach
+        @endif
     </x-slot:summary>
 
     {{-- ── Relationships ───────────────────────────────────────────────── --}}
@@ -172,6 +189,15 @@
                         <strong class="d-block">{{ $progress['deliverable']->activityType?->name ?? 'Unspecified Activity Type' }}</strong>
                         @if($progress['deliverable']->contactFamily)
                             <small class="text-muted">{{ $progress['deliverable']->contactFamily->name }}</small>
+                        @endif
+
+                        @if($progress['deliverable']->assignedUsers?->isNotEmpty())
+                            <div class="mt-1 mb-1">
+                                <small class="text-muted">Assigned: </small>
+                                @foreach($progress['deliverable']->assignedUsers as $assignedUser)
+                                    <span class="badge bg-secondary me-1">{{ $assignedUser->name }}</span>
+                                @endforeach
+                            </div>
                         @endif
 
                         @if($progress['deliverable']->required_hours)

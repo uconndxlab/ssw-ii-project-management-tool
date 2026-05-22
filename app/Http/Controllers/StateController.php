@@ -17,37 +17,16 @@ class StateController extends Controller
             $query->where('name', 'like', "%{$search}%");
         }
 
-        // Sorting
-        $sort = $request->input('sort', 'name');
-        $direction = $request->input('direction', 'asc') === 'desc' ? 'desc' : 'asc';
-
-        switch ($sort) {
-            case 'organizations':
-                $query->orderBy('organizations_count', $direction);
-                break;
-
-            case 'agreements':
-                $query->orderBy('agreements_count', $direction);
-                break;
-
-            case 'created':
-                $query->orderBy('created_at', $direction);
-                break;
-
-            case 'name':
-            default:
-                $query->orderBy('name', $direction);
-                break;
-        }
+        $query->orderBy('name');
 
         $states = $query->paginate(20)->withQueryString();
 
         // HTMX: table only
         if ($request->header('HX-Request') === 'true') {
-            return view('states.partials.table', compact('states', 'sort', 'direction'));
+            return view('states.partials.table', compact('states'));
         }
 
-        return view('states.index', compact('states', 'sort', 'direction'));
+        return view('states.index', compact('states'));
     }
 
     public function create()
@@ -72,7 +51,20 @@ class StateController extends Controller
     {
         $state->load(['organizations.agreements', 'agreements.organizations', 'agreements.users']);
 
-        return view('states.show', compact('state'));
+        // Deduplicate staff across all agreements in this state, tagging agreement names
+        $staffMembersMap = [];
+        foreach ($state->agreements as $agreement) {
+            foreach ($agreement->users as $user) {
+                if (!isset($staffMembersMap[$user->id])) {
+                    $staffMembersMap[$user->id] = clone $user;
+                    $staffMembersMap[$user->id]->via_agreements = collect();
+                }
+                $staffMembersMap[$user->id]->via_agreements->push($agreement->name);
+            }
+        }
+        $staffMembers = collect($staffMembersMap)->sortBy('name');
+
+        return view('states.show', compact('state', 'staffMembers'));
     }
 
     public function edit(State $state)

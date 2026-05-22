@@ -60,6 +60,29 @@
                   maxlength="500">{{ $deliverable->notes }}</textarea>
     </div>
 
+    <div class="mb-3">
+        <label class="form-label">Assigned Users</label>
+        @if($users->isEmpty())
+            <p class="text-muted small mb-0">No users available.</p>
+        @else
+            <div class="border rounded p-2" style="max-height:180px;overflow-y:auto;">
+                @foreach($users as $user)
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox"
+                               name="user_ids[]"
+                               value="{{ $user->id }}"
+                               id="edit_del_user_{{ $deliverable->id }}_{{ $user->id }}"
+                               {{ in_array($user->id, $assignedUserIds) ? 'checked' : '' }}>
+                        <label class="form-check-label" for="edit_del_user_{{ $deliverable->id }}_{{ $user->id }}">
+                            {{ $user->name }}
+                            <span class="text-muted small">{{ ucfirst($user->role) }}</span>
+                        </label>
+                    </div>
+                @endforeach
+            </div>
+        @endif
+    </div>
+
     <div class="modal-footer px-0 pb-0">
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
         <button type="submit" class="btn btn-primary">Save Changes</button>

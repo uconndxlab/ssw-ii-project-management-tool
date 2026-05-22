@@ -3,10 +3,10 @@
         <h5 class="mb-0">Quick Search</h5>
     </div>
     <div class="card-body">
-        <form action="{{ route('agreements.index') }}" method="get" class="d-flex gap-2">
-            <input type="text" name="search" class="form-control form-control-sm" placeholder="Search agreements, organizations..." value="{{ request('search', '') }}">
+        <form action="{{ route('search') }}" method="get" class="d-flex gap-2">
+            <input type="text" name="q" class="form-control form-control-sm" placeholder="Search agreements, organizations, people..." value="{{ request('q', '') }}">
             <button type="submit" class="btn btn-primary btn-sm">Search</button>
         </form>
-        <small class="text-muted d-block mt-2">💡 Tip: Search will look across agreements, organizations, states, and activity types.</small>
+        <small class="text-muted d-block mt-2">💡 Tip: Search across agreements, organizations, and people.</small>
     </div>
 </div>

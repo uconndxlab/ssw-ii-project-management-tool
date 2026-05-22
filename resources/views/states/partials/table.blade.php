@@ -1,44 +1,12 @@
-@php
-    $s    = $sort ?? 'name';
-    $d    = $direction ?? 'asc';
-    $flip = fn($col) => ($s === $col && $d === 'asc') ? 'desc' : 'asc';
-    $icon = fn($col) => $s === $col ? ($d === 'asc' ? ' ↑' : ' ↓') : '';
-    $url  = fn($col) => route('states.index', array_merge(request()->query(), ['sort' => $col, 'direction' => $flip($col), 'page' => 1]));
-@endphp
-
 <div class="card shadow-sm">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>
-                        <a class="text-decoration-none fw-semibold text-dark"
-                           href="{{ $url('name') }}"
-                           hx-get="{{ $url('name') }}" hx-target="#states-table" hx-swap="innerHTML" hx-push-url="true">
-                            Name{!! $icon('name') !!}
-                        </a>
-                    </th>
-                    <th>
-                        <a class="text-decoration-none fw-semibold text-dark"
-                           href="{{ $url('organizations') }}"
-                           hx-get="{{ $url('organizations') }}" hx-target="#states-table" hx-swap="innerHTML" hx-push-url="true">
-                            Organizations{!! $icon('organizations') !!}
-                        </a>
-                    </th>
-                    <th>
-                        <a class="text-decoration-none fw-semibold text-dark"
-                           href="{{ $url('agreements') }}"
-                           hx-get="{{ $url('agreements') }}" hx-target="#states-table" hx-swap="innerHTML" hx-push-url="true">
-                            Agreements{!! $icon('agreements') !!}
-                        </a>
-                    </th>
-                    <th>
-                        <a class="text-decoration-none fw-semibold text-dark"
-                           href="{{ $url('created') }}"
-                           hx-get="{{ $url('created') }}" hx-target="#states-table" hx-swap="innerHTML" hx-push-url="true">
-                            Created{!! $icon('created') !!}
-                        </a>
-                    </th>
+                    <th>Name</th>
+                    <th>Organizations</th>
+                    <th>Agreements</th>
+                    <th>Created</th>
                     <th class="text-end" style="width:160px;">Actions</th>
                 </tr>
             </thead>

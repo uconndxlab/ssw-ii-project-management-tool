@@ -48,7 +48,7 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('agreements.update', $agreement) }}" id="agreements-edit-form">
+                <form method="POST" action="{{ route('agreements.update', $agreement) }}" id="agreements-edit-form" enctype="multipart/form-data">
                     @csrf
                     @method('PUT')
 
@@ -403,6 +403,49 @@
             </div>
         </div>
 
+        {{-- Attachments --}}
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="mb-3">Attachments</h5>
+
+                @if($agreement->attachments->isNotEmpty())
+                    <div class="mb-3">
+                        @foreach($agreement->attachments as $attachment)
+                            <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
+                                <div class="small">
+                                    <a href="{{ $attachment->download_url }}" target="_blank" class="text-decoration-none">
+                                        {{ $attachment->filename }}
+                                    </a>
+                                    <span class="text-muted ms-2">{{ $attachment->formatted_size }}</span>
+                                </div>
+                                <form method="POST"
+                                      action="{{ route('agreements.attachments.destroy', [$agreement, $attachment]) }}"
+                                      onsubmit="return confirm('Delete {{ addslashes($attachment->filename) }}?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+                                </form>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+
+                <div class="mb-0">
+                    <label class="form-label">Upload New Attachment(s)</label>
+                    <input type="file"
+                           class="form-control @error('attachments.*') is-invalid @enderror"
+                           name="attachments[]"
+                           form="agreements-edit-form"
+                           multiple
+                           accept=".pdf,.doc,.docx,.xls,.xlsx,.txt">
+                    <div class="form-text">PDF, Word, Excel, or text files. Max 10MB each. Saves with the form.</div>
+                    @error('attachments.*')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
+            </div>
+        </div>
+
         <div class="card mb-4">
             <div class="card-body">
                 <label class="form-label">Quick Add User</label>
@@ -510,6 +553,28 @@
                                           rows="2"></textarea>
                             </div>
 
+                            <div class="mb-3">
+                                <label class="form-label">Assign Users</label>
+                                @if($users->isEmpty())
+                                    <p class="text-muted small mb-0">No users available.</p>
+                                @else
+                                    <div class="border rounded p-2" style="max-height:150px;overflow-y:auto;">
+                                        @foreach($users as $user)
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox"
+                                                       name="user_ids[]"
+                                                       value="{{ $user->id }}"
+                                                       id="new_del_user_{{ $user->id }}">
+                                                <label class="form-check-label" for="new_del_user_{{ $user->id }}">
+                                                    {{ $user->name }}
+                                                    <span class="text-muted small">{{ ucfirst($user->role) }}</span>
+                                                </label>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @endif
+                            </div>
+
                             <button type="submit" class="btn btn-sm btn-outline-primary">
                                 Add Deliverable
                             </button>
@@ -526,6 +591,7 @@
                                 <th class="text-center">Hours</th>
                                 <th class="text-center">Activities</th>
                                 <th>Notes</th>
+                                <th>Assigned</th>
                                 <th></th>
                             </tr>
                         </thead>

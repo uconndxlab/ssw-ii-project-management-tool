@@ -30,43 +30,21 @@ class OrganizationController extends Controller
             $query->whereHas('states', fn ($q) => $q->where('states.id', $request->integer('state_id')));
         }
 
-        // Sorting
-        $sort = $request->input('sort', 'name');
-        $direction = $request->input('direction', 'asc') === 'desc' ? 'desc' : 'asc';
-
-        switch ($sort) {
-            case 'agreements':
-                $query->withCount('agreements')->orderBy('agreements_count', $direction);
-                break;
-
-            case 'created':
-                $query->orderBy('created_at', $direction);
-                break;
-
-            case 'name':
-            default:
-                $query->orderBy('name', $direction);
-                break;
-        }
+        $query->orderBy('name');
 
         $organizations = $query->paginate(20)->withQueryString();
 
         // HTMX: filters only
         if ($request->header('HX-Request') === 'true' && $request->input('partial') === 'filters') {
-            return view('organizations.partials.filters', compact('states', 'sort', 'direction'));
+            return view('organizations.partials.filters', compact('states'));
         }
 
         // HTMX: table only
         if ($request->header('HX-Request') === 'true') {
-            return view('organizations.partials.table', compact('organizations', 'sort', 'direction'));
+            return view('organizations.partials.table', compact('organizations'));
         }
 
-        return view('organizations.index', compact(
-            'organizations',
-            'states',
-            'sort',
-            'direction'
-        ));
+        return view('organizations.index', compact('organizations', 'states'));
     }
 
     public function show(Organization $organization)
@@ -85,8 +63,18 @@ class OrganizationController extends Controller
         // Recent activities (last 5)
         $recentActivities = $allActivities->take(5);
         
-        // Unique team members across all agreements
-        $teamMembers = $agreements->pluck('users')->flatten()->unique('id')->sortBy('name');
+        // Deduplicate staff across all agreements, collecting agreement names per user
+        $teamMembersMap = [];
+        foreach ($agreements as $agreement) {
+            foreach ($agreement->users as $user) {
+                if (!isset($teamMembersMap[$user->id])) {
+                    $teamMembersMap[$user->id] = clone $user;
+                    $teamMembersMap[$user->id]->via_agreements = collect();
+                }
+                $teamMembersMap[$user->id]->via_agreements->push($agreement->name);
+            }
+        }
+        $teamMembers = collect($teamMembersMap)->sortBy('name');
         
         // YTD activities
         $ytdActivities = $allActivities->filter(fn($e) => $e->engagement_date->year === now()->year);

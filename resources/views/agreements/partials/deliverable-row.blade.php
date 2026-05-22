@@ -4,6 +4,13 @@
     <td class="text-center">{{ $deliverable->required_hours !== null ? number_format($deliverable->required_hours, 1) : '—' }}</td>
     <td class="text-center">{{ $deliverable->required_activities ?? '—' }}</td>
     <td>{{ $deliverable->notes ?? '' }}</td>
+    <td>
+        @forelse($deliverable->assignedUsers ?? [] as $user)
+            <span class="badge bg-secondary me-1">{{ $user->name }}</span>
+        @empty
+            <span class="text-muted small">—</span>
+        @endforelse
+    </td>
     <td class="text-end text-nowrap">
         <button type="button"
                 class="btn btn-sm btn-outline-secondary"

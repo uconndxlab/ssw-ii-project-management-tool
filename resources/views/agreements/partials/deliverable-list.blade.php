@@ -3,6 +3,6 @@
 @endforeach
 @if($agreement->deliverables->isEmpty())
 <tr>
-    <td colspan="6" class="text-muted text-center py-3">No deliverables defined yet</td>
+    <td colspan="7" class="text-muted text-center py-3">No deliverables defined yet</td>
 </tr>
 @endif
