@@ -309,6 +309,7 @@ class AgreementController extends Controller
             return [
                 'deliverable' => $deliverable,
                 'completed_activities' => $matchingActivities->count(),
+                'completed_hours' => $matchingActivities->sum(fn ($a) => ($a->event_hours ?? 0) + ($a->prep_hours ?? 0) + ($a->followup_hours ?? 0)),
             ];
         });
         

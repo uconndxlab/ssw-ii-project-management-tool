@@ -27,6 +27,11 @@ class Program extends Model
         return $this->belongsToMany(Activity::class, 'activity_program')->withTimestamps();
     }
 
+    public function agreements(): BelongsToMany
+    {
+        return $this->belongsToMany(Agreement::class, 'agreement_program')->withTimestamps();
+    }
+
     public function agreementCertificationCandidates(): HasMany
     {
         return $this->hasMany(AgreementCertificationCandidate::class);
@@ -35,5 +40,10 @@ class Program extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function organizations(): BelongsToMany
+    {
+        return $this->belongsToMany(Organization::class, 'organization_program')->withTimestamps();
     }
 }

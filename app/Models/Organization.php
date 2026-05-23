@@ -26,11 +26,13 @@ class Organization extends Model
         return $this->belongsToMany(Activity::class, 'activity_organization')->withTimestamps();
     }
 
-    /**
-     * Legacy accessor for backwards compatibility during migration
-     */
+    public function programs(): BelongsToMany
+    {
+        return $this->belongsToMany(Program::class, 'organization_program')->withTimestamps();
+    }
+
     public function projects(): BelongsToMany
     {
-        return $this->agreements();
+        return $this->belongsToMany(Project::class, 'organization_project')->withTimestamps();
     }
 }

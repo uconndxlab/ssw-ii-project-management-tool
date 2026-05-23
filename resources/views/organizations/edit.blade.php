@@ -53,6 +53,34 @@
                         @enderror
                     </div>
 
+                    <div class="mb-3">
+                        <label class="form-label">Projects</label>
+                        <x-token-picker
+                            picker-id="organization-projects"
+                            name="project_ids[]"
+                            :items="$projects"
+                            :selected-ids="old('project_ids', $organization->projects->pluck('id')->toArray())"
+                            placeholder="Search projects..."
+                        />
+                        @error('project_ids')
+                            <div class="text-danger small mt-1">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Programs</label>
+                        <x-token-picker
+                            picker-id="organization-programs"
+                            name="program_ids[]"
+                            :items="$programs"
+                            :selected-ids="old('program_ids', $organization->programs->pluck('id')->toArray())"
+                            placeholder="Search programs..."
+                        />
+                        @error('program_ids')
+                            <div class="text-danger small mt-1">{{ $message }}</div>
+                        @enderror
+                    </div>
+
                 </form>
             </div>
         </div>
