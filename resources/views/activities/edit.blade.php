@@ -43,7 +43,7 @@
         <div class="row g-4">
             <div class="col-lg-8">
                 <div class="d-grid gap-4">
-                    <x-section-card title="1) Agreements & Coverage" subtitle="Update agreement context first.">
+                    <x-section-card title="Agreements & Coverage" subtitle="Update agreement context first.">
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Agreements</label>
                             <x-token-picker
@@ -89,45 +89,7 @@
                         </div>
                     </x-section-card>
 
-                    <x-section-card title="1b) Agreement Logging Fields" subtitle="Agreement-specific questions are grouped below each selected agreement.">
-                        <div id="agreement-logging-groups" class="d-grid gap-3">
-                            @foreach($agreements as $agreement)
-                                <div class="border rounded p-3 d-none" data-agreement-logging-group="{{ $agreement->id }}">
-                                    <div class="d-flex justify-content-between align-items-center mb-3">
-                                        <div>
-                                            <h5 class="mb-1">{{ $agreement->name }}</h5>
-                                            <p class="small text-muted mb-0">Agreement-level logging fields</p>
-                                        </div>
-                                    </div>
-
-                                    @if($agreement->agreementLoggingFields->isEmpty())
-                                        <div class="text-muted small">No agreement-specific logging fields are assigned to this agreement.</div>
-                                    @else
-                                        <div class="row g-3">
-                                            @foreach($agreement->agreementLoggingFields as $field)
-                                                <div class="col-md-6">
-                                                    @include('activities.partials.logging-field-input', [
-                                                        'field' => $field,
-                                                        'inputName' => "agreement_logging_values[{$agreement->id}][{$field->id}]",
-                                                        'oldKey' => "agreement_logging_values.{$agreement->id}.{$field->id}",
-                                                        'value' => data_get($agreementLoggingData, "{$agreement->id}.{$field->id}"),
-                                                        'inputId' => "agreement_{$agreement->id}_field_{$field->id}",
-                                                        'isRequired' => (bool) $field->pivot->is_required,
-                                                    ])
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                    @endif
-                                </div>
-                            @endforeach
-
-                            <div id="agreement-logging-empty" class="text-muted small border rounded p-3">
-                                Select one or more agreements to see their grouped logging fields.
-                            </div>
-                        </div>
-                    </x-section-card>
-
-                    <x-section-card title="2) Activity Classification" subtitle="Contact family controls available activity types.">
+                    <x-section-card title="Activity Classification" subtitle="Contact family controls available activity types.">
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label for="contact_family_id" class="form-label fw-semibold">
@@ -199,12 +161,50 @@
                             @endforeach
                         </div>
                     </x-section-card>
+
+                    <x-section-card title="Agreement Logging Fields" subtitle="Agreement-specific questions are grouped below each selected agreement.">
+                        <div id="agreement-logging-groups" class="d-grid gap-3">
+                            @foreach($agreements as $agreement)
+                                <div class="border rounded p-3 d-none" data-agreement-logging-group="{{ $agreement->id }}">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div>
+                                            <h5 class="mb-1">{{ $agreement->name }}</h5>
+                                            <p class="small text-muted mb-0">Agreement-level logging fields</p>
+                                        </div>
+                                    </div>
+
+                                    @if($agreement->agreementLoggingFields->isEmpty())
+                                        <div class="text-muted small">No agreement-specific logging fields are assigned to this agreement.</div>
+                                    @else
+                                        <div class="row g-3">
+                                            @foreach($agreement->agreementLoggingFields as $field)
+                                                <div class="col-md-6">
+                                                    @include('activities.partials.logging-field-input', [
+                                                        'field' => $field,
+                                                        'inputName' => "agreement_logging_values[{$agreement->id}][{$field->id}]",
+                                                        'oldKey' => "agreement_logging_values.{$agreement->id}.{$field->id}",
+                                                        'value' => data_get($agreementLoggingData, "{$agreement->id}.{$field->id}"),
+                                                        'inputId' => "agreement_{$agreement->id}_field_{$field->id}",
+                                                        'isRequired' => (bool) $field->pivot->is_required,
+                                                    ])
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @endif
+                                </div>
+                            @endforeach
+
+                            <div id="agreement-logging-empty" class="text-muted small border rounded p-3">
+                                Select one or more agreements to see their grouped logging fields.
+                            </div>
+                        </div>
+                    </x-section-card>
                 </div>
             </div>
 
             <div class="col-lg-4">
                 <div class="d-grid gap-4">
-                    <x-section-card title="3) Details" subtitle="Date and visibility.">
+                    <x-section-card title="Details" subtitle="Date and visibility.">
                         <div class="mb-3">
                             <label for="engagement_date" class="form-label fw-semibold">Date <span class="text-danger">*</span></label>
                             <input type="date"
