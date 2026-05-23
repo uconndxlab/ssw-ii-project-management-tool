@@ -14,9 +14,6 @@
     {{-- ── Summary ─────────────────────────────────────────────────────── --}}
     <x-slot:summary>
         <dl class="row mb-0">
-            <dt class="col-5 text-muted fw-normal small">Name</dt>
-            <dd class="col-7 mb-2 fw-semibold">{{ $program->name }}</dd>
-
             <dt class="col-5 text-muted fw-normal small">Status</dt>
             <dd class="col-7 mb-2">
                 @if($program->active)
@@ -26,7 +23,7 @@
                 @endif
             </dd>
 
-            <dt class="col-5 text-muted fw-normal small">Parent Project</dt>
+            <dt class="col-5 text-muted fw-normal small">Project</dt>
             <dd class="col-7 mb-2">
                 @if($program->project)
                     <a href="{{ route('projects.show', $program->project) }}" class="text-decoration-none">
@@ -37,54 +34,137 @@
                 @endif
             </dd>
 
+            <dt class="col-5 text-muted fw-normal small">Agreements</dt>
+            <dd class="col-7 mb-2">
+                <span class="badge bg-success rounded-pill">{{ $agreements->count() }}</span>
+            </dd>
+
+            <dt class="col-5 text-muted fw-normal small">Organizations</dt>
+            <dd class="col-7 mb-2">
+                <span class="badge bg-primary rounded-pill">{{ $organizations->count() }}</span>
+            </dd>
+
+            <dt class="col-5 text-muted fw-normal small">Staff</dt>
+            <dd class="col-7 mb-2">
+                <span class="badge bg-secondary rounded-pill">{{ $users->count() }}</span>
+            </dd>
+
             <dt class="col-5 text-muted fw-normal small">Activities</dt>
             <dd class="col-7 mb-2">
                 <span class="badge bg-primary rounded-pill">{{ $program->activities->count() }}</span>
             </dd>
 
+            <dt class="col-5 text-muted fw-normal small">States</dt>
+            <dd class="col-7 mb-2">
+                @forelse($states as $state)
+                    <a href="{{ route('states.show', $state) }}" class="badge bg-info text-dark text-decoration-none me-1">
+                        {{ $state->name }}
+                    </a>
+                @empty
+                    <span class="text-muted">—</span>
+                @endforelse
+            </dd>
+
             <dt class="col-5 text-muted fw-normal small">Added</dt>
             <dd class="col-7 mb-0 small text-muted">{{ $program->created_at->format('M d, Y') }}</dd>
         </dl>
+
+        @if($program->description)
+            <hr>
+            <h6 class="text-muted fw-normal small mb-1">Description</h6>
+            <p class="mb-0 small">{{ $program->description }}</p>
+        @endif
     </x-slot:summary>
 
     {{-- ── Relationships ───────────────────────────────────────────────── --}}
     <x-slot:relationships>
-        @if($program->project)
-        <div class="mb-4">
-            <h6 class="fw-semibold mb-2">Parent Project</h6>
-            <div class="d-flex align-items-center gap-2 p-3 rounded border">
-                <span class="badge bg-dark">Project</span>
-                <a href="{{ route('projects.show', $program->project) }}" class="fw-semibold text-decoration-none">
-                    {{ $program->project->name }}
-                </a>
-                @if(!$program->project->active)
-                    <span class="badge bg-secondary ms-auto">Inactive</span>
-                @endif
-            </div>
-        </div>
-        @endif
+        <div class="row g-4">
 
-        {{-- Agreements linked via activities --}}
-        @php
-            $linkedAgreements = $program->activities
-                ->flatMap(fn($a) => $a->agreements)
-                ->unique('id')
-                ->sortBy('name');
-        @endphp
-        <div>
-            <h6 class="fw-semibold mb-2">
-                Agreements (via activities)
-                <span class="badge bg-success rounded-pill ms-1">{{ $linkedAgreements->count() }}</span>
-            </h6>
-            @forelse($linkedAgreements as $agreement)
-                <div class="py-2 border-bottom">
-                    <a href="{{ route('agreements.show', $agreement) }}" class="text-decoration-none fw-semibold">
-                        {{ $agreement->name }}
-                    </a>
+            {{-- Agreements --}}
+            <div class="col-md-6">
+                <h6 class="fw-semibold mb-3">
+                    Agreements
+                    <span class="badge bg-success rounded-pill ms-1">{{ $agreements->count() }}</span>
+                </h6>
+                @forelse($agreements as $agreement)
+                    <div class="py-2 border-bottom">
+                        <a href="{{ route('agreements.show', $agreement) }}" class="text-decoration-none fw-semibold d-block">
+                            {{ $agreement->name }}
+                        </a>
+                        <div class="d-flex flex-wrap gap-1 mt-1">
+                            @foreach($agreement->states as $state)
+                                <a href="{{ route('states.show', $state) }}" class="badge bg-info text-dark text-decoration-none">
+                                    {{ $state->name }}
+                                </a>
+                            @endforeach
+                            @if($agreement->users->isNotEmpty())
+                                <small class="text-muted">{{ $agreement->users->count() }} staff</small>
+                            @endif
+                        </div>
+                    </div>
+                @empty
+                    <p class="text-muted small mb-0">No agreements linked to this program yet.</p>
+                @endforelse
+            </div>
+
+            {{-- Organizations --}}
+            <div class="col-md-6">
+                <h6 class="fw-semibold mb-3">
+                    Organizations
+                    <span class="badge bg-primary rounded-pill ms-1">{{ $organizations->count() }}</span>
+                </h6>
+                @forelse($organizations as $org)
+                    <div class="py-2 border-bottom">
+                        <a href="{{ route('organizations.show', $org) }}" class="text-decoration-none fw-semibold d-block">
+                            {{ $org->name }}
+                        </a>
+                        <div class="d-flex flex-wrap gap-1 mt-1">
+                            @foreach($org->states as $state)
+                                <a href="{{ route('states.show', $state) }}" class="badge bg-info text-dark text-decoration-none">
+                                    {{ $state->name }}
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                @empty
+                    <p class="text-muted small mb-0">No organizations linked.</p>
+                @endforelse
+            </div>
+
+            {{-- Staff --}}
+            <div class="col-12">
+                <h6 class="fw-semibold mb-1">
+                    Assigned Staff
+                    <span class="badge bg-secondary rounded-pill ms-1">{{ $users->count() }}</span>
+                </h6>
+                <p class="text-muted small mb-3">Staff are assigned at the agreement level.</p>
+                <div class="row g-2">
+                    @forelse($users as $user)
+                        <div class="col-md-4 col-sm-6">
+                            <div class="py-2 border-bottom">
+                                <a href="{{ route('users.show', $user) }}" class="text-decoration-none fw-semibold small d-block">
+                                    {{ $user->name }}
+                                </a>
+                                @if($user->email)
+                                    <div class="small text-muted">{{ $user->email }}</div>
+                                @endif
+                                @if($user->via_agreements?->isNotEmpty())
+                                    <div class="mt-1 d-flex flex-wrap gap-1">
+                                        @foreach($user->via_agreements as $agreementName)
+                                            <span class="badge bg-success-subtle text-success-emphasis" style="font-size:.7rem;">{{ $agreementName }}</span>
+                                        @endforeach
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    @empty
+                        <div class="col-12">
+                            <p class="text-muted small mb-0">No staff assigned via agreements.</p>
+                        </div>
+                    @endforelse
                 </div>
-            @empty
-                <p class="text-muted small mb-0">No agreements linked to this program yet.</p>
-            @endforelse
+            </div>
+
         </div>
     </x-slot:relationships>
 
