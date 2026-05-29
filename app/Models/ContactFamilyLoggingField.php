@@ -64,6 +64,7 @@ class ContactFamilyLoggingField extends Model
             'textarea' => 'Textarea',
             'checkbox' => 'Checkbox',
             'select' => 'Select',
+            'document' => 'Document Upload',
         ];
     }
 }

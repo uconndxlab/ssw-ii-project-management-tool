@@ -59,17 +59,40 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="duration_days" class="form-label">Duration (Days)</label>
-                        <input type="number"
-                               class="form-control @error('duration_days') is-invalid @enderror"
-                               id="duration_days"
-                               name="duration_days"
-                               value="{{ old('duration_days', $activityType->duration_days) }}"
-                               min="0">
-                        @error('duration_days')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                        <div class="form-text">Number of days associated with this activity type for reporting purposes.</div>
+                        <label class="form-label">Duration</label>
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <div class="input-group">
+                                    <input type="number"
+                                           class="form-control @error('duration_days') is-invalid @enderror"
+                                           id="duration_days"
+                                           name="duration_days"
+                                           value="{{ old('duration_days', $activityType->duration_days) }}"
+                                           min="0"
+                                           placeholder="0">
+                                    <span class="input-group-text">days</span>
+                                    @error('duration_days')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="input-group">
+                                    <input type="number"
+                                           class="form-control @error('duration_hours') is-invalid @enderror"
+                                           id="duration_hours"
+                                           name="duration_hours"
+                                           value="{{ old('duration_hours', $activityType->duration_hours) }}"
+                                           min="0"
+                                           placeholder="0">
+                                    <span class="input-group-text">hours</span>
+                                    @error('duration_hours')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-text">Duration associated with this activity type for reporting purposes. Both fields are optional and independent.</div>
                     </div>
 
                     <div class="mb-3">

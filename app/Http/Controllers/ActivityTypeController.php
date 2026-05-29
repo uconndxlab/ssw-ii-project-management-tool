@@ -61,6 +61,11 @@ class ActivityTypeController extends Controller
                     ->orderBy('name');
                 break;
 
+            case 'duration_hours':
+                $query->orderBy('duration_hours', $direction)
+                    ->orderBy('name');
+                break;
+
             case 'active':
                 $query->orderBy('active', $direction)
                     ->orderBy('name');
@@ -105,6 +110,7 @@ class ActivityTypeController extends Controller
             'active' => ['boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'duration_days' => ['nullable', 'integer', 'min:0'],
+            'duration_hours' => ['nullable', 'integer', 'min:0'],
         ]);
 
         $exists = ActivityType::where('contact_family_id', $validated['contact_family_id'])
@@ -122,6 +128,7 @@ class ActivityTypeController extends Controller
         $validated['active'] = $request->has('active');
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
         $validated['duration_days'] = $validated['duration_days'] ?? 0;
+        $validated['duration_hours'] = $validated['duration_hours'] ?? 0;
 
         ActivityType::create($validated);
 
@@ -145,6 +152,7 @@ class ActivityTypeController extends Controller
             'active' => ['boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'duration_days' => ['nullable', 'integer', 'min:0'],
+            'duration_hours' => ['nullable', 'integer', 'min:0'],
         ]);
 
         $exists = ActivityType::where('contact_family_id', $validated['contact_family_id'])
@@ -163,6 +171,7 @@ class ActivityTypeController extends Controller
         $validated['active'] = $request->has('active');
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
         $validated['duration_days'] = $validated['duration_days'] ?? 0;
+        $validated['duration_hours'] = $validated['duration_hours'] ?? 0;
 
         $activityType->update($validated);
 
