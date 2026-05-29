@@ -69,7 +69,7 @@ class ContactFamilyLoggingFieldController extends Controller
     public function show(ContactFamilyLoggingField $contactFamilyLoggingField)
     {
         $contactFamilyLoggingField->load(['contactFamilies' => function ($query) {
-            $query->select('id', 'name')->orderBy('name');
+            $query->select('contact_families.id', 'contact_families.name')->orderBy('contact_families.name');
         }]);
 
         return view('contact-family-logging-fields.show', compact('contactFamilyLoggingField'));
