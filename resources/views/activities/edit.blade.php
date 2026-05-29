@@ -36,7 +36,7 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('activities.update', $activity) }}" id="activity-edit-form">
+    <form method="POST" action="{{ route('activities.update', $activity) }}" id="activity-edit-form" enctype="multipart/form-data">
         @csrf
         @method('PUT')
 

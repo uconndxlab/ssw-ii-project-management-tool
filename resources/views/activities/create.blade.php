@@ -37,7 +37,7 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('activities.store') }}" id="activity-create-form">
+    <form method="POST" action="{{ route('activities.store') }}" id="activity-create-form" enctype="multipart/form-data">
         @csrf
 
         <div class="row g-4">

@@ -37,6 +37,26 @@
                    {{ old($oldKey ?? '', $value) ? 'checked' : '' }}>
             <label class="form-check-label" for="{{ $inputId }}">Yes</label>
         </div>
+    @elseif($field->field_type === 'document')
+        <input type="file"
+               class="form-control"
+               id="{{ $inputId }}"
+               name="{{ $inputName }}"
+               accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg">
+        @if(!empty($value))
+            <div class="mt-1 small">
+                <span class="text-muted">Current file:</span>
+                <a href="{{ route('activities.logging-field-document.download', [
+                    'activity' => $activity ?? 0,
+                    'context'  => str_starts_with($inputName, 'contact_family') ? 'contact_family' : 'agreement',
+                    'fieldId'  => $field->id,
+                    'agreementId' => $agreementId ?? null,
+                ]) }}" class="text-decoration-none" target="_blank">
+                    {{ basename($value) }}
+                </a>
+                <span class="text-muted">(upload a new file to replace)</span>
+            </div>
+        @endif
     @elseif(in_array($field->field_type, ['number', 'decimal'], true))
         <input type="number"
                class="form-control"

@@ -383,7 +383,7 @@ class ActivityController extends Controller
         $activity->update([
             'engagement_date' => $validated['engagement_date'],
             'activity_type_id' => $validated['activity_type_id'],
-            'logging_field_data' => $this->extractLoggingFieldData($validated, $agreements, $contactFamily),
+            'logging_field_data' => $this->extractLoggingFieldData($validated, $agreements, $contactFamily, $activity),
             'internal_only' => $validated['internal_only'] ?? false,
         ]);
 
@@ -531,19 +531,33 @@ class ActivityController extends Controller
             'decimal' => array_merge($prefix, ['numeric']),
             'checkbox' => array_merge($prefix, ['boolean']),
             'select' => array_merge($prefix, [Rule::in($options)]),
+            'document' => array_merge($required ? ['required'] : ['nullable'], ['file', 'mimes:pdf,doc,docx,xls,xlsx,png,jpg,jpeg', 'max:10240']),
             'textarea', 'text' => array_merge($prefix, ['string', 'max:5000']),
             default => array_merge($prefix, ['string', 'max:5000']),
         };
     }
 
-    private function extractLoggingFieldData(array $validated, $agreements, ContactFamily $contactFamily): array
+    private function extractLoggingFieldData(array $validated, $agreements, ContactFamily $contactFamily, ?Activity $existing = null): array
     {
+        $existingData = $existing?->logging_field_data ?? [];
+
         $agreementValues = [];
         foreach ($agreements as $agreement) {
             $values = [];
             foreach ($agreement->agreementLoggingFields as $field) {
-                $rawValue = data_get($validated, "agreement_logging_values.{$agreement->id}.{$field->id}");
-                $values[$field->id] = $this->normalizeLoggingFieldValue($field->field_type, $rawValue);
+                if ($field->field_type === 'document') {
+                    $file = request()->file("agreement_logging_values.{$agreement->id}.{$field->id}");
+                    if ($file) {
+                        $path = $file->store("activity-documents");
+                        $values[$field->id] = $path;
+                    } else {
+                        // Preserve existing file path if no new file uploaded
+                        $values[$field->id] = $existingData['agreements'][$agreement->id][$field->id] ?? null;
+                    }
+                } else {
+                    $rawValue = data_get($validated, "agreement_logging_values.{$agreement->id}.{$field->id}");
+                    $values[$field->id] = $this->normalizeLoggingFieldValue($field->field_type, $rawValue);
+                }
             }
 
             if (!empty($values)) {
@@ -553,8 +567,18 @@ class ActivityController extends Controller
 
         $contactFamilyValues = [];
         foreach ($contactFamily->contactFamilyLoggingFields as $field) {
-            $rawValue = data_get($validated, "contact_family_logging_values.{$field->id}");
-            $contactFamilyValues[$field->id] = $this->normalizeLoggingFieldValue($field->field_type, $rawValue);
+            if ($field->field_type === 'document') {
+                $file = request()->file("contact_family_logging_values.{$field->id}");
+                if ($file) {
+                    $path = $file->store("activity-documents");
+                    $contactFamilyValues[$field->id] = $path;
+                } else {
+                    $contactFamilyValues[$field->id] = $existingData['contact_family'][$field->id] ?? null;
+                }
+            } else {
+                $rawValue = data_get($validated, "contact_family_logging_values.{$field->id}");
+                $contactFamilyValues[$field->id] = $this->normalizeLoggingFieldValue($field->field_type, $rawValue);
+            }
         }
 
         return [
@@ -572,4 +596,15 @@ class ActivityController extends Controller
             default => $value === '' ? null : $value,
         };
     }
-}
+    public function downloadLoggingFieldDocument(Activity $activity, string $context, int $fieldId, ?int $agreementId = null): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $data = $activity->logging_field_data ?? [];
+
+        $path = $context === 'agreement'
+            ? ($data['agreements'][$agreementId][$fieldId] ?? null)
+            : ($data['contact_family'][$fieldId] ?? null);
+
+        abort_unless($path && \Illuminate\Support\Facades\Storage::exists($path), 404);
+
+        return \Illuminate\Support\Facades\Storage::download($path);
+    }}

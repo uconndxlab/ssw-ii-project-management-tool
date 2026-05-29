@@ -62,6 +62,10 @@ Route::middleware('auth')->group(function () {
     Route::put('/activities/{activity}', [ActivityController::class, 'update'])->name('activities.update');
     Route::delete('/activities/{activity}', [ActivityController::class, 'destroy'])->name('activities.destroy');
     
+    // Document download for activity logging field uploads
+    Route::get('/activities/{activity}/logging-field-document/{context}/{fieldId}/{agreementId?}', [ActivityController::class, 'downloadLoggingFieldDocument'])
+        ->name('activities.logging-field-document.download');
+
     // HTMX endpoint for filtering activity types by contact family
     Route::get('/activity-types/by-family', [ActivityTypeController::class, 'getByFamily'])->name('activity-types.by-family');
     

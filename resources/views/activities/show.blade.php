@@ -192,7 +192,15 @@
                                                 <div class="col-md-6">
                                                     <div class="small text-muted">{{ $field->name }}</div>
                                                     <div>
-                                                        {{ is_bool($value) ? ($value ? 'Yes' : 'No') : $value }}
+                                                        @if($field->field_type === 'document')
+                                                            <a href="{{ route('activities.logging-field-document.download', ['activity' => $activity, 'context' => 'agreement', 'fieldId' => $field->id, 'agreementId' => $agreement->id]) }}" class="text-decoration-none" target="_blank">
+                                                                <i class="bi bi-file-earmark-arrow-down me-1"></i>{{ basename($value) }}
+                                                            </a>
+                                                        @elseif(is_bool($value))
+                                                            {{ $value ? 'Yes' : 'No' }}
+                                                        @else
+                                                            {{ $value }}
+                                                        @endif
                                                     </div>
                                                 </div>
                                             @endif
@@ -216,7 +224,15 @@
                                     <div class="col-md-6">
                                         <div class="small text-muted">{{ $field->name }}</div>
                                         <div>
-                                            {{ is_bool($value) ? ($value ? 'Yes' : 'No') : $value }}
+                                            @if($field->field_type === 'document')
+                                                <a href="{{ route('activities.logging-field-document.download', ['activity' => $activity, 'context' => 'contact_family', 'fieldId' => $field->id]) }}" class="text-decoration-none" target="_blank">
+                                                    <i class="bi bi-file-earmark-arrow-down me-1"></i>{{ basename($value) }}
+                                                </a>
+                                            @elseif(is_bool($value))
+                                                {{ $value ? 'Yes' : 'No' }}
+                                            @else
+                                                {{ $value }}
+                                            @endif
                                         </div>
                                     </div>
                                 @endif
