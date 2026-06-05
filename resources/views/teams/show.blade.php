@@ -80,34 +80,126 @@
             </div>
         </div>
 
-        <!-- Assigned Agreements -->
-        <div class="card">
+        <!-- Team Deliverables -->
+        <div class="card mb-4">
             <div class="card-header">
-                <h5 class="mb-0">Assigned Agreements ({{ $team->agreements->count() }})</h5>
+                <h5 class="mb-0">Team Deliverables</h5>
             </div>
             <div class="card-body">
-                @if($team->agreements->isNotEmpty())
-                    <div class="list-group list-group-flush">
-                        @foreach($team->agreements as $agreement)
-                        <div class="list-group-item px-0 py-2">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <a href="{{ route('agreements.show', $agreement) }}" class="text-decoration-none">
-                                        <strong class="d-block">{{ $agreement->name }}</strong>
-                                    </a>
-                                    <small class="text-muted">{{ $agreement->organization->name ?? 'N/A' }}</small>
-                                </div>
+                @php
+                    $agreementsWithDeliverables = $team->agreements->filter(fn($a) => $a->deliverables->isNotEmpty());
+                @endphp
+                @if($team->agreements->isEmpty())
+                    <p class="text-muted mb-0">This team is not assigned to any agreements.</p>
+                @elseif($agreementsWithDeliverables->isEmpty())
+                    <p class="text-muted mb-0">No deliverables have been defined for the agreements assigned to this team.</p>
+                @else
+                    @foreach($agreementsWithDeliverables as $agreement)
+                        <div class="mb-4">
+                            <h6 class="mb-2">
+                                <a href="{{ route('agreements.show', $agreement) }}" class="text-decoration-none">
+                                    {{ $agreement->name }}
+                                </a>
                                 @if($agreement->start_date && $agreement->end_date)
-                                    <small class="text-muted">
-                                        {{ $agreement->start_date->format('M Y') }} - {{ $agreement->end_date->format('M Y') }}
+                                    <small class="text-muted fw-normal ms-2">
+                                        {{ $agreement->start_date->format('M Y') }} – {{ $agreement->end_date->format('M Y') }}
                                     </small>
                                 @endif
+                            </h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Activity Type</th>
+                                            <th>Contact Family</th>
+                                            <th class="text-center">Req. Hours</th>
+                                            <th class="text-center">Req. Activities</th>
+                                            <th>Notes</th>
+                                            <th>Assigned Members</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($agreement->deliverables as $deliverable)
+                                        <tr>
+                                            <td>{{ $deliverable->activityType?->name ?? '—' }}</td>
+                                            <td>{{ $deliverable->contactFamily?->name ?? '—' }}</td>
+                                            <td class="text-center">{{ $deliverable->required_hours !== null ? number_format($deliverable->required_hours, 1) : '—' }}</td>
+                                            <td class="text-center">{{ $deliverable->required_activities ?? '—' }}</td>
+                                            <td>{{ $deliverable->notes ?? '' }}</td>
+                                            <td>
+                                                @forelse($deliverable->assignedUsers as $assignedUser)
+                                                    <span class="badge bg-secondary me-1">{{ $assignedUser->name }}</span>
+                                                @empty
+                                                    <span class="text-muted small">—</span>
+                                                @endforelse
+                                            </td>
+                                        </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
-                        @endforeach
-                    </div>
+                    @endforeach
+                @endif
+            </div>
+        </div>
+
+        <!-- Individual Assignments -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Individual Assignments</h5>
+            </div>
+            <div class="card-body">
+                @if($team->users->isEmpty())
+                    <p class="text-muted mb-0">No members on this team.</p>
                 @else
-                    <p class="text-muted mb-0">This team is not assigned to any agreements.</p>
+                    @foreach($team->users as $member)
+                        <div class="mb-4">
+                            <div class="d-flex align-items-center mb-2">
+                                <strong>{{ $member->name }}</strong>
+                                <span class="badge ms-2
+                                    @if($member->role === 'admin') bg-danger
+                                    @elseif($member->role === 'consultant') bg-info
+                                    @else bg-secondary
+                                    @endif">
+                                    {{ ucfirst($member->role) }}
+                                </span>
+                            </div>
+                            @if(!empty($memberDeliverables[$member->id]))
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Agreement</th>
+                                                <th>Activity Type</th>
+                                                <th class="text-center">Req. Hours</th>
+                                                <th class="text-center">Req. Activities</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($memberDeliverables[$member->id] as $entry)
+                                            <tr>
+                                                <td>
+                                                    <a href="{{ route('agreements.show', $entry['agreement']) }}" class="text-decoration-none">
+                                                        {{ $entry['agreement']->name }}
+                                                    </a>
+                                                </td>
+                                                <td>{{ $entry['deliverable']->activityType?->name ?? '—' }}</td>
+                                                <td class="text-center">{{ $entry['deliverable']->required_hours !== null ? number_format($entry['deliverable']->required_hours, 1) : '—' }}</td>
+                                                <td class="text-center">{{ $entry['deliverable']->required_activities ?? '—' }}</td>
+                                            </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            @else
+                                <p class="text-muted small mb-0">No deliverables assigned.</p>
+                            @endif
+                        </div>
+                        @if(!$loop->last)
+                            <hr class="my-3">
+                        @endif
+                    @endforeach
                 @endif
             </div>
         </div>
