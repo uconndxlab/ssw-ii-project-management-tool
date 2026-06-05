@@ -69,7 +69,7 @@ class ContactFamilyLoggingFieldController extends Controller
     public function show(ContactFamilyLoggingField $contactFamilyLoggingField)
     {
         $contactFamilyLoggingField->load(['contactFamilies' => function ($query) {
-            $query->select('id', 'name')->orderBy('name');
+            $query->select('contact_families.id', 'contact_families.name')->orderBy('contact_families.name');
         }]);
 
         return view('contact-family-logging-fields.show', compact('contactFamilyLoggingField'));
@@ -120,7 +120,7 @@ class ContactFamilyLoggingFieldController extends Controller
 
         $validated = $request->validate([
             'name' => $uniqueRule,
-            'field_type' => 'required|in:number,decimal,text,textarea,checkbox,select',
+            'field_type' => 'required|in:number,decimal,text,textarea,checkbox,select,document',
             'help_text' => 'nullable|string|max:1000',
             'options_json' => 'nullable|string',
             'is_active' => 'boolean',

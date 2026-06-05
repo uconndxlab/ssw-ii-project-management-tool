@@ -24,7 +24,7 @@
                         </small>
                     </div>
                     <div class="text-end ms-2">
-                        <span class="badge bg-secondary">{{ number_format($activity->event_hours ?? 0, 1) }}h</span>
+                        <span class="badge bg-secondary">—</span>
                     </div>
                 </div>
             @endforeach

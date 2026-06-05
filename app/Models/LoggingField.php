@@ -89,6 +89,7 @@ class LoggingField extends Model
             'textarea' => 'Textarea',
             'checkbox' => 'Checkbox',
             'select' => 'Select',
+            'document' => 'Document Upload',
         ];
     }
 }

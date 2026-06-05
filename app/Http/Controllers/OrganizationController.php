@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Organization;
+use App\Models\Program;
+use App\Models\Project;
 use App\Models\State;
 use Illuminate\Http\Request;
 
@@ -104,8 +106,10 @@ class OrganizationController extends Controller
     public function create()
     {
         $states = State::orderBy('name')->get();
-        
-        return view('organizations.create', compact('states'));
+        $programs = Program::orderBy('name')->get();
+        $projects = Project::orderBy('name')->get();
+
+        return view('organizations.create', compact('states', 'programs', 'projects'));
     }
 
     public function store(Request $request)
@@ -114,10 +118,16 @@ class OrganizationController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'state_ids' => ['required', 'array', 'min:1'],
             'state_ids.*' => ['exists:states,id'],
+            'program_ids' => ['nullable', 'array'],
+            'program_ids.*' => ['exists:programs,id'],
+            'project_ids' => ['nullable', 'array'],
+            'project_ids.*' => ['exists:projects,id'],
         ]);
 
         $organization = Organization::create(['name' => $validated['name']]);
         $organization->states()->sync($validated['state_ids']);
+        $organization->programs()->sync($validated['program_ids'] ?? []);
+        $organization->projects()->sync($validated['project_ids'] ?? []);
 
         return redirect()
             ->route('organizations.index')
@@ -127,8 +137,10 @@ class OrganizationController extends Controller
     public function edit(Organization $organization)
     {
         $states = State::orderBy('name')->get();
-        
-        return view('organizations.edit', compact('organization', 'states'));
+        $programs = Program::orderBy('name')->get();
+        $projects = Project::orderBy('name')->get();
+
+        return view('organizations.edit', compact('organization', 'states', 'programs', 'projects'));
     }
 
     public function update(Request $request, Organization $organization)
@@ -137,10 +149,16 @@ class OrganizationController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'state_ids' => ['required', 'array', 'min:1'],
             'state_ids.*' => ['exists:states,id'],
+            'program_ids' => ['nullable', 'array'],
+            'program_ids.*' => ['exists:programs,id'],
+            'project_ids' => ['nullable', 'array'],
+            'project_ids.*' => ['exists:projects,id'],
         ]);
 
         $organization->update(['name' => $validated['name']]);
         $organization->states()->sync($validated['state_ids']);
+        $organization->programs()->sync($validated['program_ids'] ?? []);
+        $organization->projects()->sync($validated['project_ids'] ?? []);
 
         return redirect()
             ->route('organizations.index')

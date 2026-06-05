@@ -34,6 +34,13 @@
                     </th>
                     <th>
                         <a class="text-decoration-none fw-semibold text-dark"
+                           href="{{ $url('duration_hours') }}"
+                           hx-get="{{ $url('duration_hours') }}" hx-target="#activity-types-table" hx-push-url="true">
+                            Duration (Hours){!! $icon('duration_hours') !!}
+                        </a>
+                    </th>
+                    <th>
+                        <a class="text-decoration-none fw-semibold text-dark"
                            href="{{ $url('active') }}"
                            hx-get="{{ $url('active') }}" hx-target="#activity-types-table" hx-push-url="true">
                             Status{!! $icon('active') !!}
@@ -48,6 +55,7 @@
                     <td class="fw-semibold">{{ $type->name }}</td>
                     <td class="text-muted small">{{ $type->contactFamily->name }}</td>
                     <td>{{ $type->duration_days }}</td>
+                    <td>{{ $type->duration_hours }}</td>
                     <td>
                         @if($type->active)
                             <span class="badge bg-success">Active</span>

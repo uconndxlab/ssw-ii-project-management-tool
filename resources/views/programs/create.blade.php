@@ -12,6 +12,9 @@
 <div class="row">
     <div class="col-md-6">
         <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Program Details</h5>
+            </div>
             <div class="card-body">
                 @if ($errors->any())
                     <div class="alert alert-danger">
@@ -28,11 +31,11 @@
 
                     <div class="mb-3">
                         <label for="name" class="form-label">Program Name</label>
-                        <input type="text" 
-                               class="form-control @error('name') is-invalid @enderror" 
-                               id="name" 
-                               name="name" 
-                               value="{{ old('name') }}" 
+                        <input type="text"
+                               class="form-control @error('name') is-invalid @enderror"
+                               id="name"
+                               name="name"
+                               value="{{ old('name') }}"
                                required>
                         @error('name')
                             <div class="invalid-feedback">{{ $message }}</div>
@@ -40,10 +43,21 @@
                     </div>
 
                     <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control @error('description') is-invalid @enderror"
+                                  id="description"
+                                  name="description"
+                                  rows="3">{{ old('description') }}</textarea>
+                        @error('description')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="mb-3">
                         <label for="project_id" class="form-label">Project</label>
-                        <select class="form-select @error('project_id') is-invalid @enderror" 
-                                id="project_id" 
-                                name="project_id" 
+                        <select class="form-select @error('project_id') is-invalid @enderror"
+                                id="project_id"
+                                name="project_id"
                                 required>
                             <option value="">Select project...</option>
                             @foreach($projects as $project)
@@ -58,17 +72,17 @@
                     </div>
 
                     <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input" 
-                                   type="checkbox" 
-                                   id="active" 
-                                   name="active" 
-                                   value="1"
-                                   {{ old('active', true) ? 'checked' : '' }}>
-                            <label class="form-check-label" for="active">
-                                Active
-                            </label>
-                        </div>
+                        <label for="active" class="form-label">Status</label>
+                        <select class="form-select @error('active') is-invalid @enderror"
+                                id="active"
+                                name="active"
+                                required>
+                            <option value="1" {{ old('active', '1') !== '0' ? 'selected' : '' }}>Active</option>
+                            <option value="0" {{ old('active') === '0' ? 'selected' : '' }}>Inactive</option>
+                        </select>
+                        @error('active')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
                     </div>
 
                 </form>
@@ -78,3 +92,4 @@
 </div>
 <x-save-bar form-id="programs-create-form" cancel-url="{{ route('programs.index') }}" save-label="Create Program" />
 @endsection
+

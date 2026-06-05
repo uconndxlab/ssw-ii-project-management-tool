@@ -138,7 +138,7 @@
                                         </td>
                                         <td><span class="badge bg-primary">{{ $activity->activityType->contactFamily->name }}</span></td>
                                         <td>{{ $activity->activityType->name }}</td>
-                                        <td>{{ number_format($activity->total_hours, 2) }}</td>
+                                        <td>{{ 0 }}</td>
                                         <td>{{ $activity->user->name }}</td>
                                     </tr>
                                 @endforeach

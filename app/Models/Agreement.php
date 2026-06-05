@@ -19,8 +19,6 @@ class Agreement extends Model
         'extension_start_date',
         'extension_end_date',
         'certification_candidates',
-        'activity_logging_config',
-        'time_tracking_mode',
     ];
 
     protected function casts(): array
@@ -30,7 +28,6 @@ class Agreement extends Model
             'end_date' => 'date',
             'original_end_date' => 'date',
             'extended_end_date' => 'date',
-            'activity_logging_config' => 'array',
         ];
     }
 

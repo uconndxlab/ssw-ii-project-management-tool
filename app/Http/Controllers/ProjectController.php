@@ -63,14 +63,45 @@ class ProjectController extends Controller
     public function show(Project $project)
     {
         abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can view projects.');
-        $project->load(['programs.activities']);
+        $project->load([
+            'programs.activities',
+            'programs.agreements.states',
+            'programs.agreements.users',
+            'organizations.states',
+        ]);
 
         $recentActivities = $project->programs
             ->flatMap(fn ($p) => $p->activities)
             ->sortByDesc('engagement_date')
             ->take(10);
 
-        return view('projects.show', compact('project', 'recentActivities'));
+        // Collect unique agreements across all programs
+        $agreements = $project->programs
+            ->flatMap(fn ($p) => $p->agreements)
+            ->unique('id')
+            ->sortBy('name');
+
+        // Collect unique users across all agreements, with agreement context
+        $staffMap = [];
+        foreach ($agreements as $agreement) {
+            foreach ($agreement->users as $user) {
+                if (!isset($staffMap[$user->id])) {
+                    $staffMap[$user->id] = clone $user;
+                    $staffMap[$user->id]->via_agreements = collect();
+                }
+                $staffMap[$user->id]->via_agreements->push($agreement->name);
+            }
+        }
+        $users = collect($staffMap)->sortBy('name');
+
+        // Collect unique states: from organizations + agreements
+        $states = $project->organizations
+            ->flatMap(fn ($o) => $o->states)
+            ->merge($agreements->flatMap(fn ($a) => $a->states))
+            ->unique('id')
+            ->sortBy('name');
+
+        return view('projects.show', compact('project', 'recentActivities', 'agreements', 'users', 'states'));
     }
 
     public function edit(Project $project)

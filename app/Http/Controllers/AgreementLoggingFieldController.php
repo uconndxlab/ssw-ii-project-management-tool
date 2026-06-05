@@ -120,7 +120,7 @@ class AgreementLoggingFieldController extends Controller
 
         $validated = $request->validate([
             'name' => $uniqueRule,
-            'field_type' => 'required|in:number,decimal,text,textarea,checkbox,select',
+            'field_type' => 'required|in:number,decimal,text,textarea,checkbox,select,document',
             'help_text' => 'nullable|string|max:1000',
             'options_json' => 'nullable|string',
             'is_active' => 'boolean',

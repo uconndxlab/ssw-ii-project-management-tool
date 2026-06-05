@@ -7,7 +7,6 @@ use App\Models\Agreement;
 use App\Models\ActivityType;
 use App\Models\ContactFamily;
 use App\Models\Organization;
-use App\Models\Program;
 use App\Models\State;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -167,12 +166,6 @@ class ActivityController extends Controller
                     ->orderBy('users.name', $direction);
                 break;
 
-            case 'total_hours':
-                $query->orderByRaw(
-                    '(COALESCE(event_hours, 0) + COALESCE(prep_hours, 0) + COALESCE(followup_hours, 0)) ' . $direction
-                );
-                break;
-
             case 'date':
             default:
                 $query->orderBy('engagement_date', $direction);
@@ -218,26 +211,24 @@ class ActivityController extends Controller
         $agreements = $this->getVisibleAgreements()->load('agreementLoggingFields');
         $states = State::orderBy('name')->get();
         $organizations = Organization::orderBy('name')->get();
-        $programs = Program::where('active', true)->orderBy('name')->get();
         $contactFamilies = ContactFamily::where('active', true)
             ->with('contactFamilyLoggingFields')
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
-        
-        // Pre-load users, organizations, and states for each agreement
-        $agreements->load(['users', 'organizations', 'states']);
-        
+
+        // Pre-load organizations and states for each agreement
+        $agreements->load(['organizations', 'states']);
+
         // Get pre-selected agreement if provided
         $preselectedAgreementId = $request->query('agreement_id');
         $duplicateData = session('duplicate_data', []);
         $currentContactFamilyId = old('contact_family_id', $duplicateData['contact_family_id'] ?? null);
-        
+
         return view('activities.create', compact(
             'agreements',
             'states',
             'organizations',
-            'programs',
             'contactFamilies',
             'preselectedAgreementId',
             'duplicateData',
@@ -257,15 +248,7 @@ class ActivityController extends Controller
             'engagement_date' => ['required', 'date'],
             'contact_family_id' => ['required', 'exists:contact_families,id'],
             'activity_type_id' => ['required', 'exists:activity_types,id'],
-            'program_ids' => ['nullable', 'array'],
-            'program_ids.*' => ['exists:programs,id'],
-            'participant_user_ids' => ['nullable', 'array'],
-            'participant_user_ids.*' => ['exists:users,id'],
             'internal_only' => ['nullable', 'boolean'],
-            'participant_times' => ['nullable', 'array'],
-            'participant_times.*.user_id' => ['exists:users,id'],
-            'participant_times.*.hours' => ['numeric', 'min:0.25', 'max:24'],
-            'participant_times.*.notes' => ['nullable', 'string', 'max:500'],
             'agreement_logging_values' => ['nullable', 'array'],
             'contact_family_logging_values' => ['nullable', 'array'],
         ]);
@@ -274,30 +257,12 @@ class ActivityController extends Controller
         $contactFamily = ContactFamily::with('contactFamilyLoggingFields')
             ->findOrFail($baseValidated['contact_family_id']);
 
-        $agreement = $agreements->first();
-        $timeTrackingMode = $agreement?->time_tracking_mode ?? 'engagement';
-        $config = $agreement ? $this->getAgreementActivityLoggingConfig($agreement) : [];
-
         $validated = array_merge(
             $baseValidated,
-            $request->validate(array_merge(
-                $this->activityLoggingValidationRules($config),
+            $request->validate(
                 $this->dynamicLoggingFieldValidationRules($agreements, $contactFamily)
-            ))
+            )
         );
-
-        // Verify all selected participants belong to at least one agreement
-        if (!empty($validated['participant_user_ids']) && !empty($validated['agreement_ids'])) {
-            $this->verifyParticipantsInAgreement($validated['agreement_ids'][0], $validated['participant_user_ids']);
-        }
-
-        // Verify participant time users exist if using participant mode
-        if ($timeTrackingMode === 'participant' && !empty($validated['participant_times'])) {
-            $participantTimeUserIds = array_column($validated['participant_times'], 'user_id');
-            if (!empty($validated['agreement_ids'])) {
-                $this->verifyParticipantsInAgreement($validated['agreement_ids'][0], $participantTimeUserIds);
-            }
-        }
 
         $activity = Activity::create([
             'user_id' => Auth::id(),
@@ -305,41 +270,11 @@ class ActivityController extends Controller
             'activity_type_id' => $validated['activity_type_id'],
             'logging_field_data' => $this->extractLoggingFieldData($validated, $agreements, $contactFamily),
             'internal_only' => $validated['internal_only'] ?? false,
-            'time_tracking_mode' => $timeTrackingMode,
-
-            'event_hours' => !empty($config['event_hours']) ? ($validated['event_hours'] ?? 0) : 0,
-            'prep_hours' => !empty($config['prep_hours']) ? ($validated['prep_hours'] ?? 0) : 0,
-            'followup_hours' => !empty($config['followup_hours']) ? ($validated['followup_hours'] ?? 0) : 0,
-            'participant_count' => !empty($config['participant_count']) ? ($validated['participant_count'] ?? null) : null,
-            'external_attendees' => !empty($config['external_attendees']) ? ($validated['external_attendees'] ?? null) : null,
-            'summary' => !empty($config['summary']) ? ($validated['summary'] ?? null) : null,
-            'follow_up' => !empty($config['follow_up']) ? ($validated['follow_up'] ?? null) : null,
-            'strengths' => !empty($config['strengths']) ? ($validated['strengths'] ?? null) : null,
-            'recommendations' => !empty($config['recommendations']) ? ($validated['recommendations'] ?? null) : null,
         ]);
 
         $activity->agreements()->sync($validated['agreement_ids'] ?? []);
         $activity->states()->sync($validated['state_ids'] ?? []);
         $activity->organizations()->sync($validated['organization_ids'] ?? []);
-
-        if (!empty($validated['program_ids'])) {
-            $activity->programs()->sync($validated['program_ids']);
-        }
-
-        if (!empty($validated['participant_user_ids'])) {
-            $activity->participants()->sync($validated['participant_user_ids']);
-        }
-
-        // Save participant times if using participant mode
-        if ($activity->time_tracking_mode === 'participant' && !empty($validated['participant_times'])) {
-            foreach ($validated['participant_times'] as $participantTime) {
-                $activity->participantTimes()->create([
-                    'user_id' => $participantTime['user_id'],
-                    'hours' => $participantTime['hours'],
-                    'notes' => $participantTime['notes'] ?? null,
-                ]);
-            }
-        }
 
         $saveMode = $request->input('save_mode', 'save');
 
@@ -350,36 +285,14 @@ class ActivityController extends Controller
         }
 
         if ($saveMode === 'save_duplicate') {
-            $participantTimes = [];
-            if ($activity->time_tracking_mode === 'participant') {
-                $participantTimes = $activity->participantTimes->map(fn ($pt) => [
-                    'user_id' => $pt->user_id,
-                    'hours' => $pt->hours,
-                    'notes' => $pt->notes,
-                ])->toArray();
-            }
-
             $duplicateData = [
                 'agreement_ids' => $validated['agreement_ids'] ?? [],
                 'state_ids' => $validated['state_ids'] ?? [],
                 'organization_ids' => $validated['organization_ids'] ?? [],
                 'contact_family_id' => $validated['contact_family_id'] ?? null,
                 'activity_type_id' => $validated['activity_type_id'] ?? null,
-                'program_ids' => $validated['program_ids'] ?? [],
-                'participant_user_ids' => $validated['participant_user_ids'] ?? [],
                 'engagement_date' => now()->format('Y-m-d'),
-                'event_hours' => null,
-                'prep_hours' => 0,
-                'followup_hours' => 0,
-                'participant_count' => null,
-                'external_attendees' => $validated['external_attendees'] ?? null,
-                'summary' => $validated['summary'] ?? null,
-                'follow_up' => $validated['follow_up'] ?? null,
-                'strengths' => $validated['strengths'] ?? null,
-                'recommendations' => $validated['recommendations'] ?? null,
                 'internal_only' => $validated['internal_only'] ?? false,
-                'time_tracking_mode' => $validated['time_tracking_mode'] ?? 'engagement',
-                'participant_times' => $participantTimes,
                 'agreement_logging_values' => $validated['agreement_logging_values'] ?? [],
                 'contact_family_logging_values' => $validated['contact_family_logging_values'] ?? [],
             ];
@@ -414,36 +327,25 @@ class ActivityController extends Controller
 
     public function edit(Activity $activity)
     {
-        // Authorization: admin can edit any, staff/consultant can only edit their own
         $this->verifyActivityEditAccess($activity);
 
         $agreements = $this->getVisibleAgreements()->load('agreementLoggingFields');
         $states = State::orderBy('name')->get();
         $organizations = Organization::orderBy('name')->get();
-        $programs = Program::where('active', true)->orderBy('name')->get();
         $contactFamilies = ContactFamily::where('active', true)
             ->with('contactFamilyLoggingFields')
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
-        $activityTypes = \App\Models\ActivityType::where('active', true)
-            ->orderBy('sort_order')
-            ->orderBy('name')
-            ->get();
-        $activity->load(['programs', 'participants', 'activityType.contactFamily', 'agreements', 'states', 'organizations', 'participantTimes.user']);
+        $activity->load(['activityType.contactFamily', 'agreements', 'states', 'organizations']);
         $currentContactFamilyId = old('contact_family_id', $activity->activityType?->contactFamily?->id);
-        
-        // Pre-load users for each agreement for participant selection
-        $agreements->load('users');
 
         return view('activities.edit', compact(
             'activity',
             'agreements',
             'states',
             'organizations',
-            'programs',
             'contactFamilies',
-            'activityTypes',
             'currentContactFamilyId'
         ));
     }
@@ -462,15 +364,7 @@ class ActivityController extends Controller
             'engagement_date' => ['required', 'date'],
             'contact_family_id' => ['required', 'exists:contact_families,id'],
             'activity_type_id' => ['required', 'exists:activity_types,id'],
-            'program_ids' => ['nullable', 'array'],
-            'program_ids.*' => ['exists:programs,id'],
-            'participant_user_ids' => ['nullable', 'array'],
-            'participant_user_ids.*' => ['exists:users,id'],
             'internal_only' => ['nullable', 'boolean'],
-            'participant_times' => ['nullable', 'array'],
-            'participant_times.*.user_id' => ['exists:users,id'],
-            'participant_times.*.hours' => ['numeric', 'min:0.25', 'max:24'],
-            'participant_times.*.notes' => ['nullable', 'string', 'max:500'],
             'agreement_logging_values' => ['nullable', 'array'],
             'contact_family_logging_values' => ['nullable', 'array'],
         ]);
@@ -479,66 +373,23 @@ class ActivityController extends Controller
         $contactFamily = ContactFamily::with('contactFamilyLoggingFields')
             ->findOrFail($baseValidated['contact_family_id']);
 
-        $agreement = $agreements->first();
-        $timeTrackingMode = $agreement?->time_tracking_mode ?? 'engagement';
-        $config = $agreement ? $this->getAgreementActivityLoggingConfig($agreement) : [];
-
         $validated = array_merge(
             $baseValidated,
-            $request->validate(array_merge(
-                $this->activityLoggingValidationRules($config),
+            $request->validate(
                 $this->dynamicLoggingFieldValidationRules($agreements, $contactFamily)
-            ))
+            )
         );
-
-        if (!empty($validated['participant_user_ids']) && !empty($validated['agreement_ids'])) {
-            $this->verifyParticipantsInAgreement($validated['agreement_ids'][0], $validated['participant_user_ids']);
-        }
-
-        // Verify participant time users exist if using participant mode
-        if ($timeTrackingMode === 'participant' && !empty($validated['participant_times'])) {
-            $participantTimeUserIds = array_column($validated['participant_times'], 'user_id');
-            if (!empty($validated['agreement_ids'])) {
-                $this->verifyParticipantsInAgreement($validated['agreement_ids'][0], $participantTimeUserIds);
-            }
-        }
 
         $activity->update([
             'engagement_date' => $validated['engagement_date'],
             'activity_type_id' => $validated['activity_type_id'],
-            'logging_field_data' => $this->extractLoggingFieldData($validated, $agreements, $contactFamily),
+            'logging_field_data' => $this->extractLoggingFieldData($validated, $agreements, $contactFamily, $activity),
             'internal_only' => $validated['internal_only'] ?? false,
-            'time_tracking_mode' => $timeTrackingMode,
-
-            'event_hours' => !empty($config['event_hours']) ? ($validated['event_hours'] ?? 0) : 0,
-            'prep_hours' => !empty($config['prep_hours']) ? ($validated['prep_hours'] ?? 0) : 0,
-            'followup_hours' => !empty($config['followup_hours']) ? ($validated['followup_hours'] ?? 0) : 0,
-            'participant_count' => !empty($config['participant_count']) ? ($validated['participant_count'] ?? null) : null,
-            'external_attendees' => !empty($config['external_attendees']) ? ($validated['external_attendees'] ?? null) : null,
-            'summary' => !empty($config['summary']) ? ($validated['summary'] ?? null) : null,
-            'follow_up' => !empty($config['follow_up']) ? ($validated['follow_up'] ?? null) : null,
-            'strengths' => !empty($config['strengths']) ? ($validated['strengths'] ?? null) : null,
-            'recommendations' => !empty($config['recommendations']) ? ($validated['recommendations'] ?? null) : null,
         ]);
 
         $activity->agreements()->sync($validated['agreement_ids'] ?? []);
         $activity->states()->sync($validated['state_ids'] ?? []);
         $activity->organizations()->sync($validated['organization_ids'] ?? []);
-        $activity->programs()->sync($validated['program_ids'] ?? []);
-        $activity->participants()->sync($validated['participant_user_ids'] ?? []);
-
-        // Delete and recreate participant times if using participant mode
-        $activity->participantTimes()->delete();
-        if ($activity->time_tracking_mode === 'participant' && !empty($validated['participant_times'])) {
-            foreach ($validated['participant_times'] as $participantTime) {
-                $activity->participantTimes()->create([
-                    'user_id' => $participantTime['user_id'],
-                    'hours' => $participantTime['hours'],
-                    'notes' => $participantTime['notes'] ?? null,
-                ]);
-            }
-        }
-
         $saveMode = $request->input('save_mode', 'save');
 
         if ($saveMode === 'save_new') {
@@ -548,36 +399,14 @@ class ActivityController extends Controller
         }
 
         if ($saveMode === 'save_duplicate') {
-            $participantTimes = [];
-            if ($activity->time_tracking_mode === 'participant') {
-                $participantTimes = $activity->participantTimes->map(fn ($pt) => [
-                    'user_id' => $pt->user_id,
-                    'hours' => $pt->hours,
-                    'notes' => $pt->notes,
-                ])->toArray();
-            }
-
             $duplicateData = [
                 'agreement_ids' => $validated['agreement_ids'] ?? [],
                 'state_ids' => $validated['state_ids'] ?? [],
                 'organization_ids' => $validated['organization_ids'] ?? [],
                 'contact_family_id' => $validated['contact_family_id'] ?? null,
                 'activity_type_id' => $validated['activity_type_id'] ?? null,
-                'program_ids' => $validated['program_ids'] ?? [],
-                'participant_user_ids' => $validated['participant_user_ids'] ?? [],
                 'engagement_date' => now()->format('Y-m-d'),
-                'event_hours' => null,
-                'prep_hours' => 0,
-                'followup_hours' => 0,
-                'participant_count' => null,
-                'external_attendees' => $validated['external_attendees'] ?? null,
-                'summary' => $validated['summary'] ?? null,
-                'follow_up' => $validated['follow_up'] ?? null,
-                'strengths' => $validated['strengths'] ?? null,
-                'recommendations' => $validated['recommendations'] ?? null,
                 'internal_only' => $validated['internal_only'] ?? false,
-                'time_tracking_mode' => $validated['time_tracking_mode'] ?? 'engagement',
-                'participant_times' => $participantTimes,
                 'agreement_logging_values' => $validated['agreement_logging_values'] ?? [],
                 'contact_family_logging_values' => $validated['contact_family_logging_values'] ?? [],
             ];
@@ -657,123 +486,6 @@ class ActivityController extends Controller
         }
     }
 
-    /**
-     * Verify all selected participants belong to the agreement
-     */
-    private function verifyParticipantsInAgreement(int $agreementId, array $userIds): void
-    {
-        $agreement = Agreement::findOrFail($agreementId);
-        $agreementUserIds = $agreement->users()->pluck('users.id')->toArray();
-
-        foreach ($userIds as $userId) {
-            if (!in_array($userId, $agreementUserIds)) {
-                abort(422, 'All participants must be members of the agreement.');
-            }
-        }
-    }
-
-    /**
-     * HTMX endpoint: Get participant checkboxes for an agreement
-     */
-    public function getParticipantsForAgreement(Request $request)
-    {
-        $agreementId = $request->input('agreement_id');
-        $selectedIds = $request->input('participant_user_ids', []);
-        
-        if (!$agreementId) {
-            return '<small class="text-muted">Select an agreement first to see team</small>';
-        }
-        
-        $agreement = Agreement::with('users')->find($agreementId);
-        
-        if (!$agreement) {
-            return '<small class="text-muted">Agreement not found</small>';
-        }
-        
-        // Verify user has access to this agreement
-        if (!Auth::user()->isAdmin()) {
-            $hasAccess = Auth::user()->agreements()->where('agreements.id', $agreementId)->exists();
-            if (!$hasAccess) {
-                return '<small class="text-muted">You do not have access to this agreement</small>';
-            }
-        }
-        
-        if ($agreement->users->isEmpty()) {
-            return '<small class="text-muted">No team members assigned to this agreement</small>';
-        }
-        
-        return view('activities.partials.participant-checkboxes', [
-            'users' => $agreement->users,
-            'agreement' => $agreement,
-            'selectedIds' => $selectedIds,
-            'pickerId' => 'activity-participants-' . $agreement->id,
-        ])->render();
-    }
-
-    private function defaultActivityLoggingConfig(): array
-    {
-        return [
-            'event_hours' => true,
-            'prep_hours' => true,
-            'followup_hours' => false,
-            'participant_count' => true,
-            'external_attendees' => true,
-            'summary' => true,
-            'follow_up' => true,
-            'strengths' => false,
-            'recommendations' => false,
-        ];
-    }
-
-    private function getAgreementActivityLoggingConfig(Agreement $agreement): array
-    {
-        return array_merge(
-            $this->defaultActivityLoggingConfig(),
-            $agreement->activity_logging_config ?? []
-        );
-    }
-
-    private function activityLoggingValidationRules(array $config): array
-    {
-        return [
-            'event_hours' => !empty($config['event_hours'])
-                ? ['required', 'numeric', 'min:0', 'max:9999.99']
-                : ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-
-            'prep_hours' => !empty($config['prep_hours'])
-                ? ['nullable', 'numeric', 'min:0', 'max:9999.99']
-                : ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-
-            'followup_hours' => !empty($config['followup_hours'])
-                ? ['nullable', 'numeric', 'min:0', 'max:9999.99']
-                : ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-
-            'participant_count' => !empty($config['participant_count'])
-                ? ['nullable', 'integer', 'min:0']
-                : ['nullable', 'integer', 'min:0'],
-
-            'external_attendees' => !empty($config['external_attendees'])
-                ? ['nullable', 'string', 'max:5000']
-                : ['nullable', 'string', 'max:5000'],
-
-            'summary' => !empty($config['summary'])
-                ? ['nullable', 'string', 'max:5000']
-                : ['nullable', 'string', 'max:5000'],
-
-            'follow_up' => !empty($config['follow_up'])
-                ? ['nullable', 'string', 'max:5000']
-                : ['nullable', 'string', 'max:5000'],
-
-            'strengths' => !empty($config['strengths'])
-                ? ['nullable', 'string', 'max:5000']
-                : ['nullable', 'string', 'max:5000'],
-
-            'recommendations' => !empty($config['recommendations'])
-                ? ['nullable', 'string', 'max:5000']
-                : ['nullable', 'string', 'max:5000'],
-        ];
-    }
-
     private function resolveSelectedAgreements(array $agreementIds)
     {
         $agreements = collect();
@@ -819,19 +531,33 @@ class ActivityController extends Controller
             'decimal' => array_merge($prefix, ['numeric']),
             'checkbox' => array_merge($prefix, ['boolean']),
             'select' => array_merge($prefix, [Rule::in($options)]),
+            'document' => array_merge($required ? ['required'] : ['nullable'], ['file', 'mimes:pdf,doc,docx,xls,xlsx,png,jpg,jpeg', 'max:10240']),
             'textarea', 'text' => array_merge($prefix, ['string', 'max:5000']),
             default => array_merge($prefix, ['string', 'max:5000']),
         };
     }
 
-    private function extractLoggingFieldData(array $validated, $agreements, ContactFamily $contactFamily): array
+    private function extractLoggingFieldData(array $validated, $agreements, ContactFamily $contactFamily, ?Activity $existing = null): array
     {
+        $existingData = $existing?->logging_field_data ?? [];
+
         $agreementValues = [];
         foreach ($agreements as $agreement) {
             $values = [];
             foreach ($agreement->agreementLoggingFields as $field) {
-                $rawValue = data_get($validated, "agreement_logging_values.{$agreement->id}.{$field->id}");
-                $values[$field->id] = $this->normalizeLoggingFieldValue($field->field_type, $rawValue);
+                if ($field->field_type === 'document') {
+                    $file = request()->file("agreement_logging_values.{$agreement->id}.{$field->id}");
+                    if ($file) {
+                        $path = $file->store("activity-documents");
+                        $values[$field->id] = $path;
+                    } else {
+                        // Preserve existing file path if no new file uploaded
+                        $values[$field->id] = $existingData['agreements'][$agreement->id][$field->id] ?? null;
+                    }
+                } else {
+                    $rawValue = data_get($validated, "agreement_logging_values.{$agreement->id}.{$field->id}");
+                    $values[$field->id] = $this->normalizeLoggingFieldValue($field->field_type, $rawValue);
+                }
             }
 
             if (!empty($values)) {
@@ -841,8 +567,18 @@ class ActivityController extends Controller
 
         $contactFamilyValues = [];
         foreach ($contactFamily->contactFamilyLoggingFields as $field) {
-            $rawValue = data_get($validated, "contact_family_logging_values.{$field->id}");
-            $contactFamilyValues[$field->id] = $this->normalizeLoggingFieldValue($field->field_type, $rawValue);
+            if ($field->field_type === 'document') {
+                $file = request()->file("contact_family_logging_values.{$field->id}");
+                if ($file) {
+                    $path = $file->store("activity-documents");
+                    $contactFamilyValues[$field->id] = $path;
+                } else {
+                    $contactFamilyValues[$field->id] = $existingData['contact_family'][$field->id] ?? null;
+                }
+            } else {
+                $rawValue = data_get($validated, "contact_family_logging_values.{$field->id}");
+                $contactFamilyValues[$field->id] = $this->normalizeLoggingFieldValue($field->field_type, $rawValue);
+            }
         }
 
         return [
@@ -860,4 +596,15 @@ class ActivityController extends Controller
             default => $value === '' ? null : $value,
         };
     }
-}
+    public function downloadLoggingFieldDocument(Activity $activity, string $context, int $fieldId, ?int $agreementId = null): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $data = $activity->logging_field_data ?? [];
+
+        $path = $context === 'agreement'
+            ? ($data['agreements'][$agreementId][$fieldId] ?? null)
+            : ($data['contact_family'][$fieldId] ?? null);
+
+        abort_unless($path && \Illuminate\Support\Facades\Storage::exists($path), 404);
+
+        return \Illuminate\Support\Facades\Storage::download($path);
+    }}

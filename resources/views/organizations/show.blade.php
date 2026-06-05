@@ -178,7 +178,7 @@
                                 @endforeach
                             </td>
                             <td class="small">{{ $activity->activityType->name }}</td>
-                            <td class="text-end">{{ number_format($activity->total_hours, 1) }}</td>
+                            <td class="text-end">{{ 0 }}</td>
                             <td class="small text-muted">{{ $activity->user->name }}</td>
                         </tr>
                         @endforeach

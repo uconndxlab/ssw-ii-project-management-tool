@@ -108,20 +108,10 @@ class ReportController extends Controller
             if (!isset($agreementData[$aid])) {
                 $agreementData[$aid] = [
                     'agreement' => $firstAgreement,
-                    'event_hours' => 0,
-                    'prep_hours' => 0,
-                    'followup_hours' => 0,
-                    'total_hours' => 0,
-                    'participant_count' => 0,
                     'activity_count' => 0,
                 ];
             }
 
-            $agreementData[$aid]['event_hours'] += $activity->event_hours;
-            $agreementData[$aid]['prep_hours'] += $activity->prep_hours ?? 0;
-            $agreementData[$aid]['followup_hours'] += $activity->followup_hours ?? 0;
-            $agreementData[$aid]['total_hours'] += ($activity->event_hours + ($activity->prep_hours ?? 0) + ($activity->followup_hours ?? 0));
-            $agreementData[$aid]['participant_count'] += $activity->participant_count ?? 0;
             $agreementData[$aid]['activity_count']++;
         }
 

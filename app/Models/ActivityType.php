@@ -14,6 +14,7 @@ class ActivityType extends Model
         'active',
         'sort_order',
         'duration_days',
+        'duration_hours',
     ];
 
     protected function casts(): array
@@ -22,6 +23,7 @@ class ActivityType extends Model
             'active' => 'boolean',
             'sort_order' => 'integer',
             'duration_days' => 'integer',
+            'duration_hours' => 'integer',
             'contact_family_id' => 'integer',
         ];
     }

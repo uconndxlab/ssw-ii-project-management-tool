@@ -92,9 +92,30 @@ class TeamController extends Controller
         // Admin-only authorization
         abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can view teams.');
 
-        $team->load(['users', 'agreements']);
+        $team->load([
+            'users',
+            'agreements.deliverables.activityType',
+            'agreements.deliverables.contactFamily',
+            'agreements.deliverables.assignedUsers',
+        ]);
 
-        return view('teams.show', compact('team'));
+        // Build per-member deliverable map from already-loaded data (no extra queries)
+        $memberDeliverables = [];
+        foreach ($team->users as $user) {
+            $memberDeliverables[$user->id] = [];
+            foreach ($team->agreements as $agreement) {
+                foreach ($agreement->deliverables as $deliverable) {
+                    if ($deliverable->assignedUsers->contains('id', $user->id)) {
+                        $memberDeliverables[$user->id][] = [
+                            'deliverable' => $deliverable,
+                            'agreement'   => $agreement,
+                        ];
+                    }
+                }
+            }
+        }
+
+        return view('teams.show', compact('team', 'memberDeliverables'));
     }
 
     public function edit(Team $team)

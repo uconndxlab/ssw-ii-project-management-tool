@@ -96,21 +96,6 @@
                         @enderror
                     </div>
 
-                    <div class="mb-3">
-                        <label for="sort_order" class="form-label">Sort Order</label>
-                        <input type="number" 
-                               class="form-control @error('sort_order') is-invalid @enderror" 
-                               id="sort_order" 
-                               name="sort_order" 
-                               value="{{ old('sort_order', $loggingField->sort_order) }}" 
-                               min="0"
-                               placeholder="Optional (defaults to alphabetical)">
-                        <small class="form-text text-muted">Lower numbers appear first.</small>
-                        @error('sort_order')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-
                     <div class="form-check mb-3">
                         <input class="form-check-input" 
                                type="checkbox" 

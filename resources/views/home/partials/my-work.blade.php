@@ -49,7 +49,7 @@
                                         @endif
                                     </small>
                                 </div>
-                                <span class="badge bg-info">{{ number_format($activity->event_hours ?? 0, 1) }}h</span>
+                                <span class="badge bg-info">—</span>
                             </div>
                         </a>
                     @endforeach
