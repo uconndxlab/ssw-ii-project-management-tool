@@ -17,6 +17,7 @@ use App\Models\AgreementDeliverable;
 use App\Models\Activity;
 use App\Models\AgreementLoggingField;
 use App\Models\ContactFamilyLoggingField;
+use App\Models\ActivityParticipantTime;
 use Carbon\Carbon;
 
 class DemoSeeder extends Seeder
@@ -480,14 +481,6 @@ class DemoSeeder extends Seeder
                 'user_id' => $userId,
                 'engagement_date' => Carbon::now()->subDays(rand(1, 180)),
                 'activity_type_id' => $activityType->id,
-                'event_hours' => rand(1, 12) + (rand(0, 3) * 0.25),
-                'prep_hours' => rand(0, 4) + (rand(0, 3) * 0.25),
-                'followup_hours' => rand(0, 3) + (rand(0, 3) * 0.25),
-                'participant_count' => rand(5, 50),
-                'summary' => $narrative['summary'],
-                'follow_up' => $narrative['follow_up'],
-                'strengths' => $narrative['strengths'],
-                'recommendations' => $narrative['recommendations'],
             ]);
             
             // Attach agreement
@@ -512,6 +505,15 @@ class DemoSeeder extends Seeder
             $participantCount = min(rand(1, 2), count($agreementUserIds));
             $selectedParticipants = collect($agreementUserIds)->random($participantCount);
             $activity->participants()->sync($selectedParticipants);
+
+            // Seed participant time entries
+            foreach ($selectedParticipants as $participantId) {
+                ActivityParticipantTime::create([
+                    'activity_id' => $activity->id,
+                    'user_id' => $participantId,
+                    'hours' => rand(1, 8) + (rand(0, 3) * 0.25),
+                ]);
+            }
         }
     }
 
