@@ -69,7 +69,7 @@ class AgreementLoggingFieldController extends Controller
     public function show(AgreementLoggingField $agreementLoggingField)
     {
         $agreementLoggingField->load(['agreements' => function ($query) {
-            $query->select('id', 'name')->orderBy('name');
+            $query->select('agreements.id', 'agreements.name')->orderBy('agreements.name');
         }]);
 
         return view('agreement-logging-fields.show', compact('agreementLoggingField'));
