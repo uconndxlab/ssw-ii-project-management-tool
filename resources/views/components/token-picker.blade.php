@@ -2,21 +2,27 @@
     'pickerId',
     'name',
     'items' => collect(),
+    'options' => null,
     'selectedIds' => [],
     'placeholder' => 'Search...',
     'labelKey' => 'name',
     'valueKey' => 'id',
+    'searchKey' => null,
     'emptyMessage' => 'No matches found.',
     'openOnFocus' => true,
+    'height' => '300px',
 ])
 
 @php
     $selectedIds = collect($selectedIds)->map(fn ($id) => (string) $id)->values()->all();
 
-    $options = collect($items)->map(function ($item) use ($labelKey, $valueKey) {
+    $searchKey = $searchKey ?: $labelKey;
+
+    $normalizedOptions = collect($options ?? $items)->map(function ($item) use ($labelKey, $valueKey, $searchKey) {
         return [
             'value' => (string) data_get($item, $valueKey),
             'label' => (string) data_get($item, $labelKey),
+            'search' => strtolower((string) data_get($item, $searchKey, data_get($item, $labelKey))),
         ];
     })->filter(fn ($option) => $option['value'] !== '')->values()->all();
 @endphp
@@ -40,14 +46,14 @@
                autocomplete="off">
     </div>
 
-    <div class="list-group position-absolute start-0 end-0 mt-1 shadow-sm d-none"
-        style="z-index: 1060; max-height: 220px; overflow-y: scroll;"
-         data-token-dropdown></div>
+    <div class="border rounded p-3 bg-white shadow-sm d-none position-absolute start-0 end-0 mt-1"
+        style="z-index: 1060; max-height: {{ $height }}; overflow-y: scroll;"
+         data-token-list></div>
 
     <div data-token-inputs></div>
 
     <script type="application/json" data-token-options>
-        @json($options)
+        @json($normalizedOptions)
     </script>
 </div>
 
@@ -65,11 +71,11 @@
     function renderTokenPicker(picker) {
         const searchInput = picker.querySelector('[data-token-search]');
         const selectedWrap = picker.querySelector('[data-token-selected]');
-        const dropdown = picker.querySelector('[data-token-dropdown]');
+        const listWrap = picker.querySelector('[data-token-list]');
         const hiddenInputs = picker.querySelector('[data-token-inputs]');
         const optionsNode = picker.querySelector('[data-token-options]');
 
-        if (!searchInput || !selectedWrap || !dropdown || !hiddenInputs || !optionsNode) {
+        if (!searchInput || !selectedWrap || !listWrap || !hiddenInputs || !optionsNode) {
             return;
         }
 
@@ -137,9 +143,7 @@
                 badge.querySelector('button').addEventListener('click', function () {
                     selected.delete(String(value));
                     renderSelected();
-                    if (!dropdown.classList.contains('d-none')) {
-                        renderDropdown(true);
-                    }
+                    renderList();
                     writeHiddenInputs();
                     picker.dispatchEvent(new CustomEvent('token-picker:change', { bubbles: true }));
                 });
@@ -156,45 +160,61 @@
                 if (selected.has(String(opt.value))) {
                     return false;
                 }
-                return q === '' || String(opt.label).toLowerCase().includes(q);
+                const haystack = String(opt.search || opt.label).toLowerCase();
+                return q === '' || haystack.includes(q);
             });
         }
 
-        function renderDropdown(forceOpen) {
+        function renderList(forceOpen) {
             const list = filteredOptions(searchInput.value);
-            dropdown.innerHTML = '';
+            listWrap.innerHTML = '';
 
             if (list.length === 0) {
                 const empty = document.createElement('div');
-                empty.className = 'list-group-item text-muted small';
+                empty.className = 'text-muted small';
                 empty.textContent = emptyMessage;
-                dropdown.appendChild(empty);
+                listWrap.appendChild(empty);
             } else {
-                list.slice(0, 25).forEach(function (opt, index) {
-                    const btn = document.createElement('button');
-                    btn.type = 'button';
-                    btn.className = 'list-group-item list-group-item-action';
-                    btn.textContent = opt.label;
-                    btn.dataset.value = String(opt.value);
-                    if (index === 0) {
-                        btn.dataset.firstMatch = 'true';
-                    }
-                    btn.addEventListener('click', function () {
-                        selected.add(String(opt.value));
-                        searchInput.value = '';
+                list.forEach(function (opt) {
+                    const row = document.createElement('label');
+                    row.className = 'form-check d-flex align-items-start gap-2 mb-2';
+
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.className = 'form-check-input mt-1';
+                    checkbox.value = String(opt.value);
+                    checkbox.checked = selected.has(String(opt.value));
+                    checkbox.addEventListener('change', function () {
+                        if (checkbox.checked) {
+                            selected.add(String(opt.value));
+                        } else {
+                            selected.delete(String(opt.value));
+                        }
+
                         renderSelected();
-                        renderDropdown(true);
+                        renderList(true);
                         writeHiddenInputs();
                         picker.dispatchEvent(new CustomEvent('token-picker:change', { bubbles: true }));
                         searchInput.focus();
                     });
-                    dropdown.appendChild(btn);
+
+                    const text = document.createElement('span');
+                    text.className = 'form-check-label';
+                    text.textContent = opt.label;
+
+                    row.appendChild(checkbox);
+                    row.appendChild(text);
+                    listWrap.appendChild(row);
                 });
             }
 
             if (forceOpen) {
-                dropdown.classList.remove('d-none');
+                listWrap.classList.remove('d-none');
             }
+        }
+
+        function closeList() {
+            listWrap.classList.add('d-none');
         }
 
         picker.addEventListener('token-picker:set', function (event) {
@@ -205,8 +225,8 @@
             });
             syncSelectionToAllowedValues();
             renderSelected();
-            if (!dropdown.classList.contains('d-none')) {
-                renderDropdown(true);
+            if (!listWrap.classList.contains('d-none')) {
+                renderList(true);
             }
             writeHiddenInputs();
             picker.dispatchEvent(new CustomEvent('token-picker:change', { bubbles: true }));
@@ -216,8 +236,8 @@
             allowedValues = normalizedAllowedValues(event.detail);
             syncSelectionToAllowedValues();
             renderSelected();
-            if (!dropdown.classList.contains('d-none')) {
-                renderDropdown(true);
+            if (!listWrap.classList.contains('d-none')) {
+                renderList(true);
             }
             writeHiddenInputs();
             picker.dispatchEvent(new CustomEvent('token-picker:change', { bubbles: true }));
@@ -225,35 +245,33 @@
 
         searchInput.addEventListener('focus', function () {
             if (picker.dataset.openOnFocus === 'true') {
-                renderDropdown(true);
+                renderList(true);
             }
         });
         searchInput.addEventListener('click', function () {
-            renderDropdown(true);
+            renderList(true);
         });
         searchInput.addEventListener('input', function () {
-            renderDropdown(true);
+            renderList(true);
         });
         searchInput.addEventListener('keydown', function (event) {
             if (event.key === 'Enter') {
-                const first = dropdown.querySelector('[data-first-match="true"]');
-                if (first) {
-                    event.preventDefault();
-                    first.click();
-                }
+                event.preventDefault();
             }
             if (event.key === 'Escape') {
-                dropdown.classList.add('d-none');
+                closeList();
             }
         });
 
         document.addEventListener('click', function (event) {
             if (!picker.contains(event.target)) {
-                dropdown.classList.add('d-none');
+                closeList();
             }
         });
 
         renderSelected();
+        renderList(false);
+        closeList();
         writeHiddenInputs();
 
         // Dispatch initialization event when picker is ready with initial values
@@ -261,12 +279,6 @@
             setTimeout(function() {
                 picker.dispatchEvent(new CustomEvent('token-picker:initialized', { bubbles: true }));
             }, 0);
-        }
-
-        // Check if input is already focused (e.g., browser autofocus) and show dropdown
-        // Fixes: dropdown not appearing when page loads with focused field
-        if (picker.dataset.openOnFocus === 'true' && document.activeElement === searchInput) {
-            renderDropdown(true);
         }
     }
 

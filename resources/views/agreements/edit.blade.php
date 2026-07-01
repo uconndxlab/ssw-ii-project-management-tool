@@ -10,6 +10,15 @@
         'required_agreement_logging_field_ids',
         $agreement->agreementLoggingFields->filter(fn ($field) => $field->pivot->is_required)->pluck('id')->toArray()
     );
+    $agreementUserOptions = $users->map(function ($user) {
+        $role = !empty($user->role) ? ' (' . ucfirst($user->role) . ')' : '';
+
+        return [
+            'value' => $user->id,
+            'label' => $user->name . $role,
+            'search' => trim($user->name . ' ' . ($user->email ?? '') . ' ' . ($user->role ?? '')),
+        ];
+    });
 @endphp
 
 <div class="row mb-4">
@@ -53,11 +62,13 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Organizations</label>
-                                <x-organization-picker
+                                <x-token-picker
                                     picker-id="agreement-organizations"
                                     name="organization_ids[]"
-                                    :organizations="$organizations"
+                                    :items="$organizations"
                                     :selected-ids="old('organization_ids', $agreement->organizations->pluck('id')->toArray())"
+                                    placeholder="Search organizations..."
+                                    :height="'300px'"
                                 />
                                 @error('organization_ids')
                                     <div class="text-danger small mt-1">{{ $message }}</div>
@@ -68,11 +79,13 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">States</label>
-                                <x-state-picker
+                                <x-token-picker
                                     picker-id="agreement-states"
                                     name="state_ids[]"
-                                    :states="$states"
+                                    :items="$states"
                                     :selected-ids="old('state_ids', $agreement->states->pluck('id')->toArray())"
+                                    placeholder="Search states..."
+                                    :height="'300px'"
                                 />
                                 @error('state_ids')
                                     <div class="text-danger small mt-1">{{ $message }}</div>
@@ -134,7 +147,6 @@
                                 @error('original_end_date')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
-                                <small class="text-muted">For tracking agreement extensions</small>
                             </div>
                         </div>
 
@@ -162,7 +174,6 @@
                         @error('certification_candidates')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
-                        <small class="text-muted">List of certification candidates (placeholder)</small>
                     </div>
 
                     <hr class="my-4">
@@ -210,13 +221,16 @@
                     <div class="mb-3">
                         <label class="form-label">Assign Users</label>
 
-                        <x-user-picker
+                        <x-token-picker
                             picker-id="agreement-edit-users"
                             name="user_ids[]"
-                            :users="$users"
+                            :options="$agreementUserOptions"
                             :selected-ids="old('user_ids', $agreement->users->pluck('id')->toArray())"
-                            search-placeholder="Search to assign users..."
-                            :show-role="true"
+                            label-key="label"
+                            value-key="value"
+                            search-key="search"
+                            placeholder="Search to assign users..."
+                            :height="'300px'"
                         />
 
                         <small class="text-muted">Use the checkboxes above and click Update Agreement to save assigned users.</small>

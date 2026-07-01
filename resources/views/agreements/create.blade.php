@@ -6,6 +6,15 @@
 @php
     $selectedAgreementLoggingFieldIds = old('agreement_logging_field_ids', []);
     $requiredAgreementLoggingFieldIds = old('required_agreement_logging_field_ids', []);
+    $agreementUserOptions = $users->map(function ($user) {
+        $role = !empty($user->role) ? ' (' . ucfirst($user->role) . ')' : '';
+
+        return [
+            'value' => $user->id,
+            'label' => $user->name . $role,
+            'search' => trim($user->name . ' ' . ($user->email ?? '') . ' ' . ($user->role ?? '')),
+        ];
+    });
 @endphp
 <div class="row mb-4">
     <div class="col-12">
@@ -32,11 +41,11 @@
 
                     <div class="mb-3">
                         <label for="name" class="form-label">Agreement Name</label>
-                        <input type="text" 
-                               class="form-control @error('name') is-invalid @enderror" 
-                               id="name" 
-                               name="name" 
-                               value="{{ old('name') }}" 
+                        <input type="text"
+                               class="form-control @error('name') is-invalid @enderror"
+                               id="name"
+                               name="name"
+                               value="{{ old('name') }}"
                                required>
                         @error('name')
                             <div class="invalid-feedback">{{ $message }}</div>
@@ -47,11 +56,13 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Organizations</label>
-                                <x-organization-picker
+                                <x-token-picker
                                     picker-id="agreement-organizations"
                                     name="organization_ids[]"
-                                    :organizations="$organizations"
+                                    :items="$organizations"
                                     :selected-ids="old('organization_ids', [])"
+                                    placeholder="Search organizations..."
+                                    :height="'300px'"
                                 />
                                 @error('organization_ids')
                                     <div class="text-danger small mt-1">{{ $message }}</div>
@@ -62,11 +73,13 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">States</label>
-                                <x-state-picker
+                                <x-token-picker
                                     picker-id="agreement-states"
                                     name="state_ids[]"
-                                    :states="$states"
+                                    :items="$states"
                                     :selected-ids="old('state_ids', [])"
+                                    placeholder="Search states..."
+                                    :height="'300px'"
                                 />
                                 @error('state_ids')
                                     <div class="text-danger small mt-1">{{ $message }}</div>
@@ -77,9 +90,9 @@
 
                     <div class="mb-3">
                         <label for="abstract" class="form-label">Abstract</label>
-                        <textarea class="form-control @error('abstract') is-invalid @enderror" 
-                                  id="abstract" 
-                                  name="abstract" 
+                        <textarea class="form-control @error('abstract') is-invalid @enderror"
+                                  id="abstract"
+                                  name="abstract"
                                   rows="4">{{ old('abstract') }}</textarea>
                         @error('abstract')
                             <div class="invalid-feedback">{{ $message }}</div>
@@ -90,10 +103,10 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="start_date" class="form-label">Start Date</label>
-                                <input type="date" 
-                                       class="form-control @error('start_date') is-invalid @enderror" 
-                                       id="start_date" 
-                                       name="start_date" 
+                                <input type="date"
+                                       class="form-control @error('start_date') is-invalid @enderror"
+                                       id="start_date"
+                                       name="start_date"
                                        value="{{ old('start_date') }}">
                                 @error('start_date')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -104,10 +117,10 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="end_date" class="form-label">End Date</label>
-                                <input type="date" 
-                                       class="form-control @error('end_date') is-invalid @enderror" 
-                                       id="end_date" 
-                                       name="end_date" 
+                                <input type="date"
+                                       class="form-control @error('end_date') is-invalid @enderror"
+                                       id="end_date"
+                                       name="end_date"
                                        value="{{ old('end_date') }}">
                                 @error('end_date')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -120,25 +133,24 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="original_end_date" class="form-label">Original End Date</label>
-                                <input type="date" 
-                                       class="form-control @error('original_end_date') is-invalid @enderror" 
-                                       id="original_end_date" 
-                                       name="original_end_date" 
+                                <input type="date"
+                                       class="form-control @error('original_end_date') is-invalid @enderror"
+                                       id="original_end_date"
+                                       name="original_end_date"
                                        value="{{ old('original_end_date') }}">
                                 @error('original_end_date')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
-                                <small class="text-muted">For tracking agreement extensions</small>
                             </div>
                         </div>
 
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="extended_end_date" class="form-label">Extended End Date</label>
-                                <input type="date" 
-                                       class="form-control @error('extended_end_date') is-invalid @enderror" 
-                                       id="extended_end_date" 
-                                       name="extended_end_date" 
+                                <input type="date"
+                                       class="form-control @error('extended_end_date') is-invalid @enderror"
+                                       id="extended_end_date"
+                                       name="extended_end_date"
                                        value="{{ old('extended_end_date') }}">
                                 @error('extended_end_date')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -149,14 +161,13 @@
 
                     <div class="mb-3">
                         <label for="certification_candidates" class="form-label">Certification Candidates</label>
-                        <textarea class="form-control @error('certification_candidates') is-invalid @enderror" 
-                                  id="certification_candidates" 
-                                  name="certification_candidates" 
+                        <textarea class="form-control @error('certification_candidates') is-invalid @enderror"
+                                  id="certification_candidates"
+                                  name="certification_candidates"
                                   rows="3">{{ old('certification_candidates') }}</textarea>
                         @error('certification_candidates')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
-                        <small class="text-muted">List of certification candidates (placeholder)</small>
                     </div>
 
                     <div class="mb-4">
@@ -200,13 +211,16 @@
                     <div class="mb-3">
                         <label class="form-label">Assign Users</label>
 
-                        <x-user-picker
+                        <x-token-picker
                             picker-id="agreement-create-users"
                             name="user_ids[]"
-                            :users="$users"
+                            :options="$agreementUserOptions"
                             :selected-ids="old('user_ids', [])"
-                            search-placeholder="Search to assign users..."
-                            :show-role="true"
+                            label-key="label"
+                            value-key="value"
+                            search-key="search"
+                            placeholder="Search to assign users..."
+                            :height="'300px'"
                         />
                     </div>
 
