@@ -11,6 +11,7 @@ use App\Models\State;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class ActivityController extends Controller
 {
@@ -264,6 +265,8 @@ class ActivityController extends Controller
             )
         );
 
+        $this->validateAgreementCoverageSelections($validated, $agreements);
+
         $activity = Activity::create([
             'user_id' => Auth::id(),
             'engagement_date' => $validated['engagement_date'],
@@ -379,6 +382,8 @@ class ActivityController extends Controller
                 $this->dynamicLoggingFieldValidationRules($agreements, $contactFamily)
             )
         );
+
+        $this->validateAgreementCoverageSelections($validated, $agreements);
 
         $activity->update([
             'engagement_date' => $validated['engagement_date'],
@@ -520,6 +525,44 @@ class ActivityController extends Controller
         }
 
         return $rules;
+    }
+
+    private function validateAgreementCoverageSelections(array $validated, $agreements): void
+    {
+        if (empty($validated['agreement_ids'])) {
+            return;
+        }
+
+        $agreements->loadMissing(['organizations:id', 'states:id']);
+
+        $allowedOrganizationIds = $agreements
+            ->flatMap(fn ($agreement) => $agreement->organizations->pluck('id'))
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        $allowedStateIds = $agreements
+            ->flatMap(fn ($agreement) => $agreement->states->pluck('id'))
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        $selectedOrganizationIds = collect($validated['organization_ids'] ?? [])->map(fn ($id) => (int) $id);
+        $selectedStateIds = collect($validated['state_ids'] ?? [])->map(fn ($id) => (int) $id);
+
+        if ($selectedOrganizationIds->diff($allowedOrganizationIds)->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'organization_ids' => 'Selected organizations must belong to at least one chosen agreement.',
+            ]);
+        }
+
+        if ($selectedStateIds->diff($allowedStateIds)->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'state_ids' => 'Selected states must belong to at least one chosen agreement.',
+            ]);
+        }
     }
 
     private function rulesForField(string $fieldType, bool $required, array $options = []): array
