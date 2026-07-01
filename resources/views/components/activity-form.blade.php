@@ -79,7 +79,7 @@
         <div class="row g-4">
             <div class="col-lg-8">
                 <div class="d-grid gap-4">
-                    <x-section-card title="Agreements & Coverage" subtitle="{{ $isEditMode ? 'Update agreement context first.' : 'Select agreements first, then optional org/state context.' }}">
+                    <x-section-card title="Agreements & Coverage">
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Agreements</label>
                             <x-token-picker
@@ -128,7 +128,7 @@
                         </div>
                     </x-section-card>
 
-                    <x-section-card title="Activity Classification" subtitle="{{ $isEditMode ? 'Contact family controls available activity types.' : 'Contact family unlocks activity type.' }}">
+                    <x-section-card title="Activity Classification">
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label for="contact_family_id" class="form-label fw-semibold">
@@ -202,7 +202,7 @@
                     </x-section-card>
 
                     <div id="agreement-logging-section" class="{{ $agreementsWithLoggingFields->isEmpty() ? 'd-none' : '' }}">
-                        <x-section-card title="Agreement Logging Fields" subtitle="Agreement-specific questions are grouped below each selected agreement.">
+                        <x-section-card title="Agreement Logging Fields">
                             <div id="agreement-logging-groups" class="d-grid gap-3">
                             @foreach($agreementsWithLoggingFields as $agreement)
                                 <div class="border rounded p-3 d-none" data-agreement-logging-group="{{ $agreement->id }}">
@@ -237,7 +237,7 @@
 
             <div class="col-lg-4">
                 <div class="d-grid gap-4">
-                    <x-section-card title="Details" subtitle="Date and visibility.">
+                    <x-section-card title="Details">
                         <div class="mb-3">
                             <label for="engagement_date" class="form-label fw-semibold">Date <span class="text-danger">*</span></label>
                             <input type="date"
