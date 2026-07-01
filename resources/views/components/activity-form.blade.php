@@ -53,6 +53,7 @@
     $formId = $isEditMode ? 'activity-edit-form' : 'activity-create-form';
     $formAction = $isEditMode ? route('activities.update', $activity) : route('activities.store');
     $saveStatusDefault = $isEditMode ? 'Saved' : 'Ready';
+    $agreementsWithLoggingFields = $agreements->filter(fn ($agreement) => $agreement->agreementLoggingFields->isNotEmpty())->values();
 @endphp
 
 <div class="container-fluid py-4">
@@ -200,9 +201,10 @@
                         </div>
                     </x-section-card>
 
-                    <x-section-card title="Agreement Logging Fields" subtitle="Agreement-specific questions are grouped below each selected agreement.">
-                        <div id="agreement-logging-groups" class="d-grid gap-3">
-                            @foreach($agreements as $agreement)
+                    <div id="agreement-logging-section" class="{{ $agreementsWithLoggingFields->isEmpty() ? 'd-none' : '' }}">
+                        <x-section-card title="Agreement Logging Fields" subtitle="Agreement-specific questions are grouped below each selected agreement.">
+                            <div id="agreement-logging-groups" class="d-grid gap-3">
+                            @foreach($agreementsWithLoggingFields as $agreement)
                                 <div class="border rounded p-3 d-none" data-agreement-logging-group="{{ $agreement->id }}">
                                     <div class="d-flex justify-content-between align-items-center mb-3">
                                         <div>
@@ -211,32 +213,25 @@
                                         </div>
                                     </div>
 
-                                    @if($agreement->agreementLoggingFields->isEmpty())
-                                        <div class="text-muted small">No agreement-specific logging fields are assigned to this agreement.</div>
-                                    @else
-                                        <div class="row g-3">
-                                            @foreach($agreement->agreementLoggingFields as $field)
-                                                <div class="col-md-6">
-                                                    @include('activities.partials.logging-field-input', [
-                                                        'field' => $field,
-                                                        'inputName' => "agreement_logging_values[{$agreement->id}][{$field->id}]",
-                                                        'oldKey' => "agreement_logging_values.{$agreement->id}.{$field->id}",
-                                                        'value' => data_get($agreementLoggingData, "{$agreement->id}.{$field->id}"),
-                                                        'inputId' => "agreement_{$agreement->id}_field_{$field->id}",
-                                                        'isRequired' => (bool) $field->pivot->is_required,
-                                                    ])
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                    @endif
+                                    <div class="row g-3">
+                                        @foreach($agreement->agreementLoggingFields as $field)
+                                            <div class="col-md-6">
+                                                @include('activities.partials.logging-field-input', [
+                                                    'field' => $field,
+                                                    'inputName' => "agreement_logging_values[{$agreement->id}][{$field->id}]",
+                                                    'oldKey' => "agreement_logging_values.{$agreement->id}.{$field->id}",
+                                                    'value' => data_get($agreementLoggingData, "{$agreement->id}.{$field->id}"),
+                                                    'inputId' => "agreement_{$agreement->id}_field_{$field->id}",
+                                                    'isRequired' => (bool) $field->pivot->is_required,
+                                                ])
+                                            </div>
+                                        @endforeach
+                                    </div>
                                 </div>
                             @endforeach
-
-                            <div id="agreement-logging-empty" class="text-muted small border rounded p-3">
-                                Select one or more agreements to see their grouped logging fields.
                             </div>
-                        </div>
-                    </x-section-card>
+                        </x-section-card>
+                    </div>
                 </div>
             </div>
 
@@ -433,6 +428,7 @@
 
     function updateAgreementLoggingGroups() {
         const selected = new Set(selectedValues('agreement_ids[]'));
+        const section = document.getElementById('agreement-logging-section');
         let visibleGroups = 0;
 
         document.querySelectorAll('[data-agreement-logging-group]').forEach(function (group) {
@@ -444,7 +440,7 @@
             visibleGroups += visible ? 1 : 0;
         });
 
-        document.getElementById('agreement-logging-empty')?.classList.toggle('d-none', visibleGroups > 0);
+        section?.classList.toggle('d-none', visibleGroups === 0);
     }
 
     function updateContactFamilyLoggingGroups() {
