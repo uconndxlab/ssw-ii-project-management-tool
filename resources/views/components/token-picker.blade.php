@@ -7,6 +7,7 @@
     'labelKey' => 'name',
     'valueKey' => 'id',
     'emptyMessage' => 'No matches found.',
+    'openOnFocus' => true,
 ])
 
 @php
@@ -26,9 +27,11 @@
      data-name="{{ $name }}"
      data-empty-message="{{ $emptyMessage }}"
      data-placeholder="{{ $placeholder }}"
+     data-open-on-focus="{{ $openOnFocus ? 'true' : 'false' }}"
      data-selected='@json($selectedIds)'>
-    <div class="form-control d-flex flex-wrap gap-1 align-items-center py-1" style="min-height: 42px;">
-        <div class="d-flex flex-wrap gap-1" data-token-selected></div>
+    <div class="d-flex flex-wrap gap-1 mb-2" data-token-selected></div>
+
+    <div class="form-control d-flex align-items-center py-1" style="min-height: 42px;">
         <input type="text"
                class="border-0 flex-grow-1"
                style="outline: none; min-width: 160px;"
@@ -38,7 +41,7 @@
     </div>
 
     <div class="list-group position-absolute start-0 end-0 mt-1 shadow-sm d-none"
-         style="z-index: 1060; max-height: 220px; overflow-y: auto;"
+        style="z-index: 1060; max-height: 220px; overflow-y: scroll;"
          data-token-dropdown></div>
 
     <div data-token-inputs></div>
@@ -75,6 +78,7 @@
         const options = parseJson(optionsNode, []);
         const initialSelected = new Set(parseJson({ textContent: picker.dataset.selected || '[]' }, []));
         const selected = new Set(Array.from(initialSelected));
+        let allowedValues = null;
 
         function selectedArray() {
             return Array.from(selected);
@@ -82,6 +86,28 @@
 
         function optionByValue(value) {
             return options.find(opt => String(opt.value) === String(value));
+        }
+
+        function normalizedAllowedValues(values) {
+            if (!Array.isArray(values)) {
+                return null;
+            }
+
+            return new Set(values.map(function (value) {
+                return String(value);
+            }));
+        }
+
+        function syncSelectionToAllowedValues() {
+            if (allowedValues === null) {
+                return;
+            }
+
+            Array.from(selected).forEach(function (value) {
+                if (!allowedValues.has(String(value))) {
+                    selected.delete(String(value));
+                }
+            });
         }
 
         function writeHiddenInputs() {
@@ -111,7 +137,9 @@
                 badge.querySelector('button').addEventListener('click', function () {
                     selected.delete(String(value));
                     renderSelected();
-                    renderDropdown();
+                    if (!dropdown.classList.contains('d-none')) {
+                        renderDropdown(true);
+                    }
                     writeHiddenInputs();
                     picker.dispatchEvent(new CustomEvent('token-picker:change', { bubbles: true }));
                 });
@@ -122,6 +150,9 @@
         function filteredOptions(term) {
             const q = (term || '').trim().toLowerCase();
             return options.filter(function (opt) {
+                if (allowedValues !== null && !allowedValues.has(String(opt.value))) {
+                    return false;
+                }
                 if (selected.has(String(opt.value))) {
                     return false;
                 }
@@ -129,7 +160,7 @@
             });
         }
 
-        function renderDropdown() {
+        function renderDropdown(forceOpen) {
             const list = filteredOptions(searchInput.value);
             dropdown.innerHTML = '';
 
@@ -152,7 +183,7 @@
                         selected.add(String(opt.value));
                         searchInput.value = '';
                         renderSelected();
-                        renderDropdown();
+                        renderDropdown(true);
                         writeHiddenInputs();
                         picker.dispatchEvent(new CustomEvent('token-picker:change', { bubbles: true }));
                         searchInput.focus();
@@ -161,7 +192,9 @@
                 });
             }
 
-            dropdown.classList.remove('d-none');
+            if (forceOpen) {
+                dropdown.classList.remove('d-none');
+            }
         }
 
         picker.addEventListener('token-picker:set', function (event) {
@@ -170,14 +203,37 @@
             values.forEach(function (value) {
                 selected.add(String(value));
             });
+            syncSelectionToAllowedValues();
             renderSelected();
-            renderDropdown();
+            if (!dropdown.classList.contains('d-none')) {
+                renderDropdown(true);
+            }
             writeHiddenInputs();
             picker.dispatchEvent(new CustomEvent('token-picker:change', { bubbles: true }));
         });
 
-        searchInput.addEventListener('focus', renderDropdown);
-        searchInput.addEventListener('input', renderDropdown);
+        picker.addEventListener('token-picker:restrict', function (event) {
+            allowedValues = normalizedAllowedValues(event.detail);
+            syncSelectionToAllowedValues();
+            renderSelected();
+            if (!dropdown.classList.contains('d-none')) {
+                renderDropdown(true);
+            }
+            writeHiddenInputs();
+            picker.dispatchEvent(new CustomEvent('token-picker:change', { bubbles: true }));
+        });
+
+        searchInput.addEventListener('focus', function () {
+            if (picker.dataset.openOnFocus === 'true') {
+                renderDropdown(true);
+            }
+        });
+        searchInput.addEventListener('click', function () {
+            renderDropdown(true);
+        });
+        searchInput.addEventListener('input', function () {
+            renderDropdown(true);
+        });
         searchInput.addEventListener('keydown', function (event) {
             if (event.key === 'Enter') {
                 const first = dropdown.querySelector('[data-first-match="true"]');
@@ -199,18 +255,18 @@
 
         renderSelected();
         writeHiddenInputs();
-        
+
         // Dispatch initialization event when picker is ready with initial values
         if (initialSelected.size > 0) {
             setTimeout(function() {
                 picker.dispatchEvent(new CustomEvent('token-picker:initialized', { bubbles: true }));
             }, 0);
         }
-        
+
         // Check if input is already focused (e.g., browser autofocus) and show dropdown
         // Fixes: dropdown not appearing when page loads with focused field
-        if (document.activeElement === searchInput) {
-            renderDropdown();
+        if (picker.dataset.openOnFocus === 'true' && document.activeElement === searchInput) {
+            renderDropdown(true);
         }
     }
 
