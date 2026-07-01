@@ -8,6 +8,20 @@
     
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --app-page-bg: #f3f4f6;
+        }
+
+        body {
+            background-color: var(--app-page-bg);
+        }
+
+        main {
+            min-height: calc(100vh - 56px);
+        }
+    </style>
     
     <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
