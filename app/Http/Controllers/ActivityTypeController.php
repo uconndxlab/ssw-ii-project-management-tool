@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AgreementDeliverable;
 use App\Models\ActivityType;
 use App\Models\ContactFamily;
 use Illuminate\Http\Request;
@@ -199,16 +200,51 @@ class ActivityTypeController extends Controller
     {
         $contactFamilyId = $request->input('contact_family_id');
         $selectedActivityTypeId = (int) $request->input('activity_type_id');
+        $agreementIds = collect($request->input('agreement_ids', []))
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
 
         if (!$contactFamilyId) {
             return response('<option value="">Select activity type...</option>');
         }
 
-        $activityTypes = ActivityType::where('contact_family_id', $contactFamilyId)
+        $query = ActivityType::where('contact_family_id', $contactFamilyId)
             ->where('active', true)
             ->orderBy('sort_order')
-            ->orderBy('name')
-            ->get();
+            ->orderBy('name');
+
+        if ($agreementIds->isNotEmpty()) {
+            $deliverables = AgreementDeliverable::query()
+                ->with('activityType:id,contact_family_id')
+                ->whereIn('agreement_id', $agreementIds)
+                ->where(function ($query) use ($contactFamilyId) {
+                    $query
+                        ->where('contact_family_id', $contactFamilyId)
+                        ->orWhereHas('activityType', function ($activityTypeQuery) use ($contactFamilyId) {
+                            $activityTypeQuery->where('contact_family_id', $contactFamilyId);
+                        });
+                })
+                ->get();
+
+            $hasFamilyLevelDeliverable = $deliverables->contains(function ($deliverable) use ($contactFamilyId) {
+                return (int) $deliverable->contact_family_id === (int) $contactFamilyId
+                    && !$deliverable->activity_type_id;
+            });
+
+            if (!$hasFamilyLevelDeliverable) {
+                $allowedActivityTypeIds = $deliverables
+                    ->pluck('activity_type_id')
+                    ->filter()
+                    ->unique()
+                    ->values();
+
+                $query->whereIn('id', $allowedActivityTypeIds->all());
+            }
+        }
+
+        $activityTypes = $query->get();
 
         $html = '<option value="">Select activity type...</option>';
         foreach ($activityTypes as $type) {

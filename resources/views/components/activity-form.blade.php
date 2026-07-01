@@ -18,10 +18,29 @@
 
 @php
     $agreementConfigs = $agreements->mapWithKeys(function ($agreement) {
+        $deliverables = $agreement->deliverables ?? collect();
+
         return [
             $agreement->id => [
                 'organization_ids' => $agreement->organizations->pluck('id')->map(fn($id) => (string) $id)->values()->all(),
                 'state_ids' => $agreement->states->pluck('id')->map(fn($id) => (string) $id)->values()->all(),
+                'contact_family_ids' => $deliverables
+                    ->flatMap(function ($deliverable) {
+                        $ids = [];
+
+                        if ($deliverable->contact_family_id) {
+                            $ids[] = (string) $deliverable->contact_family_id;
+                        }
+
+                        if ($deliverable->activityType?->contact_family_id) {
+                            $ids[] = (string) $deliverable->activityType->contact_family_id;
+                        }
+
+                        return $ids;
+                    })
+                    ->unique()
+                    ->values()
+                    ->all(),
             ]
         ];
     });
@@ -120,7 +139,7 @@
                                         hx-get="{{ route('activity-types.by-family') }}"
                                         hx-target="#activity_type_id"
                                         hx-swap="innerHTML"
-                                        hx-include="#contact_family_id, #activity_type_selected"
+                                    hx-include="#{{ $formId }}, #activity_type_selected"
                                         hx-trigger="change, load"
                                         required>
                                     <option value="">Select contact family...</option>
@@ -334,6 +353,66 @@
         statePicker?.dispatchEvent(new CustomEvent('token-picker:restrict', { detail: uniqueMergedIds('state_ids') }));
     }
 
+    function restrictClassificationOptions() {
+        const family = document.getElementById('contact_family_id');
+        const type = document.getElementById('activity_type_id');
+        const selectedType = document.getElementById('activity_type_selected');
+        const agreements = selectedValues('agreement_ids[]');
+
+        if (!family || !type) return;
+
+        const hasAgreementSelection = agreements.length > 0;
+        const allowedFamilyIds = new Set(uniqueMergedIds('contact_family_ids'));
+        const hasRestriction = hasAgreementSelection && allowedFamilyIds.size > 0;
+
+        Array.from(family.options).forEach(function (option) {
+            if (!option.value) {
+                option.disabled = false;
+                option.hidden = false;
+                option.textContent = hasAgreementSelection && allowedFamilyIds.size === 0
+                    ? 'No deliverable contact families for selected agreements...'
+                    : 'Select contact family...';
+                return;
+            }
+
+            const allowed = !hasRestriction || allowedFamilyIds.has(String(option.value));
+            option.disabled = !allowed;
+            option.hidden = !allowed;
+        });
+
+        if (hasRestriction && family.value && !allowedFamilyIds.has(String(family.value))) {
+            family.value = '';
+            if (selectedType) {
+                selectedType.value = '';
+            }
+        }
+
+        if (hasAgreementSelection && allowedFamilyIds.size === 0) {
+            family.value = '';
+            if (selectedType) {
+                selectedType.value = '';
+            }
+            type.innerHTML = '<option value="">No activity types available for selected agreements...</option>';
+        }
+
+        updateActivityTypeState();
+    }
+
+    function refreshActivityTypes() {
+        const family = document.getElementById('contact_family_id');
+        const type = document.getElementById('activity_type_id');
+
+        if (!family || !type) return;
+
+        if (!family.value) {
+            type.innerHTML = '<option value="">Select contact family first...</option>';
+            type.disabled = true;
+            return;
+        }
+
+        htmx.trigger(family, 'change');
+    }
+
     function updateAgreementAutoFill() {
         const agreementId = firstSelectedAgreementId();
         const config = agreementConfigs[agreementId] || {};
@@ -455,12 +534,16 @@
     if (agreementsPicker) {
         agreementsPicker.addEventListener('token-picker:change', function () {
             restrictCoveragePickers();
+            restrictClassificationOptions();
+            refreshActivityTypes();
             updateAgreementAutoFill();
             updateAgreementLoggingGroups();
             markDirty();
         });
         agreementsPicker.addEventListener('token-picker:initialized', function () {
             restrictCoveragePickers();
+            restrictClassificationOptions();
+            refreshActivityTypes();
             if (!isEditMode) {
                 updateAgreementAutoFill();
             }
@@ -489,6 +572,15 @@
         if (selectedType && type && selectedType.value) {
             type.value = selectedType.value;
         }
+        if (type) {
+            const availableOptions = Array.from(type.options).filter(function (option) {
+                return option.value !== '';
+            });
+
+            if (!type.value && availableOptions.length === 1) {
+                type.value = availableOptions[0].value;
+            }
+        }
         if (type) type.dispatchEvent(new Event('change', { bubbles: true }));
     });
 
@@ -510,6 +602,7 @@
 
     updateActivityTypeState();
     restrictCoveragePickers();
+    restrictClassificationOptions();
     updateAgreementLoggingGroups();
     updateContactFamilyLoggingGroups();
 

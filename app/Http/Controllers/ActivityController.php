@@ -218,8 +218,8 @@ class ActivityController extends Controller
             ->orderBy('name')
             ->get();
 
-        // Pre-load organizations and states for each agreement
-        $agreements->load(['organizations', 'states']);
+        // Pre-load organizations, states, and deliverables
+        $agreements->load(['organizations', 'states', 'deliverables.activityType']);
 
         // Get pre-selected agreement if provided
         $preselectedAgreementId = $request->query('agreement_id');
@@ -266,6 +266,7 @@ class ActivityController extends Controller
         );
 
         $this->validateAgreementCoverageSelections($validated, $agreements);
+        $this->validateAgreementClassificationSelections($validated, $agreements);
 
         $activity = Activity::create([
             'user_id' => Auth::id(),
@@ -340,6 +341,7 @@ class ActivityController extends Controller
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
+        $agreements->load(['organizations', 'states', 'deliverables.activityType']);
         $activity->load(['activityType.contactFamily', 'agreements', 'states', 'organizations']);
         $currentContactFamilyId = old('contact_family_id', $activity->activityType?->contactFamily?->id);
 
@@ -384,6 +386,7 @@ class ActivityController extends Controller
         );
 
         $this->validateAgreementCoverageSelections($validated, $agreements);
+        $this->validateAgreementClassificationSelections($validated, $agreements);
 
         $activity->update([
             'engagement_date' => $validated['engagement_date'],
@@ -561,6 +564,93 @@ class ActivityController extends Controller
         if ($selectedStateIds->diff($allowedStateIds)->isNotEmpty()) {
             throw ValidationException::withMessages([
                 'state_ids' => 'Selected states must belong to at least one chosen agreement.',
+            ]);
+        }
+    }
+
+    private function validateAgreementClassificationSelections(array $validated, $agreements): void
+    {
+        if (empty($validated['agreement_ids'])) {
+            return;
+        }
+
+        $agreements->loadMissing(['deliverables.activityType']);
+
+        $allowedContactFamilyIds = $agreements
+            ->flatMap(function ($agreement) {
+                return $agreement->deliverables->flatMap(function ($deliverable) {
+                    $ids = [];
+
+                    if ($deliverable->contact_family_id) {
+                        $ids[] = (int) $deliverable->contact_family_id;
+                    }
+
+                    if ($deliverable->activityType?->contact_family_id) {
+                        $ids[] = (int) $deliverable->activityType->contact_family_id;
+                    }
+
+                    return $ids;
+                });
+            })
+            ->unique()
+            ->values();
+
+        if ($allowedContactFamilyIds->isEmpty()) {
+            throw ValidationException::withMessages([
+                'contact_family_id' => 'Selected agreements do not cover any deliverable contact families.',
+            ]);
+        }
+
+        $selectedContactFamilyId = (int) $validated['contact_family_id'];
+        $selectedActivityTypeId = (int) $validated['activity_type_id'];
+
+        if (!$allowedContactFamilyIds->contains($selectedContactFamilyId)) {
+            throw ValidationException::withMessages([
+                'contact_family_id' => 'Selected contact family must be covered by at least one chosen agreement deliverable.',
+            ]);
+        }
+
+        $hasFamilyLevelDeliverable = $agreements
+            ->flatMap->deliverables
+            ->contains(function ($deliverable) use ($selectedContactFamilyId) {
+                return (int) $deliverable->contact_family_id === $selectedContactFamilyId
+                    && !$deliverable->activity_type_id;
+            });
+
+        if ($hasFamilyLevelDeliverable) {
+            $activityTypeAllowed = ActivityType::query()
+                ->whereKey($selectedActivityTypeId)
+                ->where('contact_family_id', $selectedContactFamilyId)
+                ->where('active', true)
+                ->exists();
+
+            if (!$activityTypeAllowed) {
+                throw ValidationException::withMessages([
+                    'activity_type_id' => 'Selected activity type must belong to the chosen contact family.',
+                ]);
+            }
+
+            return;
+        }
+
+        $allowedActivityTypeIds = $agreements
+            ->flatMap->deliverables
+            ->pluck('activity_type_id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        $activityTypeAllowed = ActivityType::query()
+            ->whereKey($selectedActivityTypeId)
+            ->where('contact_family_id', $selectedContactFamilyId)
+            ->whereIn('id', $allowedActivityTypeIds)
+            ->where('active', true)
+            ->exists();
+
+        if (!$activityTypeAllowed) {
+            throw ValidationException::withMessages([
+                'activity_type_id' => 'Selected activity type must be covered by at least one chosen agreement deliverable.',
             ]);
         }
     }
