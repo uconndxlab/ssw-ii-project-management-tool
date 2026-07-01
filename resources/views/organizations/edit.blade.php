@@ -42,11 +42,13 @@
 
                     <div class="mb-3">
                         <label class="form-label">State(s)</label>
-                        <x-state-picker
+                        <x-token-picker
                             picker-id="organization-states"
                             name="state_ids[]"
-                            :states="$states"
+                            :items="$states"
                             :selected-ids="old('state_ids', $organization->states->pluck('id')->toArray())"
+                            placeholder="Search states..."
+                            :height="'300px'"
                         />
                         @error('state_ids')
                             <div class="text-danger small mt-1">{{ $message }}</div>

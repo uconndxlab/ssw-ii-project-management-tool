@@ -3,6 +3,17 @@
 @section('title', 'Create Team')
 
 @section('content')
+@php
+    $teamUserOptions = $users->map(function ($user) {
+        $role = !empty($user->role) ? ' (' . ucfirst($user->role) . ')' : '';
+
+        return [
+            'value' => $user->id,
+            'label' => $user->name . $role,
+            'search' => trim($user->name . ' ' . ($user->email ?? '') . ' ' . ($user->role ?? '')),
+        ];
+    });
+@endphp
 <div class="row mb-4">
     <div class="col-12">
         <h1>Create Team</h1>
@@ -56,13 +67,16 @@
                     <div class="mb-3">
                         <label class="form-label">Team Members</label>
 
-                        <x-user-picker
+                        <x-token-picker
                             picker-id="team-create-users"
                             name="user_ids[]"
-                            :users="$users"
+                            :options="$teamUserOptions"
                             :selected-ids="old('user_ids', [])"
-                            search-placeholder="Search to add members..."
-                            :show-role="true"
+                            label-key="label"
+                            value-key="value"
+                            search-key="search"
+                            placeholder="Search to add members..."
+                            :height="'300px'"
                         />
 
                         <small class="text-muted">
