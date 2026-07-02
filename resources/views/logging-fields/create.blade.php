@@ -3,14 +3,14 @@
 @section('title', 'Create Logging Field')
 
 @section('content')
-<div class="row mb-4">
-    <div class="col-12">
+<div class="row justify-content-center mb-4">
+    <div class="col-lg-8">
         <h1>Create Activity Logging Field</h1>
         <p class="text-muted">Define a new field that can be used in activity logging forms.</p>
     </div>
 </div>
 
-<div class="row">
+<div class="row justify-content-center">
     <div class="col-lg-8">
         <div class="card">
             <div class="card-body">
@@ -29,11 +29,11 @@
 
                     <div class="mb-3">
                         <label for="name" class="form-label">Field Name <span class="text-danger">*</span></label>
-                        <input type="text" 
-                               class="form-control @error('name') is-invalid @enderror" 
-                               id="name" 
-                               name="name" 
-                               value="{{ old('name') }}" 
+                        <input type="text"
+                               class="form-control @error('name') is-invalid @enderror"
+                               id="name"
+                               name="name"
+                               value="{{ old('name') }}"
                                placeholder="e.g., Event Hours, Prep Time, Travel Miles"
                                required>
                         <small class="form-text text-muted">The display name for this field. A URL-friendly slug will be auto-generated.</small>
@@ -44,9 +44,9 @@
 
                     <div class="mb-3">
                         <label for="field_type" class="form-label">Field Type <span class="text-danger">*</span></label>
-                        <select class="form-select @error('field_type') is-invalid @enderror" 
-                                id="field_type" 
-                                name="field_type" 
+                        <select class="form-select @error('field_type') is-invalid @enderror"
+                                id="field_type"
+                                name="field_type"
                                 required
                                 onchange="toggleOptionsField()">
                             <option value="">Select field type…</option>
@@ -62,9 +62,9 @@
 
                     <div class="mb-3" id="options-field" style="display: none;">
                         <label for="options_json" class="form-label">Dropdown Options <span class="text-danger">*</span></label>
-                        <textarea class="form-control @error('options_json') is-invalid @enderror" 
-                                  id="options_json" 
-                                  name="options_json" 
+                        <textarea class="form-control @error('options_json') is-invalid @enderror"
+                                  id="options_json"
+                                  name="options_json"
                                   rows="5"
                                   placeholder='["Option 1", "Option 2", "Option 3"]'>{{ old('options_json') }}</textarea>
                         <small class="form-text text-muted">Enter options as a JSON array. Example: <code>["Yes", "No", "Maybe"]</code></small>
@@ -75,9 +75,9 @@
 
                     <div class="mb-3">
                         <label for="help_text" class="form-label">Help Text</label>
-                        <textarea class="form-control @error('help_text') is-invalid @enderror" 
-                                  id="help_text" 
-                                  name="help_text" 
+                        <textarea class="form-control @error('help_text') is-invalid @enderror"
+                                  id="help_text"
+                                  name="help_text"
                                   rows="2"
                                   placeholder="Optional instructions or description for this field">{{ old('help_text') }}</textarea>
                         <small class="form-text text-muted">Optional guidance text that will appear below the field.</small>
@@ -87,10 +87,10 @@
                     </div>
 
                     <div class="form-check mb-3">
-                        <input class="form-check-input" 
-                               type="checkbox" 
-                               id="is_active" 
-                               name="is_active" 
+                        <input class="form-check-input"
+                               type="checkbox"
+                               id="is_active"
+                               name="is_active"
                                value="1"
                                {{ old('is_active', true) ? 'checked' : '' }}>
                         <label class="form-check-label" for="is_active">

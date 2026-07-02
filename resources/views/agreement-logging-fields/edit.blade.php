@@ -3,14 +3,14 @@
 @section('title', 'Edit Agreement Logging Field')
 
 @section('content')
-<div class="row mb-4">
-    <div class="col-12">
+<div class="row justify-content-center mb-4">
+    <div class="col-lg-8">
         <h1>Edit Agreement Logging Field</h1>
         <p class="text-muted">Update the field definition for "{{ $agreementLoggingField->name }}".</p>
     </div>
 </div>
 
-<div class="row">
+<div class="row justify-content-center">
     <div class="col-lg-8">
         <div class="card">
             <div class="card-body">

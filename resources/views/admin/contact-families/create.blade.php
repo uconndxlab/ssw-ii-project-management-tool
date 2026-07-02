@@ -7,13 +7,13 @@
     $selectedContactFamilyLoggingFieldIds = old('contact_family_logging_field_ids', []);
     $requiredContactFamilyLoggingFieldIds = old('required_contact_family_logging_field_ids', []);
 @endphp
-<div class="row mb-4">
-    <div class="col-12">
+<div class="row justify-content-center mb-4">
+    <div class="col-lg-8">
         <h1>Create Contact Family</h1>
     </div>
 </div>
 
-<div class="row">
+<div class="row justify-content-center">
     <div class="col-lg-8">
         <div class="card">
             <div class="card-body">
@@ -32,11 +32,11 @@
 
                     <div class="mb-3">
                         <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
-                        <input type="text" 
-                               class="form-control @error('name') is-invalid @enderror" 
-                               id="name" 
-                               name="name" 
-                               value="{{ old('name') }}" 
+                        <input type="text"
+                               class="form-control @error('name') is-invalid @enderror"
+                               id="name"
+                               name="name"
+                               value="{{ old('name') }}"
                                required>
                         @error('name')
                             <div class="invalid-feedback">{{ $message }}</div>
@@ -45,11 +45,11 @@
 
                     <div class="mb-3">
                         <div class="form-check">
-                            <input type="checkbox" 
-                                   class="form-check-input" 
-                                   id="active" 
-                                   name="active" 
-                                   value="1" 
+                            <input type="checkbox"
+                                   class="form-check-input"
+                                   id="active"
+                                   name="active"
+                                   value="1"
                                    {{ old('active', true) ? 'checked' : '' }}>
                             <label class="form-check-label" for="active">
                                 Active

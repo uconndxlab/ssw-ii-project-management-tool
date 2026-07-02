@@ -3,13 +3,13 @@
 @section('title', 'Create Program')
 
 @section('content')
-<div class="row mb-4">
-    <div class="col-12">
+<div class="row justify-content-center mb-4">
+    <div class="col-md-6">
         <h1>Create Program</h1>
     </div>
 </div>
 
-<div class="row">
+<div class="row justify-content-center">
     <div class="col-md-6">
         <div class="card">
             <div class="card-header">

@@ -3,13 +3,13 @@
 @section('title', 'Edit Organization')
 
 @section('content')
-<div class="row mb-4">
-    <div class="col-12">
+<div class="row justify-content-center mb-4">
+    <div class="col-md-6">
         <h1>Edit Organization</h1>
     </div>
 </div>
 
-<div class="row">
+<div class="row justify-content-center">
     <div class="col-md-6">
         <div class="card">
             <div class="card-body">
@@ -29,11 +29,11 @@
 
                     <div class="mb-3">
                         <label for="name" class="form-label">Organization Name</label>
-                        <input type="text" 
-                               class="form-control @error('name') is-invalid @enderror" 
-                               id="name" 
-                               name="name" 
-                               value="{{ old('name', $organization->name) }}" 
+                        <input type="text"
+                               class="form-control @error('name') is-invalid @enderror"
+                               id="name"
+                               name="name"
+                               value="{{ old('name', $organization->name) }}"
                                required>
                         @error('name')
                             <div class="invalid-feedback">{{ $message }}</div>

@@ -3,13 +3,13 @@
 @section('title', 'Edit Activity Type')
 
 @section('content')
-<div class="row mb-4">
-    <div class="col-12">
+<div class="row justify-content-center mb-4">
+    <div class="col-lg-8">
         <h1>Edit Activity Type</h1>
     </div>
 </div>
 
-<div class="row">
+<div class="row justify-content-center">
     <div class="col-lg-8">
         <div class="card">
             <div class="card-body">
