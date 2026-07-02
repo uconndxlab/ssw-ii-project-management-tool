@@ -43,10 +43,25 @@
                 <option value="textarea" {{ request('field_type') === 'textarea' ? 'selected' : '' }}>Textarea</option>
                 <option value="checkbox" {{ request('field_type') === 'checkbox' ? 'selected' : '' }}>Checkbox</option>
                 <option value="select" {{ request('field_type') === 'select' ? 'selected' : '' }}>Select</option>
+                <option value="document" {{ request('field_type') === 'document' ? 'selected' : '' }}>Document Upload</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <select name="availability" class="form-select form-select-sm"
+                    hx-get="{{ route('logging-fields.index') }}"
+                    hx-trigger="change"
+                    hx-target="#logging-fields-table"
+                    hx-swap="innerHTML"
+                    hx-push-url="true"
+                    hx-include="#logging-field-filters">
+                <option value="">All Availability</option>
+                <option value="available_in_agreements" {{ request('availability') === 'available_in_agreements' ? 'selected' : '' }}>Agreements</option>
+                <option value="available_in_contact_families" {{ request('availability') === 'available_in_contact_families' ? 'selected' : '' }}>Contact Families</option>
+                <option value="available_in_activities" {{ request('availability') === 'available_in_activities' ? 'selected' : '' }}>Activities</option>
             </select>
         </div>
         <div class="col-auto">
-            @if(request()->hasAny(['search', 'status', 'field_type']))
+            @if(request()->hasAny(['search', 'status', 'field_type', 'availability']))
                 <a href="{{ route('logging-fields.index') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
             @endif
         </div>

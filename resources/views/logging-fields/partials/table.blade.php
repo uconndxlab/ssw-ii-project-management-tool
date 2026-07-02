@@ -11,13 +11,6 @@
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
                 <tr>
-                    <th style="width:30px;">
-                        <a class="text-decoration-none fw-semibold text-dark"
-                           href="{{ $url('sort_order') }}"
-                           hx-get="{{ $url('sort_order') }}" hx-target="#logging-fields-table" hx-swap="innerHTML" hx-push-url="true">
-                            #
-                        </a>
-                    </th>
                     <th>
                         <a class="text-decoration-none fw-semibold text-dark"
                            href="{{ $url('name') }}"
@@ -25,7 +18,6 @@
                             Field Name{!! $icon('name') !!}
                         </a>
                     </th>
-                    <th>Slug</th>
                     <th>
                         <a class="text-decoration-none fw-semibold text-dark"
                            href="{{ $url('field_type') }}"
@@ -33,6 +25,7 @@
                             Field Type{!! $icon('field_type') !!}
                         </a>
                     </th>
+                    <th>Available In</th>
                     <th>
                         <a class="text-decoration-none fw-semibold text-dark"
                            href="{{ $url('is_active') }}"
@@ -46,7 +39,6 @@
             <tbody>
                 @forelse($loggingFields as $field)
                 <tr>
-                    <td class="text-muted small">{{ $field->sort_order ?? '—' }}</td>
                     <td>
                         <a href="{{ route('logging-fields.show', $field) }}" class="fw-semibold text-decoration-none text-dark">
                             {{ $field->name }}
@@ -55,8 +47,23 @@
                             <br><small class="text-muted">{{ Str::limit($field->help_text, 60) }}</small>
                         @endif
                     </td>
-                    <td><code class="text-muted small">{{ $field->slug }}</code></td>
                     <td><span class="badge bg-secondary">{{ ucfirst($field->field_type) }}</span></td>
+                    <td>
+                        <div class="d-flex flex-wrap gap-1">
+                            @if($field->available_in_agreements)
+                                <span class="badge bg-primary">Agreements</span>
+                            @endif
+                            @if($field->available_in_contact_families)
+                                <span class="badge bg-info text-dark">Contact Families</span>
+                            @endif
+                            @if($field->available_in_activities)
+                                <span class="badge bg-warning text-dark">Activities</span>
+                            @endif
+                            @if(! $field->available_in_agreements && ! $field->available_in_contact_families && ! $field->available_in_activities)
+                                <span class="badge bg-light text-dark border">Unassigned</span>
+                            @endif
+                        </div>
+                    </td>
                     <td>
                         @if($field->is_active)
                             <span class="badge bg-success">Active</span>
@@ -78,7 +85,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="6" class="text-center py-5">
+                    <td colspan="5" class="text-center py-5">
                         <p class="text-muted mb-2">No logging fields found.</p>
                         <a href="{{ route('logging-fields.create') }}" class="btn btn-sm btn-primary">Create Logging Field</a>
                     </td>

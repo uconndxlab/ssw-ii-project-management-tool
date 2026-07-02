@@ -176,7 +176,7 @@
                                 <h5 class="mb-1">Agreement-Specific Logging Fields</h5>
                                 <p class="text-muted small mb-0">These fields will be emphasized when activity is logged against this agreement.</p>
                             </div>
-                            <a href="{{ route('agreement-logging-fields.index') }}" class="btn btn-sm btn-outline-secondary">Manage Agreement Fields</a>
+                            <a href="{{ route('logging-fields.index') }}" class="btn btn-sm btn-outline-secondary">Manage Logging Fields</a>
                         </div>
 
                         @if($agreementLoggingFields->isEmpty())

@@ -10,12 +10,11 @@ use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ProgramController;
 use App\Http\Controllers\ContactFamilyController;
-use App\Http\Controllers\ContactFamilyLoggingFieldController;
 use App\Http\Controllers\ActivityTypeController;
-use App\Http\Controllers\AgreementLoggingFieldController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\LoggingFieldController;
 use Illuminate\Support\Facades\Route;
 
 // Guest routes
@@ -80,10 +79,8 @@ Route::middleware('auth')->group(function () {
 
     // Admin routes
     Route::middleware('role:admin')->group(function () {
-        Route::redirect('/logging-fields', '/agreement-logging-fields')->name('logging-fields.index');
+        Route::resource('logging-fields', LoggingFieldController::class);
         Route::resource('contact-families', ContactFamilyController::class)->except(['show']);
-        Route::resource('contact-family-logging-fields', ContactFamilyLoggingFieldController::class);
-        Route::resource('agreement-logging-fields', AgreementLoggingFieldController::class);
         Route::resource('activity-types', ActivityTypeController::class)->except(['show']);
         Route::resource('states', StateController::class);
         Route::resource('organizations', OrganizationController::class)->except(['index', 'show', 'create']);

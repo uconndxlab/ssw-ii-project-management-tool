@@ -9,11 +9,13 @@
             <div>
                 <h1>{{ $loggingField->name }}</h1>
                 <p class="text-muted mb-0">
-                    <code>{{ $loggingField->slug }}</code>
                     @if($loggingField->is_active)
                         <span class="badge bg-success ms-2">Active</span>
                     @else
                         <span class="badge bg-secondary ms-2">Inactive</span>
+                    @endif
+                    @if($loggingField->is_full_width)
+                        <span class="badge bg-dark ms-2">Full width</span>
                     @endif
                 </p>
             </div>
@@ -39,12 +41,24 @@
                             <td class="fw-semibold">{{ $loggingField->name }}</td>
                         </tr>
                         <tr>
-                            <td class="text-muted">Slug</td>
-                            <td><code>{{ $loggingField->slug }}</code></td>
-                        </tr>
-                        <tr>
                             <td class="text-muted">Field Type</td>
                             <td><span class="badge bg-secondary">{{ ucfirst($loggingField->field_type) }}</span></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Available In</td>
+                            <td>
+                                <div class="d-flex flex-wrap gap-1">
+                                    @if($loggingField->available_in_agreements)
+                                        <span class="badge bg-primary">Agreements</span>
+                                    @endif
+                                    @if($loggingField->available_in_contact_families)
+                                        <span class="badge bg-info text-dark">Contact Families</span>
+                                    @endif
+                                    @if($loggingField->available_in_activities)
+                                        <span class="badge bg-warning text-dark">Activities</span>
+                                    @endif
+                                </div>
+                            </td>
                         </tr>
                         @if($loggingField->field_type === 'select' && $loggingField->options_json)
                         <tr>
@@ -67,6 +81,10 @@
                         <tr>
                             <td class="text-muted">Sort Order</td>
                             <td>{{ $loggingField->sort_order ?? 'None (alphabetical)' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Layout</td>
+                            <td>{{ $loggingField->is_full_width ? 'Full width' : 'Half width' }}</td>
                         </tr>
                         <tr>
                             <td class="text-muted">Status</td>
@@ -99,7 +117,7 @@
             </div>
             <div class="card-body">
                 <p class="text-muted mb-3">This field is currently used in:</p>
-                
+
                 <div class="mb-4">
                     <h6 class="fw-semibold">Agreements ({{ $loggingField->agreements->count() }})</h6>
                     @if($loggingField->agreements->isNotEmpty())
@@ -108,7 +126,7 @@
                                 <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
                                     <div>
                                         <a href="{{ route('agreements.show', $agreement) }}" class="text-decoration-none">
-                                            {{ $agreement->number }} - {{ $agreement->name }}
+                                            {{ $agreement->name }}
                                         </a>
                                         @if($agreement->pivot->is_required)
                                             <span class="badge bg-warning text-dark ms-2">Required</span>

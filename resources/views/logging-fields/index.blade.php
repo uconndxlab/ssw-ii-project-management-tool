@@ -6,7 +6,7 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1 class="h2 mb-1">Activity Logging Fields</h1>
+        <h1 class="h2 mb-1">Logging Fields</h1>
         <p class="text-muted small mb-0">{{ $loggingFields->total() }} total</p>
     </div>
     <a href="{{ route('logging-fields.create') }}" class="btn btn-primary">+ Create Logging Field</a>

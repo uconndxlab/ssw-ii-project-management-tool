@@ -183,7 +183,7 @@
                                     @else
                                         <div class="row g-3">
                                             @foreach($family->contactFamilyLoggingFields as $field)
-                                                <div class="col-md-6">
+                                                <div class="{{ $field->is_full_width ? 'col-12' : 'col-md-6' }}">
                                                     @include('activities.partials.logging-field-input', [
                                                         'field' => $field,
                                                         'inputName' => "contact_family_logging_values[{$field->id}]",
@@ -215,7 +215,7 @@
 
                                     <div class="row g-3">
                                         @foreach($agreement->agreementLoggingFields as $field)
-                                            <div class="col-md-6">
+                                            <div class="{{ $field->is_full_width ? 'col-12' : 'col-md-6' }}">
                                                 @include('activities.partials.logging-field-input', [
                                                     'field' => $field,
                                                     'inputName' => "agreement_logging_values[{$agreement->id}][{$field->id}]",

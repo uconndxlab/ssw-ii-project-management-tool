@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ContactFamily;
-use App\Models\ContactFamilyLoggingField;
+use App\Models\LoggingField;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -18,8 +18,8 @@ class ContactFamilyController extends Controller
     public function index(Request $request)
     {
         $query = ContactFamily::withCount('activityTypes')
-            ->orderBy('sort_order')
-            ->orderBy('name');
+            ->orderBy('sort_order', 'asc')
+            ->orderBy('name', 'asc');
 
         if ($request->filled('search')) {
             $query->where('name', 'like', '%' . $request->input('search') . '%');
@@ -32,7 +32,10 @@ class ContactFamilyController extends Controller
 
     public function create()
     {
-        $contactFamilyLoggingFields = ContactFamilyLoggingField::active()->ordered()->get();
+        $contactFamilyLoggingFields = LoggingField::active()
+            ->ordered()
+            ->where('available_in_contact_families', true)
+            ->get();
 
         return view('admin.contact-families.create', compact('contactFamilyLoggingFields'));
     }
@@ -44,9 +47,9 @@ class ContactFamilyController extends Controller
             'active' => ['boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'contact_family_logging_field_ids' => ['nullable', 'array'],
-            'contact_family_logging_field_ids.*' => ['exists:contact_family_logging_fields,id'],
+            'contact_family_logging_field_ids.*' => ['exists:logging_fields,id'],
             'required_contact_family_logging_field_ids' => ['nullable', 'array'],
-            'required_contact_family_logging_field_ids.*' => ['exists:contact_family_logging_fields,id'],
+            'required_contact_family_logging_field_ids.*' => ['exists:logging_fields,id'],
         ]);
 
         $validated['active'] = $request->has('active');
@@ -73,7 +76,10 @@ class ContactFamilyController extends Controller
 
     public function edit(ContactFamily $contactFamily)
     {
-        $contactFamilyLoggingFields = ContactFamilyLoggingField::active()->ordered()->get();
+        $contactFamilyLoggingFields = LoggingField::active()
+            ->ordered()
+            ->where('available_in_contact_families', true)
+            ->get();
         $contactFamily->load('contactFamilyLoggingFields');
 
         return view('admin.contact-families.edit', compact('contactFamily', 'contactFamilyLoggingFields'));
@@ -86,9 +92,9 @@ class ContactFamilyController extends Controller
             'active' => ['boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'contact_family_logging_field_ids' => ['nullable', 'array'],
-            'contact_family_logging_field_ids.*' => ['exists:contact_family_logging_fields,id'],
+            'contact_family_logging_field_ids.*' => ['exists:logging_fields,id'],
             'required_contact_family_logging_field_ids' => ['nullable', 'array'],
-            'required_contact_family_logging_field_ids.*' => ['exists:contact_family_logging_fields,id'],
+            'required_contact_family_logging_field_ids.*' => ['exists:logging_fields,id'],
         ]);
 
         $validated['active'] = $request->has('active');
@@ -118,7 +124,7 @@ class ContactFamilyController extends Controller
                 ->with('error', 'Cannot delete contact family with existing activity types.');
         }
 
-        $contactFamily->delete();
+        ContactFamily::destroy($contactFamily->id);
 
         return redirect()
             ->route('contact-families.index')

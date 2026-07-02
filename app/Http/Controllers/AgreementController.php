@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\AgreementLoggingField;
 use App\Models\Organization;
 use App\Models\Agreement;
 use App\Models\AgreementAttachment;
 use App\Models\AgreementDeliverable;
 use App\Models\ActivityType;
 use App\Models\ContactFamily;
+use App\Models\LoggingField;
 use App\Models\Project;
 use App\Models\State;
 use App\Models\Team;
@@ -30,7 +30,7 @@ class AgreementController extends Controller
         }
 
         // Build organizations list for cascading filters
-        $organizationsQuery = Organization::query()->orderBy('name');
+        $organizationsQuery = Organization::query();
 
         if ($request->filled('state_id')) {
             $stateId = $request->integer('state_id');
@@ -44,8 +44,8 @@ class AgreementController extends Controller
             });
         }
 
-        $organizations = $organizationsQuery->get(['id', 'name']);
-        $states = State::orderBy('name')->get(['id', 'name']);
+        $organizations = $organizationsQuery->get(['id', 'name'])->sortBy('name')->values();
+        $states = State::query()->get(['id', 'name'])->sortBy('name')->values();
 
         $query = Agreement::with(['organizations', 'states', 'users']);
 
@@ -140,16 +140,16 @@ class AgreementController extends Controller
         // Admin-only authorization
         abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can create agreements.');
 
-        $states = State::orderBy('name')->get();
-        $organizations = Organization::with('states')->orderBy('name')->get();
-        $users = User::orderBy('name')->get();
-        $teams = Team::where('active', true)->orderBy('name')->get();
-        $projects = Project::where('active', true)->with('programs')->orderBy('name')->get();
-        $programsByProject = \App\Models\Program::where('active', true)
-            ->with('project')
-            ->get()
-            ->groupBy('project_id');
-        $agreementLoggingFields = AgreementLoggingField::active()->ordered()->get();
+        $states = State::query()->get()->sortBy('name')->values();
+        $organizations = Organization::query()->with('states')->get()->sortBy('name')->values();
+        $users = User::query()->get()->sortBy('name')->values();
+        $teams = Team::query()->where('active', true)->get()->sortBy('name')->values();
+        $projects = Project::query()->where('active', true)->with('programs')->get()->sortBy('name')->values();
+        $programsByProject = \App\Models\Program::query()->where('active', true)->get()->groupBy('project_id');
+        $agreementLoggingFields = LoggingField::active()
+            ->ordered()
+            ->where('available_in_agreements', true)
+            ->get();
         
         return view('agreements.create', compact('states', 'organizations', 'users', 'teams', 'projects', 'programsByProject', 'agreementLoggingFields'));
     }
@@ -180,9 +180,9 @@ class AgreementController extends Controller
             'team_ids.*' => ['exists:teams,id'],
             
             'agreement_logging_field_ids' => ['nullable', 'array'],
-            'agreement_logging_field_ids.*' => ['exists:agreement_logging_fields,id'],
+            'agreement_logging_field_ids.*' => ['exists:logging_fields,id'],
             'required_agreement_logging_field_ids' => ['nullable', 'array'],
-            'required_agreement_logging_field_ids.*' => ['exists:agreement_logging_fields,id'],
+            'required_agreement_logging_field_ids.*' => ['exists:logging_fields,id'],
             
             'attachments' => ['nullable', 'array'],
             'attachments.*' => ['file', 'max:10240', 'mimes:pdf,doc,docx,xls,xlsx,txt'],
@@ -201,7 +201,7 @@ class AgreementController extends Controller
 
         $selectedProgramIds = $validated['program_ids'] ?? [];
         if (!empty($validated['project_id'])) {
-            $projectProgramIds = Project::find($validated['project_id'])
+            $projectProgramIds = Project::query()->whereKey($validated['project_id'])->first()
                 ?->programs()
                 ->where('active', true)
                 ->pluck('id')
@@ -321,18 +321,15 @@ class AgreementController extends Controller
         // Admin-only authorization
         abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can edit agreements.');
 
-        $states = State::orderBy('name')->get();
-        $organizations = Organization::with('states')->orderBy('name')->get();
-        $users = User::orderBy('name')->get();
-        $teams = Team::where('active', true)->orderBy('name')->get();
-        $contactFamilies = ContactFamily::where('active', true)->orderBy('sort_order')->orderBy('name')->get();
-        $activityTypes = ActivityType::where('active', true)->orderBy('sort_order')->orderBy('name')->get();
-        $projects = Project::where('active', true)->with('programs')->orderBy('name')->get();
-        $programsByProject = \App\Models\Program::where('active', true)
-            ->with('project')
-            ->get()
-            ->groupBy('project_id');
-        $agreementLoggingFields = AgreementLoggingField::active()->ordered()->get();
+        $states = State::query()->get()->sortBy('name')->values();
+        $organizations = Organization::query()->with('states')->get()->sortBy('name')->values();
+        $users = User::query()->get()->sortBy('name')->values();
+        $teams = Team::query()->where('active', true)->get()->sortBy('name')->values();
+        $contactFamilies = ContactFamily::query()->where('active', true)->get()->sortBy(fn ($item) => [$item->sort_order, $item->name])->values();
+        $activityTypes = ActivityType::query()->where('active', true)->get()->sortBy(fn ($item) => [$item->sort_order, $item->name])->values();
+        $projects = Project::query()->where('active', true)->with('programs')->get()->sortBy('name')->values();
+        $programsByProject = \App\Models\Program::query()->where('active', true)->get()->groupBy('project_id');
+        $agreementLoggingFields = LoggingField::active()->ordered()->where('available_in_agreements', true)->get();
         $agreement->load(['users', 'teams', 'deliverables.activityType.contactFamily', 'deliverables.assignedUsers', 'organizations', 'states', 'attachments', 'agreementLoggingFields', 'programs']);
         
         return view('agreements.edit', compact('agreement', 'states', 'organizations', 'users', 'teams', 'contactFamilies', 'activityTypes', 'projects', 'programsByProject', 'agreementLoggingFields'));
@@ -364,9 +361,9 @@ class AgreementController extends Controller
             'team_ids.*' => ['exists:teams,id'],
             
             'agreement_logging_field_ids' => ['nullable', 'array'],
-            'agreement_logging_field_ids.*' => ['exists:agreement_logging_fields,id'],
+            'agreement_logging_field_ids.*' => ['exists:logging_fields,id'],
             'required_agreement_logging_field_ids' => ['nullable', 'array'],
-            'required_agreement_logging_field_ids.*' => ['exists:agreement_logging_fields,id'],
+            'required_agreement_logging_field_ids.*' => ['exists:logging_fields,id'],
             
             'attachments' => ['nullable', 'array'],
             'attachments.*' => ['file', 'max:10240', 'mimes:pdf,doc,docx,xls,xlsx,txt'],
@@ -385,7 +382,7 @@ class AgreementController extends Controller
 
         $selectedProgramIds = $validated['program_ids'] ?? [];
         if (!empty($validated['project_id'])) {
-            $projectProgramIds = Project::find($validated['project_id'])
+            $projectProgramIds = Project::query()->whereKey($validated['project_id'])->first()
                 ?->programs()
                 ->where('active', true)
                 ->pluck('id')
@@ -434,7 +431,7 @@ class AgreementController extends Controller
         // Admin-only authorization
         abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can delete agreements.');
 
-        $agreement->delete();
+        Agreement::destroy($agreement->id);
 
         return redirect()
             ->route('agreements.index')
@@ -495,7 +492,7 @@ class AgreementController extends Controller
         // Ensure deliverable belongs to this agreement
         abort_unless($deliverable->agreement_id === $agreement->id, 403, 'Invalid deliverable.');
 
-        $deliverable->delete();
+        AgreementDeliverable::destroy($deliverable->id);
         $agreement->load('deliverables.activityType.contactFamily', 'deliverables.assignedUsers');
 
         return view('agreements.partials.deliverable-list', compact('agreement'));
@@ -506,11 +503,11 @@ class AgreementController extends Controller
         abort_unless(Auth::user()->isAdmin(), 403);
         abort_unless($deliverable->agreement_id === $agreement->id, 403);
 
-        $contactFamilies = ContactFamily::where('active', true)->orderBy('sort_order')->orderBy('name')->get();
+        $contactFamilies = ContactFamily::query()->where('active', true)->get()->sortBy(fn ($item) => [$item->sort_order, $item->name])->values();
         $activityTypes = $deliverable->contact_family_id
-            ? ActivityType::where('contact_family_id', $deliverable->contact_family_id)->where('active', true)->orderBy('sort_order')->orderBy('name')->get()
+            ? ActivityType::query()->where('contact_family_id', $deliverable->contact_family_id)->where('active', true)->get()->sortBy(fn ($item) => [$item->sort_order, $item->name])->values()
             : collect();
-        $users = User::orderBy('name')->get(['id', 'name', 'role']);
+        $users = User::query()->get(['id', 'name', 'role'])->sortBy('name')->values();
         $assignedUserIds = $deliverable->assignedUsers()->pluck('users.id')->all();
 
         return view('agreements.partials.deliverable-row-edit', compact('agreement', 'deliverable', 'contactFamilies', 'activityTypes', 'users', 'assignedUserIds'));

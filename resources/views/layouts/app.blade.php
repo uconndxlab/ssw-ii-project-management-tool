@@ -57,11 +57,10 @@
                             <li><h6 class="dropdown-header">Agreement Setup</h6></li>
                             <li><a class="dropdown-item" href="{{ route('projects.index') }}">Projects</a></li>
                             <li><a class="dropdown-item" href="{{ route('programs.index') }}">Programs</a></li>
-                            <li><a class="dropdown-item" href="{{ route('agreement-logging-fields.index') }}">Agreement Logging Fields</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><h6 class="dropdown-header">Activity Setup</h6></li>
                             <li><a class="dropdown-item" href="{{ route('contact-families.index') }}">Contact Families</a></li>
-                            <li><a class="dropdown-item" href="{{ route('contact-family-logging-fields.index') }}">Contact Family Logging Fields</a></li>
+                            <li><a class="dropdown-item" href="{{ route('logging-fields.index') }}">Logging Fields</a></li>
                             <li><a class="dropdown-item" href="{{ route('activity-types.index') }}">Activity Types</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><h6 class="dropdown-header">People</h6></li>

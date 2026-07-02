@@ -68,7 +68,7 @@
                                 <h5 class="mb-1">Classification Logging Fields</h5>
                                 <p class="text-muted small mb-0">These fields appear in the activity classification area for this contact family.</p>
                             </div>
-                            <a href="{{ route('contact-family-logging-fields.index') }}" class="btn btn-sm btn-outline-secondary">Manage Contact Family Fields</a>
+                            <a href="{{ route('logging-fields.index') }}" class="btn btn-sm btn-outline-secondary">Manage Logging Fields</a>
                         </div>
 
                         @if($contactFamilyLoggingFields->isEmpty())

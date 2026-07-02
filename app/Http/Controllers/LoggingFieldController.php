@@ -39,17 +39,26 @@ class LoggingFieldController extends Controller
             $query->where('field_type', $request->field_type);
         }
 
+        // Availability filter
+        if ($request->filled('availability') && array_key_exists($request->availability, LoggingField::availabilityOptions())) {
+            $query->where($request->availability, true);
+        }
+
         // Sort
         $sortBy = $request->get('sort_by', 'sort_order');
         $sortDir = $request->get('sort_dir', 'asc');
-        
+
         if ($sortBy === 'sort_order') {
-            $query->orderBy('sort_order')->orderBy('name');
+            $query->orderBy('sort_order', 'asc')->orderBy('name', 'asc');
         } else {
             $query->orderBy($sortBy, $sortDir);
         }
 
         $loggingFields = $query->paginate(20)->withQueryString();
+
+        if ($request->header('HX-Request')) {
+            return view('logging-fields.partials.table', compact('loggingFields'));
+        }
 
         return view('logging-fields.index', compact('loggingFields'));
     }
@@ -60,7 +69,9 @@ class LoggingFieldController extends Controller
     public function create()
     {
         $fieldTypes = LoggingField::fieldTypes();
-        return view('logging-fields.create', compact('fieldTypes'));
+        $availabilityOptions = LoggingField::availabilityOptions();
+
+        return view('logging-fields.create', compact('fieldTypes', 'availabilityOptions'));
     }
 
     /**
@@ -70,11 +81,15 @@ class LoggingFieldController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:logging_fields,name',
-            'field_type' => 'required|in:number,decimal,text,textarea,checkbox,select',
+            'field_type' => 'required|in:number,decimal,text,textarea,checkbox,select,document',
             'help_text' => 'nullable|string|max:1000',
             'options_json' => 'nullable|string',
             'is_active' => 'boolean',
             'sort_order' => 'nullable|integer|min:0',
+            'is_full_width' => 'boolean',
+            'available_in_agreements' => 'boolean',
+            'available_in_contact_families' => 'boolean',
+            'available_in_activities' => 'boolean',
         ]);
 
         // Parse options JSON for select fields
@@ -89,6 +104,10 @@ class LoggingFieldController extends Controller
         }
 
         $validated['is_active'] = $request->boolean('is_active', true);
+        $validated['is_full_width'] = $request->boolean('is_full_width');
+        $validated['available_in_agreements'] = $request->boolean('available_in_agreements');
+        $validated['available_in_contact_families'] = $request->boolean('available_in_contact_families');
+        $validated['available_in_activities'] = $request->boolean('available_in_activities');
 
         LoggingField::create($validated);
 
@@ -102,9 +121,9 @@ class LoggingFieldController extends Controller
     public function show(LoggingField $loggingField)
     {
         $loggingField->load(['agreements' => function ($query) {
-            $query->select('id', 'number', 'name')->orderBy('number');
+            $query->select('agreements.id', 'agreements.name')->orderBy('agreements.name');
         }, 'contactFamilies' => function ($query) {
-            $query->select('id', 'name')->orderBy('name');
+            $query->select('contact_families.id', 'contact_families.name')->orderBy('contact_families.name');
         }]);
 
         return view('logging-fields.show', compact('loggingField'));
@@ -116,7 +135,8 @@ class LoggingFieldController extends Controller
     public function edit(LoggingField $loggingField)
     {
         $fieldTypes = LoggingField::fieldTypes();
-        return view('logging-fields.edit', compact('loggingField', 'fieldTypes'));
+        $availabilityOptions = LoggingField::availabilityOptions();
+        return view('logging-fields.edit', compact('loggingField', 'fieldTypes', 'availabilityOptions'));
     }
 
     /**
@@ -126,11 +146,15 @@ class LoggingFieldController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:logging_fields,name,' . $loggingField->id,
-            'field_type' => 'required|in:number,decimal,text,textarea,checkbox,select',
+            'field_type' => 'required|in:number,decimal,text,textarea,checkbox,select,document',
             'help_text' => 'nullable|string|max:1000',
             'options_json' => 'nullable|string',
             'is_active' => 'boolean',
             'sort_order' => 'nullable|integer|min:0',
+            'is_full_width' => 'boolean',
+            'available_in_agreements' => 'boolean',
+            'available_in_contact_families' => 'boolean',
+            'available_in_activities' => 'boolean',
         ]);
 
         // Parse options JSON for select fields
@@ -145,6 +169,10 @@ class LoggingFieldController extends Controller
         }
 
         $validated['is_active'] = $request->boolean('is_active');
+        $validated['is_full_width'] = $request->boolean('is_full_width');
+        $validated['available_in_agreements'] = $request->boolean('available_in_agreements');
+        $validated['available_in_contact_families'] = $request->boolean('available_in_contact_families');
+        $validated['available_in_activities'] = $request->boolean('available_in_activities');
 
         // Regenerate slug if name changed
         if ($validated['name'] !== $loggingField->name) {
@@ -170,7 +198,7 @@ class LoggingFieldController extends Controller
             return back()->with('error', "Cannot delete this field. It is currently used by {$agreementCount} agreement(s) and {$contactFamilyCount} contact family/families.");
         }
 
-        $loggingField->delete();
+        LoggingField::destroy($loggingField->id);
 
         return redirect()->route('logging-fields.index')
             ->with('success', 'Logging field deleted successfully.');

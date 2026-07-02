@@ -16,6 +16,10 @@ class LoggingField extends Model
         'options_json',
         'is_active',
         'sort_order',
+        'is_full_width',
+        'available_in_agreements',
+        'available_in_contact_families',
+        'available_in_activities',
     ];
 
     protected function casts(): array
@@ -24,6 +28,10 @@ class LoggingField extends Model
             'is_active' => 'boolean',
             'sort_order' => 'integer',
             'options_json' => 'array',
+            'is_full_width' => 'boolean',
+            'available_in_agreements' => 'boolean',
+            'available_in_contact_families' => 'boolean',
+            'available_in_activities' => 'boolean',
         ];
     }
 
@@ -54,7 +62,7 @@ class LoggingField extends Model
      */
     public function scopeOrdered($query)
     {
-        return $query->orderBy('sort_order')->orderBy('name');
+        return $query->orderBy('sort_order', 'asc')->orderBy('name', 'asc');
     }
 
     /**
@@ -62,7 +70,7 @@ class LoggingField extends Model
      */
     public function agreements(): BelongsToMany
     {
-        return $this->belongsToMany(Agreement::class, 'agreement_logging_field')
+        return $this->belongsToMany(Agreement::class, 'agreement_logging_field_assignments', 'logging_field_id', 'agreement_id')
             ->withPivot('is_required')
             ->withTimestamps();
     }
@@ -72,9 +80,18 @@ class LoggingField extends Model
      */
     public function contactFamilies(): BelongsToMany
     {
-        return $this->belongsToMany(ContactFamily::class, 'contact_family_logging_field')
+        return $this->belongsToMany(ContactFamily::class, 'contact_family_logging_field_assignments', 'logging_field_id', 'contact_family_id')
             ->withPivot('is_required')
             ->withTimestamps();
+    }
+
+    public static function availabilityOptions(): array
+    {
+        return [
+            'available_in_agreements' => 'Agreements',
+            'available_in_contact_families' => 'Contact Families',
+            'available_in_activities' => 'Activities',
+        ];
     }
 
     /**
