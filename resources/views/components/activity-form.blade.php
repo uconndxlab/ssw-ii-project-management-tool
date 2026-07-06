@@ -61,6 +61,28 @@
         ->values();
 @endphp
 
+<style>
+    .activity-logging-subsection {
+        border-left: 4px solid var(--bs-border-color);
+        padding-left: 1rem;
+    }
+
+    .activity-logging-subsection + .activity-logging-subsection {
+        margin-top: 1.25rem;
+        padding-top: 1.25rem;
+    }
+
+    .activity-logging-subsection-title {
+        font-size: 1.05rem;
+        font-weight: 600;
+        line-height: 1.3;
+    }
+
+    .activity-logging-subsection-meta {
+        font-size: 0.875rem;
+    }
+</style>
+
 <div class="container-fluid py-4">
     <div class="row g-4 mb-2">
         <div class="col-12">
@@ -180,8 +202,11 @@
 
                         <div class="mt-4">
                             @foreach($contactFamilies as $family)
-                                <div class="border rounded p-3 d-none" data-contact-family-logging-group="{{ $family->id }}">
-                                    <div class="fw-semibold mb-2">{{ $family->name }} Logging Fields</div>
+                                <div class="activity-logging-subsection d-none" data-contact-family-logging-group="{{ $family->id }}">
+                                    <div class="d-flex flex-column flex-md-row align-items-md-baseline gap-1 gap-md-3 mb-3">
+                                        <div class="activity-logging-subsection-title">Contact Family Logging Fields</div>
+                                        <div class="text-muted activity-logging-subsection-meta">{{ $family->name }}</div>
+                                    </div>
 
                                     @if($family->contactFamilyLoggingFields->isEmpty())
                                         <div class="text-muted small">No classification logging fields are assigned to this contact family.</div>
@@ -205,10 +230,13 @@
                             @endforeach
                         </div>
 
-                        <div id="activity-logging-section" class="mt-4 {{ $selectedActivityTypeId ? '' : 'd-none' }}">
+                        <div id="activity-logging-section" class="mt-4 d-none">
                             @forelse($activityTypesWithLoggingFields as $activityType)
-                                <div class="border rounded p-3 d-none" data-activity-logging-group="{{ $activityType->id }}">
-                                    <div class="fw-semibold mb-2">{{ $activityType->name }} Logging Fields</div>
+                                <div class="activity-logging-subsection d-none" data-activity-logging-group="{{ $activityType->id }}">
+                                    <div class="d-flex flex-column flex-md-row align-items-md-baseline gap-1 gap-md-3 mb-3">
+                                        <div class="activity-logging-subsection-title">Activity Logging Fields</div>
+                                        <div class="text-muted activity-logging-subsection-meta">{{ $activityType->name }}</div>
+                                    </div>
                                     <div class="row g-3">
                                         @foreach($activityType->activityTypeLoggingFields as $field)
                                             <div class="{{ $field->is_full_width ? 'col-12' : 'col-md-6' }}">
@@ -225,11 +253,7 @@
                                         @endforeach
                                     </div>
                                 </div>
-                            @empty
-                                <div class="border rounded p-3 text-muted small d-none" data-activity-logging-empty>
-                                    No activity logging fields are assigned to this activity type.
-                                </div>
-                            @endforelse
+                            @endforeach
                         </div>
                     </x-section-card>
 
@@ -502,13 +526,7 @@
             visibleGroups += visible ? 1 : 0;
         });
 
-        const emptyState = document.querySelector('[data-activity-logging-empty]');
-        if (emptyState) {
-            const showEmpty = !!activityTypeId && visibleGroups === 0;
-            emptyState.classList.toggle('d-none', !showEmpty);
-        }
-
-        section?.classList.toggle('d-none', !activityTypeId || (visibleGroups === 0 && !emptyState));
+        section?.classList.toggle('d-none', !activityTypeId || visibleGroups === 0);
     }
 
     function updateActivityTypeState() {
