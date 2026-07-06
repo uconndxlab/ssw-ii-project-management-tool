@@ -11,6 +11,7 @@
     $selectedActivityTypeId = old('activity_type_id', $activity->activity_type_id);
     $agreementLoggingData = old('agreement_logging_values', $activity->agreement_logging_values ?? []);
     $contactFamilyLoggingData = old('contact_family_logging_values', $activity->contact_family_logging_values ?? []);
+    $activityLoggingData = old('activity_logging_values', $activity->activity_type_logging_values ?? []);
     $engagementDateValue = old('engagement_date', $activity->engagement_date?->format('Y-m-d'));
     $internalOnlyChecked = (bool) old('internal_only', $activity->internal_only);
 @endphp
@@ -28,6 +29,7 @@
     :selected-activity-type-id="$selectedActivityTypeId"
     :agreement-logging-data="$agreementLoggingData"
     :contact-family-logging-data="$contactFamilyLoggingData"
+    :activity-logging-data="$activityLoggingData"
     :engagement-date-value="$engagementDateValue"
     :internal-only-checked="$internalOnlyChecked"
     :activity="$activity"

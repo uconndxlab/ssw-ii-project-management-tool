@@ -3,6 +3,13 @@
 @section('title', 'Edit Activity Type')
 
 @section('content')
+@php
+    $selectedActivityTypeLoggingFieldIds = old('activity_type_logging_field_ids', $activityType->activityTypeLoggingFields->pluck('id')->toArray());
+    $requiredActivityTypeLoggingFieldIds = old(
+        'required_activity_type_logging_field_ids',
+        $activityType->activityTypeLoggingFields->filter(fn ($field) => $field->pivot->is_required)->pluck('id')->toArray()
+    );
+@endphp
 <div class="row justify-content-center mb-4">
     <div class="col-lg-8">
         <h1>Edit Activity Type</h1>
@@ -108,6 +115,44 @@
                             </label>
                         </div>
                         <div class="form-text">Only active activity types appear in activity forms.</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <h5 class="mb-1">Activity Logging Fields</h5>
+                                <p class="text-muted small mb-0">These fields appear in the activity log for this activity type.</p>
+                            </div>
+                            <a href="{{ route('logging-fields.index') }}" class="btn btn-sm btn-outline-secondary">Manage Logging Fields</a>
+                        </div>
+
+                        @if($activityTypeLoggingFields->isEmpty())
+                            <div class="alert alert-light border mb-0">No activity logging fields have been defined yet.</div>
+                        @else
+                            <div class="border rounded">
+                                @foreach($activityTypeLoggingFields as $field)
+                                    <label class="d-flex align-items-start gap-3 px-3 py-2 border-bottom {{ $loop->last ? 'border-bottom-0' : '' }}">
+                                        <input class="form-check-input mt-1"
+                                               type="checkbox"
+                                               name="activity_type_logging_field_ids[]"
+                                               value="{{ $field->id }}"
+                                               {{ in_array($field->id, $selectedActivityTypeLoggingFieldIds) ? 'checked' : '' }}>
+                                        <div class="flex-grow-1">
+                                            <div class="fw-semibold">{{ $field->name }}</div>
+                                            <div class="small text-muted">{{ ucfirst($field->field_type) }}{{ $field->help_text ? ' · ' . $field->help_text : '' }}</div>
+                                        </div>
+                                        <div class="form-check m-0">
+                                            <input class="form-check-input"
+                                                   type="checkbox"
+                                                   name="required_activity_type_logging_field_ids[]"
+                                                   value="{{ $field->id }}"
+                                                   {{ in_array($field->id, $requiredActivityTypeLoggingFieldIds) ? 'checked' : '' }}>
+                                            <label class="form-check-label small">Required</label>
+                                        </div>
+                                    </label>
+                                @endforeach
+                            </div>
+                        @endif
                     </div>
 
                 </form>

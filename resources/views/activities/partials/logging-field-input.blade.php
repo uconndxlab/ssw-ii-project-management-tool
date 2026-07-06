@@ -4,6 +4,7 @@
     $isRequired = $isRequired ?? false;
     $value = $value ?? null;
     $options = $field->options_json ?? [];
+    $downloadContext = $downloadContext ?? (str_starts_with($inputName, 'contact_family') ? 'contact_family' : 'agreement');
 @endphp
 
 <div class="mb-3">
@@ -48,7 +49,7 @@
                 <span class="text-muted">Current file:</span>
                 <a href="{{ route('activities.logging-field-document.download', [
                     'activity' => $activity ?? 0,
-                    'context'  => str_starts_with($inputName, 'contact_family') ? 'contact_family' : 'agreement',
+                    'context'  => $downloadContext,
                     'fieldId'  => $field->id,
                     'agreementId' => $agreementId ?? null,
                 ]) }}" class="text-decoration-none" target="_blank">

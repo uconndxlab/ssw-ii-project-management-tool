@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ActivityType extends Model
@@ -36,6 +37,15 @@ class ActivityType extends Model
     public function activities(): HasMany
     {
         return $this->hasMany(Activity::class);
+    }
+
+    public function activityTypeLoggingFields(): BelongsToMany
+    {
+        return $this->belongsToMany(LoggingField::class, 'activity_type_logging_field_assignments', 'activity_type_id', 'logging_field_id')
+            ->withPivot('is_required')
+            ->withTimestamps()
+            ->orderBy('sort_order', 'asc')
+            ->orderBy('name', 'asc');
     }
 
     /**

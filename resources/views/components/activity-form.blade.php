@@ -11,6 +11,7 @@
     'selectedActivityTypeId' => null,
     'agreementLoggingData' => [],
     'contactFamilyLoggingData' => [],
+    'activityLoggingData' => [],
     'engagementDateValue' => null,
     'internalOnlyChecked' => false,
     'activity' => null,
@@ -54,6 +55,10 @@
     $formAction = $isEditMode ? route('activities.update', $activity) : route('activities.store');
     $saveStatusDefault = $isEditMode ? 'Saved' : 'Ready';
     $agreementsWithLoggingFields = $agreements->filter(fn ($agreement) => $agreement->agreementLoggingFields->isNotEmpty())->values();
+    $activityTypesWithLoggingFields = $contactFamilies
+        ->flatMap(fn ($family) => $family->activityTypes)
+        ->filter(fn ($type) => $type->activityTypeLoggingFields->isNotEmpty())
+        ->values();
 @endphp
 
 <div class="container-fluid py-4">
@@ -198,6 +203,33 @@
                                     @endif
                                 </div>
                             @endforeach
+                        </div>
+
+                        <div id="activity-logging-section" class="mt-4 {{ $selectedActivityTypeId ? '' : 'd-none' }}">
+                            @forelse($activityTypesWithLoggingFields as $activityType)
+                                <div class="border rounded p-3 d-none" data-activity-logging-group="{{ $activityType->id }}">
+                                    <div class="fw-semibold mb-2">{{ $activityType->name }} Logging Fields</div>
+                                    <div class="row g-3">
+                                        @foreach($activityType->activityTypeLoggingFields as $field)
+                                            <div class="{{ $field->is_full_width ? 'col-12' : 'col-md-6' }}">
+                                                @include('activities.partials.logging-field-input', [
+                                                    'field' => $field,
+                                                    'inputName' => "activity_logging_values[{$field->id}]",
+                                                    'oldKey' => "activity_logging_values.{$field->id}",
+                                                    'value' => data_get($activityLoggingData, (string) $field->id),
+                                                    'inputId' => "activity_field_{$activityType->id}_{$field->id}",
+                                                    'downloadContext' => 'activity_type',
+                                                    'isRequired' => (bool) $field->pivot->is_required,
+                                                ])
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @empty
+                                <div class="border rounded p-3 text-muted small d-none" data-activity-logging-empty>
+                                    No activity logging fields are assigned to this activity type.
+                                </div>
+                            @endforelse
                         </div>
                     </x-section-card>
 
@@ -456,6 +488,29 @@
         });
     }
 
+    function updateActivityLoggingGroups() {
+        const activityTypeId = document.getElementById('activity_type_id')?.value;
+        const section = document.getElementById('activity-logging-section');
+        let visibleGroups = 0;
+
+        document.querySelectorAll('[data-activity-logging-group]').forEach(function (group) {
+            const visible = group.dataset.activityLoggingGroup === activityTypeId;
+            group.classList.toggle('d-none', !visible);
+            group.querySelectorAll('input, textarea, select').forEach(function (field) {
+                field.disabled = !visible;
+            });
+            visibleGroups += visible ? 1 : 0;
+        });
+
+        const emptyState = document.querySelector('[data-activity-logging-empty]');
+        if (emptyState) {
+            const showEmpty = !!activityTypeId && visibleGroups === 0;
+            emptyState.classList.toggle('d-none', !showEmpty);
+        }
+
+        section?.classList.toggle('d-none', !activityTypeId || (visibleGroups === 0 && !emptyState));
+    }
+
     function updateActivityTypeState() {
         const family = document.getElementById('contact_family_id');
         const type = document.getElementById('activity_type_id');
@@ -522,6 +577,7 @@
 
                 markDirty();
                 updateAgreementLoggingGroups();
+                updateActivityLoggingGroups();
             });
             container.appendChild(button);
         });
@@ -559,6 +615,10 @@
             if (selectedType) selectedType.value = '';
             updateActivityTypeState();
             updateContactFamilyLoggingGroups();
+            updateActivityLoggingGroups();
+        }
+        if (event.target && event.target.id === 'activity_type_id') {
+            updateActivityLoggingGroups();
         }
         markDirty();
     });
@@ -602,6 +662,7 @@
     restrictClassificationOptions();
     updateAgreementLoggingGroups();
     updateContactFamilyLoggingGroups();
+    updateActivityLoggingGroups();
 
     if (!isEditMode) {
         renderTemplates();

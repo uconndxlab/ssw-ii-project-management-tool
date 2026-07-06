@@ -103,6 +103,11 @@ class Activity extends Model
         return $this->buildLoggingFieldValueMap('contact_family');
     }
 
+    public function getActivityTypeLoggingValuesAttribute(): array
+    {
+        return $this->buildLoggingFieldValueMap('activity_type');
+    }
+
     private function buildLoggingFieldValueMap(string $contextType): array
     {
         $answers = $this->relationLoaded('loggingFieldAnswers')

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AgreementDeliverable;
 use App\Models\ActivityType;
 use App\Models\ContactFamily;
+use App\Models\LoggingField;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -99,8 +100,12 @@ class ActivityTypeController extends Controller
     public function create()
     {
         $contactFamilies = ContactFamily::orderBy('sort_order')->orderBy('name')->get();
+        $activityTypeLoggingFields = LoggingField::active()
+            ->ordered()
+            ->where('available_in_activities', true)
+            ->get();
 
-        return view('admin.activity-types.create', compact('contactFamilies'));
+        return view('admin.activity-types.create', compact('contactFamilies', 'activityTypeLoggingFields'));
     }
 
     public function store(Request $request)
@@ -112,6 +117,10 @@ class ActivityTypeController extends Controller
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'duration_days' => ['nullable', 'integer', 'min:0'],
             'duration_hours' => ['nullable', 'integer', 'min:0'],
+            'activity_type_logging_field_ids' => ['nullable', 'array'],
+            'activity_type_logging_field_ids.*' => ['exists:logging_fields,id'],
+            'required_activity_type_logging_field_ids' => ['nullable', 'array'],
+            'required_activity_type_logging_field_ids.*' => ['exists:logging_fields,id'],
         ]);
 
         $exists = ActivityType::where('contact_family_id', $validated['contact_family_id'])
@@ -131,7 +140,15 @@ class ActivityTypeController extends Controller
         $validated['duration_days'] = $validated['duration_days'] ?? 0;
         $validated['duration_hours'] = $validated['duration_hours'] ?? 0;
 
-        ActivityType::create($validated);
+        $activityType = ActivityType::create($validated);
+
+        $syncData = [];
+        foreach (($validated['activity_type_logging_field_ids'] ?? []) as $fieldId) {
+            $syncData[$fieldId] = [
+                'is_required' => in_array($fieldId, $validated['required_activity_type_logging_field_ids'] ?? []),
+            ];
+        }
+        $activityType->activityTypeLoggingFields()->sync($syncData);
 
         return redirect()
             ->route('activity-types.index')
@@ -141,8 +158,13 @@ class ActivityTypeController extends Controller
     public function edit(ActivityType $activityType)
     {
         $contactFamilies = ContactFamily::orderBy('sort_order')->orderBy('name')->get();
+        $activityTypeLoggingFields = LoggingField::active()
+            ->ordered()
+            ->where('available_in_activities', true)
+            ->get();
+        $activityType->load('activityTypeLoggingFields');
 
-        return view('admin.activity-types.edit', compact('activityType', 'contactFamilies'));
+        return view('admin.activity-types.edit', compact('activityType', 'contactFamilies', 'activityTypeLoggingFields'));
     }
 
     public function update(Request $request, ActivityType $activityType)
@@ -154,6 +176,10 @@ class ActivityTypeController extends Controller
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'duration_days' => ['nullable', 'integer', 'min:0'],
             'duration_hours' => ['nullable', 'integer', 'min:0'],
+            'activity_type_logging_field_ids' => ['nullable', 'array'],
+            'activity_type_logging_field_ids.*' => ['exists:logging_fields,id'],
+            'required_activity_type_logging_field_ids' => ['nullable', 'array'],
+            'required_activity_type_logging_field_ids.*' => ['exists:logging_fields,id'],
         ]);
 
         $exists = ActivityType::where('contact_family_id', $validated['contact_family_id'])
@@ -175,6 +201,14 @@ class ActivityTypeController extends Controller
         $validated['duration_hours'] = $validated['duration_hours'] ?? 0;
 
         $activityType->update($validated);
+
+        $syncData = [];
+        foreach (($validated['activity_type_logging_field_ids'] ?? []) as $fieldId) {
+            $syncData[$fieldId] = [
+                'is_required' => in_array($fieldId, $validated['required_activity_type_logging_field_ids'] ?? []),
+            ];
+        }
+        $activityType->activityTypeLoggingFields()->sync($syncData);
 
         return redirect()
             ->route('activity-types.index')

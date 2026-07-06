@@ -170,8 +170,9 @@
         @php
             $agreementLoggingValues = $activity->agreement_logging_values;
             $contactFamilyLoggingValues = $activity->contact_family_logging_values;
+            $activityTypeLoggingValues = $activity->activity_type_logging_values;
         @endphp
-        @if(!empty($agreementLoggingValues) || !empty($contactFamilyLoggingValues))
+        @if(!empty($agreementLoggingValues) || !empty($contactFamilyLoggingValues) || !empty($activityTypeLoggingValues))
         <div class="card mt-3">
             <div class="card-header">
                 <h5 class="mb-0">Dynamic Logging Fields</h5>
@@ -230,6 +231,35 @@
                                         <div>
                                             @if($field->field_type === 'document')
                                                 <a href="{{ route('activities.logging-field-document.download', ['activity' => $activity, 'context' => 'contact_family', 'fieldId' => $field->id]) }}" class="text-decoration-none" target="_blank">
+                                                    <i class="bi bi-file-earmark-arrow-down me-1"></i>{{ basename($value) }}
+                                                </a>
+                                            @elseif(is_bool($value))
+                                                {{ $value ? 'Yes' : 'No' }}
+                                            @else
+                                                {{ $value }}
+                                            @endif
+                                        </div>
+                                    </div>
+                                @endif
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
+                @if(!empty($activityTypeLoggingValues))
+                    <div class="mt-4">
+                        <h6 class="mb-3">Activity Fields</h6>
+                        <div class="row g-2">
+                            @foreach($activity->activityType->activityTypeLoggingFields as $field)
+                                @php
+                                    $value = $activityTypeLoggingValues[$field->id] ?? null;
+                                @endphp
+                                @if($field && $value !== null && $value !== '')
+                                    <div class="col-md-6">
+                                        <div class="small text-muted">{{ $field->name }}</div>
+                                        <div>
+                                            @if($field->field_type === 'document')
+                                                <a href="{{ route('activities.logging-field-document.download', ['activity' => $activity, 'context' => 'activity_type', 'fieldId' => $field->id]) }}" class="text-decoration-none" target="_blank">
                                                     <i class="bi bi-file-earmark-arrow-down me-1"></i>{{ basename($value) }}
                                                 </a>
                                             @elseif(is_bool($value))

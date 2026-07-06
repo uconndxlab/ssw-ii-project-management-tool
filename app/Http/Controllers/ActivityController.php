@@ -215,7 +215,12 @@ class ActivityController extends Controller
         $states = State::orderBy('name')->get();
         $organizations = Organization::orderBy('name')->get();
         $contactFamilies = ContactFamily::where('active', true)
-            ->with('contactFamilyLoggingFields')
+            ->with(['contactFamilyLoggingFields', 'activityTypes' => function ($query) {
+                $query->where('active', true)
+                    ->with('activityTypeLoggingFields')
+                    ->orderBy('sort_order')
+                    ->orderBy('name');
+            }])
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
@@ -254,16 +259,18 @@ class ActivityController extends Controller
             'internal_only' => ['nullable', 'boolean'],
             'agreement_logging_values' => ['nullable', 'array'],
             'contact_family_logging_values' => ['nullable', 'array'],
+            'activity_logging_values' => ['nullable', 'array'],
         ]);
 
         $agreements = $this->resolveSelectedAgreements($baseValidated['agreement_ids'] ?? []);
         $contactFamily = ContactFamily::with('contactFamilyLoggingFields')
             ->findOrFail($baseValidated['contact_family_id']);
+        $activityType = ActivityType::with('activityTypeLoggingFields')->findOrFail($baseValidated['activity_type_id']);
 
         $validated = array_merge(
             $baseValidated,
             $request->validate(
-                $this->dynamicLoggingFieldValidationRules($agreements, $contactFamily)
+                $this->dynamicLoggingFieldValidationRules($agreements, $contactFamily, $activityType)
             )
         );
 
@@ -277,7 +284,7 @@ class ActivityController extends Controller
             'internal_only' => $validated['internal_only'] ?? false,
         ]);
 
-        $this->syncLoggingFieldAnswers($activity, $validated, $agreements, $contactFamily);
+        $this->syncLoggingFieldAnswers($activity, $validated, $agreements, $contactFamily, $activityType);
 
         $activity->agreements()->sync($validated['agreement_ids'] ?? []);
         $activity->states()->sync($validated['state_ids'] ?? []);
@@ -302,6 +309,7 @@ class ActivityController extends Controller
                 'internal_only' => $validated['internal_only'] ?? false,
                 'agreement_logging_values' => $validated['agreement_logging_values'] ?? [],
                 'contact_family_logging_values' => $validated['contact_family_logging_values'] ?? [],
+                'activity_logging_values' => $validated['activity_logging_values'] ?? [],
             ];
 
             return redirect()
@@ -326,7 +334,7 @@ class ActivityController extends Controller
             }
         }
 
-        $activity->load(['agreements.organizations', 'agreements.states', 'organizations', 'states', 'user', 'programs', 'participants', 'activityType.contactFamily', 'loggingFieldAnswers']);
+        $activity->load(['agreements.organizations', 'agreements.states', 'organizations', 'states', 'user', 'programs', 'participants', 'activityType.contactFamily', 'activityType.activityTypeLoggingFields', 'loggingFieldAnswers.loggingField']);
         $activity->load(['agreements.agreementLoggingFields', 'activityType.contactFamily.contactFamilyLoggingFields']);
 
         return view('activities.show', compact('activity'));
@@ -340,12 +348,17 @@ class ActivityController extends Controller
         $states = State::orderBy('name')->get();
         $organizations = Organization::orderBy('name')->get();
         $contactFamilies = ContactFamily::where('active', true)
-            ->with('contactFamilyLoggingFields')
+            ->with(['contactFamilyLoggingFields', 'activityTypes' => function ($query) {
+                $query->where('active', true)
+                    ->with('activityTypeLoggingFields')
+                    ->orderBy('sort_order')
+                    ->orderBy('name');
+            }])
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
         $agreements->load(['organizations', 'states', 'deliverables.activityType']);
-        $activity->load(['activityType.contactFamily', 'agreements', 'states', 'organizations', 'loggingFieldAnswers']);
+        $activity->load(['activityType.contactFamily', 'activityType.activityTypeLoggingFields', 'agreements', 'states', 'organizations', 'loggingFieldAnswers']);
         $currentContactFamilyId = old('contact_family_id', $activity->activityType?->contactFamily?->id);
 
         return view('activities.edit', compact(
@@ -375,16 +388,18 @@ class ActivityController extends Controller
             'internal_only' => ['nullable', 'boolean'],
             'agreement_logging_values' => ['nullable', 'array'],
             'contact_family_logging_values' => ['nullable', 'array'],
+            'activity_logging_values' => ['nullable', 'array'],
         ]);
 
         $agreements = $this->resolveSelectedAgreements($baseValidated['agreement_ids'] ?? []);
         $contactFamily = ContactFamily::with('contactFamilyLoggingFields')
             ->findOrFail($baseValidated['contact_family_id']);
+        $activityType = ActivityType::with('activityTypeLoggingFields')->findOrFail($baseValidated['activity_type_id']);
 
         $validated = array_merge(
             $baseValidated,
             $request->validate(
-                $this->dynamicLoggingFieldValidationRules($agreements, $contactFamily)
+                $this->dynamicLoggingFieldValidationRules($agreements, $contactFamily, $activityType)
             )
         );
 
@@ -397,7 +412,7 @@ class ActivityController extends Controller
             'internal_only' => $validated['internal_only'] ?? false,
         ]);
 
-        $this->syncLoggingFieldAnswers($activity, $validated, $agreements, $contactFamily);
+        $this->syncLoggingFieldAnswers($activity, $validated, $agreements, $contactFamily, $activityType);
 
         $activity->agreements()->sync($validated['agreement_ids'] ?? []);
         $activity->states()->sync($validated['state_ids'] ?? []);
@@ -421,6 +436,7 @@ class ActivityController extends Controller
                 'internal_only' => $validated['internal_only'] ?? false,
                 'agreement_logging_values' => $validated['agreement_logging_values'] ?? [],
                 'contact_family_logging_values' => $validated['contact_family_logging_values'] ?? [],
+                'activity_logging_values' => $validated['activity_logging_values'] ?? [],
             ];
 
             return redirect()
@@ -517,7 +533,7 @@ class ActivityController extends Controller
         return $agreements;
     }
 
-    private function dynamicLoggingFieldValidationRules($agreements, ContactFamily $contactFamily): array
+    private function dynamicLoggingFieldValidationRules($agreements, ContactFamily $contactFamily, ActivityType $activityType): array
     {
         $rules = [];
 
@@ -529,6 +545,10 @@ class ActivityController extends Controller
 
         foreach ($contactFamily->contactFamilyLoggingFields as $field) {
             $rules["contact_family_logging_values.{$field->id}"] = $this->rulesForField($field->field_type, (bool) $field->pivot->is_required, $field->options_json ?? []);
+        }
+
+        foreach ($activityType->activityTypeLoggingFields as $field) {
+            $rules["activity_logging_values.{$field->id}"] = $this->rulesForField($field->field_type, (bool) $field->pivot->is_required, $field->options_json ?? []);
         }
 
         return $rules;
@@ -674,12 +694,13 @@ class ActivityController extends Controller
         };
     }
 
-    private function syncLoggingFieldAnswers(Activity $activity, array $validated, $agreements, ContactFamily $contactFamily): void
+    private function syncLoggingFieldAnswers(Activity $activity, array $validated, $agreements, ContactFamily $contactFamily, ActivityType $activityType): void
     {
         $activity->loadMissing('loggingFieldAnswers');
 
         $existingAgreementValues = $activity->agreement_logging_values;
         $existingContactFamilyValues = $activity->contact_family_logging_values;
+        $existingActivityValues = $activity->activity_type_logging_values;
         $payload = [];
 
         foreach ($agreements as $agreement) {
@@ -707,6 +728,21 @@ class ActivityController extends Controller
                 data_get($validated, "contact_family_logging_values.{$field->id}"),
                 request()->file("contact_family_logging_values.{$field->id}"),
                 data_get($existingContactFamilyValues, (string) $field->id)
+            );
+
+            if ($answer !== null) {
+                $payload[] = $answer;
+            }
+        }
+
+        foreach ($activityType->activityTypeLoggingFields as $field) {
+            $answer = $this->buildLoggingFieldAnswerPayload(
+                $field,
+                'activity_type',
+                (int) $activityType->id,
+                data_get($validated, "activity_logging_values.{$field->id}"),
+                request()->file("activity_logging_values.{$field->id}"),
+                data_get($existingActivityValues, (string) $field->id)
             );
 
             if ($answer !== null) {
@@ -760,9 +796,11 @@ class ActivityController extends Controller
 
     public function downloadLoggingFieldDocument(Activity $activity, string $context, int $fieldId, ?int $agreementId = null): \Symfony\Component\HttpFoundation\StreamedResponse
     {
-        $contextId = $context === 'agreement'
-            ? $agreementId
-            : $activity->activityType()->value('contact_family_id');
+        $contextId = match ($context) {
+            'agreement' => $agreementId,
+            'activity_type' => $activity->activity_type_id,
+            default => $activity->activityType()->value('contact_family_id'),
+        };
 
         $path = $activity->loggingFieldAnswers()
             ->where('logging_field_id', $fieldId)

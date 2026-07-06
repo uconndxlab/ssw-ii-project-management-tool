@@ -12,6 +12,7 @@
     $selectedActivityTypeId = old('activity_type_id', $prefill['activity_type_id'] ?? null);
     $agreementLoggingData = old('agreement_logging_values', $prefill['agreement_logging_values'] ?? []);
     $contactFamilyLoggingData = old('contact_family_logging_values', $prefill['contact_family_logging_values'] ?? []);
+    $activityLoggingData = old('activity_logging_values', $prefill['activity_logging_values'] ?? []);
     $engagementDateValue = old('engagement_date', $prefill['engagement_date'] ?? now()->format('Y-m-d'));
     $internalOnlyChecked = (bool) old('internal_only', $prefill['internal_only'] ?? false);
 @endphp
@@ -29,6 +30,7 @@
     :selected-activity-type-id="$selectedActivityTypeId"
     :agreement-logging-data="$agreementLoggingData"
     :contact-family-logging-data="$contactFamilyLoggingData"
+    :activity-logging-data="$activityLoggingData"
     :engagement-date-value="$engagementDateValue"
     :internal-only-checked="$internalOnlyChecked"
 />
