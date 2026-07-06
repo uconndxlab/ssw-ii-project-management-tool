@@ -222,6 +222,7 @@
                                                     'oldKey' => "agreement_logging_values.{$agreement->id}.{$field->id}",
                                                     'value' => data_get($agreementLoggingData, "{$agreement->id}.{$field->id}"),
                                                     'inputId' => "agreement_{$agreement->id}_field_{$field->id}",
+                                                    'agreementId' => $agreement->id,
                                                     'isRequired' => (bool) $field->pivot->is_required,
                                                 ])
                                             </div>

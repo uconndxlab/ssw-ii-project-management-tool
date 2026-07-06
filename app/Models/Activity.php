@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany; // kept for certificationCandidates
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Activity extends Model
 {
@@ -13,7 +13,6 @@ class Activity extends Model
         'user_id',
         'engagement_date',
         'activity_type_id',
-        'logging_field_data',
         'internal_only',
     ];
 
@@ -21,9 +20,13 @@ class Activity extends Model
     {
         return [
             'engagement_date' => 'date',
-            'logging_field_data' => 'array',
             'internal_only' => 'boolean',
         ];
+    }
+
+    public function loggingFieldAnswers(): HasMany
+    {
+        return $this->hasMany(ActivityLoggingFieldAnswer::class);
     }
 
     public function agreements(): BelongsToMany
@@ -88,6 +91,40 @@ class Activity extends Model
     public function scopeInternalOnly($query)
     {
         return $query->where('internal_only', true);
+    }
+
+    public function getAgreementLoggingValuesAttribute(): array
+    {
+        return $this->buildLoggingFieldValueMap('agreement');
+    }
+
+    public function getContactFamilyLoggingValuesAttribute(): array
+    {
+        return $this->buildLoggingFieldValueMap('contact_family');
+    }
+
+    private function buildLoggingFieldValueMap(string $contextType): array
+    {
+        $answers = $this->relationLoaded('loggingFieldAnswers')
+            ? $this->loggingFieldAnswers
+            : $this->loggingFieldAnswers()->get();
+
+        $filtered = $answers->where('context_type', $contextType);
+
+        if ($contextType === 'agreement') {
+            return $filtered
+                ->groupBy('context_id')
+                ->map(function ($group) {
+                    return $group
+                        ->mapWithKeys(fn ($answer) => [$answer->logging_field_id => $answer->value])
+                        ->all();
+                })
+                ->all();
+        }
+
+        return $filtered
+            ->mapWithKeys(fn ($answer) => [$answer->logging_field_id => $answer->value])
+            ->all();
     }
 
 }

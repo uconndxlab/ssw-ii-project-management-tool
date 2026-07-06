@@ -167,18 +167,22 @@
 
 
 
-        @if(!empty($activity->logging_field_data['agreements']) || !empty($activity->logging_field_data['contact_family']))
+        @php
+            $agreementLoggingValues = $activity->agreement_logging_values;
+            $contactFamilyLoggingValues = $activity->contact_family_logging_values;
+        @endphp
+        @if(!empty($agreementLoggingValues) || !empty($contactFamilyLoggingValues))
         <div class="card mt-3">
             <div class="card-header">
                 <h5 class="mb-0">Dynamic Logging Fields</h5>
             </div>
             <div class="card-body">
-                @if(!empty($activity->logging_field_data['agreements']))
+                @if(!empty($agreementLoggingValues))
                     <div class="mb-4">
                         <h6 class="mb-3">Agreement Fields</h6>
                         @foreach($activity->agreements as $agreement)
                             @php
-                                $agreementValues = $activity->logging_field_data['agreements'][$agreement->id] ?? [];
+                                $agreementValues = $agreementLoggingValues[$agreement->id] ?? [];
                             @endphp
                             @if(!empty($agreementValues))
                                 <div class="border rounded p-3 mb-3">
@@ -212,13 +216,13 @@
                     </div>
                 @endif
 
-                @if(!empty($activity->logging_field_data['contact_family']))
+                @if(!empty($contactFamilyLoggingValues))
                     <div>
                         <h6 class="mb-3">Contact Family Fields</h6>
                         <div class="row g-2">
                             @foreach($activity->activityType->contactFamily->contactFamilyLoggingFields as $field)
                                 @php
-                                    $value = $activity->logging_field_data['contact_family'][$field->id] ?? null;
+                                    $value = $contactFamilyLoggingValues[$field->id] ?? null;
                                 @endphp
                                 @if($value !== null && $value !== '')
                                     <div class="col-md-6">

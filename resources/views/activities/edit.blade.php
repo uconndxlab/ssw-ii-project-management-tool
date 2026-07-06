@@ -9,8 +9,8 @@
     $selectedOrganizationIds = old('organization_ids', $activity->organizations->pluck('id')->toArray());
     $selectedStateIds = old('state_ids', $activity->states->pluck('id')->toArray());
     $selectedActivityTypeId = old('activity_type_id', $activity->activity_type_id);
-    $agreementLoggingData = old('agreement_logging_values', $activity->logging_field_data['agreements'] ?? []);
-    $contactFamilyLoggingData = old('contact_family_logging_values', $activity->logging_field_data['contact_family'] ?? []);
+    $agreementLoggingData = old('agreement_logging_values', $activity->agreement_logging_values ?? []);
+    $contactFamilyLoggingData = old('contact_family_logging_values', $activity->contact_family_logging_values ?? []);
     $engagementDateValue = old('engagement_date', $activity->engagement_date?->format('Y-m-d'));
     $internalOnlyChecked = (bool) old('internal_only', $activity->internal_only);
 @endphp
