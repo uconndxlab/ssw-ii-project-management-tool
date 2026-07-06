@@ -230,8 +230,7 @@ class ActivityController extends Controller
 
         // Get pre-selected agreement if provided
         $preselectedAgreementId = $request->query('agreement_id');
-        $duplicateData = session('duplicate_data', []);
-        $currentContactFamilyId = old('contact_family_id', $duplicateData['contact_family_id'] ?? null);
+        $currentContactFamilyId = old('contact_family_id', null);
 
         return view('activities.create', compact(
             'agreements',
@@ -239,7 +238,6 @@ class ActivityController extends Controller
             'organizations',
             'contactFamilies',
             'preselectedAgreementId',
-            'duplicateData',
             'currentContactFamilyId'
         ));
     }
@@ -289,34 +287,6 @@ class ActivityController extends Controller
         $activity->agreements()->sync($validated['agreement_ids'] ?? []);
         $activity->states()->sync($validated['state_ids'] ?? []);
         $activity->organizations()->sync($validated['organization_ids'] ?? []);
-
-        $saveMode = $request->input('save_mode', 'save');
-
-        if ($saveMode === 'save_new') {
-            return redirect()
-                ->route('activities.create')
-                ->with('success', 'Activity logged. Ready for a new entry.');
-        }
-
-        if ($saveMode === 'save_duplicate') {
-            $duplicateData = [
-                'agreement_ids' => $validated['agreement_ids'] ?? [],
-                'state_ids' => $validated['state_ids'] ?? [],
-                'organization_ids' => $validated['organization_ids'] ?? [],
-                'contact_family_id' => $validated['contact_family_id'] ?? null,
-                'activity_type_id' => $validated['activity_type_id'] ?? null,
-                'engagement_date' => now()->format('Y-m-d'),
-                'internal_only' => $validated['internal_only'] ?? false,
-                'agreement_logging_values' => $validated['agreement_logging_values'] ?? [],
-                'contact_family_logging_values' => $validated['contact_family_logging_values'] ?? [],
-                'activity_logging_values' => $validated['activity_logging_values'] ?? [],
-            ];
-
-            return redirect()
-                ->route('activities.create')
-                ->with('success', 'Activity logged. Previous selections loaded for quick duplicate entry.')
-                ->with('duplicate_data', $duplicateData);
-        }
 
         return redirect()
             ->route('activities.index')
@@ -417,33 +387,6 @@ class ActivityController extends Controller
         $activity->agreements()->sync($validated['agreement_ids'] ?? []);
         $activity->states()->sync($validated['state_ids'] ?? []);
         $activity->organizations()->sync($validated['organization_ids'] ?? []);
-        $saveMode = $request->input('save_mode', 'save');
-
-        if ($saveMode === 'save_new') {
-            return redirect()
-                ->route('activities.create')
-                ->with('success', 'Activity updated. Ready for a new entry.');
-        }
-
-        if ($saveMode === 'save_duplicate') {
-            $duplicateData = [
-                'agreement_ids' => $validated['agreement_ids'] ?? [],
-                'state_ids' => $validated['state_ids'] ?? [],
-                'organization_ids' => $validated['organization_ids'] ?? [],
-                'contact_family_id' => $validated['contact_family_id'] ?? null,
-                'activity_type_id' => $validated['activity_type_id'] ?? null,
-                'engagement_date' => now()->format('Y-m-d'),
-                'internal_only' => $validated['internal_only'] ?? false,
-                'agreement_logging_values' => $validated['agreement_logging_values'] ?? [],
-                'contact_family_logging_values' => $validated['contact_family_logging_values'] ?? [],
-                'activity_logging_values' => $validated['activity_logging_values'] ?? [],
-            ];
-
-            return redirect()
-                ->route('activities.create')
-                ->with('success', 'Activity updated. Previous selections loaded for quick duplicate entry.')
-                ->with('duplicate_data', $duplicateData);
-        }
 
         return redirect()
             ->route('activities.index')

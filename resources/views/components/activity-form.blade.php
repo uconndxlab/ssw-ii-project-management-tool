@@ -341,8 +341,6 @@
         <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
             <a href="{{ route('activities.index') }}" class="btn btn-sm btn-outline-secondary">Cancel</a>
             <button type="submit" class="btn btn-sm btn-primary" form="{{ $formId }}" name="save_mode" value="save">Save Activity</button>
-            <button type="submit" class="btn btn-sm btn-outline-primary" form="{{ $formId }}" name="save_mode" value="save_new">Save + New</button>
-            <button type="submit" class="btn btn-sm btn-outline-primary" form="{{ $formId }}" name="save_mode" value="save_duplicate">Save + Duplicate</button>
         </div>
     </div>
 </div>

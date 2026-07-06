@@ -5,16 +5,15 @@
 @section('content')
 
 @php
-    $prefill = $duplicateData ?? [];
-    $selectedAgreementIds = old('agreement_ids', $prefill['agreement_ids'] ?? ($preselectedAgreementId ? [$preselectedAgreementId] : []));
-    $selectedOrganizationIds = old('organization_ids', $prefill['organization_ids'] ?? []);
-    $selectedStateIds = old('state_ids', $prefill['state_ids'] ?? []);
-    $selectedActivityTypeId = old('activity_type_id', $prefill['activity_type_id'] ?? null);
-    $agreementLoggingData = old('agreement_logging_values', $prefill['agreement_logging_values'] ?? []);
-    $contactFamilyLoggingData = old('contact_family_logging_values', $prefill['contact_family_logging_values'] ?? []);
-    $activityLoggingData = old('activity_logging_values', $prefill['activity_logging_values'] ?? []);
-    $engagementDateValue = old('engagement_date', $prefill['engagement_date'] ?? now()->format('Y-m-d'));
-    $internalOnlyChecked = (bool) old('internal_only', $prefill['internal_only'] ?? false);
+    $selectedAgreementIds = old('agreement_ids', $preselectedAgreementId ? [$preselectedAgreementId] : []);
+    $selectedOrganizationIds = old('organization_ids', []);
+    $selectedStateIds = old('state_ids', []);
+    $selectedActivityTypeId = old('activity_type_id', null);
+    $agreementLoggingData = old('agreement_logging_values', []);
+    $contactFamilyLoggingData = old('contact_family_logging_values', []);
+    $activityLoggingData = old('activity_logging_values', []);
+    $engagementDateValue = old('engagement_date', now()->format('Y-m-d'));
+    $internalOnlyChecked = (bool) old('internal_only', false);
 @endphp
 
 <x-activity-form
