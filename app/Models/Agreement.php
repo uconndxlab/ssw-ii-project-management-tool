@@ -16,8 +16,8 @@ class Agreement extends Model
         'abstract',
         'start_date',
         'end_date',
-        'extension_start_date',
-        'extension_end_date',
+        'original_end_date',
+        'extended_end_date',
         'certification_candidates',
     ];
 

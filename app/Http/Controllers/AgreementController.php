@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\AgreementRequest;
 use App\Models\Organization;
 use App\Models\Agreement;
 use App\Models\AgreementAttachment;
@@ -10,6 +11,7 @@ use App\Models\ActivityType;
 use App\Models\ContactFamily;
 use App\Models\LoggingField;
 use App\Models\Project;
+use App\Models\Program;
 use App\Models\State;
 use App\Models\Team;
 use App\Models\User;
@@ -140,53 +142,12 @@ class AgreementController extends Controller
         // Admin-only authorization
         abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can create agreements.');
 
-        $states = State::query()->get()->sortBy('name')->values();
-        $organizations = Organization::query()->with('states')->get()->sortBy('name')->values();
-        $users = User::query()->get()->sortBy('name')->values();
-        $teams = Team::query()->where('active', true)->get()->sortBy('name')->values();
-        $projects = Project::query()->where('active', true)->with('programs')->get()->sortBy('name')->values();
-        $programsByProject = \App\Models\Program::query()->where('active', true)->get()->groupBy('project_id');
-        $agreementLoggingFields = LoggingField::active()
-            ->ordered()
-            ->where('available_in_agreements', true)
-            ->get();
-        
-        return view('agreements.create', compact('states', 'organizations', 'users', 'teams', 'projects', 'programsByProject', 'agreementLoggingFields'));
+        return view('agreements.create', $this->agreementFormData());
     }
 
-    public function store(Request $request)
+    public function store(AgreementRequest $request)
     {
-        // Admin-only authorization
-        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can create agreements.');
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'organization_ids' => ['nullable', 'array'],
-            'organization_ids.*' => ['exists:organizations,id'],
-            'state_ids' => ['nullable', 'array'],
-            'state_ids.*' => ['exists:states,id'],
-            'project_id' => ['nullable', 'exists:projects,id'],
-            'program_ids' => ['nullable', 'array'],
-            'program_ids.*' => ['exists:programs,id'],
-            'abstract' => ['nullable', 'string'],
-            'start_date' => ['nullable', 'date'],
-            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
-            'extension_start_date' => ['nullable', 'date'],
-            'extension_end_date' => ['nullable', 'date', 'after_or_equal:extension_start_date'],
-            'certification_candidates' => ['nullable', 'string'],
-
-            'user_ids' => ['nullable', 'array'],
-            'user_ids.*' => ['exists:users,id'],
-            'team_ids' => ['nullable', 'array'],
-            'team_ids.*' => ['exists:teams,id'],
-            
-            'agreement_logging_field_ids' => ['nullable', 'array'],
-            'agreement_logging_field_ids.*' => ['exists:logging_fields,id'],
-            'required_agreement_logging_field_ids' => ['nullable', 'array'],
-            'required_agreement_logging_field_ids.*' => ['exists:logging_fields,id'],
-            
-            'attachments' => ['nullable', 'array'],
-            'attachments.*' => ['file', 'max:10240', 'mimes:pdf,doc,docx,xls,xlsx,txt'],
-        ]);
+        $validated = $request->validated();
 
         $agreement = Agreement::create([
             'name' => $validated['name'],
@@ -194,8 +155,8 @@ class AgreementController extends Controller
             'abstract' => $validated['abstract'] ?? null,
             'start_date' => $validated['start_date'],
             'end_date' => $validated['end_date'],
-            'extension_start_date' => $validated['extension_start_date'] ?? null,
-            'extension_end_date' => $validated['extension_end_date'] ?? null,
+            'original_end_date' => $validated['original_end_date'] ?? null,
+            'extended_end_date' => $validated['extended_end_date'] ?? null,
             'certification_candidates' => $validated['certification_candidates'] ?? null,
         ]);
 
@@ -321,53 +282,12 @@ class AgreementController extends Controller
         // Admin-only authorization
         abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can edit agreements.');
 
-        $states = State::query()->get()->sortBy('name')->values();
-        $organizations = Organization::query()->with('states')->get()->sortBy('name')->values();
-        $users = User::query()->get()->sortBy('name')->values();
-        $teams = Team::query()->where('active', true)->get()->sortBy('name')->values();
-        $contactFamilies = ContactFamily::query()->where('active', true)->get()->sortBy(fn ($item) => [$item->sort_order, $item->name])->values();
-        $activityTypes = ActivityType::query()->where('active', true)->get()->sortBy(fn ($item) => [$item->sort_order, $item->name])->values();
-        $projects = Project::query()->where('active', true)->with('programs')->get()->sortBy('name')->values();
-        $programsByProject = \App\Models\Program::query()->where('active', true)->get()->groupBy('project_id');
-        $agreementLoggingFields = LoggingField::active()->ordered()->where('available_in_agreements', true)->get();
-        $agreement->load(['users', 'teams', 'deliverables.activityType.contactFamily', 'deliverables.assignedUsers', 'organizations', 'states', 'attachments', 'agreementLoggingFields', 'programs']);
-        
-        return view('agreements.edit', compact('agreement', 'states', 'organizations', 'users', 'teams', 'contactFamilies', 'activityTypes', 'projects', 'programsByProject', 'agreementLoggingFields'));
+        return view('agreements.edit', $this->agreementFormData($agreement));
     }
 
-    public function update(Request $request, Agreement $agreement)
+    public function update(AgreementRequest $request, Agreement $agreement)
     {
-        // Admin-only authorization
-        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can update agreements.');
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'organization_ids' => ['nullable', 'array'],
-            'organization_ids.*' => ['exists:organizations,id'],
-            'state_ids' => ['nullable', 'array'],
-            'state_ids.*' => ['exists:states,id'],
-            'project_id' => ['nullable', 'exists:projects,id'],
-            'program_ids' => ['nullable', 'array'],
-            'program_ids.*' => ['exists:programs,id'],
-            'abstract' => ['nullable', 'string'],
-            'start_date' => ['nullable', 'date'],
-            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
-            'extension_start_date' => ['nullable', 'date'],
-            'extension_end_date' => ['nullable', 'date', 'after_or_equal:extension_start_date'],
-            'certification_candidates' => ['nullable', 'string'],
-
-            'user_ids' => ['nullable', 'array'],
-            'user_ids.*' => ['exists:users,id'],
-            'team_ids' => ['nullable', 'array'],
-            'team_ids.*' => ['exists:teams,id'],
-            
-            'agreement_logging_field_ids' => ['nullable', 'array'],
-            'agreement_logging_field_ids.*' => ['exists:logging_fields,id'],
-            'required_agreement_logging_field_ids' => ['nullable', 'array'],
-            'required_agreement_logging_field_ids.*' => ['exists:logging_fields,id'],
-            
-            'attachments' => ['nullable', 'array'],
-            'attachments.*' => ['file', 'max:10240', 'mimes:pdf,doc,docx,xls,xlsx,txt'],
-        ]);
+        $validated = $request->validated();
 
         $agreement->update([
             'name' => $validated['name'],
@@ -375,8 +295,8 @@ class AgreementController extends Controller
             'abstract' => $validated['abstract'] ?? null,
             'start_date' => $validated['start_date'],
             'end_date' => $validated['end_date'],
-            'extension_start_date' => $validated['extension_start_date'] ?? null,
-            'extension_end_date' => $validated['extension_end_date'] ?? null,
+            'original_end_date' => $validated['original_end_date'] ?? null,
+            'extended_end_date' => $validated['extended_end_date'] ?? null,
             'certification_candidates' => $validated['certification_candidates'] ?? null,
         ]);
 
@@ -424,6 +344,36 @@ class AgreementController extends Controller
         return redirect()
             ->route('agreements.index')
             ->with('success', 'Agreement updated successfully.');
+    }
+
+    private function agreementFormData(?Agreement $agreement = null): array
+    {
+        $states = State::query()->get()->sortBy('name')->values();
+        $organizations = Organization::query()->with('states')->get()->sortBy('name')->values();
+        $users = User::query()->get()->sortBy('name')->values();
+        $teams = Team::query()->where('active', true)->get()->sortBy('name')->values();
+        $contactFamilies = ContactFamily::query()->where('active', true)->get()->sortBy(fn ($item) => [$item->sort_order, $item->name])->values();
+        $activityTypes = ActivityType::query()->where('active', true)->get()->sortBy(fn ($item) => [$item->sort_order, $item->name])->values();
+        $projects = Project::query()->where('active', true)->with('programs')->get()->sortBy('name')->values();
+        $programsByProject = Program::query()->where('active', true)->get()->groupBy('project_id');
+        $agreementLoggingFields = LoggingField::active()->ordered()->where('available_in_agreements', true)->get();
+
+        if ($agreement) {
+            $agreement->load(['users', 'teams', 'deliverables.activityType.contactFamily', 'deliverables.assignedUsers', 'organizations', 'states', 'attachments', 'agreementLoggingFields', 'programs']);
+        }
+
+        return compact(
+            'agreement',
+            'states',
+            'organizations',
+            'users',
+            'teams',
+            'contactFamilies',
+            'activityTypes',
+            'projects',
+            'programsByProject',
+            'agreementLoggingFields'
+        );
     }
 
     public function destroy(Agreement $agreement)
