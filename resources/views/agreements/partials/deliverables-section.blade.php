@@ -77,7 +77,7 @@
                         @endforeach
                     @else
                         <tr class="deliverable-empty-row">
-                            <td colspan="4" class="text-center text-muted small">
+                            <td colspan="4" class="text-center text-muted py-4 small">
                                 Click "+ Add Deliverable" to create a deliverable for this agreement.
                             </td>
                         </tr>
@@ -288,7 +288,7 @@
             }
         }
 
-        function clearEditor() {
+        function clearEditor(showModal = true) {
             currentKey = null;
             editorKeyInput.value = '';
             editorCard.querySelectorAll('[name^="deliverable_editor["]').forEach(function (input) {
@@ -301,7 +301,7 @@
             editorCard.querySelector('[name="deliverable_editor[id]"]')?.remove();
             syncActivityTypeOptions();
 
-            if (editorModal) {
+            if (showModal && editorModal) {
                 editorModal.show();
             }
         }
@@ -491,7 +491,7 @@
 
                 deleteRow(rowKey);
                 if (currentKey === rowKey) {
-                    clearEditor();
+                    clearEditor(false);
                 }
             }
         });
