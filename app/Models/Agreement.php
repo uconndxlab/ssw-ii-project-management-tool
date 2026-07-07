@@ -18,7 +18,6 @@ class Agreement extends Model
         'end_date',
         'extension_start_date',
         'extension_end_date',
-        'certification_candidates',
     ];
 
     protected function casts(): array
@@ -83,6 +82,11 @@ class Agreement extends Model
     public function deliverables(): HasMany
     {
         return $this->hasMany(AgreementDeliverable::class);
+    }
+
+    public function certificationCandidates(): HasMany
+    {
+        return $this->hasMany(AgreementCertificationCandidate::class)->orderBy('id');
     }
 
     /**

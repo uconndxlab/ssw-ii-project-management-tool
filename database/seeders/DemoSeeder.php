@@ -13,10 +13,10 @@ use App\Models\Program;
 use App\Models\ContactFamily;
 use App\Models\ActivityType;
 use App\Models\Agreement;
+use App\Models\AgreementCertificationCandidate;
 use App\Models\AgreementDeliverable;
 use App\Models\Activity;
-use App\Models\AgreementLoggingField;
-use App\Models\ContactFamilyLoggingField;
+use App\Models\LoggingField;
 use App\Models\ActivityParticipantTime;
 use Carbon\Carbon;
 
@@ -332,9 +332,23 @@ class DemoSeeder extends Seeder
                     'end_date' => $endDate,
                     'extension_start_date' => $extensionStartDate,
                     'extension_end_date' => $extensionEndDate,
-                    'certification_candidates' => $data['certification_candidates'],
                 ]
             );
+
+            $candidateNames = collect(preg_split('/\r\n|\r|\n/', (string) ($data['certification_candidates'] ?? '')))
+                ->map(fn ($value) => trim($value))
+                ->filter()
+                ->values();
+
+            foreach ($candidateNames as $candidateName) {
+                AgreementCertificationCandidate::firstOrCreate([
+                    'agreement_id' => $agreement->id,
+                    'name' => $candidateName,
+                ], [
+                    'program_id' => null,
+                    'notes' => null,
+                ]);
+            }
             
             // Attach organization and state
             $agreement->organizations()->syncWithoutDetaching([$org->id]);
@@ -519,8 +533,8 @@ class DemoSeeder extends Seeder
 
     private function attachLoggingFields(array $agreements): void
     {
-        $agreementLoggingFields = AgreementLoggingField::all();
-        $contactFamilyLoggingFields = ContactFamilyLoggingField::all();
+        $agreementLoggingFields = LoggingField::query()->where('available_in_agreements', true)->get();
+        $contactFamilyLoggingFields = LoggingField::query()->where('available_in_contact_families', true)->get();
 
         if ($agreementLoggingFields->isEmpty() && $contactFamilyLoggingFields->isEmpty()) {
             $this->command->warn('No logging fields found. Skipping pivot table population.');

@@ -139,10 +139,14 @@
                     <p class="text-muted small mb-0">No staff assigned.</p>
                 @endif
 
-                @if($agreement->certification_candidates)
+                @if($agreement->certificationCandidates->isNotEmpty())
                     <hr>
                     <h6 class="fw-semibold mb-2">Certification Candidates</h6>
-                    <p class="small mb-0" style="white-space: pre-line;">{{ $agreement->certification_candidates }}</p>
+                    <div class="small mb-0 d-grid gap-1">
+                        @foreach($agreement->certificationCandidates as $candidate)
+                            <div>{{ $candidate->name }}</div>
+                        @endforeach
+                    </div>
                 @endif
             </div>
 

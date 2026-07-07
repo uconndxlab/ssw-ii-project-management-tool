@@ -9,6 +9,34 @@
         'required_agreement_logging_field_ids',
         $agreementLoggingFieldCollection->filter(fn ($field) => $field->pivot->is_required)->pluck('id')->toArray()
     );
+
+    $rawCertificationCandidateRows = old('certification_candidates');
+    $certificationCandidateRows = [];
+
+    if (is_array($rawCertificationCandidateRows)) {
+        foreach ($rawCertificationCandidateRows as $key => $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $rowKey = is_string($key) ? $key : 'row-' . $key;
+            $certificationCandidateRows[] = [
+                'row_key' => $rowKey,
+                'id' => $row['id'] ?? '',
+                'value' => $row['value'] ?? '',
+                '_delete' => !empty($row['_delete']) ? 1 : 0,
+            ];
+        }
+    } elseif ($agreement?->certificationCandidates) {
+        foreach ($agreement->certificationCandidates as $candidate) {
+            $certificationCandidateRows[] = [
+                'row_key' => 'existing-' . $candidate->id,
+                'id' => $candidate->id,
+                'value' => $candidate->name,
+                '_delete' => 0,
+            ];
+        }
+    }
 @endphp
 
 <div class="card mb-4">
@@ -135,28 +163,17 @@
             </div>
         </div>
 
-        <div class="mb-3">
-            <label for="certification_candidates" class="form-label">Certification Candidates</label>
-            <textarea class="form-control @error('certification_candidates') is-invalid @enderror"
-                      id="certification_candidates"
-                      name="certification_candidates"
-                      rows="3">{{ old('certification_candidates', $agreement?->certification_candidates ?? '') }}</textarea>
-            @error('certification_candidates')
-                <div class="invalid-feedback">{{ $message }}</div>
-            @enderror
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Attachments</label>
-            <input type="file"
-                   class="form-control @error('attachments.*') is-invalid @enderror"
-                   name="attachments[]"
-                   multiple
-                   accept=".pdf,.doc,.docx,.xls,.xlsx,.txt">
-            <div class="form-text">PDF, Word, Excel, or text files. Max 10MB each.</div>
-            @error('attachments.*')
-                <div class="invalid-feedback">{{ $message }}</div>
-            @enderror
+        <div class="col-md-6 mb-3">
+            <x-inline-string-list
+                list-id="agreement-certification-candidates"
+                name="certification_candidates"
+                label="Certification Candidates"
+                :rows="$certificationCandidateRows"
+                :suggestions="$candidateNameSuggestions ?? []"
+                add-button-text="Add Candidate"
+                empty-message="No certification candidates added yet."
+                input-placeholder="Type a candidate name..."
+            />
         </div>
     </div>
 </div>

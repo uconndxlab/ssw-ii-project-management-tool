@@ -30,7 +30,10 @@ class AgreementRequest extends FormRequest
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'extension_start_date' => ['nullable', 'date'],
             'extension_end_date' => ['nullable', 'date', 'after_or_equal:extension_start_date'],
-            'certification_candidates' => ['nullable', 'string'],
+            'certification_candidates' => ['nullable', 'array'],
+            'certification_candidates.*.id' => ['nullable', 'integer'],
+            'certification_candidates.*.value' => ['nullable', 'string', 'max:255'],
+            'certification_candidates.*._delete' => ['nullable', 'boolean'],
             'deleted_attachment_ids' => ['nullable', 'array'],
             'deleted_attachment_ids.*' => ['integer', 'exists:agreement_attachments,id'],
 

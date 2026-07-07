@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\AgreementRequest;
 use App\Models\Organization;
 use App\Models\Agreement;
+use App\Models\AgreementCertificationCandidate;
 use App\Models\ActivityType;
 use App\Models\ContactFamily;
 use App\Models\LoggingField;
@@ -157,10 +158,10 @@ class AgreementController extends Controller
                 'end_date' => $validated['end_date'],
                 'extension_start_date' => $validated['extension_start_date'] ?? null,
                 'extension_end_date' => $validated['extension_end_date'] ?? null,
-                'certification_candidates' => $validated['certification_candidates'] ?? null,
             ]);
 
             $this->syncAgreementRelations($agreement, $validated);
+            $this->syncAgreementCertificationCandidates($agreement, $validated['certification_candidates'] ?? []);
             $this->syncAgreementDeliverables($agreement, $validated['deliverables'] ?? []);
 
             return $agreement;
@@ -180,7 +181,7 @@ class AgreementController extends Controller
             abort(403, 'Unauthorized access to this agreement.');
         }
 
-        $agreement->load(['organizations', 'states', 'users', 'teams.users', 'deliverables.activityType.contactFamily', 'deliverables.assignedUsers', 'attachments']);
+        $agreement->load(['organizations', 'states', 'users', 'teams.users', 'deliverables.activityType.contactFamily', 'deliverables.assignedUsers', 'attachments', 'certificationCandidates']);
         
         // Get activities for this agreement
         $activities = $agreement->activities()
@@ -265,10 +266,10 @@ class AgreementController extends Controller
                 'end_date' => $validated['end_date'],
                 'extension_start_date' => $validated['extension_start_date'] ?? null,
                 'extension_end_date' => $validated['extension_end_date'] ?? null,
-                'certification_candidates' => $validated['certification_candidates'] ?? null,
             ]);
 
             $this->syncAgreementRelations($agreement, $validated);
+            $this->syncAgreementCertificationCandidates($agreement, $validated['certification_candidates'] ?? []);
             $this->syncAgreementDeliverables($agreement, $validated['deliverables'] ?? []);
         });
 
@@ -405,6 +406,43 @@ class AgreementController extends Controller
         }
     }
 
+    private function syncAgreementCertificationCandidates(Agreement $agreement, array $rows): void
+    {
+        $existingCandidates = $agreement->certificationCandidates()->get()->keyBy('id');
+
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $rowId = isset($row['id']) && $row['id'] !== '' ? (int) $row['id'] : null;
+            $markedForDeletion = filter_var($row['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $value = trim((string) ($row['value'] ?? ''));
+
+            if ($markedForDeletion) {
+                if ($rowId && $existingCandidates->has($rowId)) {
+                    $existingCandidates->get($rowId)->delete();
+                }
+
+                continue;
+            }
+
+            if ($value === '') {
+                continue;
+            }
+
+            if ($rowId && $existingCandidates->has($rowId)) {
+                $existingCandidates->get($rowId)->update(['name' => $value]);
+            } else {
+                $agreement->certificationCandidates()->create([
+                    'name' => $value,
+                    'program_id' => null,
+                    'notes' => null,
+                ]);
+            }
+        }
+    }
+
     private function deliverableRowHasContent(array $row): bool
     {
         $fields = [
@@ -434,9 +472,15 @@ class AgreementController extends Controller
         $projects = Project::query()->where('active', true)->with('programs')->get()->sortBy('name')->values();
         $programsByProject = Program::query()->where('active', true)->get()->groupBy('project_id');
         $agreementLoggingFields = LoggingField::active()->ordered()->where('available_in_agreements', true)->get();
+        $candidateNameSuggestions = AgreementCertificationCandidate::query()
+            ->distinct()
+            ->orderBy('name')
+            ->pluck('name')
+            ->filter()
+            ->values();
 
         if ($agreement) {
-            $agreement->load(['users', 'teams.users', 'deliverables.activityType.contactFamily', 'deliverables.assignedUsers', 'organizations', 'states', 'attachments', 'agreementLoggingFields', 'programs']);
+            $agreement->load(['users', 'teams.users', 'deliverables.activityType.contactFamily', 'deliverables.assignedUsers', 'organizations', 'states', 'attachments', 'agreementLoggingFields', 'programs', 'certificationCandidates']);
         }
 
         $teams = Team::query()
@@ -462,7 +506,8 @@ class AgreementController extends Controller
             'activityTypes',
             'projects',
             'programsByProject',
-            'agreementLoggingFields'
+            'agreementLoggingFields',
+            'candidateNameSuggestions'
         );
     }
 
