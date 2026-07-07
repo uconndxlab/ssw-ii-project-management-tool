@@ -220,6 +220,20 @@
         });
     }
 
+    function disposeMembershipTooltips(scope) {
+        if (!window.bootstrap || !bootstrap.Tooltip || !scope) {
+            return;
+        }
+
+        scope.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (element) {
+            const tooltip = bootstrap.Tooltip.getInstance(element);
+
+            if (tooltip) {
+                tooltip.dispose();
+            }
+        });
+    }
+
     function getMembershipPickers(section) {
         const scope = section.closest('.card-body') || document;
 
@@ -283,14 +297,15 @@
     function renderRequirementNotes(section) {
         const selectedPrincipalInvestigatorIds = getSelectedPrincipalInvestigatorIds(section);
         const effectiveUserIds = getEffectiveUserIds(section);
+        const scope = section.closest('.row') || section.closest('.card-body') || document;
 
         updateRequirementStatus(
-            section.closest('.col-lg-7').querySelector('[data-membership-requirement-members]'),
+            scope.querySelector('[data-membership-requirement-members]'),
             effectiveUserIds.length > 0
         );
 
         updateRequirementStatus(
-            section.closest('.col-lg-7').querySelector('[data-membership-requirement-principal-investigators]'),
+            scope.querySelector('[data-membership-requirement-principal-investigators]'),
             selectedPrincipalInvestigatorIds.length > 0
         );
     }
@@ -315,6 +330,8 @@
         const selectedUserIds = getSelectedIdsFromTokenPicker(tokenPicker);
         const selectedTeamMemberIds = new Set();
 
+        disposeMembershipTooltips(body);
+
         selectedTeamIds.forEach(function (teamId) {
             const memberIds = Array.isArray(teamMembers[teamId]) ? teamMembers[teamId] : [];
             memberIds.forEach(function (memberId) {
@@ -336,7 +353,10 @@
             button.setAttribute('aria-label', label);
             button.setAttribute('data-bs-toggle', 'tooltip');
             button.setAttribute('data-bs-title', label);
-            button.addEventListener('click', onClick);
+            button.addEventListener('click', function () {
+                disposeMembershipTooltips(body);
+                onClick();
+            });
 
             return button;
         }
