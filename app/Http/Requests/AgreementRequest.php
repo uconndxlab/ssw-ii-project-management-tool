@@ -35,9 +35,9 @@ class AgreementRequest extends FormRequest
             'deleted_attachment_ids.*' => ['integer', 'exists:agreement_attachments,id'],
 
             'user_ids' => ['nullable', 'array'],
-            'user_ids.*' => ['exists:users,id'],
+            'user_ids.*' => ['distinct', 'exists:users,id'],
             'team_ids' => ['nullable', 'array'],
-            'team_ids.*' => ['exists:teams,id'],
+            'team_ids.*' => ['distinct', 'exists:teams,id'],
 
             'agreement_logging_field_ids' => ['nullable', 'array'],
             'agreement_logging_field_ids.*' => ['exists:logging_fields,id'],

@@ -104,6 +104,11 @@
                 @endphp
 
                 @if($hasAnyUsers)
+                    @if($directUsers->isNotEmpty())
+                        <div class="py-1 bg-light px-2 rounded mb-1">
+                            <small class="fw-semibold text-primary">Additional users</small>
+                        </div>
+                    @endif
                     @foreach($directUsers as $user)
                     <div class="py-2 border-bottom">
                         <a href="{{ route('users.show', $user) }}" class="fw-semibold text-decoration-none d-block">

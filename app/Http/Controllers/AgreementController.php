@@ -326,8 +326,29 @@ class AgreementController extends Controller
         $agreement->organizations()->sync($validated['organization_ids'] ?? []);
         $agreement->states()->sync($validated['state_ids'] ?? []);
         $agreement->programs()->sync($selectedProgramIds);
-        $agreement->users()->sync($validated['user_ids'] ?? []);
-        $agreement->teams()->sync($validated['team_ids'] ?? []);
+
+        $teamIds = array_values(array_unique($validated['team_ids'] ?? []));
+        $teamUserIds = collect();
+
+        if (!empty($teamIds)) {
+            $teamUserIds = Team::query()
+                ->whereIn('id', $teamIds)
+                ->with(['users:id'])
+                ->get()
+                ->flatMap(fn (Team $team) => $team->users->pluck('id'))
+                ->unique()
+                ->values();
+        }
+
+        $directUserIds = collect($validated['user_ids'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => !$teamUserIds->contains($id))
+            ->unique()
+            ->values()
+            ->all();
+
+        $agreement->users()->sync($directUserIds);
+        $agreement->teams()->sync($teamIds);
 
         $loggingFieldIds = $validated['agreement_logging_field_ids'] ?? [];
         $requiredFieldIds = $validated['required_agreement_logging_field_ids'] ?? [];
@@ -408,7 +429,6 @@ class AgreementController extends Controller
         $states = State::query()->get()->sortBy('name')->values();
         $organizations = Organization::query()->with('states')->get()->sortBy('name')->values();
         $users = User::query()->get()->sortBy('name')->values();
-        $teams = Team::query()->where('active', true)->get()->sortBy('name')->values();
         $contactFamilies = ContactFamily::query()->where('active', true)->get()->sortBy(fn ($item) => [$item->sort_order, $item->name])->values();
         $activityTypes = ActivityType::query()->where('active', true)->get()->sortBy(fn ($item) => [$item->sort_order, $item->name])->values();
         $projects = Project::query()->where('active', true)->with('programs')->get()->sortBy('name')->values();
@@ -416,7 +436,20 @@ class AgreementController extends Controller
         $agreementLoggingFields = LoggingField::active()->ordered()->where('available_in_agreements', true)->get();
 
         if ($agreement) {
-            $agreement->load(['users', 'teams', 'deliverables.activityType.contactFamily', 'deliverables.assignedUsers', 'organizations', 'states', 'attachments', 'agreementLoggingFields', 'programs']);
+            $agreement->load(['users', 'teams.users', 'deliverables.activityType.contactFamily', 'deliverables.assignedUsers', 'organizations', 'states', 'attachments', 'agreementLoggingFields', 'programs']);
+        }
+
+        $teams = Team::query()
+            ->where('active', true)
+            ->with(['users' => fn ($query) => $query->select('users.id', 'users.name', 'users.role')])
+            ->get();
+
+        if ($agreement) {
+            $teams = $teams
+                ->merge($agreement->teams ?? collect())
+                ->unique('id')
+                ->sortBy('name')
+                ->values();
         }
 
         return compact(

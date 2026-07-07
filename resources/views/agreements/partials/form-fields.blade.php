@@ -9,18 +9,6 @@
         'required_agreement_logging_field_ids',
         $agreementLoggingFieldCollection->filter(fn ($field) => $field->pivot->is_required)->pluck('id')->toArray()
     );
-    $selectedUserIds = old('user_ids', $agreement?->users?->pluck('id')->toArray() ?? []);
-    $selectedTeamIds = old('team_ids', $agreement?->teams?->pluck('id')->toArray() ?? []);
-
-    $agreementUserOptions = $users->map(function ($user) {
-        $role = !empty($user->role) ? ' (' . ucfirst($user->role) . ')' : '';
-
-        return [
-            'value' => $user->id,
-            'label' => $user->name . $role,
-            'search' => trim($user->name . ' ' . ($user->email ?? '') . ' ' . ($user->role ?? '')),
-        ];
-    });
 @endphp
 
 <div class="card mb-4">
@@ -219,42 +207,10 @@
     </div>
 </div>
 
-<div class="card mb-4">
-    <div class="card-body">
-        <h5 class="mb-3">Teams & Users</h5>
-
-        <div class="mb-3">
-            <label class="form-label">Assign Users</label>
-
-            <x-token-picker
-                picker-id="agreement-{{ $agreement ? 'edit' : 'create' }}-users"
-                name="user_ids[]"
-                :options="$agreementUserOptions"
-                :selected-ids="$selectedUserIds"
-                label-key="label"
-                value-key="value"
-                search-key="search"
-                placeholder="Search to assign users..."
-                :height="'300px'"
-            />
-        </div>
-
-        <div class="mb-3 mb-0">
-            <label class="form-label">Assign Teams</label>
-
-            <x-team-picker
-                picker-id="agreement-{{ $agreement ? 'edit' : 'create' }}-teams"
-                name="team_ids[]"
-                :teams="$teams"
-                :selected-ids="$selectedTeamIds"
-                search-placeholder="Search to assign teams..."
-            />
-
-            <small class="text-muted">
-                All users in assigned teams will have access to this agreement.
-            </small>
-        </div>
-    </div>
-</div>
+@include('agreements.partials.membership-section', [
+    'agreement' => $agreement,
+    'teams' => $teams,
+    'users' => $users,
+])
 
 @include('agreements.partials.deliverables-section', ['agreement' => $agreement])

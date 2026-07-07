@@ -56,7 +56,7 @@
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
             <div>
                 <h5 class="mb-1">Deliverables</h5>
-                <p class="text-muted small mb-0">Use the table to manage rows. Edit loads the row into the form below.</p>
+                <p class="text-muted small mb-0">Use the table to manage rows.</p>
             </div>
         </div>
 
