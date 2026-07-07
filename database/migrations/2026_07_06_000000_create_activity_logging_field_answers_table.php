@@ -32,7 +32,7 @@ return new class extends Migration
 
             DB::table('activities')
                 ->leftJoin('activity_types', 'activities.activity_type_id', '=', 'activity_types.id')
-                ->select('activities.id as id', 'activities.logging_field_data', 'activity_types.contact_family_id')
+                ->select('activities.id as activity_row_id', 'activities.logging_field_data', 'activity_types.contact_family_id')
                 ->chunkById(100, function ($activities) use ($fieldTypes) {
                     $rows = [];
 
@@ -49,7 +49,7 @@ return new class extends Migration
 
                             foreach ($fields as $fieldId => $value) {
                                 $row = $this->buildAnswerRow(
-                                    (int) $activity->id,
+                                    (int) $activity->activity_row_id,
                                     (int) $fieldId,
                                     'agreement',
                                     (int) $agreementId,
@@ -65,7 +65,7 @@ return new class extends Migration
 
                         foreach (($data['contact_family'] ?? []) as $fieldId => $value) {
                             $row = $this->buildAnswerRow(
-                                (int) $activity->id,
+                                (int) $activity->activity_row_id,
                                 (int) $fieldId,
                                 'contact_family',
                                 (int) $activity->contact_family_id,
@@ -82,7 +82,7 @@ return new class extends Migration
                     if (!empty($rows)) {
                         DB::table('activity_logging_field_answers')->insert($rows);
                     }
-                });
+                }, 'activities.id', 'activity_row_id');
         }
 
         if (Schema::hasColumn('activities', 'logging_field_data')) {
