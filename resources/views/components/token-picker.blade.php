@@ -10,6 +10,7 @@
     'searchKey' => null,
     'emptyMessage' => 'No matches found.',
     'openOnFocus' => true,
+    'showSelected' => true,
     'height' => '300px',
 ])
 
@@ -34,8 +35,9 @@
      data-empty-message="{{ $emptyMessage }}"
      data-placeholder="{{ $placeholder }}"
      data-open-on-focus="{{ $openOnFocus ? 'true' : 'false' }}"
+    data-show-selected="{{ $showSelected ? 'true' : 'false' }}"
      data-selected='@json($selectedIds)'>
-    <div class="d-flex flex-wrap gap-1 mb-2" data-token-selected></div>
+    <div class="d-flex flex-wrap gap-1 mb-2 {{ $showSelected ? '' : 'd-none' }}" data-token-selected></div>
 
     <div class="form-control d-flex align-items-center py-1" style="min-height: 42px;">
         <input type="text"
@@ -81,6 +83,7 @@
 
         const name = picker.dataset.name;
         const emptyMessage = picker.dataset.emptyMessage || 'No matches found.';
+        const showSelected = picker.dataset.showSelected === 'true';
         const options = parseJson(optionsNode, []);
         const initialSelected = new Set(parseJson({ textContent: picker.dataset.selected || '[]' }, []));
         const selected = new Set(Array.from(initialSelected));
@@ -128,6 +131,11 @@
         }
 
         function renderSelected() {
+            if (!showSelected) {
+                selectedWrap.innerHTML = '';
+                return;
+            }
+
             selectedWrap.innerHTML = '';
 
             selectedArray().forEach(function (value) {
