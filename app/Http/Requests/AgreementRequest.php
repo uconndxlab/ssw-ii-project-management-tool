@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Team;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Validator;
 
 class AgreementRequest extends FormRequest
 {
@@ -41,6 +43,8 @@ class AgreementRequest extends FormRequest
             'user_ids.*' => ['distinct', 'exists:users,id'],
             'team_ids' => ['nullable', 'array'],
             'team_ids.*' => ['distinct', 'exists:teams,id'],
+            'principal_investigator_ids' => ['nullable', 'array'],
+            'principal_investigator_ids.*' => ['distinct', 'exists:users,id'],
 
             'agreement_logging_field_ids' => ['nullable', 'array'],
             'agreement_logging_field_ids.*' => ['exists:logging_fields,id'],
@@ -61,5 +65,56 @@ class AgreementRequest extends FormRequest
             'attachments' => ['nullable', 'array'],
             'attachments.*' => ['file', 'max:10240', 'mimes:pdf,doc,docx,xls,xlsx,txt'],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            $directUserIds = collect($this->input('user_ids', []))
+                ->filter(fn ($id) => $id !== null && $id !== '')
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values();
+
+            $teamIds = collect($this->input('team_ids', []))
+                ->filter(fn ($id) => $id !== null && $id !== '')
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values();
+
+            $teamUserIds = Team::query()
+                ->whereKey($teamIds)
+                ->with(['users:id'])
+                ->get()
+                ->flatMap(fn (Team $team) => $team->users->pluck('id'))
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values();
+
+            $effectiveUserIds = $directUserIds
+                ->merge($teamUserIds)
+                ->unique()
+                ->values();
+
+            if ($effectiveUserIds->isEmpty()) {
+                $validator->errors()->add('team_ids', 'Add at least one user or team to the agreement.');
+            }
+
+            $principalInvestigatorIds = collect($this->input('principal_investigator_ids', []))
+                ->filter(fn ($id) => $id !== null && $id !== '')
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values();
+
+            if ($principalInvestigatorIds->isEmpty()) {
+                $validator->errors()->add('principal_investigator_ids', 'Select at least one principal investigator. Use the PI toggle on a selected user.');
+
+                return;
+            }
+
+            if ($principalInvestigatorIds->diff($effectiveUserIds)->isNotEmpty()) {
+                $validator->errors()->add('principal_investigator_ids', 'Principal investigators must be selected from the users assigned to this agreement.');
+            }
+        });
     }
 }

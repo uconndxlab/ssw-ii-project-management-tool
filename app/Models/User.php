@@ -83,6 +83,11 @@ class User extends Authenticatable
         return $this->belongsToMany(Agreement::class, 'agreement_user')->withTimestamps();
     }
 
+    public function principalInvestigatorAgreements(): BelongsToMany
+    {
+        return $this->belongsToMany(Agreement::class, 'agreement_principal_investigator')->withTimestamps();
+    }
+
     /**
      * Legacy accessor for backwards compatibility during migration
      */

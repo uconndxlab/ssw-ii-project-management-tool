@@ -115,6 +115,9 @@
                             {{ $user->name }}
                         </a>
                         <small class="text-muted">{{ ucfirst($user->role) }}</small>
+                        @if(!empty($user->is_principal_investigator))
+                            <span class="badge bg-warning-subtle text-dark ms-1">PI</span>
+                        @endif
                         @if(!empty($user->also_in_teams))
                             @foreach($user->also_in_teams as $teamName)
                                 <span class="badge bg-info text-dark ms-1">{{ $teamName }}</span>
@@ -132,6 +135,9 @@
                                 {{ $user->name }}
                             </a>
                             <small class="text-muted">{{ ucfirst($user->role) }}</small>
+                            @if(!empty($user->is_principal_investigator))
+                                <span class="badge bg-warning-subtle text-dark ms-1">PI</span>
+                            @endif
                         </div>
                         @endforeach
                     @endforeach

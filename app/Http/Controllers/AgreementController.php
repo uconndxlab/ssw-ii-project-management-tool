@@ -181,7 +181,7 @@ class AgreementController extends Controller
             abort(403, 'Unauthorized access to this agreement.');
         }
 
-        $agreement->load(['organizations', 'states', 'users', 'teams.users', 'deliverables.activityType.contactFamily', 'deliverables.assignedUsers', 'attachments', 'certificationCandidates']);
+        $agreement->load(['organizations', 'states', 'users', 'teams.users', 'deliverables.activityType.contactFamily', 'deliverables.assignedUsers', 'attachments', 'certificationCandidates', 'principalInvestigators']);
         
         // Get activities for this agreement
         $activities = $agreement->activities()
@@ -333,7 +333,7 @@ class AgreementController extends Controller
 
         if (!empty($teamIds)) {
             $teamUserIds = Team::query()
-                ->whereIn('id', $teamIds)
+                ->whereKey($teamIds)
                 ->with(['users:id'])
                 ->get()
                 ->flatMap(fn (Team $team) => $team->users->pluck('id'))
@@ -350,6 +350,7 @@ class AgreementController extends Controller
 
         $agreement->users()->sync($directUserIds);
         $agreement->teams()->sync($teamIds);
+        $agreement->principalInvestigators()->sync($validated['principal_investigator_ids'] ?? []);
 
         $loggingFieldIds = $validated['agreement_logging_field_ids'] ?? [];
         $requiredFieldIds = $validated['required_agreement_logging_field_ids'] ?? [];
@@ -480,7 +481,7 @@ class AgreementController extends Controller
             ->values();
 
         if ($agreement) {
-            $agreement->load(['users', 'teams.users', 'deliverables.activityType.contactFamily', 'deliverables.assignedUsers', 'organizations', 'states', 'attachments', 'agreementLoggingFields', 'programs', 'certificationCandidates']);
+            $agreement->load(['users', 'teams.users', 'deliverables.activityType.contactFamily', 'deliverables.assignedUsers', 'organizations', 'states', 'attachments', 'agreementLoggingFields', 'programs', 'certificationCandidates', 'principalInvestigators']);
         }
 
         $teams = Team::query()

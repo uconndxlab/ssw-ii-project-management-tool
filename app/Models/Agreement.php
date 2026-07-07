@@ -50,6 +50,11 @@ class Agreement extends Model
         return $this->belongsToMany(Team::class, 'agreement_team')->withTimestamps();
     }
 
+    public function principalInvestigators(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'agreement_principal_investigator')->withTimestamps();
+    }
+
     public function activities(): BelongsToMany
     {
         return $this->belongsToMany(Activity::class, 'activity_agreement')->withTimestamps();
@@ -111,23 +116,35 @@ class Agreement extends Model
     {
         $directUsers = $this->users;
         $directUserIds = $directUsers->pluck('id');
+        $principalInvestigatorIds = $this->relationLoaded('principalInvestigators')
+            ? $this->principalInvestigators->pluck('id')
+            : $this->principalInvestigators()->pluck('users.id');
 
         $teamGroups = [];
         foreach ($this->teams as $team) {
             // Only include users not already directly assigned
-            $teamOnlyUsers = $team->users->whereNotIn('id', $directUserIds);
+            $teamOnlyUsers = $team->users
+                ->whereNotIn('id', $directUserIds)
+                ->map(function ($user) use ($principalInvestigatorIds) {
+                    $user->is_principal_investigator = $principalInvestigatorIds->contains($user->id);
+
+                    return $user;
+                });
+
             if ($teamOnlyUsers->isNotEmpty()) {
                 $teamGroups[$team->name] = $teamOnlyUsers;
             }
         }
 
         // Add team membership info to direct users
-        $directUsersWithTeams = $directUsers->map(function ($user) {
+        $directUsersWithTeams = $directUsers->map(function ($user) use ($principalInvestigatorIds) {
             $userTeams = $this->teams->filter(function ($team) use ($user) {
                 return $team->users->contains('id', $user->id);
             });
-            
+
             $user->also_in_teams = $userTeams->pluck('name')->toArray();
+            $user->is_principal_investigator = $principalInvestigatorIds->contains($user->id);
+
             return $user;
         });
 
