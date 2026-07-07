@@ -173,6 +173,8 @@
     </div>
 </div>
 
+@include('agreements.partials.attachments-section', ['agreement' => $agreement])
+
 <div class="card mb-4">
     <div class="card-body">
         <h5 class="mb-3">Logging Fields</h5>

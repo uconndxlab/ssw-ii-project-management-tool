@@ -39,7 +39,6 @@ Route::middleware('auth')->group(function () {
 
     // Agreement attachment routes
     Route::get('/agreements/{agreement}/attachments/{attachment}/download', [AgreementController::class, 'downloadAttachment'])->name('agreements.attachments.download');
-    Route::delete('/agreements/{agreement}/attachments/{attachment}', [AgreementController::class, 'destroyAttachment'])->name('agreements.attachments.destroy');
     
     // HTMX endpoint for activity participant selection
     Route::get('/activities/participants-for-agreement', [ActivityController::class, 'getParticipantsForAgreement'])

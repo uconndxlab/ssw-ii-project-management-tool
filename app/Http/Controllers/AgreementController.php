@@ -166,19 +166,7 @@ class AgreementController extends Controller
             return $agreement;
         });
 
-        if ($request->hasFile('attachments')) {
-            foreach ($request->file('attachments') as $file) {
-                $filename = $file->getClientOriginalName();
-                $path = $file->store('agreement-attachments', 'public');
-                
-                $agreement->attachments()->create([
-                    'filename' => $filename,
-                    'file_path' => $path,
-                    'mime_type' => $file->getMimeType(),
-                    'file_size' => $file->getSize(),
-                ]);
-            }
-        }
+        $this->syncAgreementAttachments($agreement, $request);
 
         return redirect()
             ->route('agreements.edit', $agreement)
@@ -284,11 +272,34 @@ class AgreementController extends Controller
             $this->syncAgreementDeliverables($agreement, $validated['deliverables'] ?? []);
         });
 
+        $this->syncAgreementAttachments($agreement, $request);
+
+        return redirect()
+            ->route('agreements.index')
+            ->with('success', 'Agreement updated successfully.');
+    }
+
+    private function syncAgreementAttachments(Agreement $agreement, Request $request): void
+    {
+        $deletedAttachmentIds = collect($request->input('deleted_attachment_ids', []))
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        if (!empty($deletedAttachmentIds)) {
+            $agreement->attachments()
+                ->whereIn('id', $deletedAttachmentIds)
+                ->get()
+                ->each(function ($attachment) {
+                    $attachment->delete();
+                });
+        }
+
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
                 $filename = $file->getClientOriginalName();
                 $path = $file->store('agreement-attachments', 'public');
-                
+
                 $agreement->attachments()->create([
                     'filename' => $filename,
                     'file_path' => $path,
@@ -297,10 +308,6 @@ class AgreementController extends Controller
                 ]);
             }
         }
-
-        return redirect()
-            ->route('agreements.index')
-            ->with('success', 'Agreement updated successfully.');
     }
 
     private function syncAgreementRelations(Agreement $agreement, array $validated): void
@@ -470,22 +477,6 @@ class AgreementController extends Controller
             storage_path('app/public/' . $attachment->file_path),
             $attachment->filename
         );
-    }
-
-    /**
-     * Delete an agreement attachment.
-     */
-    public function destroyAttachment(Agreement $agreement, $attachmentId)
-    {
-        // Admin-only authorization
-        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can delete attachments.');
-        
-        $attachment = $agreement->attachments()->findOrFail($attachmentId);
-        $attachment->delete(); // Will trigger model event to delete physical file
-        
-        return redirect()
-            ->route('agreements.edit', $agreement)
-            ->with('success', 'Attachment deleted successfully.');
     }
 
 }
