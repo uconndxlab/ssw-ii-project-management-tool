@@ -36,13 +36,6 @@ Route::middleware('auth')->group(function () {
     // HTMX endpoints for agreement user management
     Route::post('/agreements/{agreement}/assign-user', [AgreementController::class, 'assignUser'])->name('agreements.assign-user');
     Route::delete('/agreements/{agreement}/remove-user/{user}', [AgreementController::class, 'removeUser'])->name('agreements.remove-user');
-    
-    // HTMX endpoints for agreement deliverable management
-    Route::post('/agreements/{agreement}/add-deliverable', [AgreementController::class, 'addDeliverable'])->name('agreements.add-deliverable');
-    Route::delete('/agreements/{agreement}/remove-deliverable/{deliverable}', [AgreementController::class, 'removeDeliverable'])->name('agreements.remove-deliverable');
-    Route::get('/agreements/{agreement}/deliverables/{deliverable}/edit-form', [AgreementController::class, 'editDeliverable'])->name('agreements.edit-deliverable');
-    Route::patch('/agreements/{agreement}/deliverables/{deliverable}', [AgreementController::class, 'updateDeliverable'])->name('agreements.update-deliverable');
-    Route::get('/agreements/{agreement}/deliverables/{deliverable}/row', [AgreementController::class, 'showDeliverableRow'])->name('agreements.show-deliverable-row');
 
     // Agreement attachment routes
     Route::get('/agreements/{agreement}/attachments/{attachment}/download', [AgreementController::class, 'downloadAttachment'])->name('agreements.attachments.download');

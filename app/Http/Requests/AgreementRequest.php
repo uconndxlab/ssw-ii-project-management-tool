@@ -28,8 +28,8 @@ class AgreementRequest extends FormRequest
             'abstract' => ['nullable', 'string'],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
-            'original_end_date' => ['nullable', 'date'],
-            'extended_end_date' => ['nullable', 'date', 'after_or_equal:original_end_date'],
+            'extension_start_date' => ['nullable', 'date'],
+            'extension_end_date' => ['nullable', 'date', 'after_or_equal:extension_start_date'],
             'certification_candidates' => ['nullable', 'string'],
 
             'user_ids' => ['nullable', 'array'],
@@ -41,6 +41,17 @@ class AgreementRequest extends FormRequest
             'agreement_logging_field_ids.*' => ['exists:logging_fields,id'],
             'required_agreement_logging_field_ids' => ['nullable', 'array'],
             'required_agreement_logging_field_ids.*' => ['exists:logging_fields,id'],
+
+            'deliverables' => ['nullable', 'array'],
+            'deliverables.*.id' => ['nullable', 'integer'],
+            'deliverables.*.activity_type_id' => ['nullable', 'exists:activity_types,id'],
+            'deliverables.*.contact_family_id' => ['nullable', 'exists:contact_families,id'],
+            'deliverables.*.required_hours' => ['nullable', 'numeric', 'min:0', 'max:99999'],
+            'deliverables.*.required_activities' => ['nullable', 'integer', 'min:0', 'max:99999'],
+            'deliverables.*.notes' => ['nullable', 'string', 'max:500'],
+            'deliverables.*.user_ids' => ['nullable', 'array'],
+            'deliverables.*.user_ids.*' => ['exists:users,id'],
+            'deliverables.*._delete' => ['nullable', 'boolean'],
 
             'attachments' => ['nullable', 'array'],
             'attachments.*' => ['file', 'max:10240', 'mimes:pdf,doc,docx,xls,xlsx,txt'],

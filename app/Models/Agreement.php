@@ -16,8 +16,8 @@ class Agreement extends Model
         'abstract',
         'start_date',
         'end_date',
-        'original_end_date',
-        'extended_end_date',
+        'extension_start_date',
+        'extension_end_date',
         'certification_candidates',
     ];
 
@@ -26,8 +26,8 @@ class Agreement extends Model
         return [
             'start_date' => 'date',
             'end_date' => 'date',
-            'original_end_date' => 'date',
-            'extended_end_date' => 'date',
+            'extension_start_date' => 'date',
+            'extension_end_date' => 'date',
         ];
     }
 

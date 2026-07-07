@@ -4,13 +4,13 @@
 
 @section('content')
 <div class="row justify-content-center mb-4">
-    <div class="col-md-8">
+    <div class="col-md-10">
         <h1>Create Agreement</h1>
     </div>
 </div>
 
 <div class="row justify-content-center">
-    <div class="col-md-8">
+    <div class="col-md-10">
         <div class="card">
             <div class="card-body">
                 @if ($errors->any())

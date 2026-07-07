@@ -23,12 +23,12 @@
             <dt class="col-5 text-muted fw-normal small">End Date</dt>
             <dd class="col-7 mb-2">{{ $agreement->end_date?->format('M d, Y') ?? '—' }}</dd>
 
-            @if($agreement->original_end_date || $agreement->extended_end_date)
-            <dt class="col-5 text-muted fw-normal small">Original End</dt>
-            <dd class="col-7 mb-2 small">{{ $agreement->original_end_date?->format('M d, Y') ?? '—' }}</dd>
+            @if($agreement->extension_start_date || $agreement->extension_end_date)
+            <dt class="col-5 text-muted fw-normal small">Extension Start</dt>
+            <dd class="col-7 mb-2 small">{{ $agreement->extension_start_date?->format('M d, Y') ?? '—' }}</dd>
 
-            <dt class="col-5 text-muted fw-normal small">Extended End</dt>
-            <dd class="col-7 mb-2 small">{{ $agreement->extended_end_date?->format('M d, Y') ?? '—' }}</dd>
+            <dt class="col-5 text-muted fw-normal small">Extension End</dt>
+            <dd class="col-7 mb-2 small">{{ $agreement->extension_end_date?->format('M d, Y') ?? '—' }}</dd>
             @endif
 
             <dt class="col-5 text-muted fw-normal small">Organizations</dt>

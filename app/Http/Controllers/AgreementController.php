@@ -5,8 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Requests\AgreementRequest;
 use App\Models\Organization;
 use App\Models\Agreement;
-use App\Models\AgreementAttachment;
-use App\Models\AgreementDeliverable;
 use App\Models\ActivityType;
 use App\Models\ContactFamily;
 use App\Models\LoggingField;
@@ -16,6 +14,7 @@ use App\Models\State;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 
 class AgreementController extends Controller
@@ -149,44 +148,24 @@ class AgreementController extends Controller
     {
         $validated = $request->validated();
 
-        $agreement = Agreement::create([
-            'name' => $validated['name'],
-            'project_id' => $validated['project_id'] ?? null,
-            'abstract' => $validated['abstract'] ?? null,
-            'start_date' => $validated['start_date'],
-            'end_date' => $validated['end_date'],
-            'original_end_date' => $validated['original_end_date'] ?? null,
-            'extended_end_date' => $validated['extended_end_date'] ?? null,
-            'certification_candidates' => $validated['certification_candidates'] ?? null,
-        ]);
+        $agreement = DB::transaction(function () use ($validated) {
+            $agreement = Agreement::create([
+                'name' => $validated['name'],
+                'project_id' => $validated['project_id'] ?? null,
+                'abstract' => $validated['abstract'] ?? null,
+                'start_date' => $validated['start_date'],
+                'end_date' => $validated['end_date'],
+                'extension_start_date' => $validated['extension_start_date'] ?? null,
+                'extension_end_date' => $validated['extension_end_date'] ?? null,
+                'certification_candidates' => $validated['certification_candidates'] ?? null,
+            ]);
 
-        $selectedProgramIds = $validated['program_ids'] ?? [];
-        if (!empty($validated['project_id'])) {
-            $projectProgramIds = Project::query()->whereKey($validated['project_id'])->first()
-                ?->programs()
-                ->where('active', true)
-                ->pluck('id')
-                ->toArray() ?? [];
+            $this->syncAgreementRelations($agreement, $validated);
+            $this->syncAgreementDeliverables($agreement, $validated['deliverables'] ?? []);
 
-            $selectedProgramIds = array_values(array_unique(array_merge($selectedProgramIds, $projectProgramIds)));
-        }
+            return $agreement;
+        });
 
-        $agreement->organizations()->sync($validated['organization_ids'] ?? []);
-        $agreement->states()->sync($validated['state_ids'] ?? []);
-        $agreement->programs()->sync($selectedProgramIds);
-        $agreement->users()->sync($validated['user_ids'] ?? []);
-        $agreement->teams()->sync($validated['team_ids'] ?? []);
-        
-        // Sync logging fields with is_required pivot data
-        $loggingFieldIds = $validated['agreement_logging_field_ids'] ?? [];
-        $requiredFieldIds = $validated['required_agreement_logging_field_ids'] ?? [];
-        $syncData = [];
-        foreach ($loggingFieldIds as $fieldId) {
-            $syncData[$fieldId] = ['is_required' => in_array($fieldId, $requiredFieldIds)];
-        }
-        $agreement->agreementLoggingFields()->sync($syncData);
-        
-        // Handle file uploads
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
                 $filename = $file->getClientOriginalName();
@@ -289,44 +268,22 @@ class AgreementController extends Controller
     {
         $validated = $request->validated();
 
-        $agreement->update([
-            'name' => $validated['name'],
-            'project_id' => $validated['project_id'] ?? null,
-            'abstract' => $validated['abstract'] ?? null,
-            'start_date' => $validated['start_date'],
-            'end_date' => $validated['end_date'],
-            'original_end_date' => $validated['original_end_date'] ?? null,
-            'extended_end_date' => $validated['extended_end_date'] ?? null,
-            'certification_candidates' => $validated['certification_candidates'] ?? null,
-        ]);
+        DB::transaction(function () use ($agreement, $validated) {
+            $agreement->update([
+                'name' => $validated['name'],
+                'project_id' => $validated['project_id'] ?? null,
+                'abstract' => $validated['abstract'] ?? null,
+                'start_date' => $validated['start_date'],
+                'end_date' => $validated['end_date'],
+                'extension_start_date' => $validated['extension_start_date'] ?? null,
+                'extension_end_date' => $validated['extension_end_date'] ?? null,
+                'certification_candidates' => $validated['certification_candidates'] ?? null,
+            ]);
 
-        $selectedProgramIds = $validated['program_ids'] ?? [];
-        if (!empty($validated['project_id'])) {
-            $projectProgramIds = Project::query()->whereKey($validated['project_id'])->first()
-                ?->programs()
-                ->where('active', true)
-                ->pluck('id')
-                ->toArray() ?? [];
+            $this->syncAgreementRelations($agreement, $validated);
+            $this->syncAgreementDeliverables($agreement, $validated['deliverables'] ?? []);
+        });
 
-            $selectedProgramIds = array_values(array_unique(array_merge($selectedProgramIds, $projectProgramIds)));
-        }
-
-        $agreement->organizations()->sync($validated['organization_ids'] ?? []);
-        $agreement->states()->sync($validated['state_ids'] ?? []);
-        $agreement->programs()->sync($selectedProgramIds);
-        $agreement->users()->sync($validated['user_ids'] ?? []);
-        $agreement->teams()->sync($validated['team_ids'] ?? []);
-        
-        // Sync logging fields with is_required pivot data
-        $loggingFieldIds = $validated['agreement_logging_field_ids'] ?? [];
-        $requiredFieldIds = $validated['required_agreement_logging_field_ids'] ?? [];
-        $syncData = [];
-        foreach ($loggingFieldIds as $fieldId) {
-            $syncData[$fieldId] = ['is_required' => in_array($fieldId, $requiredFieldIds)];
-        }
-        $agreement->agreementLoggingFields()->sync($syncData);
-        
-        // Handle file uploads
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
                 $filename = $file->getClientOriginalName();
@@ -344,6 +301,99 @@ class AgreementController extends Controller
         return redirect()
             ->route('agreements.index')
             ->with('success', 'Agreement updated successfully.');
+    }
+
+    private function syncAgreementRelations(Agreement $agreement, array $validated): void
+    {
+        $selectedProgramIds = $validated['program_ids'] ?? [];
+        if (!empty($validated['project_id'])) {
+            $projectProgramIds = Project::query()->whereKey($validated['project_id'])->first()
+                ?->programs()
+                ->where('active', true)
+                ->pluck('id')
+                ->toArray() ?? [];
+
+            $selectedProgramIds = array_values(array_unique(array_merge($selectedProgramIds, $projectProgramIds)));
+        }
+
+        $agreement->organizations()->sync($validated['organization_ids'] ?? []);
+        $agreement->states()->sync($validated['state_ids'] ?? []);
+        $agreement->programs()->sync($selectedProgramIds);
+        $agreement->users()->sync($validated['user_ids'] ?? []);
+        $agreement->teams()->sync($validated['team_ids'] ?? []);
+
+        $loggingFieldIds = $validated['agreement_logging_field_ids'] ?? [];
+        $requiredFieldIds = $validated['required_agreement_logging_field_ids'] ?? [];
+        $syncData = [];
+        foreach ($loggingFieldIds as $fieldId) {
+            $syncData[$fieldId] = ['is_required' => in_array($fieldId, $requiredFieldIds)];
+        }
+        $agreement->agreementLoggingFields()->sync($syncData);
+    }
+
+    private function syncAgreementDeliverables(Agreement $agreement, array $deliverables): void
+    {
+        $existingDeliverables = $agreement->deliverables()->with('assignedUsers')->get()->keyBy('id');
+
+        foreach ($deliverables as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $rowId = isset($row['id']) && $row['id'] !== '' ? (int) $row['id'] : null;
+            $markedForDeletion = filter_var($row['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $rowHasContent = $this->deliverableRowHasContent($row);
+
+            if ($markedForDeletion) {
+                if ($rowId && $existingDeliverables->has($rowId)) {
+                    $deliverable = $existingDeliverables->get($rowId);
+                    $deliverable->assignedUsers()->detach();
+                    $deliverable->delete();
+                }
+
+                continue;
+            }
+
+            if (!$rowHasContent) {
+                continue;
+            }
+
+            $data = [
+                'activity_type_id' => $row['activity_type_id'] ?? null,
+                'contact_family_id' => $row['contact_family_id'] ?? null,
+                'required_hours' => $row['required_hours'] ?? null,
+                'required_activities' => $row['required_activities'] ?? null,
+                'notes' => $row['notes'] ?? null,
+            ];
+
+            if ($rowId && $existingDeliverables->has($rowId)) {
+                $deliverable = $existingDeliverables->get($rowId);
+                $deliverable->update($data);
+            } else {
+                $deliverable = $agreement->deliverables()->create($data);
+            }
+
+            $deliverable->assignedUsers()->sync($row['user_ids'] ?? []);
+        }
+    }
+
+    private function deliverableRowHasContent(array $row): bool
+    {
+        $fields = [
+            $row['activity_type_id'] ?? null,
+            $row['contact_family_id'] ?? null,
+            $row['required_hours'] ?? null,
+            $row['required_activities'] ?? null,
+            $row['notes'] ?? null,
+        ];
+
+        foreach ($fields as $value) {
+            if ($value !== null && $value !== '') {
+                return true;
+            }
+        }
+
+        return !empty($row['user_ids']);
     }
 
     private function agreementFormData(?Agreement $agreement = null): array
@@ -407,94 +457,6 @@ class AgreementController extends Controller
         $agreement->load('users');
 
         return view('agreements.partials.user-list', compact('agreement'));
-    }
-
-    // HTMX endpoint for deliverable management
-    public function addDeliverable(Request $request, Agreement $agreement)
-    {
-        // Admin-only authorization
-        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can add deliverables.');
-
-        $validated = $request->validate([
-            'activity_type_id'    => ['nullable', 'exists:activity_types,id'],
-            'contact_family_id'   => ['nullable', 'exists:contact_families,id'],
-            'required_hours'      => ['nullable', 'numeric', 'min:0'],
-            'required_activities' => ['nullable', 'integer', 'min:0'],
-            'notes'               => ['nullable', 'string'],
-            'user_ids'            => ['nullable', 'array'],
-            'user_ids.*'          => ['exists:users,id'],
-        ]);
-
-        $deliverable = $agreement->deliverables()->create(
-            collect($validated)->except('user_ids')->toArray()
-        );
-        $deliverable->assignedUsers()->sync($validated['user_ids'] ?? []);
-        $agreement->load('deliverables.activityType.contactFamily.contactFamilyLoggingFields', 'deliverables.assignedUsers');
-
-        return view('agreements.partials.deliverable-list', compact('agreement'));
-    }
-
-    public function removeDeliverable(Request $request, Agreement $agreement, AgreementDeliverable $deliverable)
-    {
-        // Admin-only authorization
-        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can remove deliverables.');
-
-        // Ensure deliverable belongs to this agreement
-        abort_unless($deliverable->agreement_id === $agreement->id, 403, 'Invalid deliverable.');
-
-        AgreementDeliverable::destroy($deliverable->id);
-        $agreement->load('deliverables.activityType.contactFamily', 'deliverables.assignedUsers');
-
-        return view('agreements.partials.deliverable-list', compact('agreement'));
-    }
-
-    public function editDeliverable(Request $request, Agreement $agreement, AgreementDeliverable $deliverable)
-    {
-        abort_unless(Auth::user()->isAdmin(), 403);
-        abort_unless($deliverable->agreement_id === $agreement->id, 403);
-
-        $contactFamilies = ContactFamily::query()->where('active', true)->get()->sortBy(fn ($item) => [$item->sort_order, $item->name])->values();
-        $activityTypes = $deliverable->contact_family_id
-            ? ActivityType::query()->where('contact_family_id', $deliverable->contact_family_id)->where('active', true)->get()->sortBy(fn ($item) => [$item->sort_order, $item->name])->values()
-            : collect();
-        $users = User::query()->get(['id', 'name', 'role'])->sortBy('name')->values();
-        $assignedUserIds = $deliverable->assignedUsers()->pluck('users.id')->all();
-
-        return view('agreements.partials.deliverable-row-edit', compact('agreement', 'deliverable', 'contactFamilies', 'activityTypes', 'users', 'assignedUserIds'));
-    }
-
-    public function updateDeliverable(Request $request, Agreement $agreement, AgreementDeliverable $deliverable)
-    {
-        abort_unless(Auth::user()->isAdmin(), 403);
-        abort_unless($deliverable->agreement_id === $agreement->id, 403);
-
-        $validated = $request->validate([
-            'activity_type_id'    => ['nullable', 'exists:activity_types,id'],
-            'contact_family_id'   => ['nullable', 'exists:contact_families,id'],
-            'required_hours'      => ['nullable', 'numeric', 'min:0', 'max:99999'],
-            'required_activities' => ['nullable', 'integer', 'min:0', 'max:99999'],
-            'notes'               => ['nullable', 'string', 'max:500'],
-            'user_ids'            => ['nullable', 'array'],
-            'user_ids.*'          => ['exists:users,id'],
-        ]);
-
-        $deliverable->update(collect($validated)->except('user_ids')->toArray());
-        $deliverable->assignedUsers()->sync($validated['user_ids'] ?? []);
-        $agreement->load('deliverables.activityType.contactFamily', 'deliverables.assignedUsers');
-
-        return response()
-            ->view('agreements.partials.deliverable-list', compact('agreement'))
-            ->header('HX-Trigger', 'closeDeliverableModal');
-    }
-
-    public function showDeliverableRow(Request $request, Agreement $agreement, AgreementDeliverable $deliverable)
-    {
-        abort_unless(Auth::user()->isAdmin(), 403);
-        abort_unless($deliverable->agreement_id === $agreement->id, 403);
-
-        $agreement->load('deliverables.activityType.contactFamily', 'deliverables.assignedUsers');
-
-        return view('agreements.partials.deliverable-list', compact('agreement'));
     }
 
     /**
