@@ -32,6 +32,8 @@
                             Role{!! $icon('role') !!}
                         </a>
                     </th>
+                    <th>Projects</th>
+                    <th>Programs</th>
                     <th>
                         <a class="text-decoration-none fw-semibold text-dark"
                            href="{{ $url('created') }}"
@@ -39,7 +41,7 @@
                             Created{!! $icon('created') !!}
                         </a>
                     </th>
-                    <th class="text-end" style="width:140px;">Actions</th>
+                    <th class="text-end" style="width:220px;">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -60,15 +62,40 @@
                             {{ ucfirst($user->role) }}
                         </span>
                     </td>
+                    <td>
+                        <div class="d-flex flex-wrap gap-1">
+                            @forelse($user->projects->sortBy('name') as $project)
+                                <span class="badge bg-primary">{{ $project->name }}</span>
+                            @empty
+                                <span class="text-muted small">—</span>
+                            @endforelse
+                        </div>
+                    </td>
+                    <td>
+                        <div class="d-flex flex-wrap gap-1">
+                            @forelse($user->programs->sortBy('name') as $program)
+                                <span class="badge bg-warning text-dark">{{ $program->name }}</span>
+                            @empty
+                                <span class="text-muted small">—</span>
+                            @endforelse
+                        </div>
+                    </td>
                     <td class="text-muted small">{{ $user->created_at->format('M d, Y') }}</td>
                     <td class="text-end">
-                        <a href="{{ route('admin.users.edit', $user) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
-                        <a href="{{ route('users.show', $user) }}" class="btn btn-sm btn-outline-primary">View</a>
+                        <div class="d-flex gap-1 justify-content-end flex-nowrap">
+                            <a href="{{ route('users.show', $user) }}" class="btn btn-sm btn-outline-primary">View</a>
+                            <a href="{{ route('admin.users.edit', $user) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                            <form method="POST" action="{{ route('admin.users.destroy', $user) }}" class="d-inline">
+                                @csrf @method('DELETE')
+                                <button type="submit" class="btn btn-sm btn-outline-danger"
+                                    onclick="return confirm('Delete {{ addslashes($user->name) }}?')">Delete</button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="5" class="text-center py-5">
+                    <td colspan="7" class="text-center py-5">
                         <p class="text-muted mb-2">No users found.</p>
                         <a href="{{ route('admin.users.create') }}" class="btn btn-sm btn-primary">Create User</a>
                     </td>

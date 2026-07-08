@@ -6,12 +6,16 @@ use App\Http\Requests\AdminUserRequest;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class AdminUserController extends Controller
 {
     public function index(Request $request)
     {
-        $query = User::query();
+        $query = User::query()->with([
+            'projects:id,name',
+            'programs:id,name,project_id',
+        ]);
 
         if ($request->filled('search')) {
             $search = $request->input('search');
@@ -107,6 +111,21 @@ class AdminUserController extends Controller
             ->get();
 
         return view('admin.users.show', compact('user', 'recentActivities'));
+    }
+
+    public function destroy(User $user)
+    {
+        if (Auth::id() === $user->id) {
+            return redirect()
+                ->route('admin.users.index')
+                ->with('error', 'You cannot delete your own user account.');
+        }
+
+        User::destroy($user->id);
+
+        return redirect()
+            ->route('admin.users.index')
+            ->with('success', 'User deleted successfully.');
     }
 
     private function supervisorOptions(?User $user = null)
