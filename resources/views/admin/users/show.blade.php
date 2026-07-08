@@ -8,6 +8,7 @@
     type="{{ ucfirst($user->role) }}"
     typeBadgeClass="{{ $user->isAdmin() ? 'bg-danger' : ($user->isStaff() ? 'bg-primary' : 'bg-secondary') }}"
     backRoute="{{ route('admin.users.index') }}"
+    editRoute="{{ route('admin.users.edit', $user) }}"
     backLabel="All Users"
 >
     {{-- ── Summary ─────────────────────────────────────────────────────── --}}

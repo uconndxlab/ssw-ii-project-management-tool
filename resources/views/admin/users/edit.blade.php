@@ -1,11 +1,11 @@
 @extends('layouts.app')
 
-@section('title', 'Create User')
+@section('title', 'Edit User')
 
 @section('content')
 <div class="row justify-content-center mb-4">
     <div class="col-md-6">
-        <h1>Create User</h1>
+        <h1>Edit User: {{ $user->name }}</h1>
     </div>
 </div>
 
@@ -23,14 +23,14 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('admin.users.store') }}" id="users-create-form">
+                <form method="POST" action="{{ route('admin.users.update', $user) }}" id="users-edit-form">
                     @csrf
+                    @method('PUT')
                     @include('admin.users.partials.form-fields')
-
                 </form>
             </div>
         </div>
     </div>
 </div>
-<x-save-bar form-id="users-create-form" cancel-url="{{ route('admin.users.index') }}" save-label="Create User" />
+<x-save-bar form-id="users-edit-form" cancel-url="{{ route('admin.users.index') }}" save-label="Save User" :last-saved-at="$user->updated_at" />
 @endsection

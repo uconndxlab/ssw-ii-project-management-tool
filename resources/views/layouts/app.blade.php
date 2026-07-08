@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ config('app.name') }} - @yield('title', 'Home')</title>
-    
+
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
@@ -23,7 +23,7 @@
             min-height: calc(100vh - 56px);
         }
     </style>
-    
+
     <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
 </head>
@@ -61,8 +61,8 @@
                             <li><hr class="dropdown-divider"></li>
                             <li><h6 class="dropdown-header">Activity Setup</h6></li>
                             <li><a class="dropdown-item" href="{{ route('contact-families.index') }}">Contact Families</a></li>
-                            <li><a class="dropdown-item" href="{{ route('logging-fields.index') }}">Logging Fields</a></li>
                             <li><a class="dropdown-item" href="{{ route('activity-types.index') }}">Activity Types</a></li>
+                            <li><a class="dropdown-item" href="{{ route('logging-fields.index') }}">Logging Fields</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><h6 class="dropdown-header">People</h6></li>
                             <li><a class="dropdown-item" href="{{ route('teams.index') }}">Teams</a></li>

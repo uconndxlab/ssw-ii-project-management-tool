@@ -2,10 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\AdminUserRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules\Password;
 
 class AdminUserController extends Controller
 {
@@ -46,27 +45,20 @@ class AdminUserController extends Controller
 
     public function create()
     {
-        $users = User::orderBy('name')->get();
-        return view('admin.users.create', compact('users'));
+        return view('admin.users.create', [
+            'user' => new User(),
+            'supervisors' => $this->supervisorOptions(),
+        ]);
     }
 
-    public function store(Request $request)
+    public function store(AdminUserRequest $request)
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'password' => ['required', Password::defaults()],
-            'role' => ['required', 'in:admin,staff,consultant'],
-            'supervisor_id' => ['nullable', 'exists:users,id'],
-        ]);
-
-        // Validate supervisor is not self (will be checked after user is created if needed)
-        // No circular reference possible on creation since user doesn't exist yet
+        $validated = $request->validated();
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
+            'password' => $validated['password'],
             'role' => $validated['role'],
             'supervisor_id' => $validated['supervisor_id'] ?? null,
         ]);
@@ -74,6 +66,36 @@ class AdminUserController extends Controller
         return redirect()
             ->route('admin.users.index')
             ->with('success', 'User created successfully.');
+    }
+
+    public function edit(User $user)
+    {
+        return view('admin.users.edit', [
+            'user' => $user,
+            'supervisors' => $this->supervisorOptions($user),
+        ]);
+    }
+
+    public function update(AdminUserRequest $request, User $user)
+    {
+        $validated = $request->validated();
+
+        $attributes = [
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'role' => $validated['role'],
+            'supervisor_id' => $validated['supervisor_id'] ?? null,
+        ];
+
+        if (!empty($validated['password'])) {
+            $attributes['password'] = $validated['password'];
+        }
+
+        $user->update($attributes);
+
+        return redirect()
+            ->route('admin.users.index')
+            ->with('success', 'User updated successfully.');
     }
 
     public function show(User $user)
@@ -89,41 +111,14 @@ class AdminUserController extends Controller
         return view('admin.users.show', compact('user', 'recentActivities'));
     }
 
-    /**
-     * Check if setting a supervisor would create a circular reference.
-     * Traverses up the supervisor chain to detect cycles.
-     */
-    private function wouldCreateCircularReference(User $user, ?int $supervisorId, int $maxDepth = 50): bool
+    private function supervisorOptions(?User $user = null)
     {
-        if ($supervisorId === null) {
-            return false;
+        $query = User::query()->orderBy('name', 'asc');
+
+        if ($user?->exists) {
+            $query->whereKeyNot($user->id);
         }
 
-        // Can't supervise yourself
-        if ($user->id === $supervisorId) {
-            return true;
-        }
-
-        // Traverse up the supervisor chain
-        $currentSupervisorId = $supervisorId;
-        $depth = 0;
-
-        while ($currentSupervisorId !== null && $depth < $maxDepth) {
-            $supervisor = User::find($currentSupervisorId);
-            
-            if (!$supervisor) {
-                return false; // Supervisor doesn't exist, let validation handle it
-            }
-
-            // If we encounter the original user, there's a cycle
-            if ($supervisor->supervisor_id === $user->id) {
-                return true;
-            }
-
-            $currentSupervisorId = $supervisor->supervisor_id;
-            $depth++;
-        }
-
-        return false;
+        return $query->get();
     }
 }

@@ -39,7 +39,7 @@
                             Created{!! $icon('created') !!}
                         </a>
                     </th>
-                    <th class="text-end" style="width:80px;">Actions</th>
+                    <th class="text-end" style="width:140px;">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -62,6 +62,7 @@
                     </td>
                     <td class="text-muted small">{{ $user->created_at->format('M d, Y') }}</td>
                     <td class="text-end">
+                        <a href="{{ route('admin.users.edit', $user) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
                         <a href="{{ route('users.show', $user) }}" class="btn btn-sm btn-outline-primary">View</a>
                     </td>
                 </tr>
