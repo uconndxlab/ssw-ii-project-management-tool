@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Organization;
-use App\Models\Program;
 use App\Models\Project;
 use App\Models\State;
 use Illuminate\Http\Request;
@@ -12,9 +11,9 @@ class OrganizationController extends Controller
 {
     public function index(Request $request)
     {
-        $states = State::orderBy('name')->get(['id', 'name']);
+        $states = State::orderBy('name', 'asc')->get(['id', 'name']);
 
-        $query = Organization::with(['states', 'agreements']);
+        $query = Organization::with(['states', 'projects', 'programs'])->withCount('agreements');
 
         // Search
         $search = trim((string) $request->input('search', ''));
@@ -53,7 +52,7 @@ class OrganizationController extends Controller
     {
         // Load agreements with relationships
         $agreements = $organization->agreements()->with(['states', 'users'])->get();
-        
+
         // Get all activities for this organization's agreements
         $allActivities = \App\Models\Activity::whereHas('agreements', function($query) use ($agreements) {
                 $query->whereIn('agreements.id', $agreements->pluck('id'));
@@ -61,10 +60,10 @@ class OrganizationController extends Controller
             ->with(['activityType.contactFamily', 'user', 'agreements'])
             ->orderByDesc('engagement_date')
             ->get();
-        
+
         // Recent activities (last 5)
         $recentActivities = $allActivities->take(5);
-        
+
         // Deduplicate staff across all agreements, collecting agreement names per user
         $teamMembersMap = [];
         foreach ($agreements as $agreement) {
@@ -77,22 +76,22 @@ class OrganizationController extends Controller
             }
         }
         $teamMembers = collect($teamMembersMap)->sortBy('name');
-        
+
         // YTD activities
         $ytdActivities = $allActivities->filter(fn($e) => $e->engagement_date->year === now()->year);
-        
+
         // YTD totals
         $ytdTotals = [
             'activities' => $ytdActivities->count(),
             'hours' => $ytdActivities->sum(fn($e) => $e->event_hours + ($e->prep_hours ?? 0) + ($e->followup_hours ?? 0)),
             'participants' => $ytdActivities->sum('participant_count'),
         ];
-        
+
         // Breakdown by contact family
         $contactFamilyBreakdown = $ytdActivities->groupBy(fn($e) => $e->activityType->contactFamily->name)
             ->map(fn($group) => $group->count())
             ->sortDesc();
-        
+
         return view('organizations.show', compact(
             'organization',
             'agreements',
@@ -105,11 +104,12 @@ class OrganizationController extends Controller
 
     public function create()
     {
-        $states = State::orderBy('name')->get();
-        $programs = Program::orderBy('name')->get();
-        $projects = Project::orderBy('name')->get();
+        $states = State::orderBy('name', 'asc')->get();
+        $projects = Project::with(['programs' => fn ($query) => $query->orderBy('name')])
+            ->orderBy('name')
+            ->get();
 
-        return view('organizations.create', compact('states', 'programs', 'projects'));
+        return view('organizations.create', compact('states', 'projects'));
     }
 
     public function store(Request $request)
@@ -136,11 +136,12 @@ class OrganizationController extends Controller
 
     public function edit(Organization $organization)
     {
-        $states = State::orderBy('name')->get();
-        $programs = Program::orderBy('name')->get();
-        $projects = Project::orderBy('name')->get();
+        $states = State::orderBy('name', 'asc')->get();
+        $projects = Project::with(['programs' => fn ($query) => $query->orderBy('name')])
+            ->orderBy('name')
+            ->get();
 
-        return view('organizations.edit', compact('organization', 'states', 'programs', 'projects'));
+        return view('organizations.edit', compact('organization', 'states', 'projects'));
     }
 
     public function update(Request $request, Organization $organization)
@@ -167,7 +168,7 @@ class OrganizationController extends Controller
 
     public function destroy(Organization $organization)
     {
-        $organization->delete();
+        Organization::destroy($organization->id);
 
         return redirect()
             ->route('organizations.index')

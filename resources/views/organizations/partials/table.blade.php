@@ -5,6 +5,8 @@
                 <tr>
                     <th>Name</th>
                     <th>State(s)</th>
+                    <th>Projects</th>
+                    <th>Programs</th>
                     <th>Agreements</th>
                     <th>Created</th>
                     <th class="text-end" style="width:{{ auth()->user()->isAdmin() ? '170px' : '80px' }};">Actions</th>
@@ -23,6 +25,18 @@
                             <span class="badge bg-info text-dark me-1">{{ $state->name }}</span>
                         @endforeach
                         @if($organization->states->isEmpty())<span class="text-muted">—</span>@endif
+                    </td>
+                    <td>
+                        @foreach($organization->projects as $project)
+                            <span class="badge bg-primary me-1">{{ $project->name }}</span>
+                        @endforeach
+                        @if($organization->projects->isEmpty())<span class="text-muted">—</span>@endif
+                    </td>
+                    <td>
+                        @foreach($organization->programs as $program)
+                            <span class="badge bg-warning text-dark me-1">{{ $program->name }}</span>
+                        @endforeach
+                        @if($organization->programs->isEmpty())<span class="text-muted">—</span>@endif
                     </td>
                     <td>
                         <span class="badge bg-secondary">{{ $organization->agreements_count ?? $organization->agreements->count() }}</span>
@@ -44,7 +58,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="5" class="text-center py-5">
+                    <td colspan="7" class="text-center py-5">
                         <p class="text-muted mb-2">No organizations found.</p>
                         @if(auth()->user()->isAdmin())
                             <a href="{{ route('organizations.create') }}" class="btn btn-sm btn-primary">Create Organization</a>

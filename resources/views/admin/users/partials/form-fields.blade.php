@@ -2,19 +2,6 @@
     $isEdit = $user->exists;
     $selectedProjectIds = old('project_ids', $user->projects?->pluck('id')->toArray() ?? []);
     $selectedProgramIds = old('program_ids', $user->programs?->pluck('id')->toArray() ?? []);
-    $programOptions = $projects->flatMap(function ($project) {
-        return $project->programs->map(function ($program) use ($project) {
-            return [
-                'id' => $program->id,
-                'name' => $program->name,
-                'context' => $project->name,
-                'contextBadgeClass' => 'bg-primary',
-            ];
-        });
-    })->values();
-    $projectProgramMap = $projects->mapWithKeys(function ($project) {
-        return [(string) $project->id => $project->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all()];
-    })->all();
 @endphp
 
 <div class="card mb-4">
@@ -64,7 +51,7 @@
     </div>
 </div>
 
-<div class="card mb-4" data-user-scope-section data-project-program-map='@json($projectProgramMap)'>
+<div class="card mb-4">
     <div class="card-body">
         <div class="mb-3">
             <h5 class="mb-1">Scope Assignments</h5>
@@ -105,118 +92,14 @@
             </div>
         </div>
 
-        <div class="row g-3">
-            <div class="col-md-6">
-                <label class="form-label">Projects</label>
-                <x-token-picker
-                    picker-id="user-projects"
-                    name="project_ids[]"
-                    :items="$projects"
-                    :selected-ids="$selectedProjectIds"
-                    placeholder="Search projects..."
-                    :height="'260px'"
-                />
-                <div class="form-text">Select the projects this user can work within.</div>
-                @error('project_ids')
-                    <div class="text-danger small mt-1">{{ $message }}</div>
-                @enderror
-            </div>
-
-            <div class="col-md-6">
-                <label class="form-label">Programs</label>
-                <x-token-picker
-                    picker-id="user-programs"
-                    name="program_ids[]"
-                    :options="$programOptions"
-                    :selected-ids="$selectedProgramIds"
-                    placeholder="Search programs..."
-                    disabled-placeholder="Select at least one project first..."
-                    :disabled="empty($selectedProjectIds)"
-                    :height="'260px'"
-                />
-                <div class="form-text">Programs are limited to the selected projects.</div>
-                @error('program_ids')
-                    <div class="text-danger small mt-1">{{ $message }}</div>
-                @enderror
-            </div>
-        </div>
+        <x-project-program-scope-picker
+            scope-id="user-scope"
+            :projects="$projects"
+            :selected-project-ids="$selectedProjectIds"
+            :selected-program-ids="$selectedProgramIds"
+            project-help-text="Select the projects this user can work within."
+            program-help-text="Programs are limited to the selected projects."
+            program-badge-class="bg-primary"
+        />
     </div>
 </div>
-
-@once
-<script>
-(function () {
-    function parseJson(value, fallback) {
-        try {
-            return JSON.parse(value || '');
-        } catch (error) {
-            return fallback;
-        }
-    }
-
-    function selectedIds(picker) {
-        return Array.from(picker.querySelectorAll('[data-token-inputs] input')).map(function (input) {
-            return String(input.value);
-        });
-    }
-
-    function initializeUserScopeSection(section) {
-        if (section.dataset.userScopeInitialized === 'true') {
-            return;
-        }
-
-        const projectPicker = section.querySelector('#user-projects');
-        const programPicker = section.querySelector('#user-programs');
-
-        if (!projectPicker || !programPicker) {
-            return;
-        }
-
-        const projectProgramMap = parseJson(section.dataset.projectProgramMap, {});
-
-        function refreshProgramPicker() {
-            const projectIds = selectedIds(projectPicker);
-            const allowedProgramIds = [];
-
-            projectIds.forEach(function (projectId) {
-                const programIds = Array.isArray(projectProgramMap[projectId]) ? projectProgramMap[projectId] : [];
-                programIds.forEach(function (programId) {
-                    if (!allowedProgramIds.includes(String(programId))) {
-                        allowedProgramIds.push(String(programId));
-                    }
-                });
-            });
-
-            programPicker.dispatchEvent(new CustomEvent('token-picker:set-disabled', {
-                detail: {
-                    disabled: projectIds.length === 0,
-                    placeholder: 'Select at least one project first...',
-                },
-                bubbles: true,
-            }));
-
-            programPicker.dispatchEvent(new CustomEvent('token-picker:restrict', {
-                detail: allowedProgramIds,
-                bubbles: true,
-            }));
-        }
-
-        projectPicker.addEventListener('token-picker:change', refreshProgramPicker);
-        refreshProgramPicker();
-        section.dataset.userScopeInitialized = 'true';
-    }
-
-    document.addEventListener('DOMContentLoaded', function () {
-        document.querySelectorAll('[data-user-scope-section]').forEach(function (section) {
-            initializeUserScopeSection(section);
-        });
-    });
-
-    document.body.addEventListener('htmx:afterSwap', function (event) {
-        event.target.querySelectorAll('[data-user-scope-section]').forEach(function (section) {
-            initializeUserScopeSection(section);
-        });
-    });
-})();
-</script>
-@endonce
