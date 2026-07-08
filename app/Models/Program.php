@@ -47,4 +47,9 @@ class Program extends Model
     {
         return $this->belongsToMany(Organization::class, 'organization_program')->withTimestamps();
     }
+
+    public function users(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'user_program')->withTimestamps();
+    }
 }

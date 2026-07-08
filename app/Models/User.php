@@ -89,11 +89,19 @@ class User extends Authenticatable
     }
 
     /**
-     * Legacy accessor for backwards compatibility during migration
+     * Projects this user is explicitly assigned to.
      */
     public function projects(): BelongsToMany
     {
-        return $this->agreements();
+        return $this->belongsToMany(Project::class, 'user_project')->withTimestamps();
+    }
+
+    /**
+     * Programs this user is explicitly assigned to.
+     */
+    public function programs(): BelongsToMany
+    {
+        return $this->belongsToMany(Program::class, 'user_program')->withTimestamps();
     }
 
     public function activities(): BelongsToMany

@@ -9,3 +9,20 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+:root {
+    --app-page-bg: #f3f4f6;
+}
+
+body {
+    background-color: var(--app-page-bg);
+}
+
+main {
+    min-height: calc(100vh - 56px);
+}
+
+.required-label::after {
+    content: ' *';
+    color: var(--bs-danger);
+}

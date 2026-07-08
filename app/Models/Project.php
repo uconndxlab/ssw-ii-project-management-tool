@@ -33,4 +33,9 @@ class Project extends Model
     {
         return $this->belongsToMany(Organization::class, 'organization_project')->withTimestamps();
     }
+
+    public function users(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'user_project')->withTimestamps();
+    }
 }

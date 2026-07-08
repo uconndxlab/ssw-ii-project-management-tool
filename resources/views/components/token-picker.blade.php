@@ -12,6 +12,8 @@
     'openOnFocus' => true,
     'showSelected' => true,
     'height' => '300px',
+    'disabled' => false,
+    'disabledPlaceholder' => null,
 ])
 
 @php
@@ -24,6 +26,8 @@
             'value' => (string) data_get($item, $valueKey),
             'label' => (string) data_get($item, $labelKey),
             'search' => strtolower((string) data_get($item, $searchKey, data_get($item, $labelKey))),
+            'context' => data_get($item, 'context'),
+            'contextBadgeClass' => data_get($item, 'contextBadgeClass', 'bg-primary'),
         ];
     })->filter(fn ($option) => $option['value'] !== '')->values()->all();
 @endphp
@@ -34,12 +38,14 @@
      data-name="{{ $name }}"
      data-empty-message="{{ $emptyMessage }}"
      data-placeholder="{{ $placeholder }}"
+     data-disabled-placeholder="{{ $disabledPlaceholder ?? $placeholder }}"
      data-open-on-focus="{{ $openOnFocus ? 'true' : 'false' }}"
+     data-disabled="{{ $disabled ? 'true' : 'false' }}"
     data-show-selected="{{ $showSelected ? 'true' : 'false' }}"
      data-selected='@json($selectedIds)'>
     <div class="d-flex flex-wrap gap-1 mb-2 {{ $showSelected ? '' : 'd-none' }}" data-token-selected></div>
 
-    <div class="form-control d-flex align-items-center py-1" style="min-height: 42px;">
+    <div class="form-control d-flex align-items-center py-1" style="min-height: 42px;" data-token-control>
         <input type="text"
                class="border-0 flex-grow-1"
                style="outline: none; min-width: 160px;"
@@ -76,18 +82,22 @@
         const listWrap = picker.querySelector('[data-token-list]');
         const hiddenInputs = picker.querySelector('[data-token-inputs]');
         const optionsNode = picker.querySelector('[data-token-options]');
+        const controlWrap = picker.querySelector('[data-token-control]');
 
-        if (!searchInput || !selectedWrap || !listWrap || !hiddenInputs || !optionsNode) {
+        if (!searchInput || !selectedWrap || !listWrap || !hiddenInputs || !optionsNode || !controlWrap) {
             return;
         }
 
         const name = picker.dataset.name;
         const emptyMessage = picker.dataset.emptyMessage || 'No matches found.';
+        const defaultPlaceholder = picker.dataset.placeholder || 'Search...';
+        let disabledPlaceholder = picker.dataset.disabledPlaceholder || defaultPlaceholder;
         const showSelected = picker.dataset.showSelected === 'true';
         const options = parseJson(optionsNode, []);
         const initialSelected = new Set(parseJson({ textContent: picker.dataset.selected || '[]' }, []));
         const selected = new Set(Array.from(initialSelected));
         let allowedValues = null;
+        let isDisabled = picker.dataset.disabled === 'true';
 
         function selectedArray() {
             return Array.from(selected);
@@ -174,6 +184,11 @@
         }
 
         function renderList(forceOpen) {
+            if (isDisabled) {
+                closeList();
+                return;
+            }
+
             const list = filteredOptions(searchInput.value);
             listWrap.innerHTML = '';
 
@@ -206,12 +221,23 @@
                         searchInput.focus();
                     });
 
+                    const textWrap = document.createElement('div');
+                    textWrap.className = 'form-check-label d-flex flex-wrap align-items-center gap-2';
+
                     const text = document.createElement('span');
-                    text.className = 'form-check-label';
                     text.textContent = opt.label;
 
+                    textWrap.appendChild(text);
+
+                    if (opt.context) {
+                        const badge = document.createElement('span');
+                        badge.className = 'badge ' + (opt.contextBadgeClass || 'bg-primary');
+                        badge.textContent = opt.context;
+                        textWrap.appendChild(badge);
+                    }
+
                     row.appendChild(checkbox);
-                    row.appendChild(text);
+                    row.appendChild(textWrap);
                     listWrap.appendChild(row);
                 });
             }
@@ -223,6 +249,18 @@
 
         function closeList() {
             listWrap.classList.add('d-none');
+        }
+
+        function applyDisabledState() {
+            searchInput.disabled = isDisabled;
+            searchInput.placeholder = isDisabled ? disabledPlaceholder : defaultPlaceholder;
+            controlWrap.classList.toggle('bg-light', isDisabled);
+            controlWrap.classList.toggle('text-muted', isDisabled);
+
+            if (isDisabled) {
+                searchInput.value = '';
+                closeList();
+            }
         }
 
         picker.addEventListener('token-picker:set', function (event) {
@@ -251,15 +289,43 @@
             picker.dispatchEvent(new CustomEvent('token-picker:change', { bubbles: true }));
         });
 
+        picker.addEventListener('token-picker:set-disabled', function (event) {
+            const detail = event.detail;
+
+            if (typeof detail === 'object' && detail !== null) {
+                isDisabled = !!detail.disabled;
+
+                if (typeof detail.placeholder === 'string' && detail.placeholder.trim() !== '') {
+                    disabledPlaceholder = detail.placeholder;
+                }
+            } else {
+                isDisabled = !!detail;
+            }
+
+            applyDisabledState();
+        });
+
         searchInput.addEventListener('focus', function () {
+            if (isDisabled) {
+                return;
+            }
+
             if (picker.dataset.openOnFocus === 'true') {
                 renderList(true);
             }
         });
         searchInput.addEventListener('click', function () {
+            if (isDisabled) {
+                return;
+            }
+
             renderList(true);
         });
         searchInput.addEventListener('input', function () {
+            if (isDisabled) {
+                return;
+            }
+
             renderList(true);
         });
         searchInput.addEventListener('keydown', function (event) {
@@ -278,6 +344,7 @@
         });
 
         renderSelected();
+        applyDisabledState();
         renderList(false);
         closeList();
         writeHiddenInputs();

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\AdminUserRequest;
+use App\Models\Project;
 use App\Models\User;
 use Illuminate\Http\Request;
 
@@ -45,10 +46,7 @@ class AdminUserController extends Controller
 
     public function create()
     {
-        return view('admin.users.create', [
-            'user' => new User(),
-            'supervisors' => $this->supervisorOptions(),
-        ]);
+        return view('admin.users.create', $this->userFormData(new User()));
     }
 
     public function store(AdminUserRequest $request)
@@ -63,6 +61,8 @@ class AdminUserController extends Controller
             'supervisor_id' => $validated['supervisor_id'] ?? null,
         ]);
 
+        $this->syncScopeAssignments($user, $validated);
+
         return redirect()
             ->route('admin.users.index')
             ->with('success', 'User created successfully.');
@@ -70,10 +70,7 @@ class AdminUserController extends Controller
 
     public function edit(User $user)
     {
-        return view('admin.users.edit', [
-            'user' => $user,
-            'supervisors' => $this->supervisorOptions($user),
-        ]);
+        return view('admin.users.edit', $this->userFormData($user));
     }
 
     public function update(AdminUserRequest $request, User $user)
@@ -92,6 +89,7 @@ class AdminUserController extends Controller
         }
 
         $user->update($attributes);
+        $this->syncScopeAssignments($user, $validated);
 
         return redirect()
             ->route('admin.users.index')
@@ -100,7 +98,7 @@ class AdminUserController extends Controller
 
     public function show(User $user)
     {
-        $user->load(['supervisor', 'agreements.organizations', 'agreements.states', 'teams']);
+        $user->load(['supervisor', 'projects', 'programs.project', 'agreements.organizations', 'agreements.states', 'teams']);
 
         $recentActivities = $user->activities()
             ->with(['activityType', 'agreements'])
@@ -120,5 +118,45 @@ class AdminUserController extends Controller
         }
 
         return $query->get();
+    }
+
+    private function userFormData(User $user): array
+    {
+        $user->loadMissing(['projects', 'programs.project']);
+
+        $selectedProjectIds = $user->projects->pluck('id');
+        $selectedProgramIds = $user->programs->pluck('id');
+
+        $projects = Project::query()
+            ->where(function ($query) use ($selectedProjectIds) {
+                $query->where('active', true);
+
+                if ($selectedProjectIds->isNotEmpty()) {
+                    $query->orWhereIn('id', $selectedProjectIds);
+                }
+            })
+            ->with(['programs' => function ($query) use ($selectedProgramIds) {
+                $query->where(function ($programQuery) use ($selectedProgramIds) {
+                    $programQuery->where('active', true);
+
+                    if ($selectedProgramIds->isNotEmpty()) {
+                        $programQuery->orWhereIn('id', $selectedProgramIds);
+                    }
+                })->orderBy('name');
+            }])
+            ->orderBy('name')
+            ->get();
+
+        return [
+            'user' => $user,
+            'supervisors' => $this->supervisorOptions($user->exists ? $user : null),
+            'projects' => $projects,
+        ];
+    }
+
+    private function syncScopeAssignments(User $user, array $validated): void
+    {
+        $user->projects()->sync($validated['project_ids'] ?? []);
+        $user->programs()->sync($validated['program_ids'] ?? []);
     }
 }

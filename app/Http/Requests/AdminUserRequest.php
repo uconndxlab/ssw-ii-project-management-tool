@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Program;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -26,6 +27,10 @@ class AdminUserRequest extends FormRequest
             'password' => [$userId ? 'nullable' : 'required', Password::defaults()],
             'role' => ['required', 'in:admin,staff,consultant'],
             'supervisor_id' => ['nullable', 'exists:users,id'],
+            'project_ids' => ['nullable', 'array'],
+            'project_ids.*' => ['distinct', 'exists:projects,id'],
+            'program_ids' => ['nullable', 'array'],
+            'program_ids.*' => ['distinct', 'exists:programs,id'],
         ];
     }
 
@@ -46,6 +51,38 @@ class AdminUserRequest extends FormRequest
 
             if ($this->wouldCreateCircularReference($user, (int) $supervisorId)) {
                 $validator->errors()->add('supervisor_id', 'This supervisor assignment would create a circular reporting structure.');
+            }
+
+            $projectIds = collect($this->input('project_ids', []))
+                ->filter(fn ($id) => $id !== null && $id !== '')
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values();
+
+            $programIds = collect($this->input('program_ids', []))
+                ->filter(fn ($id) => $id !== null && $id !== '')
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values();
+
+            if ($programIds->isNotEmpty() && $projectIds->isEmpty()) {
+                $validator->errors()->add('project_ids', 'Select at least one project before assigning programs.');
+
+                return;
+            }
+
+            if ($programIds->isNotEmpty()) {
+                $programProjectIds = Program::query()
+                    ->whereKey($programIds)
+                    ->pluck('project_id', 'id');
+
+                $invalidPrograms = $programProjectIds
+                    ->filter(fn ($projectId) => !$projectIds->contains((int) $projectId))
+                    ->keys();
+
+                if ($invalidPrograms->isNotEmpty()) {
+                    $validator->errors()->add('program_ids', 'Each selected program must belong to one of the selected projects.');
+                }
             }
         });
     }

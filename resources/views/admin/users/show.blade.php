@@ -47,6 +47,16 @@
                 <span class="badge bg-success rounded-pill">{{ $user->agreements->count() }}</span>
             </dd>
 
+            <dt class="col-5 text-muted fw-normal small">Projects</dt>
+            <dd class="col-7 mb-2">
+                <span class="badge bg-primary rounded-pill">{{ $user->projects->count() }}</span>
+            </dd>
+
+            <dt class="col-5 text-muted fw-normal small">Programs</dt>
+            <dd class="col-7 mb-2">
+                <span class="badge bg-info text-dark rounded-pill">{{ $user->programs->count() }}</span>
+            </dd>
+
             <dt class="col-5 text-muted fw-normal small">Teams</dt>
             <dd class="col-7 mb-2">
                 <span class="badge bg-warning text-dark rounded-pill">{{ $user->teams->count() }}</span>
@@ -60,6 +70,44 @@
     {{-- ── Relationships ───────────────────────────────────────────────── --}}
     <x-slot:relationships>
         <div class="row g-4">
+            <div class="col-md-6">
+                <h6 class="fw-semibold mb-3">
+                    Projects
+                    <span class="badge bg-primary rounded-pill ms-1">{{ $user->projects->count() }}</span>
+                </h6>
+                @forelse($user->projects->sortBy('name') as $project)
+                    <div class="py-2 border-bottom">
+                        <a href="{{ route('projects.show', $project) }}" class="text-decoration-none fw-semibold d-block">
+                            {{ $project->name }}
+                        </a>
+                        @if($project->description)
+                            <small class="text-muted">{{ $project->description }}</small>
+                        @endif
+                    </div>
+                @empty
+                    <p class="text-muted small mb-0">No projects assigned.</p>
+                @endforelse
+            </div>
+
+            <div class="col-md-6">
+                <h6 class="fw-semibold mb-3">
+                    Programs
+                    <span class="badge bg-info text-dark rounded-pill ms-1">{{ $user->programs->count() }}</span>
+                </h6>
+                @forelse($user->programs->sortBy('name') as $program)
+                    <div class="py-2 border-bottom">
+                        <a href="{{ route('programs.show', $program) }}" class="text-decoration-none fw-semibold d-block">
+                            {{ $program->name }}
+                        </a>
+                        @if($program->project)
+                            <small class="text-muted">{{ $program->project->name }}</small>
+                        @endif
+                    </div>
+                @empty
+                    <p class="text-muted small mb-0">No programs assigned.</p>
+                @endforelse
+            </div>
+
             {{-- Agreements --}}
             <div class="col-md-6">
                 <h6 class="fw-semibold mb-3">
