@@ -165,10 +165,42 @@
         const userLookup = @json($users->pluck('name', 'id'));
         const contactFamilyLookup = @json($contactFamilies->pluck('name', 'id'));
         const activityTypeLookup = @json($activityTypes->pluck('name', 'id'));
+        const userProgramMap = @json($users->mapWithKeys(fn ($user) => [(string) $user->id => $user->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all()]));
+        const contactFamilyProgramMap = @json($contactFamilies->mapWithKeys(fn ($family) => [(string) $family->id => $family->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all()]));
+        const activityTypeProgramMap = @json($activityTypes->mapWithKeys(fn ($type) => [(string) $type->id => $type->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all()]));
         let currentKey = null;
         let nextTempId = 1;
         const rowStore = {};
         const editorModal = window.bootstrap ? bootstrap.Modal.getOrCreateInstance(editorModalEl) : null;
+
+        function selectedProgramIds() {
+            const picker = document.getElementById('agreement-scope-programs');
+
+            if (!picker) {
+                return [];
+            }
+
+            return Array.from(picker.querySelectorAll('[data-token-inputs] input')).map(function (input) {
+                return String(input.value);
+            });
+        }
+
+        function isAllowedByPrograms(programIds, allowGlobal, activeProgramIds) {
+            const normalizedProgramIds = Array.isArray(programIds) ? programIds.map(String) : [];
+            const selectedPrograms = new Set((activeProgramIds || []).map(String));
+
+            if (normalizedProgramIds.length === 0) {
+                return allowGlobal;
+            }
+
+            if (selectedPrograms.size === 0) {
+                return false;
+            }
+
+            return normalizedProgramIds.some(function (programId) {
+                return selectedPrograms.has(String(programId));
+            });
+        }
 
         function initTooltips(scope) {
             if (!window.bootstrap || !bootstrap.Tooltip) {
@@ -311,16 +343,39 @@
             const activityTypeSelect = editorCard.querySelector('[name="deliverable_editor[activity_type_id]"]');
             if (!contactFamilySelect || !activityTypeSelect) return;
 
-            const contactFamilyId = contactFamilySelect.value;
+            const activeProgramIds = selectedProgramIds();
             const currentValue = activityTypeSelect.value;
+
+            Array.from(contactFamilySelect.options).forEach(function (option) {
+                if (!option.value) {
+                    option.hidden = false;
+                    option.disabled = false;
+                    return;
+                }
+
+                const visible = isAllowedByPrograms(contactFamilyProgramMap[String(option.value)] || [], true, activeProgramIds);
+                option.hidden = !visible;
+                option.disabled = !visible;
+            });
+
+            if (contactFamilySelect.value) {
+                const selectedFamilyOption = contactFamilySelect.querySelector(`option[value="${CSS.escape(contactFamilySelect.value)}"]`);
+                if (!selectedFamilyOption || selectedFamilyOption.hidden) {
+                    contactFamilySelect.value = '';
+                }
+            }
 
             Array.from(activityTypeSelect.options).forEach(function (option) {
                 if (!option.value) {
                     option.hidden = false;
+                    option.disabled = false;
                     return;
                 }
-                const matches = !contactFamilyId || option.dataset.contactFamilyId === contactFamilyId;
+                const matchesFamily = !contactFamilySelect.value || option.dataset.contactFamilyId === contactFamilySelect.value;
+                const matchesPrograms = isAllowedByPrograms(activityTypeProgramMap[String(option.value)] || [], true, activeProgramIds);
+                const matches = matchesFamily && matchesPrograms;
                 option.hidden = !matches;
+                option.disabled = !matches;
             });
 
             if (currentValue) {
@@ -329,6 +384,78 @@
                     activityTypeSelect.value = '';
                 }
             }
+
+            editorFieldset.querySelectorAll('input[name="deliverable_editor[user_ids][]"]').forEach(function (checkbox) {
+                const visible = isAllowedByPrograms(userProgramMap[String(checkbox.value)] || [], false, activeProgramIds);
+                checkbox.disabled = !visible;
+                checkbox.checked = visible ? checkbox.checked : false;
+                const wrapper = checkbox.closest('.form-check');
+                if (wrapper) {
+                    wrapper.classList.toggle('d-none', !visible);
+                }
+            });
+        }
+
+        function readHiddenRowData(hiddenRow) {
+            const rowKey = hiddenRow.dataset.deliverableHiddenRow;
+
+            function findValue(field) {
+                return hiddenRow.querySelector(`input[name="deliverables[${CSS.escape(rowKey)}][${field}]"]`)?.value || '';
+            }
+
+            return {
+                rowKey: rowKey,
+                id: findValue('id'),
+                _delete: findValue('_delete') || '0',
+                contact_family_id: findValue('contact_family_id'),
+                activity_type_id: findValue('activity_type_id'),
+                required_hours: findValue('required_hours'),
+                required_activities: findValue('required_activities'),
+                notes: findValue('notes'),
+                user_ids: Array.from(hiddenRow.querySelectorAll(`input[name="deliverables[${CSS.escape(rowKey)}][user_ids][]"]`)).map(function (input) {
+                    return input.value;
+                }),
+            };
+        }
+
+        function syncStoredRowsToPrograms() {
+            const activeProgramIds = selectedProgramIds();
+
+            Array.from(hiddenInputs.querySelectorAll('[data-deliverable-hidden-row]')).forEach(function (hiddenRow) {
+                const rowData = readHiddenRowData(hiddenRow);
+                const rowKey = rowData.rowKey;
+
+                if (!rowKey || rowData._delete === '1') {
+                    return;
+                }
+
+                const familyAllowed = !rowData.contact_family_id || isAllowedByPrograms(contactFamilyProgramMap[String(rowData.contact_family_id)] || [], true, activeProgramIds);
+                const typeAllowed = !rowData.activity_type_id || isAllowedByPrograms(activityTypeProgramMap[String(rowData.activity_type_id)] || [], true, activeProgramIds);
+
+                if (!familyAllowed || !typeAllowed) {
+                    if (rowData.id) {
+                        markRowDeleted(rowKey);
+                    } else {
+                        deleteRow(rowKey);
+                    }
+
+                    delete rowStore[rowKey];
+                    return;
+                }
+
+                const filteredUserIds = (rowData.user_ids || []).filter(function (userId) {
+                    return isAllowedByPrograms(userProgramMap[String(userId)] || [], false, activeProgramIds);
+                });
+
+                if (filteredUserIds.length !== (rowData.user_ids || []).length) {
+                    rowData.user_ids = filteredUserIds;
+                    syncTableRow(rowKey, rowData);
+                    syncHiddenRow(rowKey, rowData);
+                    return;
+                }
+
+                rowStore[rowKey] = rowData;
+            });
         }
 
         function rowMarkup(rowKey, rowData) {
@@ -526,7 +653,14 @@
 
         editorCard.querySelector('[name="deliverable_editor[contact_family_id]"]')?.addEventListener('change', syncActivityTypeOptions);
 
+        document.addEventListener('agreement-scope:change', function () {
+            syncActivityTypeOptions();
+            syncStoredRowsToPrograms();
+        });
+
         bindRows();
+        syncActivityTypeOptions();
+        syncStoredRowsToPrograms();
     });
 })();
 </script>

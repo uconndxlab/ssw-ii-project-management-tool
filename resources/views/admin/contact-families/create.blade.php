@@ -4,6 +4,8 @@
 
 @section('content')
 @php
+    $selectedProjectIds = old('project_ids', []);
+    $selectedProgramIds = old('program_ids', []);
     $selectedContactFamilyLoggingFieldIds = old('contact_family_logging_field_ids', []);
     $requiredContactFamilyLoggingFieldIds = old('required_contact_family_logging_field_ids', []);
 @endphp
@@ -56,6 +58,17 @@
                             </label>
                         </div>
                         <div class="form-text">Only active contact families appear in activity forms.</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <x-project-program-scope-picker
+                            scope-id="contact-family-create-scope"
+                            :projects="$projects"
+                            :selected-project-ids="$selectedProjectIds"
+                            :selected-program-ids="$selectedProgramIds"
+                            project-help-text="Optional project scope for reporting and agreement-form filtering."
+                            program-help-text="Leave projects and programs empty to make this contact family available everywhere."
+                        />
                     </div>
 
                     <div class="mb-4">

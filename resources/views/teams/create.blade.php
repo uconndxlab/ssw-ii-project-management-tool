@@ -4,6 +4,8 @@
 
 @section('content')
 @php
+    $selectedProjectIds = old('project_ids', []);
+    $selectedProgramIds = old('program_ids', []);
     $teamUserOptions = $users->map(function ($user) {
         $role = !empty($user->role) ? ' (' . ucfirst($user->role) . ')' : '';
 
@@ -39,11 +41,11 @@
 
                     <div class="mb-3">
                         <label for="name" class="form-label">Team Name</label>
-                        <input type="text" 
-                               class="form-control @error('name') is-invalid @enderror" 
-                               id="name" 
-                               name="name" 
-                               value="{{ old('name') }}" 
+                        <input type="text"
+                               class="form-control @error('name') is-invalid @enderror"
+                               id="name"
+                               name="name"
+                               value="{{ old('name') }}"
                                required>
                         @error('name')
                             <div class="invalid-feedback">{{ $message }}</div>
@@ -52,9 +54,9 @@
 
                     <div class="mb-3">
                         <label for="active" class="form-label">Status</label>
-                        <select class="form-select @error('active') is-invalid @enderror" 
-                                id="active" 
-                                name="active" 
+                        <select class="form-select @error('active') is-invalid @enderror"
+                                id="active"
+                                name="active"
                                 required>
                             <option value="1" {{ old('active', '1') === '1' ? 'selected' : '' }}>Active</option>
                             <option value="0" {{ old('active') === '0' ? 'selected' : '' }}>Inactive</option>
@@ -62,6 +64,20 @@
                         @error('active')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
+                    </div>
+
+                    <div class="mb-4">
+                        <x-project-program-scope-picker
+                            scope-id="team-create-scope"
+                            :projects="$projects"
+                            :selected-project-ids="$selectedProjectIds"
+                            :selected-program-ids="$selectedProgramIds"
+                            project-help-text="Select the projects this team should appear under."
+                            program-help-text="Programs determine where this team can be assigned on agreement forms."
+                        />
+                        <div class="alert alert-warning small mt-3 mb-0">
+                            Leaving projects and programs empty will save the team, but it will not be available for agreement assignment.
+                        </div>
                     </div>
 
                     <div class="mb-3">

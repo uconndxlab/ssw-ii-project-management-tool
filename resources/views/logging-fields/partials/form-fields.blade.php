@@ -1,6 +1,9 @@
 @php
     $field = $agreementLoggingField ?? $contactFamilyLoggingField ?? $loggingField ?? null;
     $availabilityOptions = $availabilityOptions ?? \App\Models\LoggingField::availabilityOptions();
+    $selectedProjectIds = old('project_ids', $field?->projects?->pluck('id')->toArray() ?? []);
+    $selectedProgramIds = old('program_ids', $field?->programs?->pluck('id')->toArray() ?? []);
+    $scopeId = $field?->id ? 'logging-field-edit-scope' : 'logging-field-create-scope';
 @endphp
 
 <div class="mb-3">
@@ -47,6 +50,17 @@
     @error('help_text')
         <div class="invalid-feedback">{{ $message }}</div>
     @enderror
+</div>
+
+<div class="mb-4">
+    <x-project-program-scope-picker
+        :scope-id="$scopeId"
+        :projects="$projects"
+        :selected-project-ids="$selectedProjectIds"
+        :selected-program-ids="$selectedProgramIds"
+        project-help-text="Optional project scope for reporting and form filtering."
+        program-help-text="Leave projects and programs empty to make this logging field available everywhere."
+    />
 </div>
 
 <div class="mb-3">

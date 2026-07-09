@@ -31,4 +31,14 @@ class Team extends Model
     {
         return $this->belongsToMany(Agreement::class, 'agreement_team')->withTimestamps();
     }
+
+    public function projects(): BelongsToMany
+    {
+        return $this->belongsToMany(Project::class, 'team_project')->withTimestamps();
+    }
+
+    public function programs(): BelongsToMany
+    {
+        return $this->belongsToMany(Program::class, 'team_program')->withTimestamps();
+    }
 }

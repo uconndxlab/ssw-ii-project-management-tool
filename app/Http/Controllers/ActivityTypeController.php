@@ -6,8 +6,10 @@ use App\Models\AgreementDeliverable;
 use App\Models\ActivityType;
 use App\Models\ContactFamily;
 use App\Models\LoggingField;
+use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 
 class ActivityTypeController extends Controller
 {
@@ -18,8 +20,8 @@ class ActivityTypeController extends Controller
 
     public function index(Request $request)
     {
-        $contactFamilies = ContactFamily::orderBy('sort_order')
-            ->orderBy('name')
+        $contactFamilies = ContactFamily::query()->orderBy('sort_order', 'asc')
+            ->orderBy('name', 'asc')
             ->get(['id', 'name']);
 
         $query = ActivityType::with('contactFamily');
@@ -99,18 +101,19 @@ class ActivityTypeController extends Controller
 
     public function create()
     {
-        $contactFamilies = ContactFamily::orderBy('sort_order')->orderBy('name')->get();
+        $contactFamilies = ContactFamily::query()->orderBy('sort_order', 'asc')->orderBy('name', 'asc')->get();
         $activityTypeLoggingFields = LoggingField::active()
             ->ordered()
             ->where('available_in_activities', true)
             ->get();
+        $projects = ProjectProgramScope::activeProjectsWithPrograms();
 
-        return view('admin.activity-types.create', compact('contactFamilies', 'activityTypeLoggingFields'));
+        return view('admin.activity-types.create', compact('contactFamilies', 'activityTypeLoggingFields', 'projects'));
     }
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'name' => ['required', 'string', 'max:255'],
             'contact_family_id' => ['required', 'exists:contact_families,id'],
             'active' => ['boolean'],
@@ -121,9 +124,23 @@ class ActivityTypeController extends Controller
             'activity_type_logging_field_ids.*' => ['exists:logging_fields,id'],
             'required_activity_type_logging_field_ids' => ['nullable', 'array'],
             'required_activity_type_logging_field_ids.*' => ['exists:logging_fields,id'],
+            'project_ids' => ['nullable', 'array'],
+            'project_ids.*' => ['distinct', 'exists:projects,id'],
+            'program_ids' => ['nullable', 'array'],
+            'program_ids.*' => ['distinct', 'exists:programs,id'],
         ]);
 
-        $exists = ActivityType::where('contact_family_id', $validated['contact_family_id'])
+        $validator->after(function ($validator) use ($request) {
+            ProjectProgramScope::validateSelection(
+                $validator,
+                ProjectProgramScope::normalizeIds($request->input('project_ids', [])),
+                ProjectProgramScope::normalizeIds($request->input('program_ids', []))
+            );
+        });
+
+        $validated = $validator->validate();
+
+        $exists = ActivityType::query()->where('contact_family_id', $validated['contact_family_id'])
             ->where('name', $validated['name'])
             ->exists();
 
@@ -141,6 +158,8 @@ class ActivityTypeController extends Controller
         $validated['duration_hours'] = $validated['duration_hours'] ?? 0;
 
         $activityType = ActivityType::create($validated);
+        $activityType->projects()->sync(ProjectProgramScope::normalizeIds($validated['project_ids'] ?? []));
+        $activityType->programs()->sync(ProjectProgramScope::normalizeIds($validated['program_ids'] ?? []));
 
         $syncData = [];
         foreach (($validated['activity_type_logging_field_ids'] ?? []) as $fieldId) {
@@ -157,19 +176,20 @@ class ActivityTypeController extends Controller
 
     public function edit(ActivityType $activityType)
     {
-        $contactFamilies = ContactFamily::orderBy('sort_order')->orderBy('name')->get();
+        $contactFamilies = ContactFamily::query()->orderBy('sort_order', 'asc')->orderBy('name', 'asc')->get();
         $activityTypeLoggingFields = LoggingField::active()
             ->ordered()
             ->where('available_in_activities', true)
             ->get();
-        $activityType->load('activityTypeLoggingFields');
+        $projects = ProjectProgramScope::activeProjectsWithPrograms();
+        $activityType->load(['activityTypeLoggingFields', 'projects', 'programs']);
 
-        return view('admin.activity-types.edit', compact('activityType', 'contactFamilies', 'activityTypeLoggingFields'));
+        return view('admin.activity-types.edit', compact('activityType', 'contactFamilies', 'activityTypeLoggingFields', 'projects'));
     }
 
     public function update(Request $request, ActivityType $activityType)
     {
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'name' => ['required', 'string', 'max:255'],
             'contact_family_id' => ['required', 'exists:contact_families,id'],
             'active' => ['boolean'],
@@ -180,9 +200,23 @@ class ActivityTypeController extends Controller
             'activity_type_logging_field_ids.*' => ['exists:logging_fields,id'],
             'required_activity_type_logging_field_ids' => ['nullable', 'array'],
             'required_activity_type_logging_field_ids.*' => ['exists:logging_fields,id'],
+            'project_ids' => ['nullable', 'array'],
+            'project_ids.*' => ['distinct', 'exists:projects,id'],
+            'program_ids' => ['nullable', 'array'],
+            'program_ids.*' => ['distinct', 'exists:programs,id'],
         ]);
 
-        $exists = ActivityType::where('contact_family_id', $validated['contact_family_id'])
+        $validator->after(function ($validator) use ($request) {
+            ProjectProgramScope::validateSelection(
+                $validator,
+                ProjectProgramScope::normalizeIds($request->input('project_ids', [])),
+                ProjectProgramScope::normalizeIds($request->input('program_ids', []))
+            );
+        });
+
+        $validated = $validator->validate();
+
+        $exists = ActivityType::query()->where('contact_family_id', $validated['contact_family_id'])
             ->where('name', $validated['name'])
             ->where('id', '!=', $activityType->id)
             ->exists();
@@ -201,6 +235,8 @@ class ActivityTypeController extends Controller
         $validated['duration_hours'] = $validated['duration_hours'] ?? 0;
 
         $activityType->update($validated);
+        $activityType->projects()->sync(ProjectProgramScope::normalizeIds($validated['project_ids'] ?? []));
+        $activityType->programs()->sync(ProjectProgramScope::normalizeIds($validated['program_ids'] ?? []));
 
         $syncData = [];
         foreach (($validated['activity_type_logging_field_ids'] ?? []) as $fieldId) {
@@ -223,7 +259,7 @@ class ActivityTypeController extends Controller
                 ->with('error', 'Cannot delete activity type that is used in activities.');
         }
 
-        $activityType->delete();
+        ActivityType::destroy($activityType->id);
 
         return redirect()
             ->route('activity-types.index')
@@ -244,7 +280,7 @@ class ActivityTypeController extends Controller
             return response('<option value="">Select activity type...</option>');
         }
 
-        $query = ActivityType::where('contact_family_id', $contactFamilyId)
+        $query = ActivityType::query()->where('contact_family_id', $contactFamilyId)
             ->where('active', true)
             ->orderBy('sort_order')
             ->orderBy('name');

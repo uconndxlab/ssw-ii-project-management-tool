@@ -41,6 +41,16 @@ class ContactFamily extends Model
         return $this->contactFamilyLoggingFields();
     }
 
+    public function projects(): BelongsToMany
+    {
+        return $this->belongsToMany(Project::class, 'contact_family_project')->withTimestamps();
+    }
+
+    public function programs(): BelongsToMany
+    {
+        return $this->belongsToMany(Program::class, 'contact_family_program')->withTimestamps();
+    }
+
     /**
      * Scope to only active contact families
      */

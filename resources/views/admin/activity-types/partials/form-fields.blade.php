@@ -1,5 +1,7 @@
 @php
     $isEditMode = isset($activityType);
+    $selectedProjectIds = old('project_ids', $isEditMode ? $activityType->projects->pluck('id')->toArray() : []);
+    $selectedProgramIds = old('program_ids', $isEditMode ? $activityType->programs->pluck('id')->toArray() : []);
     $selectedActivityTypeLoggingFieldIds = old('activity_type_logging_field_ids', $isEditMode ? $activityType->activityTypeLoggingFields->pluck('id')->toArray() : []);
     $requiredActivityTypeLoggingFieldIds = old(
         'required_activity_type_logging_field_ids',
@@ -23,6 +25,17 @@
     @error('contact_family_id')
         <div class="invalid-feedback">{{ $message }}</div>
     @enderror
+</div>
+
+<div class="mb-4">
+    <x-project-program-scope-picker
+        :scope-id="$isEditMode ? 'activity-type-edit-scope' : 'activity-type-create-scope'"
+        :projects="$projects"
+        :selected-project-ids="$selectedProjectIds"
+        :selected-program-ids="$selectedProgramIds"
+        project-help-text="Optional project scope for reporting and agreement-form filtering."
+        program-help-text="Leave projects and programs empty to make this activity type available everywhere."
+    />
 </div>
 
 <div class="mb-3">

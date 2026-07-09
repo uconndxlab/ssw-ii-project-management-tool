@@ -57,6 +57,8 @@
                                 value-key="value"
                                 search-key="search"
                                 placeholder="Search to assign teams..."
+                                disabled-placeholder="Select at least one program first..."
+                                :disabled="empty($selectedProgramIds)"
                                 :open-on-focus="false"
                                 :show-selected="false"
                                 :height="'220px'"
@@ -79,6 +81,8 @@
                                 value-key="value"
                                 search-key="search"
                                 placeholder="Search additional users..."
+                                disabled-placeholder="Select at least one program first..."
+                                :disabled="empty($selectedProgramIds)"
                                 :open-on-focus="false"
                                 :show-selected="false"
                                 :height="'220px'"
@@ -132,6 +136,7 @@
                              data-team-picker-id="agreement-{{ $agreement ? 'edit' : 'create' }}-teams"
                              data-user-picker-id="agreement-{{ $agreement ? 'edit' : 'create' }}-users"
                              data-all-user-ids='@json($agreementUserOptions->pluck("value")->values())'
+                             data-program-allowed-user-ids='@json([])'
                              data-selected-principal-investigator-ids='@json($selectedPrincipalInvestigatorIds)'
                              data-user-labels='@json($agreementUserOptions->pluck("label", "value"))'
                              data-team-labels='@json($teams->pluck("name", "id"))'
@@ -516,6 +521,9 @@
 
         const allUserIds = parseJson(section.dataset.allUserIds, []);
         const teamMembers = parseJson(section.dataset.teamMembers, {});
+        const programAllowedUserIds = new Set(parseJson(section.dataset.programAllowedUserIds, allUserIds).map(function (id) {
+            return String(id);
+        }));
         const selectedTeamIds = getSelectedIdsFromTeamPicker(teamPicker);
         const restrictedIds = new Set();
 
@@ -529,7 +537,7 @@
         const allowedIds = allUserIds.map(function (id) {
             return String(id);
         }).filter(function (userId) {
-            return !restrictedIds.has(String(userId));
+            return programAllowedUserIds.has(String(userId)) && !restrictedIds.has(String(userId));
         });
 
         tokenPicker.dispatchEvent(new CustomEvent('token-picker:restrict', {
@@ -564,6 +572,7 @@
         tokenPicker.addEventListener('token-picker:change', function () {
             refresh();
         });
+        section.addEventListener('agreement-scope:change', refresh);
 
         refresh();
         section.dataset.membershipSectionInitialized = 'true';

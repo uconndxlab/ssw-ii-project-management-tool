@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\ContactFamily;
 use App\Models\LoggingField;
+use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 
 class ContactFamilyController extends Controller
 {
@@ -36,13 +38,14 @@ class ContactFamilyController extends Controller
             ->ordered()
             ->where('available_in_contact_families', true)
             ->get();
+        $projects = ProjectProgramScope::activeProjectsWithPrograms();
 
-        return view('admin.contact-families.create', compact('contactFamilyLoggingFields'));
+        return view('admin.contact-families.create', compact('contactFamilyLoggingFields', 'projects'));
     }
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'name' => ['required', 'string', 'max:255', 'unique:contact_families,name'],
             'active' => ['boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
@@ -50,7 +53,21 @@ class ContactFamilyController extends Controller
             'contact_family_logging_field_ids.*' => ['exists:logging_fields,id'],
             'required_contact_family_logging_field_ids' => ['nullable', 'array'],
             'required_contact_family_logging_field_ids.*' => ['exists:logging_fields,id'],
+            'project_ids' => ['nullable', 'array'],
+            'project_ids.*' => ['distinct', 'exists:projects,id'],
+            'program_ids' => ['nullable', 'array'],
+            'program_ids.*' => ['distinct', 'exists:programs,id'],
         ]);
+
+        $validator->after(function ($validator) use ($request) {
+            ProjectProgramScope::validateSelection(
+                $validator,
+                ProjectProgramScope::normalizeIds($request->input('project_ids', [])),
+                ProjectProgramScope::normalizeIds($request->input('program_ids', []))
+            );
+        });
+
+        $validated = $validator->validate();
 
         $validated['active'] = $request->has('active');
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
@@ -60,6 +77,9 @@ class ContactFamilyController extends Controller
             'active' => $validated['active'],
             'sort_order' => $validated['sort_order'],
         ]);
+
+        $contactFamily->projects()->sync(ProjectProgramScope::normalizeIds($validated['project_ids'] ?? []));
+        $contactFamily->programs()->sync(ProjectProgramScope::normalizeIds($validated['program_ids'] ?? []));
 
         $syncData = [];
         foreach (($validated['contact_family_logging_field_ids'] ?? []) as $fieldId) {
@@ -80,14 +100,15 @@ class ContactFamilyController extends Controller
             ->ordered()
             ->where('available_in_contact_families', true)
             ->get();
-        $contactFamily->load('contactFamilyLoggingFields');
+        $projects = ProjectProgramScope::activeProjectsWithPrograms();
+        $contactFamily->load(['contactFamilyLoggingFields', 'projects', 'programs']);
 
-        return view('admin.contact-families.edit', compact('contactFamily', 'contactFamilyLoggingFields'));
+        return view('admin.contact-families.edit', compact('contactFamily', 'contactFamilyLoggingFields', 'projects'));
     }
 
     public function update(Request $request, ContactFamily $contactFamily)
     {
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'name' => ['required', 'string', 'max:255', 'unique:contact_families,name,' . $contactFamily->id],
             'active' => ['boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
@@ -95,12 +116,28 @@ class ContactFamilyController extends Controller
             'contact_family_logging_field_ids.*' => ['exists:logging_fields,id'],
             'required_contact_family_logging_field_ids' => ['nullable', 'array'],
             'required_contact_family_logging_field_ids.*' => ['exists:logging_fields,id'],
+            'project_ids' => ['nullable', 'array'],
+            'project_ids.*' => ['distinct', 'exists:projects,id'],
+            'program_ids' => ['nullable', 'array'],
+            'program_ids.*' => ['distinct', 'exists:programs,id'],
         ]);
+
+        $validator->after(function ($validator) use ($request) {
+            ProjectProgramScope::validateSelection(
+                $validator,
+                ProjectProgramScope::normalizeIds($request->input('project_ids', [])),
+                ProjectProgramScope::normalizeIds($request->input('program_ids', []))
+            );
+        });
+
+        $validated = $validator->validate();
 
         $validated['active'] = $request->has('active');
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
 
         $contactFamily->update($validated);
+        $contactFamily->projects()->sync(ProjectProgramScope::normalizeIds($validated['project_ids'] ?? []));
+        $contactFamily->programs()->sync(ProjectProgramScope::normalizeIds($validated['program_ids'] ?? []));
 
         $syncData = [];
         foreach (($validated['contact_family_logging_field_ids'] ?? []) as $fieldId) {

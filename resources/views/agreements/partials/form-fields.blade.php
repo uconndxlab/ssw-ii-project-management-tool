@@ -1,6 +1,14 @@
 @php
     $agreement = $agreement ?? null;
     $agreementLoggingFieldCollection = $agreement?->agreementLoggingFields ?? collect();
+    $selectedProjectIds = old(
+        'project_ids',
+        $agreement?->projects?->pluck('id')->when(
+            ($agreement?->projects?->isEmpty() ?? true) && !empty($agreement?->project_id),
+            fn ($collection) => $collection->push($agreement->project_id)
+        )->values()->all() ?? []
+    );
+    $selectedProgramIds = old('program_ids', $agreement?->programs?->pluck('id')->toArray() ?? []);
 
     $selectedOrganizationIds = old('organization_ids', $agreement?->organizations?->pluck('id')->toArray() ?? []);
     $selectedStateIds = old('state_ids', $agreement?->states?->pluck('id')->toArray() ?? []);
@@ -37,6 +45,22 @@
             ];
         }
     }
+
+    $organizationProgramMap = $organizations->mapWithKeys(fn ($organization) => [
+        (string) $organization->id => $organization->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all(),
+    ])->all();
+
+    $userProgramMap = $users->mapWithKeys(fn ($user) => [
+        (string) $user->id => $user->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all(),
+    ])->all();
+
+    $teamProgramMap = $teams->mapWithKeys(fn ($team) => [
+        (string) $team->id => $team->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all(),
+    ])->all();
+
+    $loggingFieldProgramMap = $agreementLoggingFields->mapWithKeys(fn ($field) => [
+        (string) $field->id => $field->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all(),
+    ])->all();
 @endphp
 
 <div class="card mb-4">
@@ -56,6 +80,17 @@
             @enderror
         </div>
 
+        <div class="mb-4">
+            <x-project-program-scope-picker
+                scope-id="agreement-scope"
+                :projects="$projects"
+                :selected-project-ids="$selectedProjectIds"
+                :selected-program-ids="$selectedProgramIds"
+                project-help-text="Select the projects this agreement belongs to."
+                program-help-text="Programs determine which organizations, teams, users, logging fields, contact families, and activity types are available below."
+            />
+        </div>
+
         <div class="row">
             <div class="col-md-6">
                 <div class="mb-3">
@@ -66,6 +101,8 @@
                         :items="$organizations"
                         :selected-ids="$selectedOrganizationIds"
                         placeholder="Search organizations..."
+                        disabled-placeholder="Select at least one program first..."
+                        :disabled="empty($selectedProgramIds)"
                         :height="'300px'"
                     />
                     @error('organization_ids')
@@ -198,7 +235,14 @@
             @else
                 <div class="border rounded">
                     @foreach($agreementLoggingFields as $field)
-                        <label class="d-flex align-items-start gap-3 px-3 py-2 border-bottom {{ $loop->last ? 'border-bottom-0' : '' }}">
+                        @php
+                            $fieldProgramIds = $field->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all();
+                        @endphp
+                        <label class="d-flex align-items-start gap-3 px-3 py-2 border-bottom {{ $loop->last ? 'border-bottom-0' : '' }}"
+                               data-agreement-logging-field-option
+                               data-option-id="{{ $field->id }}"
+                               data-program-ids='@json($fieldProgramIds)'
+                               data-global="{{ empty($fieldProgramIds) ? 'true' : 'false' }}">
                             <input class="form-check-input mt-1"
                                    type="checkbox"
                                    name="agreement_logging_field_ids[]"
@@ -231,3 +275,144 @@
 ])
 
 @include('agreements.partials.deliverables-section', ['agreement' => $agreement])
+
+@once
+<script>
+(function () {
+    function selectedIdsFromPicker(picker) {
+        if (!picker) {
+            return [];
+        }
+
+        return Array.from(picker.querySelectorAll('[data-token-inputs] input')).map(function (input) {
+            return String(input.value);
+        });
+    }
+
+    function normalizeProgramMap(map) {
+        return Object.entries(map || {}).reduce(function (carry, entry) {
+            carry[String(entry[0])] = Array.isArray(entry[1]) ? entry[1].map(String) : [];
+            return carry;
+        }, {});
+    }
+
+    function allowedIds(programMap, selectedProgramIds, allowGlobal) {
+        const selected = new Set((selectedProgramIds || []).map(String));
+
+        return Object.entries(programMap || {}).reduce(function (carry, entry) {
+            const optionId = String(entry[0]);
+            const programIds = Array.isArray(entry[1]) ? entry[1].map(String) : [];
+            const isGlobal = programIds.length === 0;
+            const matches = selected.size > 0 && programIds.some(function (programId) {
+                return selected.has(String(programId));
+            });
+
+            if ((isGlobal && allowGlobal) || matches) {
+                carry.push(optionId);
+            }
+
+            return carry;
+        }, []);
+    }
+
+    function setPickerRestriction(picker, allowedIds, shouldDisable, disabledPlaceholder) {
+        if (!picker) {
+            return;
+        }
+
+        picker.dispatchEvent(new CustomEvent('token-picker:set-disabled', {
+            detail: {
+                disabled: shouldDisable,
+                placeholder: disabledPlaceholder,
+            },
+            bubbles: true,
+        }));
+
+        picker.dispatchEvent(new CustomEvent('token-picker:restrict', {
+            detail: allowedIds,
+            bubbles: true,
+        }));
+    }
+
+    function syncLoggingFieldOptions(selectedProgramIds) {
+        const selectedPrograms = new Set((selectedProgramIds || []).map(String));
+
+        document.querySelectorAll('[data-agreement-logging-field-option]').forEach(function (option) {
+            const programIds = JSON.parse(option.dataset.programIds || '[]').map(String);
+            const isGlobal = option.dataset.global === 'true';
+            const visible = isGlobal || (selectedPrograms.size > 0 && programIds.some(function (programId) {
+                return selectedPrograms.has(String(programId));
+            }));
+
+            option.classList.toggle('d-none', !visible);
+            option.querySelectorAll('input').forEach(function (input) {
+                if (!visible) {
+                    input.checked = false;
+                }
+                input.disabled = !visible;
+            });
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const programPicker = document.getElementById('agreement-scope-programs');
+        const organizationPicker = document.getElementById('agreement-organizations');
+        const teamPicker = document.getElementById('agreement-{{ $agreement ? 'edit' : 'create' }}-teams');
+        const userPicker = document.getElementById('agreement-{{ $agreement ? 'edit' : 'create' }}-users');
+        const membershipSection = document.querySelector('[data-agreement-membership-section]');
+
+        if (!programPicker) {
+            return;
+        }
+
+        const organizationProgramMap = normalizeProgramMap(@json($organizationProgramMap));
+        const teamProgramMap = normalizeProgramMap(@json($teamProgramMap));
+        const userProgramMap = normalizeProgramMap(@json($userProgramMap));
+
+        function refreshAgreementScope() {
+            const selectedProgramIds = selectedIdsFromPicker(programPicker);
+            const hasSelectedPrograms = selectedProgramIds.length > 0;
+
+            setPickerRestriction(
+                organizationPicker,
+                allowedIds(organizationProgramMap, selectedProgramIds, false),
+                !hasSelectedPrograms,
+                'Select at least one program first...'
+            );
+
+            setPickerRestriction(
+                teamPicker,
+                allowedIds(teamProgramMap, selectedProgramIds, false),
+                !hasSelectedPrograms,
+                'Select at least one program first...'
+            );
+
+            setPickerRestriction(
+                userPicker,
+                allowedIds(userProgramMap, selectedProgramIds, false),
+                !hasSelectedPrograms,
+                'Select at least one program first...'
+            );
+
+            if (membershipSection) {
+                membershipSection.dataset.programAllowedUserIds = JSON.stringify(allowedIds(userProgramMap, selectedProgramIds, false));
+                membershipSection.dispatchEvent(new CustomEvent('agreement-scope:change', {
+                    bubbles: true,
+                }));
+            }
+
+            syncLoggingFieldOptions(selectedProgramIds);
+
+            document.dispatchEvent(new CustomEvent('agreement-scope:change', {
+                detail: {
+                    selectedProgramIds: selectedProgramIds,
+                },
+            }));
+        }
+
+        programPicker.addEventListener('token-picker:change', refreshAgreementScope);
+        refreshAgreementScope();
+    });
+})();
+</script>
+@endonce

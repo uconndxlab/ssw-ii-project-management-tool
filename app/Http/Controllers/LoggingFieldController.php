@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\LoggingField;
+use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
 class LoggingFieldController extends Controller
@@ -70,8 +72,9 @@ class LoggingFieldController extends Controller
     {
         $fieldTypes = LoggingField::fieldTypes();
         $availabilityOptions = LoggingField::availabilityOptions();
+        $projects = ProjectProgramScope::activeProjectsWithPrograms();
 
-        return view('logging-fields.create', compact('fieldTypes', 'availabilityOptions'));
+        return view('logging-fields.create', compact('fieldTypes', 'availabilityOptions', 'projects'));
     }
 
     /**
@@ -79,7 +82,7 @@ class LoggingFieldController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255|unique:logging_fields,name',
             'field_type' => 'required|in:number,decimal,text,textarea,checkbox,select,document',
             'help_text' => 'nullable|string|max:1000',
@@ -90,7 +93,21 @@ class LoggingFieldController extends Controller
             'available_in_agreements' => 'boolean',
             'available_in_contact_families' => 'boolean',
             'available_in_activities' => 'boolean',
+            'project_ids' => ['nullable', 'array'],
+            'project_ids.*' => ['distinct', 'exists:projects,id'],
+            'program_ids' => ['nullable', 'array'],
+            'program_ids.*' => ['distinct', 'exists:programs,id'],
         ]);
+
+        $validator->after(function ($validator) use ($request) {
+            ProjectProgramScope::validateSelection(
+                $validator,
+                ProjectProgramScope::normalizeIds($request->input('project_ids', [])),
+                ProjectProgramScope::normalizeIds($request->input('program_ids', []))
+            );
+        });
+
+        $validated = $validator->validate();
 
         // Parse options JSON for select fields
         if ($validated['field_type'] === 'select' && !empty($validated['options_json'])) {
@@ -109,7 +126,9 @@ class LoggingFieldController extends Controller
         $validated['available_in_contact_families'] = $request->boolean('available_in_contact_families');
         $validated['available_in_activities'] = $request->boolean('available_in_activities');
 
-        LoggingField::create($validated);
+        $loggingField = LoggingField::create($validated);
+        $loggingField->projects()->sync(ProjectProgramScope::normalizeIds($validated['project_ids'] ?? []));
+        $loggingField->programs()->sync(ProjectProgramScope::normalizeIds($validated['program_ids'] ?? []));
 
         return redirect()->route('logging-fields.index')
             ->with('success', 'Logging field created successfully.');
@@ -136,7 +155,10 @@ class LoggingFieldController extends Controller
     {
         $fieldTypes = LoggingField::fieldTypes();
         $availabilityOptions = LoggingField::availabilityOptions();
-        return view('logging-fields.edit', compact('loggingField', 'fieldTypes', 'availabilityOptions'));
+        $projects = ProjectProgramScope::activeProjectsWithPrograms();
+        $loggingField->load(['projects', 'programs']);
+
+        return view('logging-fields.edit', compact('loggingField', 'fieldTypes', 'availabilityOptions', 'projects'));
     }
 
     /**
@@ -144,7 +166,7 @@ class LoggingFieldController extends Controller
      */
     public function update(Request $request, LoggingField $loggingField)
     {
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255|unique:logging_fields,name,' . $loggingField->id,
             'field_type' => 'required|in:number,decimal,text,textarea,checkbox,select,document',
             'help_text' => 'nullable|string|max:1000',
@@ -155,7 +177,21 @@ class LoggingFieldController extends Controller
             'available_in_agreements' => 'boolean',
             'available_in_contact_families' => 'boolean',
             'available_in_activities' => 'boolean',
+            'project_ids' => ['nullable', 'array'],
+            'project_ids.*' => ['distinct', 'exists:projects,id'],
+            'program_ids' => ['nullable', 'array'],
+            'program_ids.*' => ['distinct', 'exists:programs,id'],
         ]);
+
+        $validator->after(function ($validator) use ($request) {
+            ProjectProgramScope::validateSelection(
+                $validator,
+                ProjectProgramScope::normalizeIds($request->input('project_ids', [])),
+                ProjectProgramScope::normalizeIds($request->input('program_ids', []))
+            );
+        });
+
+        $validated = $validator->validate();
 
         // Parse options JSON for select fields
         if ($validated['field_type'] === 'select' && !empty($validated['options_json'])) {
@@ -180,6 +216,8 @@ class LoggingFieldController extends Controller
         }
 
         $loggingField->update($validated);
+        $loggingField->projects()->sync(ProjectProgramScope::normalizeIds($validated['project_ids'] ?? []));
+        $loggingField->programs()->sync(ProjectProgramScope::normalizeIds($validated['program_ids'] ?? []));
 
         return redirect()->route('logging-fields.index')
             ->with('success', 'Logging field updated successfully.');

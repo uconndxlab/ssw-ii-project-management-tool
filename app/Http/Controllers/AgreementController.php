@@ -14,6 +14,7 @@ use App\Models\Program;
 use App\Models\State;
 use App\Models\Team;
 use App\Models\User;
+use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -148,11 +149,12 @@ class AgreementController extends Controller
     public function store(AgreementRequest $request)
     {
         $validated = $request->validated();
+        $projectIds = array_values(array_unique($validated['project_ids'] ?? []));
 
-        $agreement = DB::transaction(function () use ($validated) {
+        $agreement = DB::transaction(function () use ($validated, $projectIds) {
             $agreement = Agreement::create([
                 'name' => $validated['name'],
-                'project_id' => $validated['project_id'] ?? null,
+                'project_id' => $projectIds[0] ?? null,
                 'abstract' => $validated['abstract'] ?? null,
                 'start_date' => $validated['start_date'],
                 'end_date' => $validated['end_date'],
@@ -182,16 +184,16 @@ class AgreementController extends Controller
         }
 
         $agreement->load(['organizations', 'states', 'users', 'teams.users', 'deliverables.activityType.contactFamily', 'deliverables.assignedUsers', 'attachments', 'certificationCandidates', 'principalInvestigators']);
-        
+
         // Get activities for this agreement
         $activities = $agreement->activities()
             ->with(['activityType.contactFamily', 'user', 'participants'])
             ->orderBy('engagement_date', 'desc')
             ->get();
-        
+
         // Recent activities (last 10)
         $recentActivities = $activities->take(10);
-        
+
         // Programs represented in activities
         $programs = $agreement->activities()
             ->with('programs')
@@ -200,48 +202,48 @@ class AgreementController extends Controller
             ->flatten()
             ->unique('id')
             ->sortBy('name');
-        
+
         // Lifetime totals
         $lifetimeTotals = [
             'activities' => $activities->count(),
         ];
-        
+
         // YTD totals (current year)
         $ytdActivities = $activities->filter(fn($e) => $e->engagement_date->year === now()->year);
         $ytdTotals = [
             'activities' => $ytdActivities->count(),
         ];
-        
+
         // Calculate deliverable progress (all activities lifetime)
         $deliverableProgress = $agreement->deliverables->map(function ($deliverable) use ($activities) {
             $matchingActivities = $activities->filter(function ($activity) use ($deliverable) {
                 $matches = true;
-                
+
                 // Must match activity type if specified
                 if ($deliverable->activity_type_id) {
                     $matches = $matches && ($activity->activity_type_id === $deliverable->activity_type_id);
                 }
-                
+
                 // Must also match contact family if specified
                 if ($deliverable->contact_family_id) {
                     $matches = $matches && ($activity->activityType?->contact_family_id === $deliverable->contact_family_id);
                 }
-                
+
                 // If neither specified, don't match anything
                 if (!$deliverable->activity_type_id && !$deliverable->contact_family_id) {
                     return false;
                 }
-                
+
                 return $matches;
             });
-            
+
             return [
                 'deliverable' => $deliverable,
                 'completed_activities' => $matchingActivities->count(),
                 'completed_hours' => $matchingActivities->sum(fn ($a) => ($a->event_hours ?? 0) + ($a->prep_hours ?? 0) + ($a->followup_hours ?? 0)),
             ];
         });
-        
+
         return view('agreements.show', compact('agreement', 'recentActivities', 'programs', 'lifetimeTotals', 'ytdTotals', 'deliverableProgress'));
     }
 
@@ -256,11 +258,12 @@ class AgreementController extends Controller
     public function update(AgreementRequest $request, Agreement $agreement)
     {
         $validated = $request->validated();
+        $projectIds = array_values(array_unique($validated['project_ids'] ?? []));
 
-        DB::transaction(function () use ($agreement, $validated) {
+        DB::transaction(function () use ($agreement, $validated, $projectIds) {
             $agreement->update([
                 'name' => $validated['name'],
-                'project_id' => $validated['project_id'] ?? null,
+                'project_id' => $projectIds[0] ?? null,
                 'abstract' => $validated['abstract'] ?? null,
                 'start_date' => $validated['start_date'],
                 'end_date' => $validated['end_date'],
@@ -313,19 +316,12 @@ class AgreementController extends Controller
 
     private function syncAgreementRelations(Agreement $agreement, array $validated): void
     {
-        $selectedProgramIds = $validated['program_ids'] ?? [];
-        if (!empty($validated['project_id'])) {
-            $projectProgramIds = Project::query()->whereKey($validated['project_id'])->first()
-                ?->programs()
-                ->where('active', true)
-                ->pluck('id')
-                ->toArray() ?? [];
-
-            $selectedProgramIds = array_values(array_unique(array_merge($selectedProgramIds, $projectProgramIds)));
-        }
+        $selectedProjectIds = array_values(array_unique($validated['project_ids'] ?? []));
+        $selectedProgramIds = array_values(array_unique($validated['program_ids'] ?? []));
 
         $agreement->organizations()->sync($validated['organization_ids'] ?? []);
         $agreement->states()->sync($validated['state_ids'] ?? []);
+        $agreement->projects()->sync($selectedProjectIds);
         $agreement->programs()->sync($selectedProgramIds);
 
         $teamIds = array_values(array_unique($validated['team_ids'] ?? []));
@@ -466,13 +462,26 @@ class AgreementController extends Controller
     private function agreementFormData(?Agreement $agreement = null): array
     {
         $states = State::query()->get()->sortBy('name')->values();
-        $organizations = Organization::query()->with('states')->get()->sortBy('name')->values();
-        $users = User::query()->get()->sortBy('name')->values();
-        $contactFamilies = ContactFamily::query()->where('active', true)->get()->sortBy(fn ($item) => [$item->sort_order, $item->name])->values();
-        $activityTypes = ActivityType::query()->where('active', true)->get()->sortBy(fn ($item) => [$item->sort_order, $item->name])->values();
-        $projects = Project::query()->where('active', true)->with('programs')->get()->sortBy('name')->values();
-        $programsByProject = Program::query()->where('active', true)->get()->groupBy('project_id');
-        $agreementLoggingFields = LoggingField::active()->ordered()->where('available_in_agreements', true)->get();
+        $organizations = Organization::query()->with(['states', 'projects', 'programs'])->get()->sortBy('name')->values();
+        $users = User::query()->with(['projects', 'programs'])->get()->sortBy('name')->values();
+        $contactFamilies = ContactFamily::query()
+            ->where('active', true)
+            ->with(['projects', 'programs'])
+            ->get()
+            ->sortBy(fn ($item) => [$item->sort_order, $item->name])
+            ->values();
+        $activityTypes = ActivityType::query()
+            ->where('active', true)
+            ->with(['contactFamily', 'projects', 'programs'])
+            ->get()
+            ->sortBy(fn ($item) => [$item->sort_order, $item->name])
+            ->values();
+        $projects = ProjectProgramScope::activeProjectsWithPrograms()->sortBy('name')->values();
+        $agreementLoggingFields = LoggingField::active()
+            ->ordered()
+            ->where('available_in_agreements', true)
+            ->with(['projects', 'programs'])
+            ->get();
         $candidateNameSuggestions = AgreementCertificationCandidate::query()
             ->distinct()
             ->orderBy('name')
@@ -481,12 +490,33 @@ class AgreementController extends Controller
             ->values();
 
         if ($agreement) {
-            $agreement->load(['users', 'teams.users', 'deliverables.activityType.contactFamily', 'deliverables.assignedUsers', 'organizations', 'states', 'attachments', 'agreementLoggingFields', 'programs', 'certificationCandidates', 'principalInvestigators']);
+            $agreement->load([
+                'users.programs',
+                'teams.users',
+                'teams.projects',
+                'teams.programs',
+                'deliverables.activityType.contactFamily',
+                'deliverables.assignedUsers.programs',
+                'organizations.programs',
+                'organizations.projects',
+                'states',
+                'attachments',
+                'agreementLoggingFields.programs',
+                'agreementLoggingFields.projects',
+                'programs',
+                'projects',
+                'certificationCandidates',
+                'principalInvestigators.programs',
+            ]);
         }
 
         $teams = Team::query()
             ->where('active', true)
-            ->with(['users' => fn ($query) => $query->select('users.id', 'users.name', 'users.role')])
+            ->with([
+                'users' => fn ($query) => $query->select('users.id', 'users.name', 'users.role'),
+                'projects',
+                'programs',
+            ])
             ->get();
 
         if ($agreement) {
@@ -506,7 +536,6 @@ class AgreementController extends Controller
             'contactFamilies',
             'activityTypes',
             'projects',
-            'programsByProject',
             'agreementLoggingFields',
             'candidateNameSuggestions'
         );
@@ -551,7 +580,7 @@ class AgreementController extends Controller
     public function downloadAttachment(Agreement $agreement, $attachmentId)
     {
         $attachment = $agreement->attachments()->findOrFail($attachmentId);
-        
+
         return response()->download(
             storage_path('app/public/' . $attachment->file_path),
             $attachment->filename

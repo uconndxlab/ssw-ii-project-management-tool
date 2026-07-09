@@ -48,6 +48,16 @@ class ActivityType extends Model
             ->orderBy('name', 'asc');
     }
 
+    public function projects(): BelongsToMany
+    {
+        return $this->belongsToMany(Project::class, 'activity_type_project')->withTimestamps();
+    }
+
+    public function programs(): BelongsToMany
+    {
+        return $this->belongsToMany(Program::class, 'activity_type_program')->withTimestamps();
+    }
+
     /**
      * Scope to only active activity types
      */

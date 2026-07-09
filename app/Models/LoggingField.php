@@ -85,6 +85,16 @@ class LoggingField extends Model
             ->withTimestamps();
     }
 
+    public function projects(): BelongsToMany
+    {
+        return $this->belongsToMany(Project::class, 'logging_field_project')->withTimestamps();
+    }
+
+    public function programs(): BelongsToMany
+    {
+        return $this->belongsToMany(Program::class, 'logging_field_program')->withTimestamps();
+    }
+
     public static function availabilityOptions(): array
     {
         return [

@@ -84,6 +84,11 @@ class Agreement extends Model
         return $this->belongsToMany(Program::class, 'agreement_program')->withTimestamps();
     }
 
+    public function projects(): BelongsToMany
+    {
+        return $this->belongsToMany(Project::class, 'agreement_project')->withTimestamps();
+    }
+
     public function deliverables(): HasMany
     {
         return $this->hasMany(AgreementDeliverable::class);

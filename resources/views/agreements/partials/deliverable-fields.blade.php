@@ -11,7 +11,13 @@
             <select class="form-select" name="{{ $fieldPrefix }}[contact_family_id]" data-deliverable-contact-family>
                 <option value="">Select contact family...</option>
                 @foreach($contactFamilies as $family)
-                    <option value="{{ $family->id }}" @selected((string) ($row['contact_family_id'] ?? '') === (string) $family->id)>
+                    @php
+                        $familyProgramIds = $family->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all();
+                    @endphp
+                    <option value="{{ $family->id }}"
+                            data-program-ids='@json($familyProgramIds)'
+                            data-global="{{ empty($familyProgramIds) ? 'true' : 'false' }}"
+                            @selected((string) ($row['contact_family_id'] ?? '') === (string) $family->id)>
                         {{ $family->name }}
                     </option>
                 @endforeach
@@ -23,8 +29,13 @@
             <select class="form-select" name="{{ $fieldPrefix }}[activity_type_id]" data-deliverable-activity-type>
                 <option value="">Select activity type...</option>
                 @foreach($activityTypes as $type)
+                    @php
+                        $activityTypeProgramIds = $type->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all();
+                    @endphp
                     <option value="{{ $type->id }}"
                             data-contact-family-id="{{ $type->contact_family_id }}"
+                            data-program-ids='@json($activityTypeProgramIds)'
+                            data-global="{{ empty($activityTypeProgramIds) ? 'true' : 'false' }}"
                             @selected((string) ($row['activity_type_id'] ?? '') === (string) $type->id)>
                         {{ $type->name }}
                     </option>
@@ -69,11 +80,15 @@
         @else
             <div class="border rounded p-2" style="max-height:180px;overflow-y:auto;">
                 @foreach($users as $user)
+                    @php
+                        $userProgramIds = $user->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all();
+                    @endphp
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox"
                                name="{{ $fieldPrefix }}[user_ids][]"
                                value="{{ $user->id }}"
                                id="{{ $fieldPrefix }}_user_{{ $user->id }}"
+                               data-program-ids='@json($userProgramIds)'
                                {{ in_array($user->id, $selectedUserIds) ? 'checked' : '' }}>
                         <label class="form-check-label" for="{{ $fieldPrefix }}_user_{{ $user->id }}">
                             {{ $user->name }}
