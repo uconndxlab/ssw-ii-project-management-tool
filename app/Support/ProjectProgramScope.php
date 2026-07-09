@@ -4,6 +4,8 @@ namespace App\Support;
 
 use App\Models\Program;
 use App\Models\Project;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 
 class ProjectProgramScope
 {
@@ -52,6 +54,54 @@ class ProjectProgramScope
 
         if ($invalidPrograms->isNotEmpty()) {
             $validator->errors()->add($programKey, 'Each selected program must belong to one of the selected projects.');
+        }
+    }
+
+    public static function matchesSelectedPrograms(Collection $scopedProgramIds, array $selectedProgramIds, bool $allowGlobal): bool
+    {
+        if ($scopedProgramIds->isEmpty()) {
+            return $allowGlobal;
+        }
+
+        if (empty($selectedProgramIds)) {
+            return false;
+        }
+
+        return $scopedProgramIds
+            ->map(fn ($id) => (int) $id)
+            ->intersect(collect($selectedProgramIds)->map(fn ($id) => (int) $id))
+            ->isNotEmpty();
+    }
+
+    public static function validateScopedAssignments(
+        $validator,
+        array $selectedProgramIds,
+        array $selectedEntityIds,
+        string $modelClass,
+        string $errorKey,
+        string $message,
+        bool $allowGlobal = true
+    ): void {
+        if (empty($selectedEntityIds)) {
+            return;
+        }
+
+        /** @var Collection<int, Model> $entities */
+        $entities = $modelClass::query()
+            ->whereKey($selectedEntityIds)
+            ->with('programs:id')
+            ->get();
+
+        $invalidEntityIds = $entities
+            ->filter(fn (Model $entity) => !self::matchesSelectedPrograms(
+                $entity->programs->pluck('id'),
+                $selectedProgramIds,
+                $allowGlobal
+            ))
+            ->pluck('id');
+
+        if ($invalidEntityIds->isNotEmpty()) {
+            $validator->errors()->add($errorKey, $message);
         }
     }
 }

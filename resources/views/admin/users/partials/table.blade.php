@@ -65,7 +65,7 @@
                     <td>
                         <div class="d-flex flex-wrap gap-1">
                             @forelse($user->projects->sortBy('name') as $project)
-                                <span class="badge bg-primary">{{ $project->name }}</span>
+                                <span class="badge bg-primary-subtle text-primary-emphasis border">{{ $project->name }}</span>
                             @empty
                                 <span class="text-muted small">—</span>
                             @endforelse
@@ -74,7 +74,7 @@
                     <td>
                         <div class="d-flex flex-wrap gap-1">
                             @forelse($user->programs->sortBy('name') as $program)
-                                <span class="badge bg-warning text-dark">{{ $program->name }}</span>
+                                <span class="badge bg-warning-subtle text-warning-emphasis border">{{ $program->name }}</span>
                             @empty
                                 <span class="text-muted small">—</span>
                             @endforelse

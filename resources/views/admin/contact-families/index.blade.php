@@ -46,6 +46,8 @@
                 <thead class="table-light">
                     <tr>
                         <th>Name</th>
+                        <th>Projects</th>
+                        <th>Programs</th>
                         <th>Activity Types</th>
                         <th>Sort Order</th>
                         <th>Status</th>
@@ -56,6 +58,20 @@
                     @forelse($contactFamilies as $family)
                     <tr>
                         <td class="fw-semibold">{{ $family->name }}</td>
+                        <td>
+                            @forelse($family->projects->sortBy('name') as $project)
+                                <span class="badge bg-primary-subtle text-primary-emphasis border me-1 mb-1">{{ $project->name }}</span>
+                            @empty
+                                <span class="text-muted small">All projects</span>
+                            @endforelse
+                        </td>
+                        <td>
+                            @forelse($family->programs->sortBy('name') as $program)
+                                <span class="badge bg-warning-subtle text-warning-emphasis border me-1 mb-1">{{ $program->name }}</span>
+                            @empty
+                                <span class="text-muted small">All programs</span>
+                            @endforelse
+                        </td>
                         <td><span class="badge bg-secondary">{{ $family->activity_types_count }}</span></td>
                         <td class="text-muted small">{{ $family->sort_order }}</td>
                         <td>
@@ -78,7 +94,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="5" class="text-center py-5">
+                        <td colspan="7" class="text-center py-5">
                             <p class="text-muted mb-2">No contact families found.</p>
                             <a href="{{ route('contact-families.create') }}" class="btn btn-sm btn-primary">Add Contact Family</a>
                         </td>

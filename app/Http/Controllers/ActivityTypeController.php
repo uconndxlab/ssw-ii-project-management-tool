@@ -24,7 +24,7 @@ class ActivityTypeController extends Controller
             ->orderBy('name', 'asc')
             ->get(['id', 'name']);
 
-        $query = ActivityType::with('contactFamily');
+        $query = ActivityType::with(['contactFamily', 'projects', 'programs']);
 
         // Search
         $search = trim((string) $request->input('search', ''));
@@ -105,6 +105,7 @@ class ActivityTypeController extends Controller
         $activityTypeLoggingFields = LoggingField::active()
             ->ordered()
             ->where('available_in_activities', true)
+            ->with('programs')
             ->get();
         $projects = ProjectProgramScope::activeProjectsWithPrograms();
 
@@ -131,10 +132,21 @@ class ActivityTypeController extends Controller
         ]);
 
         $validator->after(function ($validator) use ($request) {
+            $selectedProgramIds = ProjectProgramScope::normalizeIds($request->input('program_ids', []));
+
             ProjectProgramScope::validateSelection(
                 $validator,
                 ProjectProgramScope::normalizeIds($request->input('project_ids', [])),
-                ProjectProgramScope::normalizeIds($request->input('program_ids', []))
+                $selectedProgramIds
+            );
+
+            ProjectProgramScope::validateScopedAssignments(
+                $validator,
+                $selectedProgramIds,
+                ProjectProgramScope::normalizeIds($request->input('activity_type_logging_field_ids', [])),
+                LoggingField::class,
+                'activity_type_logging_field_ids',
+                'Selected logging fields must be global or match one of the selected programs.'
             );
         });
 
@@ -180,6 +192,7 @@ class ActivityTypeController extends Controller
         $activityTypeLoggingFields = LoggingField::active()
             ->ordered()
             ->where('available_in_activities', true)
+            ->with('programs')
             ->get();
         $projects = ProjectProgramScope::activeProjectsWithPrograms();
         $activityType->load(['activityTypeLoggingFields', 'projects', 'programs']);
@@ -207,10 +220,21 @@ class ActivityTypeController extends Controller
         ]);
 
         $validator->after(function ($validator) use ($request) {
+            $selectedProgramIds = ProjectProgramScope::normalizeIds($request->input('program_ids', []));
+
             ProjectProgramScope::validateSelection(
                 $validator,
                 ProjectProgramScope::normalizeIds($request->input('project_ids', [])),
-                ProjectProgramScope::normalizeIds($request->input('program_ids', []))
+                $selectedProgramIds
+            );
+
+            ProjectProgramScope::validateScopedAssignments(
+                $validator,
+                $selectedProgramIds,
+                ProjectProgramScope::normalizeIds($request->input('activity_type_logging_field_ids', [])),
+                LoggingField::class,
+                'activity_type_logging_field_ids',
+                'Selected logging fields must be global or match one of the selected programs.'
             );
         });
 

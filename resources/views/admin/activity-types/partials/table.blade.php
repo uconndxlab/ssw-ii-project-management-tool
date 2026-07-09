@@ -26,6 +26,12 @@
                         </a>
                     </th>
                     <th>
+                        Projects
+                    </th>
+                    <th>
+                        Programs
+                    </th>
+                    <th>
                         <a class="text-decoration-none fw-semibold text-dark"
                            href="{{ $url('duration_days') }}"
                            hx-get="{{ $url('duration_days') }}" hx-target="#activity-types-table" hx-push-url="true">
@@ -54,6 +60,20 @@
                 <tr>
                     <td class="fw-semibold">{{ $type->name }}</td>
                     <td class="text-muted small">{{ $type->contactFamily->name }}</td>
+                    <td>
+                        @forelse($type->projects->sortBy('name') as $project)
+                            <span class="badge bg-primary-subtle text-primary-emphasis border me-1 mb-1">{{ $project->name }}</span>
+                        @empty
+                            <span class="text-muted small">All projects</span>
+                        @endforelse
+                    </td>
+                    <td>
+                        @forelse($type->programs->sortBy('name') as $program)
+                            <span class="badge bg-warning-subtle text-warning-emphasis border me-1 mb-1">{{ $program->name }}</span>
+                        @empty
+                            <span class="text-muted small">All programs</span>
+                        @endforelse
+                    </td>
                     <td>{{ $type->duration_days }}</td>
                     <td>{{ $type->duration_hours }}</td>
                     <td>
@@ -76,7 +96,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="5" class="text-center py-5">
+                    <td colspan="8" class="text-center py-5">
                         <p class="text-muted mb-2">No activity types found.</p>
                         <a href="{{ route('activity-types.create') }}" class="btn btn-sm btn-primary">Add Activity Type</a>
                     </td>

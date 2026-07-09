@@ -20,6 +20,7 @@ class ContactFamilyController extends Controller
     public function index(Request $request)
     {
         $query = ContactFamily::withCount('activityTypes')
+            ->with(['projects', 'programs'])
             ->orderBy('sort_order', 'asc')
             ->orderBy('name', 'asc');
 
@@ -37,6 +38,7 @@ class ContactFamilyController extends Controller
         $contactFamilyLoggingFields = LoggingField::active()
             ->ordered()
             ->where('available_in_contact_families', true)
+            ->with('programs')
             ->get();
         $projects = ProjectProgramScope::activeProjectsWithPrograms();
 
@@ -60,10 +62,21 @@ class ContactFamilyController extends Controller
         ]);
 
         $validator->after(function ($validator) use ($request) {
+            $selectedProgramIds = ProjectProgramScope::normalizeIds($request->input('program_ids', []));
+
             ProjectProgramScope::validateSelection(
                 $validator,
                 ProjectProgramScope::normalizeIds($request->input('project_ids', [])),
-                ProjectProgramScope::normalizeIds($request->input('program_ids', []))
+                $selectedProgramIds
+            );
+
+            ProjectProgramScope::validateScopedAssignments(
+                $validator,
+                $selectedProgramIds,
+                ProjectProgramScope::normalizeIds($request->input('contact_family_logging_field_ids', [])),
+                LoggingField::class,
+                'contact_family_logging_field_ids',
+                'Selected logging fields must be global or match one of the selected programs.'
             );
         });
 
@@ -99,6 +112,7 @@ class ContactFamilyController extends Controller
         $contactFamilyLoggingFields = LoggingField::active()
             ->ordered()
             ->where('available_in_contact_families', true)
+            ->with('programs')
             ->get();
         $projects = ProjectProgramScope::activeProjectsWithPrograms();
         $contactFamily->load(['contactFamilyLoggingFields', 'projects', 'programs']);
@@ -123,10 +137,21 @@ class ContactFamilyController extends Controller
         ]);
 
         $validator->after(function ($validator) use ($request) {
+            $selectedProgramIds = ProjectProgramScope::normalizeIds($request->input('program_ids', []));
+
             ProjectProgramScope::validateSelection(
                 $validator,
                 ProjectProgramScope::normalizeIds($request->input('project_ids', [])),
-                ProjectProgramScope::normalizeIds($request->input('program_ids', []))
+                $selectedProgramIds
+            );
+
+            ProjectProgramScope::validateScopedAssignments(
+                $validator,
+                $selectedProgramIds,
+                ProjectProgramScope::normalizeIds($request->input('contact_family_logging_field_ids', [])),
+                LoggingField::class,
+                'contact_family_logging_field_ids',
+                'Selected logging fields must be global or match one of the selected programs.'
             );
         });
 

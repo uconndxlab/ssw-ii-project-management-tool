@@ -8,6 +8,9 @@
     $selectedProgramIds = old('program_ids', []);
     $selectedContactFamilyLoggingFieldIds = old('contact_family_logging_field_ids', []);
     $requiredContactFamilyLoggingFieldIds = old('required_contact_family_logging_field_ids', []);
+    $loggingFieldProgramMap = $contactFamilyLoggingFields->mapWithKeys(fn ($field) => [
+        (string) $field->id => $field->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all(),
+    ])->all();
 @endphp
 <div class="row justify-content-center mb-4">
     <div class="col-lg-8">
@@ -85,7 +88,14 @@
                         @else
                             <div class="border rounded">
                                 @foreach($contactFamilyLoggingFields as $field)
-                                    <label class="d-flex align-items-start gap-3 px-3 py-2 border-bottom {{ $loop->last ? 'border-bottom-0' : '' }}">
+                                    @php
+                                        $fieldProgramIds = $field->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all();
+                                    @endphp
+                                    <label class="d-flex align-items-start gap-3 px-3 py-2 border-bottom {{ $loop->last ? 'border-bottom-0' : '' }}"
+                                           data-scoped-logging-field-option
+                                           data-option-id="{{ $field->id }}"
+                                           data-program-ids='@json($fieldProgramIds)'
+                                           data-global="{{ empty($fieldProgramIds) ? 'true' : 'false' }}">
                                         <input class="form-check-input mt-1"
                                                type="checkbox"
                                                name="contact_family_logging_field_ids[]"
@@ -115,4 +125,54 @@
     </div>
 </div>
 <x-save-bar form-id="contact-families-create-form" cancel-url="{{ route('contact-families.index') }}" save-label="Create Contact Family" />
+
+@once
+<script>
+(function () {
+    function selectedIdsFromPicker(picker) {
+        if (!picker) {
+            return [];
+        }
+
+        return Array.from(picker.querySelectorAll('[data-token-inputs] input')).map(function (input) {
+            return String(input.value);
+        });
+    }
+
+    function refreshScopedLoggingFields(programPicker) {
+        const selectedPrograms = new Set(selectedIdsFromPicker(programPicker));
+
+        document.querySelectorAll('[data-scoped-logging-field-option]').forEach(function (option) {
+            const programIds = JSON.parse(option.dataset.programIds || '[]').map(String);
+            const isGlobal = option.dataset.global === 'true';
+            const visible = isGlobal || (selectedPrograms.size > 0 && programIds.some(function (programId) {
+                return selectedPrograms.has(programId);
+            }));
+
+            option.classList.toggle('d-none', !visible);
+            option.querySelectorAll('input').forEach(function (input) {
+                if (!visible) {
+                    input.checked = false;
+                }
+                input.disabled = !visible;
+            });
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const programPicker = document.getElementById('contact-family-create-scope-programs');
+
+        if (!programPicker) {
+            return;
+        }
+
+        programPicker.addEventListener('token-picker:change', function () {
+            refreshScopedLoggingFields(programPicker);
+        });
+
+        refreshScopedLoggingFields(programPicker);
+    });
+})();
+</script>
+@endonce
 @endsection

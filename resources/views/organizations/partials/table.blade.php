@@ -28,13 +28,13 @@
                     </td>
                     <td>
                         @foreach($organization->projects as $project)
-                            <span class="badge bg-primary me-1">{{ $project->name }}</span>
+                            <span class="badge bg-primary-subtle text-primary-emphasis border me-1">{{ $project->name }}</span>
                         @endforeach
                         @if($organization->projects->isEmpty())<span class="text-muted">—</span>@endif
                     </td>
                     <td>
                         @foreach($organization->programs as $program)
-                            <span class="badge bg-warning text-dark me-1">{{ $program->name }}</span>
+                            <span class="badge bg-warning-subtle text-warning-emphasis border me-1">{{ $program->name }}</span>
                         @endforeach
                         @if($organization->programs->isEmpty())<span class="text-muted">—</span>@endif
                     </td>
