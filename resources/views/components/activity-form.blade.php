@@ -23,6 +23,7 @@
 
         return [
             $agreement->id => [
+                'name' => $agreement->name,
                 'organization_ids' => $agreement->organizations->pluck('id')->map(fn($id) => (string) $id)->values()->all(),
                 'state_ids' => $agreement->states->pluck('id')->map(fn($id) => (string) $id)->values()->all(),
                 'contact_family_ids' => $deliverables
@@ -42,9 +43,49 @@
                     ->unique()
                     ->values()
                     ->all(),
+                'time_tracking_mode' => $agreement->time_tracking_mode?->value,
             ]
         ];
     });
+
+    $selectedAgreementTimeTrackingConfigs = collect($selectedAgreementIds)
+        ->map(fn ($agreementId) => $agreementConfigs[(string) $agreementId] ?? null)
+        ->filter()
+        ->values();
+
+    $timeTrackingContactConfigs = $selectedAgreementTimeTrackingConfigs
+        ->filter(fn ($config) => in_array($config['time_tracking_mode'] ?? null, ['by_contact', 'by_user'], true))
+        ->values();
+
+    $timeTrackingUserConfigs = $selectedAgreementTimeTrackingConfigs
+        ->filter(fn ($config) => ($config['time_tracking_mode'] ?? null) === 'by_user')
+        ->values();
+
+    $formatAgreementNames = function ($configs) {
+        $names = collect($configs)->pluck('name')->filter()->values();
+
+        if ($names->isEmpty()) {
+            return '';
+        }
+
+        if ($names->count() === 1) {
+            return $names->first();
+        }
+
+        if ($names->count() === 2) {
+            return $names->implode(' and ');
+        }
+
+        return $names->slice(0, -1)->implode(', ') . ', and ' . $names->last();
+    };
+
+    $timeTrackingContactRequiredBy = $timeTrackingContactConfigs->isNotEmpty()
+        ? 'Required by: ' . $formatAgreementNames($timeTrackingContactConfigs)
+        : '';
+    $timeTrackingUserRequiredBy = $timeTrackingUserConfigs->isNotEmpty()
+        ? 'Required by: ' . $formatAgreementNames($timeTrackingUserConfigs)
+        : '';
+    $hasTimeTracking = $timeTrackingContactConfigs->isNotEmpty();
 
     $isEditMode = $formMode === 'edit';
     $pageTitle = $isEditMode ? 'Edit Activity' : 'Log Activity';
@@ -80,6 +121,16 @@
 
     .activity-logging-subsection-meta {
         font-size: 0.875rem;
+    }
+
+    .time-tracking-subsection {
+        border-left: 4px solid var(--bs-border-color);
+        padding-left: 1rem;
+    }
+
+    .time-tracking-subsection + .time-tracking-subsection {
+        margin-top: 1.25rem;
+        padding-top: 1.25rem;
     }
 </style>
 
@@ -257,6 +308,32 @@
                         </div>
                     </x-section-card>
 
+                    <div id="time-tracking-section" class="{{ $hasTimeTracking ? '' : 'd-none' }}">
+                        <x-section-card title="Time Tracking">
+                            <div class="d-grid gap-3">
+                                <div class="time-tracking-subsection {{ $hasTimeTracking ? '' : 'd-none' }}" data-time-tracking-subsection="contact">
+                                    <div class="d-flex flex-column flex-md-row align-items-md-baseline gap-1 gap-md-3 mb-3">
+                                        <div class="activity-logging-subsection-title">Time by Contact</div>
+                                        <div class="text-muted activity-logging-subsection-meta" data-time-tracking-contact-required-by>{{ $timeTrackingContactRequiredBy }}</div>
+                                    </div>
+                                    <div class="alert alert-warning mb-0">
+                                        This section is in development. Fields will be added later.
+                                    </div>
+                                </div>
+
+                                <div class="time-tracking-subsection {{ $timeTrackingUserConfigs->isNotEmpty() ? '' : 'd-none' }}" data-time-tracking-subsection="user">
+                                    <div class="d-flex flex-column flex-md-row align-items-md-baseline gap-1 gap-md-3 mb-3">
+                                        <div class="activity-logging-subsection-title">Time by User</div>
+                                        <div class="text-muted activity-logging-subsection-meta" data-time-tracking-user-required-by>{{ $timeTrackingUserRequiredBy }}</div>
+                                    </div>
+                                    <div class="alert alert-warning mb-0">
+                                        This section is in development. Fields will be added later.
+                                    </div>
+                                </div>
+                            </div>
+                        </x-section-card>
+                    </div>
+
                     <div id="agreement-logging-section" class="{{ $agreementsWithLoggingFields->isEmpty() ? 'd-none' : '' }}">
                         <x-section-card title="Agreement Logging Fields">
                             <div id="agreement-logging-groups" class="d-grid gap-3">
@@ -388,6 +465,26 @@
         return Array.from(merged);
     }
 
+    function joinNames(items) {
+        const names = items.map(function (item) {
+            return item.name;
+        }).filter(Boolean);
+
+        if (names.length === 0) {
+            return '';
+        }
+
+        if (names.length === 1) {
+            return names[0];
+        }
+
+        if (names.length === 2) {
+            return names[0] + ' and ' + names[1];
+        }
+
+        return names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1];
+    }
+
     function restrictCoveragePickers() {
         const agreements = selectedValues('agreement_ids[]');
         const orgPicker = document.getElementById('activity-organizations-picker');
@@ -496,6 +593,43 @@
         });
 
         section?.classList.toggle('d-none', visibleGroups === 0);
+    }
+
+    function updateTimeTrackingSection() {
+        const selected = selectedAgreementConfigs();
+        const section = document.getElementById('time-tracking-section');
+        const contactGroup = section?.querySelector('[data-time-tracking-subsection="contact"]');
+        const userGroup = section?.querySelector('[data-time-tracking-subsection="user"]');
+        const contactRequiredBy = selected.filter(function (config) {
+            return config.time_tracking_mode === 'by_contact' || config.time_tracking_mode === 'by_user';
+        });
+        const userRequiredBy = selected.filter(function (config) {
+            return config.time_tracking_mode === 'by_user';
+        });
+        const hasTimeTracking = contactRequiredBy.length > 0;
+
+        section?.classList.toggle('d-none', !hasTimeTracking);
+
+        if (contactGroup) {
+            contactGroup.classList.toggle('d-none', !hasTimeTracking);
+            const label = contactGroup.querySelector('[data-time-tracking-contact-required-by]');
+            if (label) {
+                label.textContent = hasTimeTracking
+                    ? 'Required by: ' + joinNames(contactRequiredBy)
+                    : '';
+            }
+        }
+
+        if (userGroup) {
+            const hasUserTracking = userRequiredBy.length > 0;
+            userGroup.classList.toggle('d-none', !hasUserTracking);
+            const label = userGroup.querySelector('[data-time-tracking-user-required-by]');
+            if (label) {
+                label.textContent = hasUserTracking
+                    ? 'Required by: ' + joinNames(userRequiredBy)
+                    : '';
+            }
+        }
     }
 
     function updateContactFamilyLoggingGroups() {
@@ -607,6 +741,7 @@
             refreshActivityTypes();
             updateAgreementAutoFill();
             updateAgreementLoggingGroups();
+            updateTimeTrackingSection();
             markDirty();
         });
         agreementsPicker.addEventListener('token-picker:initialized', function () {
@@ -617,6 +752,7 @@
                 updateAgreementAutoFill();
             }
             updateAgreementLoggingGroups();
+            updateTimeTrackingSection();
         });
     }
 
@@ -677,6 +813,7 @@
     restrictCoveragePickers();
     restrictClassificationOptions();
     updateAgreementLoggingGroups();
+    updateTimeTrackingSection();
     updateContactFamilyLoggingGroups();
     updateActivityLoggingGroups();
 

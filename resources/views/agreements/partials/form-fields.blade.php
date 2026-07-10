@@ -1,6 +1,10 @@
 @php
+    use App\Enums\AgreementTimeTrackingRequirement;
+
     $agreement = $agreement ?? null;
     $agreementLoggingFieldCollection = $agreement?->agreementLoggingFields ?? collect();
+    $currentTimeTrackingMode = old('time_tracking_mode', $agreement?->time_tracking_mode?->value ?? 'none');
+    $timeTrackingRequirements = collect(AgreementTimeTrackingRequirement::options());
     $selectedProjectIds = old(
         'project_ids',
         $agreement?->projects?->pluck('id')->when(
@@ -198,6 +202,32 @@
                     @enderror
                 </div>
             </div>
+        </div>
+
+        <div class="mb-4">
+            <div class="mb-2">
+                <label class="form-label fw-semibold d-block">Time Tracking Requirements <span class="text-danger">*</span></label>
+                <p class="text-muted small mb-0">Choose how time must be tracked for activities covered by this agreement.</p>
+            </div>
+
+            <div class="d-grid gap-2">
+                @foreach ($timeTrackingRequirements as $requirement)
+                    <label class="form-check border rounded px-3 py-2 mb-0 {{ $currentTimeTrackingMode === $requirement['value'] ? 'border-primary bg-light' : '' }}">
+                        <input class="form-check-input me-2"
+                               type="radio"
+                               name="time_tracking_mode"
+                               value="{{ $requirement['value'] }}"
+                               {{ $currentTimeTrackingMode === $requirement['value'] ? 'checked' : '' }}
+                               required>
+                        <span class="form-check-label fw-semibold">{{ $requirement['label'] }}</span>
+                        <span class="text-muted small d-block">{{ $requirement['description'] }}</span>
+                    </label>
+                @endforeach
+            </div>
+
+            @error('time_tracking_mode')
+                <div class="text-danger small mt-1">{{ $message }}</div>
+            @enderror
         </div>
 
         <div class="col-md-6 mb-3">

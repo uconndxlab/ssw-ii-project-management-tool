@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AgreementTimeTrackingRequirement;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -18,6 +19,7 @@ class Agreement extends Model
         'end_date',
         'extension_start_date',
         'extension_end_date',
+        'time_tracking_mode',
     ];
 
     protected function casts(): array
@@ -27,6 +29,7 @@ class Agreement extends Model
             'end_date' => 'date',
             'extension_start_date' => 'date',
             'extension_end_date' => 'date',
+            'time_tracking_mode' => AgreementTimeTrackingRequirement::class,
         ];
     }
 

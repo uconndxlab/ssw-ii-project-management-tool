@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\AgreementTimeTrackingRequirement;
 use App\Models\ActivityType;
 use App\Models\ContactFamily;
 use App\Models\LoggingField;
@@ -12,6 +13,7 @@ use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class AgreementRequest extends FormRequest
@@ -40,6 +42,7 @@ class AgreementRequest extends FormRequest
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'extension_start_date' => ['nullable', 'date'],
             'extension_end_date' => ['nullable', 'date', 'after_or_equal:extension_start_date'],
+            'time_tracking_mode' => ['required', Rule::in(array_merge(['none'], AgreementTimeTrackingRequirement::values()))],
             'certification_candidates' => ['nullable', 'array'],
             'certification_candidates.*.id' => ['nullable', 'integer'],
             'certification_candidates.*.value' => ['nullable', 'string', 'max:255'],
