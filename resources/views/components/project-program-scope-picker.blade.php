@@ -121,10 +121,14 @@
         }
 
         const projectProgramMap = parseJson(section.dataset.projectProgramMap, {});
+        const defaultDisabledPlaceholder = programPicker.dataset.disabledPlaceholder || 'Select at least one project first...';
+        let externalAllowedProgramIds = null;
+        let forceProgramDisabled = false;
+        let forcedProgramDisabledPlaceholder = defaultDisabledPlaceholder;
 
         function refreshProgramPicker() {
             const projectIds = selectedIds(projectPicker);
-            const allowedProgramIds = [];
+            let allowedProgramIds = [];
 
             projectIds.forEach(function (projectId) {
                 const programIds = Array.isArray(projectProgramMap[projectId]) ? projectProgramMap[projectId] : [];
@@ -135,10 +139,16 @@
                 });
             });
 
+            if (externalAllowedProgramIds !== null) {
+                allowedProgramIds = allowedProgramIds.filter(function (programId) {
+                    return externalAllowedProgramIds.has(String(programId));
+                });
+            }
+
             programPicker.dispatchEvent(new CustomEvent('token-picker:set-disabled', {
                 detail: {
-                    disabled: projectIds.length === 0,
-                    placeholder: 'Select at least one project first...',
+                    disabled: forceProgramDisabled || projectIds.length === 0,
+                    placeholder: forceProgramDisabled ? forcedProgramDisabledPlaceholder : defaultDisabledPlaceholder,
                 },
                 bubbles: true,
             }));
@@ -148,6 +158,20 @@
                 bubbles: true,
             }));
         }
+
+        section.addEventListener('project-program-scope:restrict', function (event) {
+            const detail = typeof event.detail === 'object' && event.detail !== null ? event.detail : {};
+            externalAllowedProgramIds = Array.isArray(detail.programIds)
+                ? new Set(detail.programIds.map(function (programId) {
+                    return String(programId);
+                }))
+                : null;
+            forceProgramDisabled = !!detail.forceProgramDisabled;
+            forcedProgramDisabledPlaceholder = typeof detail.programDisabledPlaceholder === 'string' && detail.programDisabledPlaceholder.trim() !== ''
+                ? detail.programDisabledPlaceholder
+                : defaultDisabledPlaceholder;
+            refreshProgramPicker();
+        });
 
         projectPicker.addEventListener('token-picker:change', refreshProgramPicker);
         refreshProgramPicker();

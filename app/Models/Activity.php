@@ -67,6 +67,11 @@ class Activity extends Model
         return $this->belongsToMany(Program::class, 'activity_program')->withTimestamps();
     }
 
+    public function projects(): BelongsToMany
+    {
+        return $this->belongsToMany(Project::class, 'activity_project')->withTimestamps();
+    }
+
     public function participants(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'activity_user')->withTimestamps();

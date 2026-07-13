@@ -29,6 +29,11 @@ class Project extends Model
         return $this->hasMany(Program::class);
     }
 
+    public function activities(): BelongsToMany
+    {
+        return $this->belongsToMany(Activity::class, 'activity_project')->withTimestamps();
+    }
+
     public function organizations(): BelongsToMany
     {
         return $this->belongsToMany(Organization::class, 'organization_project')->withTimestamps();

@@ -8,6 +8,9 @@
     'selectedAgreementIds' => [],
     'selectedOrganizationIds' => [],
     'selectedStateIds' => [],
+    'selectedProjectIds' => [],
+    'selectedProgramIds' => [],
+    'selectedParticipantUserIds' => [],
     'selectedActivityTypeId' => null,
     'agreementLoggingData' => [],
     'contactFamilyLoggingData' => [],
@@ -26,6 +29,15 @@
                 'name' => $agreement->name,
                 'organization_ids' => $agreement->organizations->pluck('id')->map(fn($id) => (string) $id)->values()->all(),
                 'state_ids' => $agreement->states->pluck('id')->map(fn($id) => (string) $id)->values()->all(),
+                'participant_user_ids' => $agreement->users
+                    ->pluck('id')
+                    ->concat($agreement->teams->flatMap(fn ($team) => $team->users->pluck('id')))
+                    ->map(fn ($id) => (string) $id)
+                    ->unique()
+                    ->values()
+                    ->all(),
+                'project_ids' => $agreement->projects->pluck('id')->map(fn($id) => (string) $id)->values()->all(),
+                'program_ids' => $agreement->programs->pluck('id')->map(fn($id) => (string) $id)->values()->all(),
                 'contact_family_ids' => $deliverables
                     ->flatMap(function ($deliverable) {
                         $ids = [];
@@ -100,6 +112,27 @@
         ->flatMap(fn ($family) => $family->activityTypes)
         ->filter(fn ($type) => $type->activityTypeLoggingFields->isNotEmpty())
         ->values();
+    $availableProjects = $agreements
+        ->flatMap(fn ($agreement) => $agreement->projects)
+        ->unique('id')
+        ->sortBy('name')
+        ->values();
+    $participantOptions = $agreements
+        ->flatMap(function ($agreement) {
+            return $agreement->users->concat($agreement->teams->flatMap(fn ($team) => $team->users));
+        })
+        ->unique('id')
+        ->sortBy('name')
+        ->values()
+        ->map(function ($user) {
+            $role = !empty($user->role) ? ' (' . ucfirst($user->role) . ')' : '';
+
+            return [
+                'value' => $user->id,
+                'label' => $user->name . $role,
+                'search' => trim($user->name . ' ' . ($user->email ?? '') . ' ' . ($user->role ?? '')),
+            ];
+        });
 @endphp
 
 <style>
@@ -203,6 +236,40 @@
                                     <div class="text-danger small mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <x-project-program-scope-picker
+                                scope-id="activity-coverage-scope"
+                                :projects="$availableProjects"
+                                :selected-project-ids="$selectedProjectIds"
+                                :selected-program-ids="$selectedProgramIds"
+                                project-help-text="Track the project coverage for this activity. Available projects come from the selected agreements."
+                                program-help-text="Track the program coverage for this activity. Available programs come from the selected agreements."
+                            />
+                        </div>
+                    </x-section-card>
+
+                    <x-section-card title="Participants">
+                        <div class="mb-0">
+                            <label class="form-label fw-semibold">Delivered By</label>
+                            <x-token-picker
+                                picker-id="activity-participants-picker"
+                                name="participant_user_ids[]"
+                                :options="$participantOptions"
+                                :selected-ids="$selectedParticipantUserIds"
+                                label-key="label"
+                                value-key="value"
+                                search-key="search"
+                                placeholder="Search covered users..."
+                                disabled-placeholder="Select at least one agreement first..."
+                                :disabled="empty($selectedAgreementIds)"
+                                :open-on-focus="false"
+                            />
+                            <div class="form-text">Choose the covered users who helped deliver this activity.</div>
+                            @error('participant_user_ids')
+                                <div class="text-danger small mt-1">{{ $message }}</div>
+                            @enderror
                         </div>
                     </x-section-card>
 
@@ -500,6 +567,61 @@
         statePicker?.dispatchEvent(new CustomEvent('token-picker:restrict', { detail: uniqueMergedIds('state_ids') }));
     }
 
+    function restrictParticipantPicker() {
+        const agreements = selectedValues('agreement_ids[]');
+        const participantPicker = document.getElementById('activity-participants-picker');
+
+        if (!participantPicker) return;
+
+        const allowedParticipantIds = agreements.length ? uniqueMergedIds('participant_user_ids') : [];
+        const disabled = !agreements.length || allowedParticipantIds.length === 0;
+        const placeholder = !agreements.length
+            ? 'Select at least one agreement first...'
+            : 'No covered users for selected agreements...';
+
+        participantPicker.dispatchEvent(new CustomEvent('token-picker:set-disabled', {
+            detail: {
+                disabled: disabled,
+                placeholder: placeholder,
+            }
+        }));
+        participantPicker.dispatchEvent(new CustomEvent('token-picker:restrict', { detail: allowedParticipantIds }));
+    }
+
+    function restrictScopePickers() {
+        const agreements = selectedValues('agreement_ids[]');
+        const scopeSection = form.querySelector('[data-scope-id="activity-coverage-scope"]');
+        const projectPicker = document.getElementById('activity-coverage-scope-projects');
+
+        if (!scopeSection || !projectPicker) return;
+
+        const allowedProjectIds = agreements.length ? uniqueMergedIds('project_ids') : [];
+        const allowedProgramIds = agreements.length ? uniqueMergedIds('program_ids') : [];
+        const disableProjects = !agreements.length || allowedProjectIds.length === 0;
+        const projectPlaceholder = !agreements.length
+            ? 'Select at least one agreement first...'
+            : 'No covered projects for selected agreements...';
+        const forceProgramDisabled = !agreements.length || allowedProgramIds.length === 0;
+        const programDisabledPlaceholder = !agreements.length
+            ? 'Select at least one agreement first...'
+            : 'No covered programs for selected agreements...';
+
+        projectPicker.dispatchEvent(new CustomEvent('token-picker:set-disabled', {
+            detail: {
+                disabled: disableProjects,
+                placeholder: projectPlaceholder,
+            }
+        }));
+        projectPicker.dispatchEvent(new CustomEvent('token-picker:restrict', { detail: allowedProjectIds }));
+        scopeSection.dispatchEvent(new CustomEvent('project-program-scope:restrict', {
+            detail: {
+                programIds: allowedProgramIds,
+                forceProgramDisabled: forceProgramDisabled,
+                programDisabledPlaceholder: programDisabledPlaceholder,
+            }
+        }));
+    }
+
     function restrictClassificationOptions() {
         const family = document.getElementById('contact_family_id');
         const type = document.getElementById('activity_type_id');
@@ -681,6 +803,9 @@
             agreement_ids: selectedValues('agreement_ids[]'),
             organization_ids: selectedValues('organization_ids[]'),
             state_ids: selectedValues('state_ids[]'),
+            project_ids: selectedValues('project_ids[]'),
+            program_ids: selectedValues('program_ids[]'),
+            participant_user_ids: selectedValues('participant_user_ids[]'),
             contact_family_id: document.getElementById('contact_family_id')?.value || '',
             activity_type_id: document.getElementById('activity_type_id')?.value || '',
             internal_only: document.getElementById('internal_only')?.checked ? 1 : 0,
@@ -714,6 +839,9 @@
                 form.querySelector('#activity-agreements-picker')?.dispatchEvent(new CustomEvent('token-picker:set', { detail: template.agreement_ids || [] }));
                 form.querySelector('#activity-organizations-picker')?.dispatchEvent(new CustomEvent('token-picker:set', { detail: template.organization_ids || [] }));
                 form.querySelector('#activity-states-picker')?.dispatchEvent(new CustomEvent('token-picker:set', { detail: template.state_ids || [] }));
+                form.querySelector('#activity-coverage-scope-projects')?.dispatchEvent(new CustomEvent('token-picker:set', { detail: template.project_ids || [] }));
+                form.querySelector('#activity-coverage-scope-programs')?.dispatchEvent(new CustomEvent('token-picker:set', { detail: template.program_ids || [] }));
+                form.querySelector('#activity-participants-picker')?.dispatchEvent(new CustomEvent('token-picker:set', { detail: template.participant_user_ids || [] }));
 
                 const family = document.getElementById('contact_family_id');
                 const selectedType = document.getElementById('activity_type_selected');
@@ -737,6 +865,8 @@
     if (agreementsPicker) {
         agreementsPicker.addEventListener('token-picker:change', function () {
             restrictCoveragePickers();
+            restrictParticipantPicker();
+            restrictScopePickers();
             restrictClassificationOptions();
             refreshActivityTypes();
             updateAgreementAutoFill();
@@ -746,6 +876,8 @@
         });
         agreementsPicker.addEventListener('token-picker:initialized', function () {
             restrictCoveragePickers();
+            restrictParticipantPicker();
+            restrictScopePickers();
             restrictClassificationOptions();
             refreshActivityTypes();
             if (!isEditMode) {
@@ -756,7 +888,7 @@
         });
     }
 
-    ['activity-organizations-picker', 'activity-states-picker'].forEach(function (id) {
+    ['activity-organizations-picker', 'activity-states-picker', 'activity-coverage-scope-projects', 'activity-coverage-scope-programs', 'activity-participants-picker'].forEach(function (id) {
         document.getElementById(id)?.addEventListener('token-picker:change', markDirty);
     });
 
@@ -811,6 +943,8 @@
 
     updateActivityTypeState();
     restrictCoveragePickers();
+    restrictParticipantPicker();
+    restrictScopePickers();
     restrictClassificationOptions();
     updateAgreementLoggingGroups();
     updateTimeTrackingSection();

@@ -99,6 +99,19 @@
                     </div>
                 </div>
 
+                @if($activity->projects->isNotEmpty())
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>Projects:</strong>
+                    </div>
+                    <div class="col-md-8">
+                        @foreach($activity->projects as $project)
+                            <span class="badge bg-dark me-1">{{ $project->name }}</span>
+                        @endforeach
+                    </div>
+                </div>
+                @endif
+
                 @if($activity->programs->isNotEmpty())
                 <div class="row mb-3">
                     <div class="col-md-4">
