@@ -11,6 +11,7 @@ class ContactFamily extends Model
     protected $fillable = [
         'name',
         'active',
+        'track_additional_time',
         'sort_order',
     ];
 
@@ -18,6 +19,7 @@ class ContactFamily extends Model
     {
         return [
             'active' => 'boolean',
+            'track_additional_time' => 'boolean',
             'sort_order' => 'integer',
         ];
     }

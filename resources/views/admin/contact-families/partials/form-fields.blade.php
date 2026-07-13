@@ -24,8 +24,9 @@
     @enderror
 </div>
 
-<div class="mb-3">
-    <div class="form-check">
+<div class="row mb-3">
+    <div class="col-md-6">
+    <div class="form-check form-switch">
         <input type="checkbox"
                class="form-check-input"
                id="active"
@@ -37,6 +38,21 @@
         </label>
     </div>
     <div class="form-text">Only active contact families appear in activity forms.</div>
+</div>
+    <div class="col-md-6">
+    <div class="form-check form-switch">
+        <input type="checkbox"
+               class="form-check-input"
+               id="track_additional_time"
+               name="track_additional_time"
+               value="1"
+               {{ old('track_additional_time', $contactFamily->track_additional_time ?? false) ? 'checked' : '' }}>
+        <label class="form-check-label" for="track_additional_time">
+            Track activity preparation and follow up time
+        </label>
+    </div>
+    <div class="form-text">Require this contact family to capture preparation and follow up time in activity logging.</div>
+</div>
 </div>
 
 <div class="mb-4">

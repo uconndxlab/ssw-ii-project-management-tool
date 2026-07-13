@@ -50,6 +50,7 @@ class ContactFamilyController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => ['required', 'string', 'max:255', 'unique:contact_families,name'],
             'active' => ['boolean'],
+            'track_additional_time' => ['boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'contact_family_logging_field_ids' => ['nullable', 'array'],
             'contact_family_logging_field_ids.*' => ['exists:logging_fields,id'],
@@ -83,11 +84,13 @@ class ContactFamilyController extends Controller
         $validated = $validator->validate();
 
         $validated['active'] = $request->has('active');
+        $validated['track_additional_time'] = $request->has('track_additional_time');
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
 
         $contactFamily = ContactFamily::create([
             'name' => $validated['name'],
             'active' => $validated['active'],
+            'track_additional_time' => $validated['track_additional_time'],
             'sort_order' => $validated['sort_order'],
         ]);
 
@@ -125,6 +128,7 @@ class ContactFamilyController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => ['required', 'string', 'max:255', 'unique:contact_families,name,' . $contactFamily->id],
             'active' => ['boolean'],
+            'track_additional_time' => ['boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'contact_family_logging_field_ids' => ['nullable', 'array'],
             'contact_family_logging_field_ids.*' => ['exists:logging_fields,id'],
@@ -158,9 +162,15 @@ class ContactFamilyController extends Controller
         $validated = $validator->validate();
 
         $validated['active'] = $request->has('active');
+        $validated['track_additional_time'] = $request->has('track_additional_time');
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
 
-        $contactFamily->update($validated);
+        $contactFamily->update([
+            'name' => $validated['name'],
+            'active' => $validated['active'],
+            'track_additional_time' => $validated['track_additional_time'],
+            'sort_order' => $validated['sort_order'],
+        ]);
         $contactFamily->projects()->sync(ProjectProgramScope::normalizeIds($validated['project_ids'] ?? []));
         $contactFamily->programs()->sync(ProjectProgramScope::normalizeIds($validated['program_ids'] ?? []));
 
