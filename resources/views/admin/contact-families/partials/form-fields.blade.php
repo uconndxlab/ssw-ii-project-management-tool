@@ -11,67 +11,74 @@
     );
 @endphp
 
-<div class="mb-3">
-    <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
-    <input type="text"
-           class="form-control @error('name') is-invalid @enderror"
-           id="name"
-           name="name"
-           value="{{ old('name', $contactFamily->name ?? '') }}"
-           required>
-    @error('name')
-        <div class="invalid-feedback">{{ $message }}</div>
-    @enderror
-</div>
+<div class="row g-4 mb-4 align-items-start">
+    <div class="col-lg-8">
+        <x-section-card title="Contact Family Details" subtitle="Define the contact family and where it should be available." class="h-100">
 
-<div class="row mb-3">
-    <div class="col-md-6">
-    <div class="form-check form-switch">
-        <input type="checkbox"
-               class="form-check-input"
-               id="active"
-               name="active"
-               value="1"
-               {{ old('active', $contactFamily->active ?? true) ? 'checked' : '' }}>
-        <label class="form-check-label" for="active">
-            Active
-        </label>
+            <div class="mb-3">
+                <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
+                <input type="text"
+                       class="form-control @error('name') is-invalid @enderror"
+                       id="name"
+                       name="name"
+                       value="{{ old('name', $contactFamily->name ?? '') }}"
+                       required>
+                @error('name')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+            </div>
+
+            <x-project-program-scope-picker
+                :scope-id="$scopeId"
+                :projects="$projects"
+                :selected-project-ids="$selectedProjectIds"
+                :selected-program-ids="$selectedProgramIds"
+                project-help-text="Optional project scope for reporting and agreement-form filtering."
+                program-help-text="Leave projects and programs empty to make this contact family available everywhere."
+            />
+        </x-section-card>
     </div>
-    <div class="form-text">Only active contact families appear in activity forms.</div>
-</div>
-    <div class="col-md-6">
-    <div class="form-check form-switch">
-        <input type="checkbox"
-               class="form-check-input"
-               id="track_additional_time"
-               name="track_additional_time"
-               value="1"
-               {{ old('track_additional_time', $contactFamily->track_additional_time ?? false) ? 'checked' : '' }}>
-        <label class="form-check-label" for="track_additional_time">
-            Track activity preparation and follow up time
-        </label>
+
+    <div class="col-lg-4">
+        <x-section-card title="Options" subtitle="Status and behavior settings for this contact family." class="h-100">
+
+            <div class="d-grid gap-4">
+                <div>
+                    <div class="form-check form-switch">
+                        <input type="checkbox"
+                               class="form-check-input"
+                               id="active"
+                               name="active"
+                               value="1"
+                               {{ old('active', $contactFamily->active ?? true) ? 'checked' : '' }}>
+                        <label class="form-check-label" for="active">
+                            Active
+                        </label>
+                    </div>
+                    <div class="form-text">Only active contact families appear in activity forms.</div>
+                </div>
+
+                <div>
+                    <div class="form-check form-switch">
+                        <input type="checkbox"
+                               class="form-check-input"
+                               id="track_additional_time"
+                               name="track_additional_time"
+                               value="1"
+                               {{ old('track_additional_time', $contactFamily->track_additional_time ?? false) ? 'checked' : '' }}>
+                        <label class="form-check-label" for="track_additional_time">
+                            Track activity preparation and follow up time
+                        </label>
+                    </div>
+                    <div class="form-text">Require this contact family to capture preparation and follow up time in activity logging.</div>
+                </div>
+            </div>
+        </x-section-card>
     </div>
-    <div class="form-text">Require this contact family to capture preparation and follow up time in activity logging.</div>
-</div>
 </div>
 
-<div class="mb-4">
-    <x-project-program-scope-picker
-        :scope-id="$scopeId"
-        :projects="$projects"
-        :selected-project-ids="$selectedProjectIds"
-        :selected-program-ids="$selectedProgramIds"
-        project-help-text="Optional project scope for reporting and agreement-form filtering."
-        program-help-text="Leave projects and programs empty to make this contact family available everywhere."
-    />
-</div>
-
-<div class="mb-4">
+<x-section-card title="Classification Logging Fields" subtitle="These fields appear in the activity classification area for this contact family." class="mb-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <div>
-            <h5 class="mb-1">Classification Logging Fields</h5>
-            <p class="text-muted small mb-0">These fields appear in the activity classification area for this contact family.</p>
-        </div>
         <a href="{{ route('logging-fields.index') }}" class="btn btn-sm btn-outline-secondary">Manage Logging Fields</a>
     </div>
 
@@ -109,7 +116,7 @@
             @endforeach
         </div>
     @endif
-</div>
+</x-section-card>
 
 @once
 <script>
