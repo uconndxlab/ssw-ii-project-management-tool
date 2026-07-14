@@ -155,6 +155,63 @@
             </div>
         </div>
 
+        @if($activity->contactTime || $activity->participantTimes->isNotEmpty())
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0">Time Tracking</h5>
+            </div>
+            <div class="card-body">
+                @if($activity->contactTime)
+                <div class="mb-4">
+                    <h6 class="mb-3">Time by Contact</h6>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="small text-muted">Activity Time</div>
+                            <div>{{ number_format((float) $activity->contactTime->activity_hours, 2) }}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="small text-muted">Prep Time</div>
+                            <div>{{ number_format((float) $activity->contactTime->prep_hours, 2) }}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="small text-muted">Follow Up Time</div>
+                            <div>{{ number_format((float) $activity->contactTime->follow_up_hours, 2) }}</div>
+                        </div>
+                    </div>
+                </div>
+                @endif
+
+                @if($activity->participantTimes->isNotEmpty())
+                <div>
+                    <h6 class="mb-3">Time by User</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Delivered By</th>
+                                    <th scope="col">Prep Time</th>
+                                    <th scope="col">Activity Time</th>
+                                    <th scope="col">Follow Up Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($activity->participantTimes as $participantTime)
+                                    <tr>
+                                        <td>{{ $participantTime->user?->name ?? $participantTime->participant_name ?? 'DELETED USER' }}</td>
+                                        <td>{{ number_format((float) $participantTime->prep_hours, 2) }}</td>
+                                        <td>{{ number_format((float) $participantTime->hours, 2) }}</td>
+                                        <td>{{ number_format((float) $participantTime->follow_up_hours, 2) }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                @endif
+            </div>
+        </div>
+        @endif
+
 
 
         <div class="card mt-3">

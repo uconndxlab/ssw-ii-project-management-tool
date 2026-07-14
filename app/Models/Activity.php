@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Activity extends Model
@@ -27,6 +28,16 @@ class Activity extends Model
     public function loggingFieldAnswers(): HasMany
     {
         return $this->hasMany(ActivityLoggingFieldAnswer::class);
+    }
+
+    public function contactTime(): HasOne
+    {
+        return $this->hasOne(ActivityContactTime::class);
+    }
+
+    public function participantTimes(): HasMany
+    {
+        return $this->hasMany(ActivityParticipantTime::class);
     }
 
     public function agreements(): BelongsToMany

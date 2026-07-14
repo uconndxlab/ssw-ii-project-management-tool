@@ -15,6 +15,8 @@
     'agreementLoggingData' => [],
     'contactFamilyLoggingData' => [],
     'activityLoggingData' => [],
+    'contactTimeData' => [],
+    'participantTimeData' => [],
     'engagementDateValue' => null,
     'internalOnlyChecked' => false,
     'activity' => null,
@@ -133,6 +135,79 @@
                 'search' => trim($user->name . ' ' . ($user->email ?? '') . ' ' . ($user->role ?? '')),
             ];
         });
+
+    $currentContactFamily = $contactFamilies->first(fn ($family) => (string) $family->id === (string) $currentContactFamilyId);
+    $selectedContactFamilyTracksAdditionalTime = (bool) ($currentContactFamily?->track_additional_time);
+
+    if ($isEditMode && $activity?->relationLoaded('participantTimes')) {
+        $historicalParticipantOptions = $activity->participantTimes
+            ->filter(function ($participantTime) use ($participantOptions) {
+                if (!$participantTime->user_id) {
+                    return false;
+                }
+
+                return !$participantOptions->contains(fn ($option) => (string) $option['value'] === (string) $participantTime->user_id);
+            })
+            ->map(function ($participantTime) {
+                $label = $participantTime->user?->name
+                    ?? $participantTime->participant_name
+                    ?? 'Historical Participant';
+
+                return [
+                    'value' => $participantTime->user_id,
+                    'label' => $label,
+                    'search' => strtolower($label),
+                    'context' => 'Historical',
+                    'contextBadgeClass' => 'bg-secondary',
+                ];
+            });
+
+        $participantOptions = $participantOptions
+            ->concat($historicalParticipantOptions)
+            ->unique('value')
+            ->sortBy('label')
+            ->values();
+    }
+
+    $participantOptionMap = $participantOptions
+        ->mapWithKeys(fn ($option) => [
+            (string) $option['value'] => [
+                'label' => $option['label'],
+                'historical' => ($option['context'] ?? null) === 'Historical',
+            ],
+        ])
+        ->all();
+
+    $normalizedContactTimeData = [
+        'activity_hours' => data_get($contactTimeData, 'activity_hours'),
+        'prep_hours' => data_get($contactTimeData, 'prep_hours', 0),
+        'follow_up_hours' => data_get($contactTimeData, 'follow_up_hours', 0),
+    ];
+
+    $normalizedParticipantTimeData = collect($participantTimeData)
+        ->mapWithKeys(function ($row, $key) use ($participantOptionMap) {
+            $userId = (string) data_get($row, 'user_id', $key);
+
+            if ($userId === '') {
+                return [];
+            }
+
+            return [
+                $userId => [
+                    'user_id' => $userId,
+                    'hours' => data_get($row, 'hours'),
+                    'prep_hours' => data_get($row, 'prep_hours', 0),
+                    'follow_up_hours' => data_get($row, 'follow_up_hours', 0),
+                    'participant_name' => data_get($row, 'participant_name', data_get($participantOptionMap, $userId . '.label')),
+                ],
+            ];
+        })
+        ->all();
+
+    $participantTimeErrorMessage = collect($errors->messages())
+        ->filter(fn ($messages, $key) => str_starts_with($key, 'participant_times.'))
+        ->flatten()
+        ->first();
 @endphp
 
 <style>
@@ -383,19 +458,83 @@
                                         <div class="activity-logging-subsection-title">Time by Contact</div>
                                         <div class="text-muted activity-logging-subsection-meta" data-time-tracking-contact-required-by>{{ $timeTrackingContactRequiredBy }}</div>
                                     </div>
-                                    <div class="alert alert-warning mb-0">
-                                        This section is in development. Fields will be added later.
+                                    <div class="row g-3">
+                                        <div class="col-md-4 {{ $selectedContactFamilyTracksAdditionalTime ? '' : 'd-none' }}" data-contact-additional-time-field="prep_hours">
+                                            <label for="contact_time_prep_hours" class="form-label fw-semibold">Prep Time</label>
+                                            <input type="number"
+                                                   step="0.25"
+                                                   min="0"
+                                                   class="form-control @error('contact_time.prep_hours') is-invalid @enderror"
+                                                   id="contact_time_prep_hours"
+                                                   name="contact_time[prep_hours]"
+                                                   value="{{ $normalizedContactTimeData['prep_hours'] }}"
+                                                   data-contact-time-input="prep_hours">
+                                            @error('contact_time.prep_hours')
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="contact_time_activity_hours" class="form-label fw-semibold">
+                                                Activity Time <span class="text-danger">*</span>
+                                            </label>
+                                            <input type="number"
+                                                   step="0.25"
+                                                   min="0"
+                                                   class="form-control @error('contact_time.activity_hours') is-invalid @enderror"
+                                                   id="contact_time_activity_hours"
+                                                   name="contact_time[activity_hours]"
+                                                   value="{{ $normalizedContactTimeData['activity_hours'] }}"
+                                                   data-contact-time-input="activity_hours">
+                                            @error('contact_time.activity_hours')
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+                                        <div class="col-md-4 {{ $selectedContactFamilyTracksAdditionalTime ? '' : 'd-none' }}" data-contact-additional-time-field="follow_up_hours">
+                                            <label for="contact_time_follow_up_hours" class="form-label fw-semibold">Follow Up Time</label>
+                                            <input type="number"
+                                                   step="0.25"
+                                                   min="0"
+                                                   class="form-control @error('contact_time.follow_up_hours') is-invalid @enderror"
+                                                   id="contact_time_follow_up_hours"
+                                                   name="contact_time[follow_up_hours]"
+                                                   value="{{ $normalizedContactTimeData['follow_up_hours'] }}"
+                                                   data-contact-time-input="follow_up_hours">
+                                            @error('contact_time.follow_up_hours')
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                        </div>
                                     </div>
                                 </div>
 
                                 <div class="time-tracking-subsection {{ $timeTrackingUserConfigs->isNotEmpty() ? '' : 'd-none' }}" data-time-tracking-subsection="user">
-                                    <div class="d-flex flex-column flex-md-row align-items-md-baseline gap-1 gap-md-3 mb-3">
-                                        <div class="activity-logging-subsection-title">Time by User</div>
-                                        <div class="text-muted activity-logging-subsection-meta" data-time-tracking-user-required-by>{{ $timeTrackingUserRequiredBy }}</div>
+                                    <div class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-baseline gap-2 mb-3">
+                                        <div class="d-flex flex-column flex-md-row align-items-md-baseline gap-1 gap-md-3">
+                                            <div class="activity-logging-subsection-title">Time by User</div>
+                                            <div class="text-muted activity-logging-subsection-meta" data-time-tracking-user-required-by>{{ $timeTrackingUserRequiredBy }}</div>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="copy-contact-time-to-users">
+                                            Sync Contact Time to Users
+                                        </button>
                                     </div>
-                                    <div class="alert alert-warning mb-0">
-                                        This section is in development. Fields will be added later.
+                                    <div class="table-responsive">
+                                        <table class="table table-sm align-middle mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th scope="col">Delivered By</th>
+                                                    <th scope="col" class="{{ $selectedContactFamilyTracksAdditionalTime ? '' : 'd-none' }}" data-participant-extra-header="prep">Prep Time</th>
+                                                    <th scope="col" style="width: 180px;">Activity Time</th>
+                                                    <th scope="col" class="{{ $selectedContactFamilyTracksAdditionalTime ? '' : 'd-none' }}" data-participant-extra-header="follow_up">Follow Up Time</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="participant-time-rows"></tbody>
+                                        </table>
                                     </div>
+                                    <div id="participant-time-empty-state" class="text-muted small mt-2">
+                                        Select Participants above to track time for each user.
+                                    </div>
+                                    @if($participantTimeErrorMessage)
+                                        <div class="text-danger small mt-2">{{ $participantTimeErrorMessage }}</div>
+                                    @endif
                                 </div>
                             </div>
                         </x-section-card>
@@ -493,6 +632,9 @@
 <script>
 (function () {
     const agreementConfigs = @json($agreementConfigs);
+    const contactFamilyAdditionalTimeMap = @json($contactFamilies->mapWithKeys(fn ($family) => [(string) $family->id => (bool) $family->track_additional_time]));
+    const participantDirectory = @json($participantOptionMap);
+    const initialParticipantTimes = @json($normalizedParticipantTimeData);
     const form = document.getElementById(@json($formId));
     const statusTop = document.getElementById('activity-save-status');
     const statusBar = document.getElementById('activity-save-bar-status');
@@ -573,7 +715,9 @@
 
         if (!participantPicker) return;
 
+        const selectedParticipantIds = selectedValues('participant_user_ids[]');
         const allowedParticipantIds = agreements.length ? uniqueMergedIds('participant_user_ids') : [];
+        const restrictedIds = Array.from(new Set(allowedParticipantIds.concat(selectedParticipantIds).map(String)));
         const disabled = !agreements.length || allowedParticipantIds.length === 0;
         const placeholder = !agreements.length
             ? 'Select at least one agreement first...'
@@ -585,7 +729,187 @@
                 placeholder: placeholder,
             }
         }));
-        participantPicker.dispatchEvent(new CustomEvent('token-picker:restrict', { detail: allowedParticipantIds }));
+        participantPicker.dispatchEvent(new CustomEvent('token-picker:restrict', { detail: restrictedIds }));
+    }
+
+    function selectedParticipantIds() {
+        return selectedValues('participant_user_ids[]').map(String);
+    }
+
+    function participantTimeRowsContainer() {
+        return document.getElementById('participant-time-rows');
+    }
+
+    function participantLabel(userId) {
+        return participantDirectory[String(userId)]?.label || ('User #' + userId);
+    }
+
+    function buildParticipantTimeInput(name, value, hidden, dataAttribute) {
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.step = '0.25';
+        input.min = '0';
+        input.className = 'form-control form-control-sm';
+        input.name = name;
+        input.value = value ?? '';
+
+        if (dataAttribute) {
+            input.setAttribute(dataAttribute, '');
+        }
+
+        if (hidden) {
+            input.classList.add('d-none');
+        }
+
+        return input;
+    }
+
+    function collectParticipantTimesFromDom() {
+        const rows = participantTimeRowsContainer();
+
+        if (!rows) {
+            return {};
+        }
+
+        const values = {};
+
+        rows.querySelectorAll('[data-participant-time-row]').forEach(function (row) {
+            const userId = String(row.dataset.userId || '');
+
+            if (!userId) {
+                return;
+            }
+
+            values[userId] = {
+                user_id: userId,
+                hours: row.querySelector('[data-participant-time-hours]')?.value || '',
+                prep_hours: row.querySelector('[data-participant-time-prep-hours]')?.value || '0',
+                follow_up_hours: row.querySelector('[data-participant-time-follow-up-hours]')?.value || '0',
+                participant_name: row.dataset.participantName || participantLabel(userId),
+            };
+        });
+
+        return values;
+    }
+
+    function renderParticipantTimeRows() {
+        const rows = participantTimeRowsContainer();
+        const emptyState = document.getElementById('participant-time-empty-state');
+        const copyButton = document.getElementById('copy-contact-time-to-users');
+
+        if (!rows) {
+            return;
+        }
+
+        const currentValues = Object.assign({}, initialParticipantTimes, collectParticipantTimesFromDom());
+        const selectedIds = selectedParticipantIds();
+        const tracksAdditionalTime = !!contactFamilyAdditionalTimeMap[String(document.getElementById('contact_family_id')?.value || '')];
+
+        rows.innerHTML = '';
+
+        selectedIds.forEach(function (userId) {
+            const rowData = currentValues[String(userId)] || {};
+            const row = document.createElement('tr');
+            const nameCell = document.createElement('td');
+            const prepCell = document.createElement('td');
+            const hoursCell = document.createElement('td');
+            const followUpCell = document.createElement('td');
+            const labelWrap = document.createElement('div');
+            const label = document.createElement('span');
+            const historicalBadge = document.createElement('span');
+            const userInput = document.createElement('input');
+            const prepHoursInput = buildParticipantTimeInput('participant_times[' + userId + '][prep_hours]', rowData.prep_hours ?? 0, !tracksAdditionalTime, 'data-participant-time-prep-hours');
+            const hoursInput = buildParticipantTimeInput('participant_times[' + userId + '][hours]', rowData.hours ?? '', false, 'data-participant-time-hours');
+            const followUpHoursInput = buildParticipantTimeInput('participant_times[' + userId + '][follow_up_hours]', rowData.follow_up_hours ?? 0, !tracksAdditionalTime, 'data-participant-time-follow-up-hours');
+
+            row.dataset.userId = String(userId);
+            row.dataset.participantName = rowData.participant_name || participantLabel(userId);
+            row.setAttribute('data-participant-time-row', '');
+
+            labelWrap.className = 'd-flex flex-wrap align-items-center gap-2';
+            label.textContent = row.dataset.participantName;
+            historicalBadge.className = 'badge bg-secondary';
+            historicalBadge.textContent = 'Historical';
+            historicalBadge.classList.toggle('d-none', !participantDirectory[String(userId)]?.historical);
+
+            userInput.type = 'hidden';
+            userInput.name = 'participant_times[' + userId + '][user_id]';
+            userInput.value = userId;
+
+            labelWrap.appendChild(label);
+            labelWrap.appendChild(historicalBadge);
+            nameCell.appendChild(labelWrap);
+            nameCell.appendChild(userInput);
+
+            prepCell.classList.toggle('d-none', !tracksAdditionalTime);
+            followUpCell.classList.toggle('d-none', !tracksAdditionalTime);
+            prepCell.appendChild(prepHoursInput);
+            hoursCell.appendChild(hoursInput);
+            followUpCell.appendChild(followUpHoursInput);
+
+            row.appendChild(nameCell);
+            row.appendChild(prepCell);
+            row.appendChild(hoursCell);
+            row.appendChild(followUpCell);
+            rows.appendChild(row);
+        });
+
+        if (emptyState) {
+            emptyState.classList.toggle('d-none', selectedIds.length > 0);
+        }
+
+        if (copyButton) {
+            copyButton.disabled = selectedIds.length === 0;
+        }
+    }
+
+    function copyContactTimeToParticipants() {
+        const contactActivityTime = document.getElementById('contact_time_activity_hours')?.value;
+        const contactPrepTime = document.getElementById('contact_time_prep_hours')?.value || '0';
+        const contactFollowUpTime = document.getElementById('contact_time_follow_up_hours')?.value || '0';
+        const tracksAdditionalTime = !!contactFamilyAdditionalTimeMap[String(document.getElementById('contact_family_id')?.value || '')];
+
+        if (!contactActivityTime) {
+            return;
+        }
+
+        participantTimeRowsContainer()?.querySelectorAll('[data-participant-time-row]').forEach(function (row) {
+            const hoursInput = row.querySelector('[data-participant-time-hours]');
+            const prepInput = row.querySelector('[data-participant-time-prep-hours]');
+            const followUpInput = row.querySelector('[data-participant-time-follow-up-hours]');
+
+            if (hoursInput) {
+                hoursInput.value = contactActivityTime;
+            }
+
+            if (tracksAdditionalTime && prepInput) {
+                prepInput.value = contactPrepTime;
+            }
+
+            if (tracksAdditionalTime && followUpInput) {
+                followUpInput.value = contactFollowUpTime;
+            }
+        });
+
+        markDirty();
+    }
+
+    function updateAdditionalContactTimeFields() {
+        const familyId = String(document.getElementById('contact_family_id')?.value || '');
+        const tracksAdditionalTime = !!contactFamilyAdditionalTimeMap[familyId];
+
+        document.querySelectorAll('[data-contact-additional-time-field]').forEach(function (fieldWrap) {
+            const input = fieldWrap.querySelector('input');
+            fieldWrap.classList.toggle('d-none', !tracksAdditionalTime);
+
+            if (input && tracksAdditionalTime && input.value === '') {
+                input.value = '0';
+            }
+        });
+
+        document.querySelectorAll('[data-participant-extra-header]').forEach(function (header) {
+            header.classList.toggle('d-none', !tracksAdditionalTime);
+        });
     }
 
     function restrictScopePickers() {
@@ -752,6 +1076,9 @@
                     : '';
             }
         }
+
+        updateAdditionalContactTimeFields();
+        renderParticipantTimeRows();
     }
 
     function updateContactFamilyLoggingGroups() {
@@ -889,8 +1216,16 @@
     }
 
     ['activity-organizations-picker', 'activity-states-picker', 'activity-coverage-scope-projects', 'activity-coverage-scope-programs', 'activity-participants-picker'].forEach(function (id) {
-        document.getElementById(id)?.addEventListener('token-picker:change', markDirty);
+        document.getElementById(id)?.addEventListener('token-picker:change', function () {
+            if (id === 'activity-participants-picker') {
+                renderParticipantTimeRows();
+            }
+
+            markDirty();
+        });
     });
+
+    document.getElementById('copy-contact-time-to-users')?.addEventListener('click', copyContactTimeToParticipants);
 
     form.addEventListener('input', markDirty);
     form.addEventListener('change', function (event) {
@@ -900,6 +1235,8 @@
             updateActivityTypeState();
             updateContactFamilyLoggingGroups();
             updateActivityLoggingGroups();
+            updateAdditionalContactTimeFields();
+            renderParticipantTimeRows();
         }
         if (event.target && event.target.id === 'activity_type_id') {
             updateActivityLoggingGroups();
@@ -950,6 +1287,8 @@
     updateTimeTrackingSection();
     updateContactFamilyLoggingGroups();
     updateActivityLoggingGroups();
+    updateAdditionalContactTimeFields();
+    renderParticipantTimeRows();
 
     if (!isEditMode) {
         renderTemplates();

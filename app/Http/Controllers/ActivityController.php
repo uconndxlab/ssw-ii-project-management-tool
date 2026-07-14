@@ -12,6 +12,7 @@ use App\Models\State;
 use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -274,6 +275,16 @@ class ActivityController extends Controller
             'agreement_logging_values' => ['nullable', 'array'],
             'contact_family_logging_values' => ['nullable', 'array'],
             'activity_logging_values' => ['nullable', 'array'],
+            'contact_time' => ['nullable', 'array'],
+            'contact_time.activity_hours' => ['nullable', 'numeric', 'min:0'],
+            'contact_time.prep_hours' => ['nullable', 'numeric', 'min:0'],
+            'contact_time.follow_up_hours' => ['nullable', 'numeric', 'min:0'],
+            'participant_times' => ['nullable', 'array'],
+            'participant_times.*' => ['nullable', 'array'],
+            'participant_times.*.user_id' => ['nullable', 'integer', 'exists:users,id'],
+            'participant_times.*.hours' => ['nullable', 'numeric', 'min:0'],
+            'participant_times.*.prep_hours' => ['nullable', 'numeric', 'min:0'],
+            'participant_times.*.follow_up_hours' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $validator->after(function ($validator) use ($request) {
@@ -310,21 +321,28 @@ class ActivityController extends Controller
         $this->validateAgreementProjectProgramSelections($validated, $agreements);
         $this->validateAgreementParticipantSelections($validated, $agreements);
 
-        $activity = Activity::create([
-            'user_id' => Auth::id(),
-            'engagement_date' => $validated['engagement_date'],
-            'activity_type_id' => $validated['activity_type_id'],
-            'internal_only' => $validated['internal_only'] ?? false,
-        ]);
+        $validated['time_tracking'] = $this->normalizeTimeTrackingPayload($validated, $agreements, $contactFamily);
+        $activity = null;
 
-        $this->syncLoggingFieldAnswers($activity, $validated, $agreements, $contactFamily, $activityType);
+        DB::transaction(function () use (&$activity, $validated, $agreements, $contactFamily, $activityType) {
+            $activity = Activity::create([
+                'user_id' => Auth::id(),
+                'engagement_date' => $validated['engagement_date'],
+                'activity_type_id' => $validated['activity_type_id'],
+                'internal_only' => $validated['internal_only'] ?? false,
+            ]);
 
-        $activity->agreements()->sync($validated['agreement_ids'] ?? []);
-        $activity->states()->sync($validated['state_ids'] ?? []);
-        $activity->organizations()->sync($validated['organization_ids'] ?? []);
-        $activity->projects()->sync($validated['project_ids'] ?? []);
-        $activity->programs()->sync($validated['program_ids'] ?? []);
-        $activity->participants()->sync($validated['participant_user_ids'] ?? []);
+            $this->syncLoggingFieldAnswers($activity, $validated, $agreements, $contactFamily, $activityType);
+
+            $activity->agreements()->sync($validated['agreement_ids'] ?? []);
+            $activity->states()->sync($validated['state_ids'] ?? []);
+            $activity->organizations()->sync($validated['organization_ids'] ?? []);
+            $activity->projects()->sync($validated['project_ids'] ?? []);
+            $activity->programs()->sync($validated['program_ids'] ?? []);
+            $activity->participants()->sync($validated['participant_user_ids'] ?? []);
+
+            $this->syncActivityTimeTracking($activity, $validated['time_tracking']);
+        });
 
         return redirect()
             ->route('activities.index')
@@ -342,14 +360,14 @@ class ActivityController extends Controller
             }
         }
 
-        $activity->load(['agreements.organizations', 'agreements.states', 'organizations', 'states', 'user', 'projects', 'programs', 'participants', 'activityType.contactFamily', 'activityType.activityTypeLoggingFields', 'loggingFieldAnswers.loggingField']);
+        $activity->load(['agreements.organizations', 'agreements.states', 'organizations', 'states', 'user', 'projects', 'programs', 'participants', 'participantTimes.user', 'contactTime', 'activityType.contactFamily', 'activityType.activityTypeLoggingFields', 'loggingFieldAnswers.loggingField']);
         $activity->load(['agreements.agreementLoggingFields', 'activityType.contactFamily.contactFamilyLoggingFields']);
 
         return view('activities.show', compact('activity'));
     }
 
     public function edit(Activity $activity)
-    {
+    {   
         $this->verifyActivityEditAccess($activity);
 
         $agreements = $this->getVisibleAgreements()->load('agreementLoggingFields');
@@ -374,7 +392,7 @@ class ActivityController extends Controller
             'projects.programs',
             'programs',
         ]);
-        $activity->load(['activityType.contactFamily', 'activityType.activityTypeLoggingFields', 'agreements', 'states', 'organizations', 'projects', 'programs', 'participants', 'loggingFieldAnswers']);
+        $activity->load(['activityType.contactFamily', 'activityType.activityTypeLoggingFields', 'agreements', 'states', 'organizations', 'projects', 'programs', 'participants', 'participantTimes.user', 'contactTime', 'loggingFieldAnswers']);
         $currentContactFamilyId = old('contact_family_id', $activity->activityType?->contactFamily?->id);
 
         return view('activities.edit', compact(
@@ -411,6 +429,16 @@ class ActivityController extends Controller
             'agreement_logging_values' => ['nullable', 'array'],
             'contact_family_logging_values' => ['nullable', 'array'],
             'activity_logging_values' => ['nullable', 'array'],
+            'contact_time' => ['nullable', 'array'],
+            'contact_time.activity_hours' => ['nullable', 'numeric', 'min:0'],
+            'contact_time.prep_hours' => ['nullable', 'numeric', 'min:0'],
+            'contact_time.follow_up_hours' => ['nullable', 'numeric', 'min:0'],
+            'participant_times' => ['nullable', 'array'],
+            'participant_times.*' => ['nullable', 'array'],
+            'participant_times.*.user_id' => ['nullable', 'integer', 'exists:users,id'],
+            'participant_times.*.hours' => ['nullable', 'numeric', 'min:0'],
+            'participant_times.*.prep_hours' => ['nullable', 'numeric', 'min:0'],
+            'participant_times.*.follow_up_hours' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $validator->after(function ($validator) use ($request) {
@@ -445,22 +473,27 @@ class ActivityController extends Controller
         $this->validateAgreementCoverageSelections($validated, $agreements);
         $this->validateAgreementClassificationSelections($validated, $agreements);
         $this->validateAgreementProjectProgramSelections($validated, $agreements);
-        $this->validateAgreementParticipantSelections($validated, $agreements);
+        $this->validateAgreementParticipantSelections($validated, $agreements, $activity);
+        $validated['time_tracking'] = $this->normalizeTimeTrackingPayload($validated, $agreements, $contactFamily);
 
-        $activity->update([
-            'engagement_date' => $validated['engagement_date'],
-            'activity_type_id' => $validated['activity_type_id'],
-            'internal_only' => $validated['internal_only'] ?? false,
-        ]);
+        DB::transaction(function () use ($activity, $validated, $agreements, $contactFamily, $activityType) {
+            $activity->update([
+                'engagement_date' => $validated['engagement_date'],
+                'activity_type_id' => $validated['activity_type_id'],
+                'internal_only' => $validated['internal_only'] ?? false,
+            ]);
 
-        $this->syncLoggingFieldAnswers($activity, $validated, $agreements, $contactFamily, $activityType);
+            $this->syncLoggingFieldAnswers($activity, $validated, $agreements, $contactFamily, $activityType);
 
-        $activity->agreements()->sync($validated['agreement_ids'] ?? []);
-        $activity->states()->sync($validated['state_ids'] ?? []);
-        $activity->organizations()->sync($validated['organization_ids'] ?? []);
-        $activity->projects()->sync($validated['project_ids'] ?? []);
-        $activity->programs()->sync($validated['program_ids'] ?? []);
-        $activity->participants()->sync($validated['participant_user_ids'] ?? []);
+            $activity->agreements()->sync($validated['agreement_ids'] ?? []);
+            $activity->states()->sync($validated['state_ids'] ?? []);
+            $activity->organizations()->sync($validated['organization_ids'] ?? []);
+            $activity->projects()->sync($validated['project_ids'] ?? []);
+            $activity->programs()->sync($validated['program_ids'] ?? []);
+            $activity->participants()->sync($validated['participant_user_ids'] ?? []);
+
+            $this->syncActivityTimeTracking($activity, $validated['time_tracking']);
+        });
 
         return redirect()
             ->route('activities.index')
@@ -740,7 +773,7 @@ class ActivityController extends Controller
         }
     }
 
-    private function validateAgreementParticipantSelections(array $validated, $agreements): void
+    private function validateAgreementParticipantSelections(array $validated, $agreements, ?Activity $activity = null): void
     {
         $selectedParticipantIds = collect($validated['participant_user_ids'] ?? [])->map(fn ($id) => (int) $id);
 
@@ -766,10 +799,148 @@ class ActivityController extends Controller
             ->values()
             ->all();
 
+        if ($activity) {
+            $historicalParticipantIds = $activity->participants()
+                ->pluck('users.id')
+                ->concat($activity->participantTimes()->whereNotNull('user_id')->pluck('user_id'))
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values()
+                ->all();
+
+            $allowedParticipantIds = array_values(array_unique(array_merge($allowedParticipantIds, $historicalParticipantIds)));
+        }
+
         if ($selectedParticipantIds->diff($allowedParticipantIds)->isNotEmpty()) {
             throw ValidationException::withMessages([
                 'participant_user_ids' => 'Selected participants must belong to at least one chosen agreement.',
             ]);
+        }
+    }
+
+    private function normalizeTimeTrackingPayload(array $validated, $agreements, ContactFamily $contactFamily): array
+    {
+        $timeTrackingModes = $agreements
+            ->pluck('time_tracking_mode')
+            ->filter()
+            ->map(fn ($mode) => $mode->value)
+            ->values();
+
+        $requiresContactTime = $timeTrackingModes->contains(fn ($mode) => in_array($mode, ['by_contact', 'by_user'], true));
+        $requiresParticipantTime = $timeTrackingModes->contains('by_user');
+        $tracksAdditionalTime = (bool) $contactFamily->track_additional_time;
+
+        $contactInput = is_array($validated['contact_time'] ?? null) ? $validated['contact_time'] : [];
+        $participantInput = is_array($validated['participant_times'] ?? null) ? $validated['participant_times'] : [];
+        $normalizedContactTime = null;
+        $normalizedParticipantTimes = [];
+
+        if ($requiresContactTime) {
+            $activityHours = $contactInput['activity_hours'] ?? null;
+
+            if ($activityHours === null || $activityHours === '') {
+                throw ValidationException::withMessages([
+                    'contact_time.activity_hours' => 'Activity Time is required when selected agreements require time tracking.',
+                ]);
+            }
+
+            if (!is_numeric($activityHours) || (float) $activityHours <= 0) {
+                throw ValidationException::withMessages([
+                    'contact_time.activity_hours' => 'Activity Time must be greater than 0.',
+                ]);
+            }
+
+            $normalizedContactTime = [
+                'activity_hours' => round((float) $activityHours, 2),
+                'prep_hours' => $tracksAdditionalTime ? round((float) ($contactInput['prep_hours'] ?? 0), 2) : 0.0,
+                'follow_up_hours' => $tracksAdditionalTime ? round((float) ($contactInput['follow_up_hours'] ?? 0), 2) : 0.0,
+            ];
+
+            if ($normalizedContactTime['prep_hours'] < 0 || $normalizedContactTime['follow_up_hours'] < 0) {
+                throw ValidationException::withMessages([
+                    'contact_time.prep_hours' => 'Prep and Follow Up time cannot be negative.',
+                ]);
+            }
+        }
+
+        if ($requiresParticipantTime) {
+            $selectedParticipantIds = collect($validated['participant_user_ids'] ?? [])
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values();
+
+            if ($selectedParticipantIds->isEmpty()) {
+                throw ValidationException::withMessages([
+                    'participant_user_ids' => 'Select at least one Delivered By user when agreements require participant time tracking.',
+                ]);
+            }
+
+            $users = $selectedParticipantIds->isEmpty()
+                ? collect()
+                : \App\Models\User::query()->whereIn('id', $selectedParticipantIds)->get()->keyBy('id');
+
+            foreach ($selectedParticipantIds as $participantId) {
+                $row = is_array($participantInput[$participantId] ?? null) ? $participantInput[$participantId] : [];
+                $hours = $row['hours'] ?? null;
+                $prepHours = $tracksAdditionalTime ? ($row['prep_hours'] ?? 0) : 0;
+                $followUpHours = $tracksAdditionalTime ? ($row['follow_up_hours'] ?? 0) : 0;
+
+                if ($hours === null || $hours === '') {
+                    throw ValidationException::withMessages([
+                        "participant_times.{$participantId}.hours" => 'Each selected Delivered By user needs an Activity Time value.',
+                    ]);
+                }
+
+                if (!is_numeric($hours) || (float) $hours <= 0) {
+                    throw ValidationException::withMessages([
+                        "participant_times.{$participantId}.hours" => 'Participant Activity Time must be greater than 0.',
+                    ]);
+                }
+
+                if (!is_numeric($prepHours) || (float) $prepHours < 0) {
+                    throw ValidationException::withMessages([
+                        "participant_times.{$participantId}.prep_hours" => 'Participant Prep Time cannot be negative.',
+                    ]);
+                }
+
+                if (!is_numeric($followUpHours) || (float) $followUpHours < 0) {
+                    throw ValidationException::withMessages([
+                        "participant_times.{$participantId}.follow_up_hours" => 'Participant Follow Up Time cannot be negative.',
+                    ]);
+                }
+
+                $normalizedParticipantTimes[] = [
+                    'user_id' => $participantId,
+                    'participant_name' => $users->get($participantId)?->name,
+                    'hours' => round((float) $hours, 2),
+                    'prep_hours' => round((float) $prepHours, 2),
+                    'follow_up_hours' => round((float) $followUpHours, 2),
+                    'notes' => null,
+                ];
+            }
+        }
+
+        return [
+            'requires_contact_time' => $requiresContactTime,
+            'requires_participant_time' => $requiresParticipantTime,
+            'tracks_additional_time' => $tracksAdditionalTime,
+            'contact_time' => $normalizedContactTime,
+            'participant_times' => $normalizedParticipantTimes,
+        ];
+    }
+
+    private function syncActivityTimeTracking(Activity $activity, array $timeTracking): void
+    {
+        if (!($timeTracking['requires_contact_time'] ?? false) || empty($timeTracking['contact_time'])) {
+            $activity->contactTime()->delete();
+        } else {
+            $activity->contactTime()->updateOrCreate([], $timeTracking['contact_time']);
+        }
+
+        $activity->participantTimes()->delete();
+
+        if (($timeTracking['requires_participant_time'] ?? false) && !empty($timeTracking['participant_times'])) {
+            $activity->participantTimes()->createMany($timeTracking['participant_times']);
         }
     }
 

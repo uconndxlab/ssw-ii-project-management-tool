@@ -5,24 +5,19 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class ActivityParticipantTime extends Model
+class ActivityContactTime extends Model
 {
-    protected $table = 'activity_participant_times';
-
     protected $fillable = [
         'activity_id',
-        'user_id',
-        'participant_name',
-        'hours',
+        'activity_hours',
         'prep_hours',
         'follow_up_hours',
-        'notes',
     ];
 
     protected function casts(): array
     {
         return [
-            'hours' => 'decimal:2',
+            'activity_hours' => 'decimal:2',
             'prep_hours' => 'decimal:2',
             'follow_up_hours' => 'decimal:2',
         ];
@@ -31,10 +26,5 @@ class ActivityParticipantTime extends Model
     public function activity(): BelongsTo
     {
         return $this->belongsTo(Activity::class);
-    }
-
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
     }
 }

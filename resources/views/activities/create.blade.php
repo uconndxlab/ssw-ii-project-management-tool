@@ -15,6 +15,12 @@
     $agreementLoggingData = old('agreement_logging_values', []);
     $contactFamilyLoggingData = old('contact_family_logging_values', []);
     $activityLoggingData = old('activity_logging_values', []);
+    $contactTimeData = old('contact_time', [
+        'activity_hours' => null,
+        'prep_hours' => 0,
+        'follow_up_hours' => 0,
+    ]);
+    $participantTimeData = old('participant_times', []);
     $engagementDateValue = old('engagement_date', now()->format('Y-m-d'));
     $internalOnlyChecked = (bool) old('internal_only', false);
 @endphp
@@ -36,6 +42,8 @@
     :agreement-logging-data="$agreementLoggingData"
     :contact-family-logging-data="$contactFamilyLoggingData"
     :activity-logging-data="$activityLoggingData"
+    :contact-time-data="$contactTimeData"
+    :participant-time-data="$participantTimeData"
     :engagement-date-value="$engagementDateValue"
     :internal-only-checked="$internalOnlyChecked"
 />
