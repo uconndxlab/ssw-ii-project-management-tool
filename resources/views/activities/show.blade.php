@@ -197,7 +197,7 @@
                             <tbody>
                                 @foreach($activity->participantTimes as $participantTime)
                                     <tr>
-                                        <td>{{ $participantTime->user?->name ?? $participantTime->participant_name ?? 'DELETED USER' }}</td>
+                                        <td>{{ $participantTime->user_id ? ($participantTime->user?->name ?? $participantTime->participant_name ?? 'Historical User') : 'DELETED USER' }}</td>
                                         <td>{{ number_format((float) $participantTime->prep_hours, 2) }}</td>
                                         <td>{{ number_format((float) $participantTime->hours, 2) }}</td>
                                         <td>{{ number_format((float) $participantTime->follow_up_hours, 2) }}</td>

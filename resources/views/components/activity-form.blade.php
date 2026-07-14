@@ -208,6 +208,24 @@
         ->filter(fn ($messages, $key) => str_starts_with($key, 'participant_times.'))
         ->flatten()
         ->first();
+
+    $historicalParticipantIds = $isEditMode && $activity
+        ? $activity->participantTimes
+            ->pluck('user_id')
+            ->filter()
+            ->map(fn ($id) => (string) $id)
+            ->unique()
+            ->values()
+            ->all()
+        : [];
+
+    $originalAgreementIds = $isEditMode && $activity
+        ? $activity->agreements
+            ->pluck('id')
+            ->map(fn ($id) => (string) $id)
+            ->values()
+            ->all()
+        : [];
 @endphp
 
 <style>
@@ -360,10 +378,11 @@
                                         hx-get="{{ route('activity-types.by-family') }}"
                                         hx-target="#activity_type_id"
                                         hx-swap="innerHTML"
-                                    hx-include="#{{ $formId }}, #activity_type_selected"
+                                        hx-include="#{{ $formId }}, #activity_type_selected"
                                         hx-trigger="change, load"
+                                        {{ empty($selectedAgreementIds) ? 'disabled' : '' }}
                                         required>
-                                    <option value="">Select contact family...</option>
+                                    <option value="">{{ empty($selectedAgreementIds) ? 'Select at least one agreement first...' : 'Select contact family...' }}</option>
                                     @foreach($contactFamilies as $family)
                                         <option value="{{ $family->id }}" {{ (string) $currentContactFamilyId === (string) $family->id ? 'selected' : '' }}>
                                             {{ $family->name }}
@@ -385,7 +404,7 @@
                                         name="activity_type_id"
                                         {{ $currentContactFamilyId ? '' : 'disabled' }}
                                         required>
-                                    <option value="">Select contact family first...</option>
+                                    <option value="">{{ empty($selectedAgreementIds) ? 'Select at least one agreement first...' : 'Select contact family first...' }}</option>
                                 </select>
                                 @error('activity_type_id')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -634,12 +653,16 @@
     const agreementConfigs = @json($agreementConfigs);
     const contactFamilyAdditionalTimeMap = @json($contactFamilies->mapWithKeys(fn ($family) => [(string) $family->id => (bool) $family->track_additional_time]));
     const participantDirectory = @json($participantOptionMap);
+    const historicalParticipantIds = @json($historicalParticipantIds);
+    const initialAgreementIds = @json(array_map('strval', $selectedAgreementIds));
+    const originalAgreementIds = @json($originalAgreementIds);
     const initialParticipantTimes = @json($normalizedParticipantTimeData);
     const form = document.getElementById(@json($formId));
     const statusTop = document.getElementById('activity-save-status');
     const statusBar = document.getElementById('activity-save-bar-status');
     const hasErrors = @json($errors->any());
     const isEditMode = @json($isEditMode);
+    let agreementsPickerInitialized = false;
 
     if (!form) return;
 
@@ -652,14 +675,36 @@
         return Array.from(form.querySelectorAll('input[type="hidden"][name="' + name + '"]')).map(i => i.value);
     }
 
+    function selectedAgreementIds() {
+        const values = selectedValues('agreement_ids[]').map(String);
+
+        if (values.length || agreementsPickerInitialized || initialAgreementIds.length === 0) {
+            return values;
+        }
+
+        return initialAgreementIds;
+    }
+
     function firstSelectedAgreementId() {
-        return selectedValues('agreement_ids[]')[0] || null;
+        return selectedAgreementIds()[0] || null;
     }
 
     function selectedAgreementConfigs() {
-        return selectedValues('agreement_ids[]').map(function (agreementId) {
+        return selectedAgreementIds().map(function (agreementId) {
             return agreementConfigs[agreementId] || null;
         }).filter(Boolean);
+    }
+
+    function shouldPreserveHistoricalParticipants() {
+        if (!isEditMode || originalAgreementIds.length === 0) {
+            return false;
+        }
+
+        const selected = new Set(selectedAgreementIds());
+
+        return originalAgreementIds.every(function (agreementId) {
+            return selected.has(String(agreementId));
+        });
     }
 
     function uniqueMergedIds(key) {
@@ -695,7 +740,7 @@
     }
 
     function restrictCoveragePickers() {
-        const agreements = selectedValues('agreement_ids[]');
+        const agreements = selectedAgreementIds();
         const orgPicker = document.getElementById('activity-organizations-picker');
         const statePicker = document.getElementById('activity-states-picker');
 
@@ -710,14 +755,14 @@
     }
 
     function restrictParticipantPicker() {
-        const agreements = selectedValues('agreement_ids[]');
+        const agreements = selectedAgreementIds();
         const participantPicker = document.getElementById('activity-participants-picker');
 
         if (!participantPicker) return;
 
-        const selectedParticipantIds = selectedValues('participant_user_ids[]');
         const allowedParticipantIds = agreements.length ? uniqueMergedIds('participant_user_ids') : [];
-        const restrictedIds = Array.from(new Set(allowedParticipantIds.concat(selectedParticipantIds).map(String)));
+        const preservedHistoricalIds = shouldPreserveHistoricalParticipants() ? historicalParticipantIds : [];
+        const restrictedIds = Array.from(new Set(allowedParticipantIds.concat(preservedHistoricalIds).map(String)));
         const disabled = !agreements.length || allowedParticipantIds.length === 0;
         const placeholder = !agreements.length
             ? 'Select at least one agreement first...'
@@ -843,6 +888,8 @@
 
             prepCell.classList.toggle('d-none', !tracksAdditionalTime);
             followUpCell.classList.toggle('d-none', !tracksAdditionalTime);
+            prepHoursInput.disabled = !tracksAdditionalTime;
+            followUpHoursInput.disabled = !tracksAdditionalTime;
             prepCell.appendChild(prepHoursInput);
             hoursCell.appendChild(hoursInput);
             followUpCell.appendChild(followUpHoursInput);
@@ -902,6 +949,10 @@
             const input = fieldWrap.querySelector('input');
             fieldWrap.classList.toggle('d-none', !tracksAdditionalTime);
 
+            if (input) {
+                input.disabled = !tracksAdditionalTime;
+            }
+
             if (input && tracksAdditionalTime && input.value === '') {
                 input.value = '0';
             }
@@ -913,7 +964,7 @@
     }
 
     function restrictScopePickers() {
-        const agreements = selectedValues('agreement_ids[]');
+        const agreements = selectedAgreementIds();
         const scopeSection = form.querySelector('[data-scope-id="activity-coverage-scope"]');
         const projectPicker = document.getElementById('activity-coverage-scope-projects');
 
@@ -950,13 +1001,32 @@
         const family = document.getElementById('contact_family_id');
         const type = document.getElementById('activity_type_id');
         const selectedType = document.getElementById('activity_type_selected');
-        const agreements = selectedValues('agreement_ids[]');
+        const agreements = selectedAgreementIds();
 
         if (!family || !type) return;
 
         const hasAgreementSelection = agreements.length > 0;
         const allowedFamilyIds = new Set(uniqueMergedIds('contact_family_ids'));
         const hasRestriction = hasAgreementSelection && allowedFamilyIds.size > 0;
+
+        if (!hasAgreementSelection) {
+            family.value = '';
+            family.disabled = true;
+            if (selectedType) {
+                selectedType.value = '';
+            }
+            if (family.options.length > 0) {
+                family.options[0].textContent = 'Select at least one agreement first...';
+            }
+            type.innerHTML = '<option value="">Select agreement first...</option>';
+            type.disabled = true;
+            updateContactFamilyLoggingGroups();
+            updateActivityLoggingGroups();
+            updateAdditionalContactTimeFields();
+            return;
+        }
+
+        family.disabled = allowedFamilyIds.size === 0;
 
         Array.from(family.options).forEach(function (option) {
             if (!option.value) {
@@ -978,6 +1048,8 @@
             if (selectedType) {
                 selectedType.value = '';
             }
+            updateContactFamilyLoggingGroups();
+            updateActivityLoggingGroups();
         }
 
         if (hasAgreementSelection && allowedFamilyIds.size === 0) {
@@ -986,6 +1058,8 @@
                 selectedType.value = '';
             }
             type.innerHTML = '<option value="">No activity types available for selected agreements...</option>';
+            updateContactFamilyLoggingGroups();
+            updateActivityLoggingGroups();
         }
 
         updateActivityTypeState();
@@ -1025,7 +1099,7 @@
     }
 
     function updateAgreementLoggingGroups() {
-        const selected = new Set(selectedValues('agreement_ids[]'));
+        const selected = new Set(selectedAgreementIds());
         const section = document.getElementById('agreement-logging-section');
         let visibleGroups = 0;
 
@@ -1122,12 +1196,12 @@
     }
 
     function saveRecentTemplate() {
-        const firstAgreementValue = selectedValues('agreement_ids[]')[0] || 'Template';
+        const firstAgreementValue = selectedAgreementIds()[0] || 'Template';
         const firstAgreementLabel = document.querySelector('#activity-agreements-picker [data-token-selected] span')?.textContent || firstAgreementValue;
 
         const payload = {
             name: firstAgreementLabel + ' · ' + new Date().toLocaleDateString(),
-            agreement_ids: selectedValues('agreement_ids[]'),
+            agreement_ids: selectedAgreementIds(),
             organization_ids: selectedValues('organization_ids[]'),
             state_ids: selectedValues('state_ids[]'),
             project_ids: selectedValues('project_ids[]'),
@@ -1191,6 +1265,7 @@
     const agreementsPicker = document.getElementById('activity-agreements-picker');
     if (agreementsPicker) {
         agreementsPicker.addEventListener('token-picker:change', function () {
+            agreementsPickerInitialized = true;
             restrictCoveragePickers();
             restrictParticipantPicker();
             restrictScopePickers();
@@ -1202,6 +1277,7 @@
             markDirty();
         });
         agreementsPicker.addEventListener('token-picker:initialized', function () {
+            agreementsPickerInitialized = true;
             restrictCoveragePickers();
             restrictParticipantPicker();
             restrictScopePickers();
@@ -1231,7 +1307,7 @@
     form.addEventListener('change', function (event) {
         if (event.target && event.target.id === 'contact_family_id') {
             const selectedType = document.getElementById('activity_type_selected');
-            if (selectedType) selectedType.value = '';
+            if (selectedType && event.isTrusted) selectedType.value = '';
             updateActivityTypeState();
             updateContactFamilyLoggingGroups();
             updateActivityLoggingGroups();

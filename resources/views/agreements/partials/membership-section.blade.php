@@ -136,7 +136,7 @@
                              data-team-picker-id="agreement-{{ $agreement ? 'edit' : 'create' }}-teams"
                              data-user-picker-id="agreement-{{ $agreement ? 'edit' : 'create' }}-users"
                              data-all-user-ids='@json($agreementUserOptions->pluck("value")->values())'
-                             data-program-allowed-user-ids='@json([])'
+                             data-program-allowed-user-ids='@json($agreementUserOptions->pluck("value")->values())'
                              data-selected-principal-investigator-ids='@json($selectedPrincipalInvestigatorIds)'
                              data-user-labels='@json($agreementUserOptions->pluck("label", "value"))'
                              data-team-labels='@json($teams->pluck("name", "id"))'
@@ -539,6 +539,14 @@
         }).filter(function (userId) {
             return programAllowedUserIds.has(String(userId)) && !restrictedIds.has(String(userId));
         });
+
+        const nextRestrictionKey = JSON.stringify(allowedIds);
+
+        if (section.dataset.additionalUserRestrictionKey === nextRestrictionKey) {
+            return;
+        }
+
+        section.dataset.additionalUserRestrictionKey = nextRestrictionKey;
 
         tokenPicker.dispatchEvent(new CustomEvent('token-picker:restrict', {
             detail: allowedIds,

@@ -309,19 +309,20 @@ class ActivityController extends Controller
             ->findOrFail($baseValidated['contact_family_id']);
         $activityType = ActivityType::with('activityTypeLoggingFields')->findOrFail($baseValidated['activity_type_id']);
 
+        $this->validateAgreementCoverageSelections($baseValidated, $agreements);
+        $this->validateAgreementClassificationSelections($baseValidated, $agreements);
+        $this->validateAgreementProjectProgramSelections($baseValidated, $agreements);
+        $this->validateAgreementParticipantSelections($baseValidated, $agreements);
+
+        $baseValidated['time_tracking'] = $this->normalizeTimeTrackingPayload($baseValidated, $agreements, $contactFamily);
         $validated = array_merge(
             $baseValidated,
             $request->validate(
-                $this->dynamicLoggingFieldValidationRules($agreements, $contactFamily, $activityType)
+                $this->dynamicLoggingFieldValidationRules($agreements, $contactFamily, $activityType),
+                [],
+                $this->dynamicLoggingFieldValidationAttributes($agreements, $contactFamily, $activityType)
             )
         );
-
-        $this->validateAgreementCoverageSelections($validated, $agreements);
-        $this->validateAgreementClassificationSelections($validated, $agreements);
-        $this->validateAgreementProjectProgramSelections($validated, $agreements);
-        $this->validateAgreementParticipantSelections($validated, $agreements);
-
-        $validated['time_tracking'] = $this->normalizeTimeTrackingPayload($validated, $agreements, $contactFamily);
         $activity = null;
 
         DB::transaction(function () use (&$activity, $validated, $agreements, $contactFamily, $activityType) {
@@ -463,18 +464,19 @@ class ActivityController extends Controller
             ->findOrFail($baseValidated['contact_family_id']);
         $activityType = ActivityType::with('activityTypeLoggingFields')->findOrFail($baseValidated['activity_type_id']);
 
+        $this->validateAgreementCoverageSelections($baseValidated, $agreements);
+        $this->validateAgreementClassificationSelections($baseValidated, $agreements);
+        $this->validateAgreementProjectProgramSelections($baseValidated, $agreements);
+        $this->validateAgreementParticipantSelections($baseValidated, $agreements, $activity);
+        $baseValidated['time_tracking'] = $this->normalizeTimeTrackingPayload($baseValidated, $agreements, $contactFamily);
         $validated = array_merge(
             $baseValidated,
             $request->validate(
-                $this->dynamicLoggingFieldValidationRules($agreements, $contactFamily, $activityType)
+                $this->dynamicLoggingFieldValidationRules($agreements, $contactFamily, $activityType),
+                [],
+                $this->dynamicLoggingFieldValidationAttributes($agreements, $contactFamily, $activityType)
             )
         );
-
-        $this->validateAgreementCoverageSelections($validated, $agreements);
-        $this->validateAgreementClassificationSelections($validated, $agreements);
-        $this->validateAgreementProjectProgramSelections($validated, $agreements);
-        $this->validateAgreementParticipantSelections($validated, $agreements, $activity);
-        $validated['time_tracking'] = $this->normalizeTimeTrackingPayload($validated, $agreements, $contactFamily);
 
         DB::transaction(function () use ($activity, $validated, $agreements, $contactFamily, $activityType) {
             $activity->update([
@@ -602,6 +604,27 @@ class ActivityController extends Controller
         }
 
         return $rules;
+    }
+
+    private function dynamicLoggingFieldValidationAttributes($agreements, ContactFamily $contactFamily, ActivityType $activityType): array
+    {
+        $attributes = [];
+
+        foreach ($agreements as $agreement) {
+            foreach ($agreement->agreementLoggingFields as $field) {
+                $attributes["agreement_logging_values.{$agreement->id}.{$field->id}"] = $agreement->name . ': ' . $field->name;
+            }
+        }
+
+        foreach ($contactFamily->contactFamilyLoggingFields as $field) {
+            $attributes["contact_family_logging_values.{$field->id}"] = $contactFamily->name . ': ' . $field->name;
+        }
+
+        foreach ($activityType->activityTypeLoggingFields as $field) {
+            $attributes["activity_logging_values.{$field->id}"] = $activityType->name . ': ' . $field->name;
+        }
+
+        return $attributes;
     }
 
     private function validateAgreementCoverageSelections(array $validated, $agreements): void
