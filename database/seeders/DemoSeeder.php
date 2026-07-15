@@ -30,30 +30,30 @@ class DemoSeeder extends Seeder
         DB::transaction(function () {
             // 1. Create States
             $states = $this->createStates();
-            
+
             // 2. Create Users
             $users = $this->createUsers();
-            
+
             // 3. Create Project
             $project = $this->createProject();
-            
+
             // 4. Create Programs
             $programs = $this->createPrograms($project);
-            
+
             // 5. Create Contact Families & Activity Types
             $activityTypes = $this->createContactFamiliesAndActivityTypes();
-            
+
             // 6. Create Organizations
             $organizations = $this->createOrganizations($states);
-            
+
             // 7. Create Agreements
             $agreements = $this->createAgreements($states, $organizations, $users);
-            
+
             // 7b. Attach logging fields to agreements and contact families
             $this->attachLoggingFields($agreements);
 
             // 8. Create Deliverables for Agreements
-            $this->createDeliverables($agreements, $activityTypes);
+            // $this->createDeliverables($agreements, $activityTypes);
 
             // 9. Create Activities
             $this->createActivities($agreements, $activityTypes, $programs);
@@ -231,7 +231,7 @@ class DemoSeeder extends Seeder
             'Northeast Behavioral Health Partnership',
             'Midwest Regional Care Coordination Network',
         ];
-        
+
         $organizations = [];
         foreach ($orgData as $index => $name) {
             $state = $states[array_rand($states)];
@@ -239,7 +239,7 @@ class DemoSeeder extends Seeder
             $org->states()->sync([$state->id]);
             $organizations[] = $org->fresh();
         }
-        
+
         return $organizations;
     }
 
@@ -301,29 +301,29 @@ class DemoSeeder extends Seeder
                 'certification_candidates' => null,
             ],
         ];
-        
+
         $agreements = [];
         foreach ($agreementData as $data) {
             $state = collect($states)->firstWhere('name', $data['state']);
-            
+
             // Find organizations in this state, or pick a random one if none exist
             $stateOrgs = collect($organizations)->filter(fn($org) => $org->states->pluck('id')->contains($state->id));
             $org = $stateOrgs->isNotEmpty() ? $stateOrgs->random() : collect($organizations)->random();
-            
+
             $startDate = Carbon::now()->subMonths(rand(6, 18));
             $endDate = Carbon::now()->addMonths(rand(12, 24));
-            
+
             // Some agreements have extensions
             $hasExtension = rand(0, 10) > 7; // 30% chance
             $extensionStartDate = null;
             $extensionEndDate = null;
-            
+
             if ($hasExtension) {
                 // Original end date logic: extension starts around the original end, extends further
                 $extensionStartDate = $endDate->copy()->subMonths(rand(3, 6));
                 $extensionEndDate = $endDate;
             }
-            
+
             $agreement = Agreement::firstOrCreate(
                 ['name' => $data['name']],
                 [
@@ -349,11 +349,11 @@ class DemoSeeder extends Seeder
                     'notes' => null,
                 ]);
             }
-            
+
             // Attach organization and state
             $agreement->organizations()->syncWithoutDetaching([$org->id]);
             $agreement->states()->syncWithoutDetaching([$state->id]);
-            
+
             // Assign 2-3 users to each agreement
             $nonAdminUsers = collect($users)->where('role', '!=', 'admin');
             if ($nonAdminUsers->isNotEmpty()) {
@@ -361,10 +361,10 @@ class DemoSeeder extends Seeder
                 $agreementUsers = $nonAdminUsers->random($userCount)->pluck('id');
                 $agreement->users()->syncWithoutDetaching($agreementUsers);
             }
-            
+
             $agreements[] = $agreement;
         }
-        
+
         return $agreements;
     }
 
@@ -402,18 +402,18 @@ class DemoSeeder extends Seeder
                 'notes' => 'Dashboard development and data review support',
             ],
         ];
-        
+
         foreach ($agreements as $agreement) {
             // Each agreement gets 2-4 deliverables
             $deliverableCount = rand(2, 4);
             $selectedTemplates = collect($deliverableTemplates)->random($deliverableCount);
-            
+
             foreach ($selectedTemplates as $template) {
                 // Find a matching activity type
                 $matchingType = collect($activityTypes)->first(function ($type) use ($template) {
                     return str_contains($type->name, $template['activity_type_pattern']);
                 });
-                
+
                 if ($matchingType) {
                     AgreementDeliverable::create([
                         'agreement_id' => $agreement->id,
@@ -476,30 +476,30 @@ class DemoSeeder extends Seeder
         ];
 
         $activityCount = rand(25, 30);
-        
+
         for ($i = 0; $i < $activityCount; $i++) {
             $agreement = $agreements[array_rand($agreements)];
             $activityType = $activityTypes[array_rand($activityTypes)];
             $narrative = $narratives[array_rand($narratives)];
-            
+
             // Get agreement users
             $agreementUserIds = $agreement->users()->pluck('users.id')->toArray();
             if (empty($agreementUserIds)) {
                 continue; // Skip if agreement has no assigned users
             }
-            
+
             // Select activity creator (must be from agreement)
             $userId = $agreementUserIds[array_rand($agreementUserIds)];
-            
+
             $activity = Activity::create([
                 'user_id' => $userId,
                 'engagement_date' => Carbon::now()->subDays(rand(1, 180)),
                 'activity_type_id' => $activityType->id,
             ]);
-            
+
             // Attach agreement
             $activity->agreements()->attach($agreement->id);
-            
+
             // Attach organizations and states from the agreement
             $agreementOrgs = $agreement->organizations()->pluck('organizations.id');
             $agreementStates = $agreement->states()->pluck('states.id');
@@ -509,12 +509,12 @@ class DemoSeeder extends Seeder
             if ($agreementStates->isNotEmpty()) {
                 $activity->states()->sync($agreementStates);
             }
-            
+
             // Attach 1-2 programs
             $programCount = rand(1, 2);
             $selectedPrograms = collect($programs)->random($programCount)->pluck('id');
             $activity->programs()->sync($selectedPrograms);
-            
+
             // Attach 1-2 internal participants (from agreement users)
             $participantCount = min(rand(1, 2), count($agreementUserIds));
             $selectedParticipants = collect($agreementUserIds)->random($participantCount);

@@ -97,6 +97,11 @@ class Agreement extends Model
         return $this->hasMany(AgreementDeliverable::class);
     }
 
+    public function agreementActivityHistories(): HasMany
+    {
+        return $this->hasMany(AgreementActivityHistory::class);
+    }
+
     public function certificationCandidates(): HasMany
     {
         return $this->hasMany(AgreementCertificationCandidate::class)->orderBy('id');

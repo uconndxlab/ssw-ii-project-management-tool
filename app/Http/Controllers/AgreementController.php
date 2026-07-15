@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\AgreementRequest;
 use App\Models\Organization;
 use App\Models\Agreement;
+use App\Models\AgreementDeliverable;
 use App\Models\AgreementCertificationCandidate;
 use App\Models\ActivityType;
 use App\Models\ContactFamily;
@@ -14,6 +15,8 @@ use App\Models\Program;
 use App\Models\State;
 use App\Models\Team;
 use App\Models\User;
+use App\Services\DeliverableContributionService;
+use App\Support\DeliverableHistoryScope;
 use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,6 +24,10 @@ use Illuminate\Support\Facades\Auth;
 
 class AgreementController extends Controller
 {
+    public function __construct(private DeliverableContributionService $deliverableContributionService)
+    {
+    }
+
     public function index(Request $request)
     {
         $baseQuery = Agreement::query();
@@ -166,6 +173,7 @@ class AgreementController extends Controller
             $this->syncAgreementRelations($agreement, $validated);
             $this->syncAgreementCertificationCandidates($agreement, $validated['certification_candidates'] ?? []);
             $this->syncAgreementDeliverables($agreement, $validated['deliverables'] ?? []);
+            $this->deliverableContributionService->syncForAgreement($agreement->fresh());
 
             return $agreement;
         });
@@ -184,7 +192,20 @@ class AgreementController extends Controller
             abort(403, 'Unauthorized access to this agreement.');
         }
 
-        $agreement->load(['organizations', 'states', 'users', 'teams.users', 'deliverables.activityType.contactFamily', 'deliverables.assignedUsers', 'attachments', 'certificationCandidates', 'principalInvestigators']);
+        $agreement->load([
+            'organizations',
+            'states',
+            'users',
+            'teams.users',
+            'deliverables.activityType.contactFamily',
+            'deliverables.program',
+            'deliverables.users',
+            'deliverables.teams',
+            'deliverables.contributions.contributor',
+            'attachments',
+            'certificationCandidates',
+            'principalInvestigators',
+        ]);
 
         // Get activities for this agreement
         $activities = $agreement->activities()
@@ -215,35 +236,47 @@ class AgreementController extends Controller
             'activities' => $ytdActivities->count(),
         ];
 
-        // Calculate deliverable progress (all activities lifetime)
-        $deliverableProgress = $agreement->deliverables->map(function ($deliverable) use ($activities) {
-            $matchingActivities = $activities->filter(function ($activity) use ($deliverable) {
-                $matches = true;
+        $deliverableProgress = $agreement->deliverables
+            ->reject(fn (AgreementDeliverable $deliverable) => $deliverable->retired_at)
+            ->map(function (AgreementDeliverable $deliverable) {
+                $contributions = $deliverable->contributions;
+                $completedValue = $deliverable->metric_type === 'time'
+                    ? (float) $contributions->sum('credited_hours')
+                    : (float) $contributions->sum('credited_units');
 
-                // Must match activity type if specified
-                if ($deliverable->activity_type_id) {
-                    $matches = $matches && ($activity->activity_type_id === $deliverable->activity_type_id);
+                $individualProgress = collect();
+                if ($deliverable->contribution_basis === 'user' && $deliverable->user_grouping_mode === 'individual') {
+                    $individualProgress = $contributions
+                        ->whereNotNull('contributor_user_id')
+                        ->groupBy('contributor_user_id')
+                        ->map(function ($userContributions) use ($deliverable) {
+                            $firstContribution = $userContributions->first();
+                            $user = $firstContribution?->contributor;
+
+                            if (!$user) {
+                                return null;
+                            }
+
+                            return [
+                                'user' => $user,
+                                'completed_value' => $deliverable->metric_type === 'time'
+                                    ? (float) $userContributions->sum('credited_hours')
+                                    : (float) $userContributions->sum('credited_units'),
+                            ];
+                        })
+                        ->filter()
+                        ->values();
                 }
 
-                // Must also match contact family if specified
-                if ($deliverable->contact_family_id) {
-                    $matches = $matches && ($activity->activityType?->contact_family_id === $deliverable->contact_family_id);
-                }
-
-                // If neither specified, don't match anything
-                if (!$deliverable->activity_type_id && !$deliverable->contact_family_id) {
-                    return false;
-                }
-
-                return $matches;
-            });
-
-            return [
-                'deliverable' => $deliverable,
-                'completed_activities' => $matchingActivities->count(),
-                'completed_hours' => $matchingActivities->sum(fn ($a) => ($a->event_hours ?? 0) + ($a->prep_hours ?? 0) + ($a->followup_hours ?? 0)),
-            ];
-        });
+                return [
+                    'deliverable' => $deliverable,
+                    'completed_value' => $completedValue,
+                    'assigned_users' => $deliverable->users->filter(fn ($user) => !$user->pivot->unassigned_at)->values(),
+                    'assigned_teams' => $deliverable->teams->filter(fn ($team) => !$team->pivot->unassigned_at)->values(),
+                    'individual_progress' => $individualProgress,
+                ];
+            })
+            ->values();
 
         return view('agreements.show', compact('agreement', 'recentActivities', 'programs', 'lifetimeTotals', 'ytdTotals', 'deliverableProgress'));
     }
@@ -276,6 +309,7 @@ class AgreementController extends Controller
             $this->syncAgreementRelations($agreement, $validated);
             $this->syncAgreementCertificationCandidates($agreement, $validated['certification_candidates'] ?? []);
             $this->syncAgreementDeliverables($agreement, $validated['deliverables'] ?? []);
+            $this->deliverableContributionService->syncForAgreement($agreement->fresh());
         });
 
         $this->syncAgreementAttachments($agreement, $request);
@@ -361,7 +395,14 @@ class AgreementController extends Controller
 
     private function syncAgreementDeliverables(Agreement $agreement, array $deliverables): void
     {
-        $existingDeliverables = $agreement->deliverables()->with('assignedUsers')->get()->keyBy('id');
+        $agreement->loadMissing('agreementActivityHistories');
+
+        $existingDeliverables = $agreement->deliverables()
+            ->with(['users', 'teams', 'contributions'])
+            ->get()
+            ->keyBy('id');
+        $retainedDeliverableIds = collect();
+        $histories = $agreement->agreementActivityHistories;
 
         foreach ($deliverables as $row) {
             if (!is_array($row)) {
@@ -375,8 +416,7 @@ class AgreementController extends Controller
             if ($markedForDeletion) {
                 if ($rowId && $existingDeliverables->has($rowId)) {
                     $deliverable = $existingDeliverables->get($rowId);
-                    $deliverable->assignedUsers()->detach();
-                    $deliverable->delete();
+                    $this->retireOrDeleteDeliverable($deliverable, $histories);
                 }
 
                 continue;
@@ -389,20 +429,170 @@ class AgreementController extends Controller
             $data = [
                 'activity_type_id' => $row['activity_type_id'] ?? null,
                 'contact_family_id' => $row['contact_family_id'] ?? null,
-                'required_hours' => $row['required_hours'] ?? null,
-                'required_activities' => $row['required_activities'] ?? null,
+                'program_id' => $row['program_id'] ?? null,
+                'metric_type' => $row['metric_type'] ?? null,
+                'contribution_basis' => $row['contribution_basis'] ?? null,
+                'user_grouping_mode' => $row['user_grouping_mode'] ?? null,
+                'include_additional_time' => filter_var($row['include_additional_time'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                'target_quantity' => $row['target_quantity'] ?? null,
+                'suggested_due_date' => $row['suggested_due_date'] ?? null,
+                'sort_order' => $row['sort_order'] ?? 0,
                 'notes' => $row['notes'] ?? null,
+                'retired_at' => null,
             ];
+
+            $isNewDeliverable = !$rowId || !$existingDeliverables->has($rowId);
 
             if ($rowId && $existingDeliverables->has($rowId)) {
                 $deliverable = $existingDeliverables->get($rowId);
+
+                if (DeliverableHistoryScope::hasMatchingHistory($histories, $deliverable)) {
+                    $data = array_merge($data, [
+                        'contact_family_id' => $deliverable->contact_family_id,
+                        'activity_type_id' => $deliverable->activity_type_id,
+                        'program_id' => $deliverable->program_id,
+                        'metric_type' => $deliverable->metric_type,
+                        'contribution_basis' => $deliverable->contribution_basis,
+                        'user_grouping_mode' => $deliverable->user_grouping_mode,
+                        'include_additional_time' => (bool) $deliverable->include_additional_time,
+                    ]);
+                }
+
                 $deliverable->update($data);
             } else {
                 $deliverable = $agreement->deliverables()->create($data);
             }
 
-            $deliverable->assignedUsers()->sync($row['user_ids'] ?? []);
+            $this->syncDeliverableParticipants($deliverable, $row, $isNewDeliverable);
+            $retainedDeliverableIds->push($deliverable->id);
         }
+
+        $staleDeliverableIds = $existingDeliverables->keys()->diff($retainedDeliverableIds)->values();
+        if ($staleDeliverableIds->isNotEmpty()) {
+            $existingDeliverables
+                ->only($staleDeliverableIds->all())
+                ->each(fn (AgreementDeliverable $deliverable) => $this->retireOrDeleteDeliverable($deliverable, $histories));
+        }
+    }
+
+    private function syncDeliverableParticipants(AgreementDeliverable $deliverable, array $row, bool $isNewDeliverable): void
+    {
+        $contributionBasis = $row['contribution_basis'] ?? null;
+        $groupingMode = $row['user_grouping_mode'] ?? null;
+        $existingUsersById = $deliverable->users->keyBy(fn ($user) => (int) $user->id);
+        $existingTeamsById = $deliverable->teams->keyBy(fn ($team) => (int) $team->id);
+
+        if ($contributionBasis !== 'user') {
+            foreach ($existingUsersById as $userId => $user) {
+                $deliverable->users()->updateExistingPivot($userId, [
+                    'unassigned_at' => $user->pivot->unassigned_at ?? now(),
+                ]);
+            }
+
+            foreach ($existingTeamsById as $teamId => $team) {
+                $deliverable->teams()->updateExistingPivot($teamId, [
+                    'unassigned_at' => $team->pivot->unassigned_at ?? now(),
+                ]);
+            }
+
+            return;
+        }
+
+        $directUserIds = collect($row['user_ids'] ?? [])
+            ->filter(fn ($id) => $id !== null && $id !== '')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        $teamIds = $groupingMode === 'joint'
+            ? collect($row['team_ids'] ?? [])
+                ->filter(fn ($id) => $id !== null && $id !== '')
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values()
+            : collect();
+
+        $teamMembersByUser = Team::query()
+            ->whereKey($teamIds)
+            ->with('users:id')
+            ->get()
+            ->flatMap(function (Team $team) {
+                return $team->users->map(fn ($user) => [
+                    'user_id' => (int) $user->id,
+                    'team_id' => (int) $team->id,
+                ]);
+            })
+            ->groupBy('user_id');
+
+        $allUserIds = $directUserIds
+            ->merge($teamMembersByUser->keys()->map(fn ($id) => (int) $id))
+            ->unique()
+            ->values();
+
+        foreach ($allUserIds as $userId) {
+            $teamMatches = collect($teamMembersByUser->get($userId, []));
+            $sourceTeamId = null;
+
+            if (!$directUserIds->contains($userId) && $teamMatches->count() === 1) {
+                $sourceTeamId = $teamMatches->first()['team_id'] ?? null;
+            }
+
+            $attributes = [
+                'assigned_at' => $existingUsersById->get($userId)?->pivot->assigned_at ?? ($isNewDeliverable ? null : now()),
+                'unassigned_at' => null,
+                'source_team_id' => $sourceTeamId,
+            ];
+
+            if ($existingUsersById->has($userId)) {
+                $deliverable->users()->updateExistingPivot($userId, $attributes);
+            } else {
+                $deliverable->users()->attach($userId, $attributes);
+            }
+        }
+
+        $staleUserIds = $existingUsersById->keys()->diff($allUserIds)->values();
+        foreach ($staleUserIds as $userId) {
+            $user = $existingUsersById->get((int) $userId);
+            $deliverable->users()->updateExistingPivot($userId, [
+                'unassigned_at' => $user->pivot->unassigned_at ?? now(),
+            ]);
+        }
+
+        foreach ($teamIds as $teamId) {
+            $attributes = [
+                'assigned_at' => $existingTeamsById->get($teamId)?->pivot->assigned_at ?? ($isNewDeliverable ? null : now()),
+                'unassigned_at' => null,
+            ];
+
+            if ($existingTeamsById->has($teamId)) {
+                $deliverable->teams()->updateExistingPivot($teamId, $attributes);
+            } else {
+                $deliverable->teams()->attach($teamId, $attributes);
+            }
+        }
+
+        $staleTeamIds = $existingTeamsById->keys()->diff($teamIds)->values();
+        foreach ($staleTeamIds as $teamId) {
+            $team = $existingTeamsById->get((int) $teamId);
+            $deliverable->teams()->updateExistingPivot($teamId, [
+                'unassigned_at' => $team->pivot->unassigned_at ?? now(),
+            ]);
+        }
+    }
+
+    private function retireOrDeleteDeliverable(AgreementDeliverable $deliverable, $histories = null): void
+    {
+        if ($histories === null) {
+            $deliverable->loadMissing('agreement.agreementActivityHistories');
+            $histories = $deliverable->agreement?->agreementActivityHistories ?? collect();
+        }
+
+        if (DeliverableHistoryScope::hasMatchingHistory($histories, $deliverable)) {
+            $deliverable->update(['retired_at' => now()]);
+            return;
+        }
+
+        AgreementDeliverable::query()->whereKey($deliverable->id)->delete();
     }
 
     private function syncAgreementCertificationCandidates(Agreement $agreement, array $rows): void
@@ -447,8 +637,12 @@ class AgreementController extends Controller
         $fields = [
             $row['activity_type_id'] ?? null,
             $row['contact_family_id'] ?? null,
-            $row['required_hours'] ?? null,
-            $row['required_activities'] ?? null,
+            $row['program_id'] ?? null,
+            $row['metric_type'] ?? null,
+            $row['contribution_basis'] ?? null,
+            $row['user_grouping_mode'] ?? null,
+            $row['target_quantity'] ?? null,
+            $row['suggested_due_date'] ?? null,
             $row['notes'] ?? null,
         ];
 
@@ -458,7 +652,7 @@ class AgreementController extends Controller
             }
         }
 
-        return !empty($row['user_ids']);
+        return !empty($row['user_ids']) || !empty($row['team_ids']) || array_key_exists('include_additional_time', $row);
     }
 
     private function agreementFormData(?Agreement $agreement = null): array
@@ -498,7 +692,10 @@ class AgreementController extends Controller
                 'teams.projects',
                 'teams.programs',
                 'deliverables.activityType.contactFamily',
-                'deliverables.assignedUsers.programs',
+                'deliverables.program',
+                'deliverables.users.programs',
+                'deliverables.teams.programs',
+                'agreementActivityHistories',
                 'organizations.programs',
                 'organizations.projects',
                 'states',

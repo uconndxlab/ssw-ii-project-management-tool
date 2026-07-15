@@ -3,6 +3,9 @@
 namespace App\Http\Requests;
 
 use App\Enums\AgreementTimeTrackingRequirement;
+use App\Models\Agreement;
+use App\Models\AgreementDeliverable;
+use App\Support\DeliverableHistoryScope;
 use App\Models\ActivityType;
 use App\Models\ContactFamily;
 use App\Models\LoggingField;
@@ -66,11 +69,19 @@ class AgreementRequest extends FormRequest
             'deliverables.*.id' => ['nullable', 'integer'],
             'deliverables.*.activity_type_id' => ['nullable', 'exists:activity_types,id'],
             'deliverables.*.contact_family_id' => ['nullable', 'exists:contact_families,id'],
-            'deliverables.*.required_hours' => ['nullable', 'numeric', 'min:0', 'max:99999'],
-            'deliverables.*.required_activities' => ['nullable', 'integer', 'min:0', 'max:99999'],
+            'deliverables.*.program_id' => ['nullable', 'exists:programs,id'],
+            'deliverables.*.metric_type' => ['nullable', Rule::in(['time', 'completion'])],
+            'deliverables.*.contribution_basis' => ['nullable', Rule::in(['contact', 'user'])],
+            'deliverables.*.user_grouping_mode' => ['nullable', Rule::in(['joint', 'individual'])],
+            'deliverables.*.include_additional_time' => ['nullable', 'boolean'],
+            'deliverables.*.target_quantity' => ['nullable', 'numeric', 'min:0', 'max:99999'],
+            'deliverables.*.suggested_due_date' => ['nullable', 'date'],
+            'deliverables.*.sort_order' => ['nullable', 'integer', 'min:0'],
             'deliverables.*.notes' => ['nullable', 'string', 'max:500'],
             'deliverables.*.user_ids' => ['nullable', 'array'],
             'deliverables.*.user_ids.*' => ['exists:users,id'],
+            'deliverables.*.team_ids' => ['nullable', 'array'],
+            'deliverables.*.team_ids.*' => ['exists:teams,id'],
             'deliverables.*._delete' => ['nullable', 'boolean'],
 
             'attachments' => ['nullable', 'array'],
@@ -255,6 +266,14 @@ class AgreementRequest extends FormRequest
                 ->filter(fn ($row) => is_array($row) && empty($row['_delete']))
                 ->values();
 
+            $existingAgreement = $this->route('agreement');
+            if ($existingAgreement instanceof Agreement) {
+                $existingAgreement->loadMissing([
+                    'deliverables',
+                    'agreementActivityHistories',
+                ]);
+            }
+
             $deliverableContactFamilyIds = $deliverables
                 ->pluck('contact_family_id')
                 ->filter(fn ($id) => $id !== null && $id !== '')
@@ -301,28 +320,208 @@ class AgreementRequest extends FormRequest
                 }
             }
 
-            $deliverableUserIds = $deliverables
-                ->flatMap(fn (array $row) => collect($row['user_ids'] ?? []))
+            $deliverableProgramIds = $deliverables
+                ->pluck('program_id')
                 ->filter(fn ($id) => $id !== null && $id !== '')
                 ->map(fn ($id) => (int) $id)
                 ->unique()
                 ->values();
 
-            if ($deliverableUserIds->isNotEmpty()) {
-                $invalidDeliverableUserIds = User::query()
-                    ->whereKey($deliverableUserIds)
-                    ->with('programs:id')
+            if ($deliverableProgramIds->isNotEmpty()) {
+                $invalidDeliverableProgramIds = $deliverableProgramIds
+                    ->diff($selectedProgramIdSet)
+                    ->values();
+
+                if ($invalidDeliverableProgramIds->isNotEmpty()) {
+                    $validator->errors()->add('deliverables', 'Deliverable program filters must belong to the selected agreement programs.');
+                }
+            }
+
+            $agreementMemberUserIdsViaTeam = collect();
+            if ($teamIds->isNotEmpty()) {
+                $agreementMemberUserIdsViaTeam = Team::query()
+                    ->whereKey($teamIds)
+                    ->with(['programs:id', 'users:id'])
                     ->get()
-                    ->filter(fn (User $user) => !$matchesSelectedPrograms(
-                        $user->programs->pluck('id')->map(fn ($id) => (int) $id)->values(),
+                    ->filter(fn (Team $team) => $matchesSelectedPrograms(
+                        $team->programs->pluck('id')->map(fn ($id) => (int) $id)->values(),
                         false
                     ))
-                    ->pluck('id');
+                    ->flatMap(fn (Team $team) => $team->users->pluck('id'))
+                    ->map(fn ($id) => (int) $id)
+                    ->unique()
+                    ->values();
+            }
 
-                if ($invalidDeliverableUserIds->isNotEmpty()) {
-                    $validator->errors()->add('deliverables', 'Deliverable assigned users must match one of the selected programs.');
+            foreach ($deliverables as $deliverableIndex => $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+
+                $existingDeliverable = null;
+                if ($existingAgreement instanceof Agreement && !empty($row['id'])) {
+                    $existingDeliverable = $existingAgreement->deliverables->firstWhere('id', (int) $row['id']);
+                }
+
+                if (empty($row['contact_family_id'])) {
+                    $validator->errors()->add("deliverables.{$deliverableIndex}.contact_family_id", 'Deliverables must select a contact family.');
+                }
+
+                $contactFamily = null;
+                if (!empty($row['contact_family_id'])) {
+                    $contactFamily = ContactFamily::query()->find((int) $row['contact_family_id']);
+                }
+
+                if (!empty($row['activity_type_id']) && $contactFamily) {
+                    $activityType = ActivityType::query()->find((int) $row['activity_type_id']);
+
+                    if ($activityType && (int) $activityType->contact_family_id !== (int) $contactFamily->id) {
+                        $validator->errors()->add("deliverables.{$deliverableIndex}.activity_type_id", 'Deliverable activity types must belong to the selected contact family.');
+                    }
+                }
+
+                $deliverableClassificationChanged = $existingDeliverable
+                    && $this->deliverableClassificationChanged($existingDeliverable, $row);
+                $deliverableScopeHasHistory = $existingDeliverable
+                    && $this->deliverableScopeHasHistory($existingAgreement?->agreementActivityHistories ?? collect(), $existingDeliverable);
+
+                $metricType = $row['metric_type'] ?? null;
+                $contributionBasis = $row['contribution_basis'] ?? null;
+                $groupingMode = $row['user_grouping_mode'] ?? null;
+                $deliverableUserIds = collect($row['user_ids'] ?? [])
+                    ->filter(fn ($id) => $id !== null && $id !== '')
+                    ->map(fn ($id) => (int) $id)
+                    ->unique()
+                    ->values();
+                $deliverableTeamIds = collect($row['team_ids'] ?? [])
+                    ->filter(fn ($id) => $id !== null && $id !== '')
+                    ->map(fn ($id) => (int) $id)
+                    ->unique()
+                    ->values();
+
+                if (!$metricType) {
+                    $validator->errors()->add("deliverables.{$deliverableIndex}.metric_type", 'Deliverable metric type is required.');
+                }
+
+                if (!$contributionBasis) {
+                    $validator->errors()->add("deliverables.{$deliverableIndex}.contribution_basis", 'Deliverable contribution basis is required.');
+                }
+
+                if ($contributionBasis === 'contact') {
+                    if ($groupingMode) {
+                        $validator->errors()->add("deliverables.{$deliverableIndex}.user_grouping_mode", 'Contact-based deliverables cannot define a user grouping mode.');
+                    }
+
+                    if ($deliverableUserIds->isNotEmpty() || $deliverableTeamIds->isNotEmpty()) {
+                        $validator->errors()->add("deliverables.{$deliverableIndex}", 'Contact-based deliverables cannot select users or teams.');
+                    }
+                }
+
+                if ($contributionBasis === 'user' && !$groupingMode) {
+                    $validator->errors()->add("deliverables.{$deliverableIndex}.user_grouping_mode", 'User-based deliverables must choose joint or individual grouping.');
+                }
+
+                if ($contributionBasis === 'user' && $deliverableUserIds->isEmpty() && $deliverableTeamIds->isEmpty()) {
+                    $validator->errors()->add("deliverables.{$deliverableIndex}", 'User-based deliverables must select at least one user or team.');
+                }
+
+                if ($groupingMode === 'individual') {
+                    if ($deliverableTeamIds->isNotEmpty()) {
+                        $validator->errors()->add("deliverables.{$deliverableIndex}.team_ids", 'Individual deliverables cannot link teams directly. Assign users instead.');
+                    }
+
+                    if ($deliverableUserIds->isEmpty()) {
+                        $validator->errors()->add("deliverables.{$deliverableIndex}.user_ids", 'Individual deliverables must select at least one user.');
+                    }
+                }
+
+                if (($row['include_additional_time'] ?? false) && $metricType !== 'time') {
+                    $validator->errors()->add("deliverables.{$deliverableIndex}.include_additional_time", 'Only time deliverables can include prep and follow up time.');
+                }
+
+                if (($row['include_additional_time'] ?? false) && $contactFamily && !$contactFamily->track_additional_time) {
+                    $validator->errors()->add("deliverables.{$deliverableIndex}.include_additional_time", 'The selected contact family does not track prep and follow up time.');
+                }
+
+                if ($deliverableUserIds->isNotEmpty()) {
+                    $invalidDeliverableUserIds = User::query()
+                        ->whereKey($deliverableUserIds)
+                        ->with('programs:id')
+                        ->get()
+                        ->filter(function (User $user) use ($matchesSelectedPrograms, $agreementMemberUserIdsViaTeam) {
+                            if ($agreementMemberUserIdsViaTeam->contains((int) $user->id)) {
+                                return false;
+                            }
+
+                            return !$matchesSelectedPrograms(
+                                $user->programs->pluck('id')->map(fn ($id) => (int) $id)->values(),
+                                false
+                            );
+                        })
+                        ->pluck('id');
+
+                    if ($invalidDeliverableUserIds->isNotEmpty()) {
+                        $validator->errors()->add("deliverables.{$deliverableIndex}.user_ids", 'Deliverable users must match one of the selected programs.');
+                    }
+                }
+
+                if ($deliverableTeamIds->isNotEmpty()) {
+                    $invalidDeliverableTeamIds = Team::query()
+                        ->whereKey($deliverableTeamIds)
+                        ->with('programs:id')
+                        ->get()
+                        ->filter(fn (Team $team) => !$matchesSelectedPrograms(
+                            $team->programs->pluck('id')->map(fn ($id) => (int) $id)->values(),
+                            false
+                        ))
+                        ->pluck('id');
+
+                    if ($invalidDeliverableTeamIds->isNotEmpty()) {
+                        $validator->errors()->add("deliverables.{$deliverableIndex}.team_ids", 'Deliverable teams must match one of the selected programs.');
+                    }
+                }
+
+                if ($existingDeliverable && $deliverableScopeHasHistory) {
+                    if ($deliverableClassificationChanged) {
+                        $validator->errors()->add(
+                            "deliverables.{$deliverableIndex}",
+                            'Deliverable classification cannot change in place after activity history exists. Create a new deliverable instead.'
+                        );
+                    }
+
+                    if ($this->deliverableSemanticFieldsChanged($existingDeliverable, $row)) {
+                        $validator->errors()->add(
+                            "deliverables.{$deliverableIndex}",
+                            'Deliverable counting rules cannot change in place after activity history exists. Create a new deliverable instead.'
+                        );
+                    }
                 }
             }
         });
+    }
+
+    private function deliverableClassificationChanged(AgreementDeliverable $deliverable, array $row): bool
+    {
+        return (int) ($deliverable->contact_family_id ?? 0) !== (int) ($row['contact_family_id'] ?? 0)
+            || (int) ($deliverable->activity_type_id ?? 0) !== (int) ($row['activity_type_id'] ?? 0)
+            || (int) ($deliverable->program_id ?? 0) !== (int) ($row['program_id'] ?? 0);
+    }
+
+    private function deliverableScopeHasHistory(Collection $histories, AgreementDeliverable $deliverable): bool
+    {
+        return DeliverableHistoryScope::hasMatchingHistory($histories, $deliverable);
+    }
+
+    private function deliverableSemanticFieldsChanged(AgreementDeliverable $deliverable, array $row): bool
+    {
+        return ($deliverable->metric_type ?? null) !== ($row['metric_type'] ?? null)
+            || ($deliverable->contribution_basis ?? null) !== ($row['contribution_basis'] ?? null)
+            || ($deliverable->user_grouping_mode ?? null) !== ($row['user_grouping_mode'] ?? null)
+            || (bool) $deliverable->include_additional_time !== filter_var($row['include_additional_time'] ?? false, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    private function isDeletedRow(array $row): bool
+    {
+        return filter_var($row['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN);
     }
 }

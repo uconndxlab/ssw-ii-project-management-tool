@@ -125,12 +125,16 @@ class User extends Authenticatable
         return $this->belongsTo(User::class, 'supervisor_id');
     }
 
-    /**
-     * Deliverables this user is directly assigned to.
-     */
-    public function assignedDeliverables(): BelongsToMany
+    public function deliverables(): BelongsToMany
     {
-        return $this->belongsToMany(AgreementDeliverable::class, 'deliverable_user', 'user_id', 'agreement_deliverable_id')->withTimestamps();
+        return $this->belongsToMany(
+            AgreementDeliverable::class,
+            'deliverable_user',
+            'user_id',
+            'agreement_deliverable_id'
+        )
+            ->withPivot(['assigned_at', 'unassigned_at', 'source_team_id'])
+            ->withTimestamps();
     }
 
 

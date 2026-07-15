@@ -112,22 +112,27 @@
                                         <tr>
                                             <th>Activity Type</th>
                                             <th>Contact Family</th>
-                                            <th class="text-center">Req. Hours</th>
-                                            <th class="text-center">Req. Activities</th>
+                                            <th class="text-center">Metric</th>
+                                            <th class="text-center">Target</th>
                                             <th>Notes</th>
                                             <th>Assigned Members</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         @foreach($agreement->deliverables as $deliverable)
+                                        @php
+                                            $activeAssignedUsers = $deliverable->users
+                                                ->filter(fn ($assignedUser) => !$assignedUser->pivot->unassigned_at)
+                                                ->whereIn('id', $team->users->pluck('id'));
+                                        @endphp
                                         <tr>
                                             <td>{{ $deliverable->activityType?->name ?? '—' }}</td>
                                             <td>{{ $deliverable->contactFamily?->name ?? '—' }}</td>
-                                            <td class="text-center">{{ $deliverable->required_hours !== null ? number_format($deliverable->required_hours, 1) : '—' }}</td>
-                                            <td class="text-center">{{ $deliverable->required_activities ?? '—' }}</td>
+                                            <td class="text-center">{{ $deliverable->metric_type ? ucfirst($deliverable->metric_type) : '—' }}</td>
+                                            <td class="text-center">{{ $deliverable->target_quantity !== null ? number_format((float) $deliverable->target_quantity, 1) : '—' }}</td>
                                             <td>{{ $deliverable->notes ?? '' }}</td>
                                             <td>
-                                                @forelse($deliverable->assignedUsers as $assignedUser)
+                                                @forelse($activeAssignedUsers as $assignedUser)
                                                     <span class="badge bg-secondary me-1">{{ $assignedUser->name }}</span>
                                                 @empty
                                                     <span class="text-muted small">—</span>
@@ -172,8 +177,8 @@
                                             <tr>
                                                 <th>Agreement</th>
                                                 <th>Activity Type</th>
-                                                <th class="text-center">Req. Hours</th>
-                                                <th class="text-center">Req. Activities</th>
+                                                <th class="text-center">Metric</th>
+                                                <th class="text-center">Target</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -185,8 +190,8 @@
                                                     </a>
                                                 </td>
                                                 <td>{{ $entry['deliverable']->activityType?->name ?? '—' }}</td>
-                                                <td class="text-center">{{ $entry['deliverable']->required_hours !== null ? number_format($entry['deliverable']->required_hours, 1) : '—' }}</td>
-                                                <td class="text-center">{{ $entry['deliverable']->required_activities ?? '—' }}</td>
+                                                <td class="text-center">{{ $entry['deliverable']->metric_type ? ucfirst($entry['deliverable']->metric_type) : '—' }}</td>
+                                                <td class="text-center">{{ $entry['deliverable']->target_quantity !== null ? number_format((float) $entry['deliverable']->target_quantity, 1) : '—' }}</td>
                                             </tr>
                                             @endforeach
                                         </tbody>

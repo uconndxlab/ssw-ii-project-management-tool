@@ -109,7 +109,8 @@ class DashboardController extends Controller
             ->count();
 
         // Deliverables assigned to this user
-        $myAssignedDeliverables = $user->assignedDeliverables()
+        $myAssignedDeliverables = $user->deliverables()
+            ->wherePivotNull('unassigned_at')
             ->with(['agreement.organizations', 'activityType', 'contactFamily'])
             ->get();
 

@@ -72,8 +72,8 @@
                         <th>Deliverable</th>
                         <th>Agreement</th>
                         <th>Organization</th>
-                        <th class="text-center">Req. Hours</th>
-                        <th class="text-center">Req. Activities</th>
+                        <th class="text-center">Metric</th>
+                        <th class="text-center">Target</th>
                         <th>Notes</th>
                     </tr>
                 </thead>
@@ -103,10 +103,10 @@
                             @endif
                         </td>
                         <td class="text-center">
-                            {{ $deliverable->required_hours !== null ? number_format($deliverable->required_hours, 1) : '—' }}
+                            {{ $deliverable->metric_type ? ucfirst($deliverable->metric_type) : '—' }}
                         </td>
                         <td class="text-center">
-                            {{ $deliverable->required_activities ?? '—' }}
+                            {{ $deliverable->target_quantity !== null ? number_format((float) $deliverable->target_quantity, 1) : '—' }}
                         </td>
                         <td class="small text-muted">{{ $deliverable->notes ?? '' }}</td>
                     </tr>

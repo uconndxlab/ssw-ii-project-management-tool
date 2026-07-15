@@ -114,7 +114,8 @@ class TeamController extends Controller
             'users',
             'agreements.deliverables.activityType',
             'agreements.deliverables.contactFamily',
-            'agreements.deliverables.assignedUsers',
+            'agreements.deliverables.users',
+            'agreements.deliverables.teams',
         ]);
 
         // Build per-member deliverable map from already-loaded data (no extra queries)
@@ -123,7 +124,7 @@ class TeamController extends Controller
             $memberDeliverables[$user->id] = [];
             foreach ($team->agreements as $agreement) {
                 foreach ($agreement->deliverables as $deliverable) {
-                    if ($deliverable->assignedUsers->contains('id', $user->id)) {
+                    if ($deliverable->users->contains(fn ($assignedUser) => (int) $assignedUser->id === (int) $user->id && !$assignedUser->pivot->unassigned_at)) {
                         $memberDeliverables[$user->id][] = [
                             'deliverable' => $deliverable,
                             'agreement'   => $agreement,

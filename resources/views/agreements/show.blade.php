@@ -162,41 +162,78 @@
                 @if($deliverableProgress->isNotEmpty())
                     @foreach($deliverableProgress as $progress)
                     <div class="mb-4 {{ !$loop->last ? 'pb-3 border-bottom' : '' }}">
-                        <strong class="d-block">{{ $progress['deliverable']->activityType?->name ?? 'Unspecified Activity Type' }}</strong>
-                        @if($progress['deliverable']->contactFamily)
-                            <small class="text-muted">{{ $progress['deliverable']->contactFamily->name }}</small>
+                        <strong class="d-block">{{ $progress['deliverable']->contactFamily?->name ?? 'Unspecified Contact Family' }}</strong>
+                        <small class="text-muted d-block">{{ $progress['deliverable']->activityType?->name ?? 'Any activity type' }}</small>
+                        @if($progress['deliverable']->program)
+                            <small class="text-muted d-block">Program: {{ $progress['deliverable']->program->name }}</small>
                         @endif
-
-                        @if($progress['deliverable']->assignedUsers?->isNotEmpty())
-                            <div class="mt-1 mb-1">
-                                <small class="text-muted">Assigned: </small>
-                                @foreach($progress['deliverable']->assignedUsers as $assignedUser)
-                                    <span class="badge bg-secondary me-1">{{ $assignedUser->name }}</span>
-                                @endforeach
-                            </div>
+                        @if($progress['deliverable']->suggested_due_date)
+                            <small class="text-muted">{{ $progress['deliverable']->suggested_due_date ? 'Suggested Due: ' . $progress['deliverable']->suggested_due_date->format('M d, Y') : '' }}</small>
                         @endif
-
-                        @if($progress['deliverable']->required_hours)
-                        <div class="mt-2">
-                            <div class="d-flex justify-content-between mb-1">
-                                <small class="text-muted">Hours</small>
-                                <small><strong>{{ number_format($progress['completed_hours'], 1) }}</strong> / {{ number_format($progress['deliverable']->required_hours, 1) }}</small>
+                        @php
+                            $deliverable = $progress['deliverable'];
+                            $target = (float) ($deliverable->target_quantity ?? 0);
+                            $completedValue = (float) $progress['completed_value'];
+                            $percent = $target > 0 ? min(100, ($completedValue / $target) * 100) : 0;
+                            $unitLabel = $deliverable->metric_type === 'time' ? 'Hours' : 'Completions';
+                        @endphp
+                        <div class="mt-3 border rounded p-3">
+                            <div class="d-flex justify-content-between align-items-start gap-3 mb-1">
+                                <div>
+                                    <div class="fw-semibold">{{ ucfirst($deliverable->metric_type ?? 'deliverable') }}</div>
+                                    <div class="text-muted small">
+                                        {{ ucfirst($deliverable->contribution_basis ?? 'unspecified') }}
+                                        @if($deliverable->contribution_basis === 'user' && $deliverable->user_grouping_mode)
+                                            | {{ ucfirst($deliverable->user_grouping_mode) }}
+                                        @endif
+                                        @if($deliverable->include_additional_time)
+                                            | Includes Prep/Follow Up
+                                        @endif
+                                    </div>
+                                </div>
+                                <div class="text-end small">
+                                    <strong>{{ number_format($completedValue, 1) }}</strong>
+                                    @if($target > 0)
+                                        / {{ number_format($target, 1) }}
+                                    @endif
+                                </div>
                             </div>
-                            @php $hp = $progress['deliverable']->required_hours > 0 ? min(100, ($progress['completed_hours'] / $progress['deliverable']->required_hours) * 100) : 0; @endphp
-                            <div class="progress" style="height:6px;"><div class="progress-bar {{ $hp >= 100 ? 'bg-success' : 'bg-primary' }}" style="width:{{ $hp }}%"></div></div>
+
+                            <div class="progress mb-2" style="height:6px;">
+                                <div class="progress-bar {{ $percent >= 100 ? 'bg-success' : 'bg-primary' }}" style="width:{{ $percent }}%"></div>
+                            </div>
+
+                            <div class="small text-muted">{{ $unitLabel }}</div>
+
+                            @if($progress['assigned_teams']->isNotEmpty())
+                                <div class="mt-2">
+                                    <small class="text-muted">Teams: </small>
+                                    @foreach($progress['assigned_teams'] as $team)
+                                        <span class="badge bg-secondary me-1">{{ $team->name }}</span>
+                                    @endforeach
+                                </div>
+                            @endif
+
+                            @if($deliverable->contribution_basis === 'user' && $deliverable->user_grouping_mode === 'joint' && $progress['assigned_users']->isNotEmpty())
+                                <div class="mt-2">
+                                    <small class="text-muted">Assigned Users: </small>
+                                    @foreach($progress['assigned_users'] as $user)
+                                        <span class="badge bg-light text-dark border me-1">{{ $user->name }}</span>
+                                    @endforeach
+                                </div>
+                            @endif
+
+                            @if($progress['individual_progress']->isNotEmpty())
+                                <div class="mt-2 small">
+                                    @foreach($progress['individual_progress'] as $individual)
+                                        <div class="d-flex justify-content-between">
+                                            <span>{{ $individual['user']->name }}</span>
+                                            <span>{{ number_format($individual['completed_value'], 1) }}@if($target > 0) / {{ number_format($target, 1) }}@endif</span>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
                         </div>
-                        @endif
-
-                        @if($progress['deliverable']->required_activities)
-                        <div class="mt-2">
-                            <div class="d-flex justify-content-between mb-1">
-                                <small class="text-muted">Activities</small>
-                                <small><strong>{{ $progress['completed_activities'] }}</strong> / {{ $progress['deliverable']->required_activities }}</small>
-                            </div>
-                            @php $ap = $progress['deliverable']->required_activities > 0 ? min(100, ($progress['completed_activities'] / $progress['deliverable']->required_activities) * 100) : 0; @endphp
-                            <div class="progress" style="height:6px;"><div class="progress-bar {{ $ap >= 100 ? 'bg-success' : 'bg-primary' }}" style="width:{{ $ap }}%"></div></div>
-                        </div>
-                        @endif
 
                         @if($progress['deliverable']->notes)
                             <small class="text-muted fst-italic mt-1 d-block">{{ $progress['deliverable']->notes }}</small>

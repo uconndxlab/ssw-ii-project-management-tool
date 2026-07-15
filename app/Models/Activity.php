@@ -40,6 +40,16 @@ class Activity extends Model
         return $this->hasMany(ActivityParticipantTime::class);
     }
 
+    public function deliverableContributions(): HasMany
+    {
+        return $this->hasMany(DeliverableContribution::class);
+    }
+
+    public function agreementActivityHistories(): HasMany
+    {
+        return $this->hasMany(AgreementActivityHistory::class);
+    }
+
     public function agreements(): BelongsToMany
     {
         return $this->belongsToMany(Agreement::class, 'activity_agreement')->withTimestamps();

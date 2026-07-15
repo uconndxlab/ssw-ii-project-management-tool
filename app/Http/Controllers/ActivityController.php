@@ -9,6 +9,7 @@ use App\Models\ContactFamily;
 use App\Models\LoggingField;
 use App\Models\Organization;
 use App\Models\State;
+use App\Services\DeliverableContributionService;
 use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -20,6 +21,10 @@ use Illuminate\Validation\ValidationException;
 
 class ActivityController extends Controller
 {
+    public function __construct(private DeliverableContributionService $deliverableContributionService)
+    {
+    }
+
     public function index(Request $request)
     {
         $visibleAgreements = $this->getVisibleAgreements()->load(['organizations', 'states']);
@@ -343,6 +348,7 @@ class ActivityController extends Controller
             $activity->participants()->sync($validated['participant_user_ids'] ?? []);
 
             $this->syncActivityTimeTracking($activity, $validated['time_tracking']);
+            $this->deliverableContributionService->syncForActivity($activity);
         });
 
         return redirect()
@@ -368,7 +374,7 @@ class ActivityController extends Controller
     }
 
     public function edit(Activity $activity)
-    {   
+    {
         $this->verifyActivityEditAccess($activity);
 
         $agreements = $this->getVisibleAgreements()->load('agreementLoggingFields');
@@ -495,6 +501,7 @@ class ActivityController extends Controller
             $activity->participants()->sync($validated['participant_user_ids'] ?? []);
 
             $this->syncActivityTimeTracking($activity, $validated['time_tracking']);
+            $this->deliverableContributionService->syncForActivity($activity);
         });
 
         return redirect()

@@ -3,51 +3,166 @@
     $deliverableRows = [];
     $hasDeliverableRows = false;
 
+    $programLookup = collect($projects ?? [])
+        ->flatMap(fn ($project) => $project->programs ?? collect())
+        ->merge($agreement?->programs ?? collect())
+        ->unique('id')
+        ->keyBy('id');
+
+    $buildRulesSummary = function (array $row): string {
+        $parts = [];
+        if (!empty($row['metric_type'])) {
+            $parts[] = ucfirst($row['metric_type']);
+        }
+        if (!empty($row['contribution_basis'])) {
+            $parts[] = ucfirst($row['contribution_basis']);
+        }
+        if (!empty($row['user_grouping_mode'])) {
+            $parts[] = ucfirst($row['user_grouping_mode']);
+        }
+        if (!empty($row['target_quantity'])) {
+            $suffix = ($row['metric_type'] ?? '') === 'time' ? ' hrs' : '';
+            $parts[] = number_format((float) $row['target_quantity'], 1) . $suffix;
+        }
+        if (!empty($row['include_additional_time'])) {
+            $parts[] = 'Incl. prep/follow up';
+        }
+
+        return implode(' · ', $parts);
+    };
+
+    $buildAssignmentBadges = function (array $row) use ($teams, $users): array {
+        $teamNames = [];
+        foreach ($row['team_ids'] ?? [] as $teamId) {
+            $name = $teams->firstWhere('id', (int) $teamId)?->name;
+            if ($name) {
+                $teamNames[] = $name;
+            }
+        }
+
+        $userNames = [];
+        foreach ($row['user_ids'] ?? [] as $userId) {
+            $name = $users->firstWhere('id', (int) $userId)?->name;
+            if ($name) {
+                $userNames[] = $name;
+            }
+        }
+
+        return [
+            'teams' => $teamNames,
+            'users' => $userNames,
+        ];
+    };
+
+    $enrichRow = function (array $row, string $rowKey) use ($contactFamilies, $activityTypes, $programLookup, $buildRulesSummary, $buildAssignmentBadges): array {
+        return array_merge($row, [
+            'row_key' => $rowKey,
+            'contact_family_label' => $contactFamilies->firstWhere('id', $row['contact_family_id'] ?? null)?->name,
+            'activity_type_label' => $activityTypes->firstWhere('id', $row['activity_type_id'] ?? null)?->name,
+            'program_label' => $programLookup->get((int) ($row['program_id'] ?? 0))?->name,
+            'rules_summary' => $buildRulesSummary($row),
+            'assignment_badges' => $buildAssignmentBadges($row),
+        ]);
+    };
+
+    $existingLockMap = [];
+    if ($agreement?->deliverables && $agreement->relationLoaded('agreementActivityHistories')) {
+        foreach ($agreement->deliverables as $deliverable) {
+            $locked = $agreement->agreementActivityHistories->contains(function ($history) use ($deliverable) {
+                if ((int) $history->contact_family_id !== (int) $deliverable->contact_family_id) {
+                    return false;
+                }
+                if ($deliverable->activity_type_id && (int) $history->activity_type_id !== (int) $deliverable->activity_type_id) {
+                    return false;
+                }
+                if ($deliverable->program_id) {
+                    return collect($history->program_ids_snapshot ?? [])
+                        ->map(fn ($id) => (int) $id)
+                        ->contains((int) $deliverable->program_id);
+                }
+
+                return true;
+            });
+            $existingLockMap[(int) $deliverable->id] = $locked;
+        }
+    }
+
+    $normalizeStoredRow = function (array $row, string $rowKey) use ($existingLockMap): array {
+        return [
+            'row_key' => $rowKey,
+            'id' => $row['id'] ?? '',
+            '_delete' => !empty($row['_delete']) ? '1' : '0',
+            'contact_family_id' => $row['contact_family_id'] ?? '',
+            'activity_type_id' => $row['activity_type_id'] ?? '',
+            'program_id' => $row['program_id'] ?? '',
+            'metric_type' => $row['metric_type'] ?? '',
+            'contribution_basis' => $row['contribution_basis'] ?? '',
+            'user_grouping_mode' => $row['user_grouping_mode'] ?? '',
+            'include_additional_time' => !empty($row['include_additional_time']),
+            'target_quantity' => $row['target_quantity'] ?? '',
+            'suggested_due_date' => $row['suggested_due_date'] ?? '',
+            'sort_order' => $row['sort_order'] ?? 0,
+            'notes' => $row['notes'] ?? '',
+            'user_ids' => collect($row['user_ids'] ?? [])->map(fn ($id) => (int) $id)->values()->all(),
+            'team_ids' => collect($row['team_ids'] ?? [])->map(fn ($id) => (int) $id)->values()->all(),
+            'classification_locked' => !empty($row['classification_locked']) || ($existingLockMap[(int) ($row['id'] ?? 0)] ?? false),
+            'semantic_locked' => !empty($row['semantic_locked']) || ($existingLockMap[(int) ($row['id'] ?? 0)] ?? false),
+        ];
+    };
+
     if (is_array($rawDeliverableRows)) {
         foreach ($rawDeliverableRows as $key => $row) {
             if (!is_array($row)) {
                 continue;
             }
-
             $rowKey = is_string($key) ? $key : 'row-' . $key;
-            $contactFamilyLabel = $contactFamilies->firstWhere('id', $row['contact_family_id'] ?? null)?->name;
-            $activityTypeLabel = $activityTypes->firstWhere('id', $row['activity_type_id'] ?? null)?->name;
-
-            $deliverableRows[] = array_merge($row, [
-                'row_key' => $rowKey,
-                'contact_family_label' => $contactFamilyLabel,
-                'activity_type_label' => $activityTypeLabel,
-                'assigned_user_names' => $users->whereIn('id', $row['user_ids'] ?? [])->pluck('name')->all(),
-            ]);
+            $deliverableRows[] = $enrichRow($normalizeStoredRow($row, $rowKey), $rowKey);
         }
         $hasDeliverableRows = !empty($deliverableRows);
     } elseif ($agreement?->deliverables) {
         foreach ($agreement->deliverables as $deliverable) {
-            $deliverableRows[] = [
-                'row_key' => 'existing-' . $deliverable->id,
+            if ($deliverable->retired_at) {
+                continue;
+            }
+            $row = $normalizeStoredRow([
                 'id' => $deliverable->id,
-                'activity_type_id' => $deliverable->activity_type_id,
                 'contact_family_id' => $deliverable->contact_family_id,
-                'required_hours' => $deliverable->required_hours,
-                'required_activities' => $deliverable->required_activities,
-                'notes' => $deliverable->notes,
-                'user_ids' => $deliverable->assignedUsers->pluck('id')->all(),
-                'contact_family_label' => $deliverable->contactFamily?->name,
-                'activity_type_label' => $deliverable->activityType?->name,
-                'assigned_user_names' => $deliverable->assignedUsers->pluck('name')->all(),
-            ];
+                'activity_type_id' => $deliverable->activity_type_id,
+                'program_id' => $deliverable->program_id,
+                'metric_type' => $deliverable->metric_type,
+                'contribution_basis' => $deliverable->contribution_basis,
+                'user_grouping_mode' => $deliverable->user_grouping_mode,
+                'include_additional_time' => (bool) $deliverable->include_additional_time,
+                'target_quantity' => $deliverable->target_quantity,
+                'suggested_due_date' => $deliverable->suggested_due_date?->format('Y-m-d') ?? '',
+                'sort_order' => $deliverable->sort_order ?? 0,
+                'notes' => $deliverable->notes ?? '',
+                'user_ids' => $deliverable->users->filter(fn ($user) => !$user->pivot->unassigned_at)->pluck('id')->all(),
+                'team_ids' => $deliverable->teams->filter(fn ($team) => !$team->pivot->unassigned_at)->pluck('id')->all(),
+            ], 'existing-' . $deliverable->id);
+            $deliverableRows[] = $enrichRow($row, $row['row_key']);
         }
         $hasDeliverableRows = !empty($deliverableRows);
     }
 
     $editorDefaults = [
         'id' => '',
+        '_delete' => '0',
         'contact_family_id' => '',
         'activity_type_id' => '',
-        'required_hours' => '',
-        'required_activities' => '',
+        'program_id' => '',
+        'metric_type' => '',
+        'contribution_basis' => '',
+        'user_grouping_mode' => '',
+        'include_additional_time' => false,
+        'target_quantity' => '',
+        'suggested_due_date' => '',
+        'sort_order' => 0,
         'notes' => '',
         'user_ids' => [],
+        'team_ids' => [],
+        'classification_locked' => false,
+        'semantic_locked' => false,
     ];
 @endphp
 
@@ -56,7 +171,7 @@
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
             <div>
                 <h5 class="mb-1">Deliverables</h5>
-                <p class="text-muted small mb-0">Use the table to manage rows.</p>
+                <p class="text-muted small mb-0">Use the table to manage rows. Each deliverable carries classification, counting rules, and assignments.</p>
             </div>
         </div>
 
@@ -65,8 +180,9 @@
                 <thead>
                     <tr>
                         <th>Contact</th>
-                        <th>Notes</th>
+                        <th>Rules</th>
                         <th>Assignments</th>
+                        <th>Notes</th>
                         <th class="text-end">Actions</th>
                     </tr>
                 </thead>
@@ -77,7 +193,7 @@
                         @endforeach
                     @else
                         <tr class="deliverable-empty-row">
-                            <td colspan="4" class="text-center text-muted py-4 small">
+                            <td colspan="5" class="text-center text-muted py-4 small">
                                 Click "+ Add Deliverable" to create a deliverable for this agreement.
                             </td>
                         </tr>
@@ -95,21 +211,28 @@
 
         <div id="deliverable-hidden-inputs">
             @foreach($deliverableRows as $row)
-                @php
-                    $rowKey = $row['row_key'];
-                @endphp
+                @php $rowKey = $row['row_key']; @endphp
                 <div data-deliverable-hidden-row="{{ $rowKey }}">
                     @if(!empty($row['id']))
                         <input type="hidden" name="deliverables[{{ $rowKey }}][id]" value="{{ $row['id'] }}">
                     @endif
-                    <input type="hidden" name="deliverables[{{ $rowKey }}][_delete]" value="{{ !empty($row['_delete']) ? 1 : 0 }}">
+                    <input type="hidden" name="deliverables[{{ $rowKey }}][_delete]" value="{{ $row['_delete'] ?? '0' }}">
                     <input type="hidden" name="deliverables[{{ $rowKey }}][contact_family_id]" value="{{ $row['contact_family_id'] ?? '' }}">
                     <input type="hidden" name="deliverables[{{ $rowKey }}][activity_type_id]" value="{{ $row['activity_type_id'] ?? '' }}">
-                    <input type="hidden" name="deliverables[{{ $rowKey }}][required_hours]" value="{{ $row['required_hours'] ?? '' }}">
-                    <input type="hidden" name="deliverables[{{ $rowKey }}][required_activities]" value="{{ $row['required_activities'] ?? '' }}">
+                    <input type="hidden" name="deliverables[{{ $rowKey }}][program_id]" value="{{ $row['program_id'] ?? '' }}">
+                    <input type="hidden" name="deliverables[{{ $rowKey }}][metric_type]" value="{{ $row['metric_type'] ?? '' }}">
+                    <input type="hidden" name="deliverables[{{ $rowKey }}][contribution_basis]" value="{{ $row['contribution_basis'] ?? '' }}">
+                    <input type="hidden" name="deliverables[{{ $rowKey }}][user_grouping_mode]" value="{{ $row['user_grouping_mode'] ?? '' }}">
+                    <input type="hidden" name="deliverables[{{ $rowKey }}][include_additional_time]" value="{{ !empty($row['include_additional_time']) ? 1 : 0 }}">
+                    <input type="hidden" name="deliverables[{{ $rowKey }}][target_quantity]" value="{{ $row['target_quantity'] ?? '' }}">
+                    <input type="hidden" name="deliverables[{{ $rowKey }}][suggested_due_date]" value="{{ $row['suggested_due_date'] ?? '' }}">
+                    <input type="hidden" name="deliverables[{{ $rowKey }}][sort_order]" value="{{ $row['sort_order'] ?? 0 }}">
                     <input type="hidden" name="deliverables[{{ $rowKey }}][notes]" value="{{ $row['notes'] ?? '' }}">
                     @foreach($row['user_ids'] ?? [] as $userId)
                         <input type="hidden" name="deliverables[{{ $rowKey }}][user_ids][]" value="{{ $userId }}">
+                    @endforeach
+                    @foreach($row['team_ids'] ?? [] as $teamId)
+                        <input type="hidden" name="deliverables[{{ $rowKey }}][team_ids][]" value="{{ $teamId }}">
                     @endforeach
                 </div>
             @endforeach
@@ -150,24 +273,29 @@
     document.addEventListener('DOMContentLoaded', function () {
         const tableBody = document.getElementById('deliverable-table-body');
         const hiddenInputs = document.getElementById('deliverable-hidden-inputs');
-        const addButtons = [
-            document.getElementById('deliverable-add-button'),
-            document.getElementById('deliverable-add-button-bottom'),
-        ].filter(Boolean);
+        const addButtons = [document.getElementById('deliverable-add-button-bottom')].filter(Boolean);
         const saveButton = document.getElementById('deliverable-save-button');
         const clearButton = document.getElementById('deliverable-clear-button');
         const editorKeyInput = document.getElementById('deliverable-editor-key');
         const editorModalEl = document.getElementById('deliverable-editor-modal');
         const editorCard = editorModalEl ? editorModalEl.querySelector('.modal-content') : null;
-        const editorFieldset = editorModalEl ? editorModalEl.querySelector('[data-deliverable-editor-fields]') : null;
-        if (!tableBody || !hiddenInputs || !saveButton || !clearButton || !editorKeyInput || !editorFieldset) return;
+        const editorFieldset = editorModalEl ? editorModalEl.querySelector('[data-deliverable-fields]') : null;
+
+        if (!tableBody || !hiddenInputs || !saveButton || !clearButton || !editorKeyInput || !editorFieldset) {
+            return;
+        }
 
         const userLookup = @json($users->pluck('name', 'id'));
+        const teamLookup = @json($teams->pluck('name', 'id'));
         const contactFamilyLookup = @json($contactFamilies->pluck('name', 'id'));
         const activityTypeLookup = @json($activityTypes->pluck('name', 'id'));
-        const userProgramMap = @json($users->mapWithKeys(fn ($user) => [(string) $user->id => $user->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all()]));
+        const programLookup = @json($programLookup->map(fn ($p) => $p->name));
         const contactFamilyProgramMap = @json($contactFamilies->mapWithKeys(fn ($family) => [(string) $family->id => $family->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all()]));
         const activityTypeProgramMap = @json($activityTypes->mapWithKeys(fn ($type) => [(string) $type->id => $type->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all()]));
+        const teamMembersMap = @json($teams->mapWithKeys(fn ($team) => [(string) $team->id => $team->users->pluck('id')->map(fn ($id) => (string) $id)->values()->all()]));
+        const agreementTeamPickerId = 'agreement-{{ $agreement ? 'edit' : 'create' }}-teams';
+        const agreementUserPickerId = 'agreement-{{ $agreement ? 'edit' : 'create' }}-users';
+
         let currentKey = null;
         let nextTempId = 1;
         const rowStore = {};
@@ -175,11 +303,15 @@
 
         function selectedProgramIds() {
             const picker = document.getElementById('agreement-scope-programs');
+            if (!picker) return [];
+            return Array.from(picker.querySelectorAll('[data-token-inputs] input')).map(function (input) {
+                return String(input.value);
+            });
+        }
 
-            if (!picker) {
-                return [];
-            }
-
+        function selectedIdsFromPicker(pickerId) {
+            const picker = document.getElementById(pickerId);
+            if (!picker) return [];
             return Array.from(picker.querySelectorAll('[data-token-inputs] input')).map(function (input) {
                 return String(input.value);
             });
@@ -188,41 +320,10 @@
         function isAllowedByPrograms(programIds, allowGlobal, activeProgramIds) {
             const normalizedProgramIds = Array.isArray(programIds) ? programIds.map(String) : [];
             const selectedPrograms = new Set((activeProgramIds || []).map(String));
-
-            if (normalizedProgramIds.length === 0) {
-                return allowGlobal;
-            }
-
-            if (selectedPrograms.size === 0) {
-                return false;
-            }
-
+            if (normalizedProgramIds.length === 0) return allowGlobal;
+            if (selectedPrograms.size === 0) return false;
             return normalizedProgramIds.some(function (programId) {
                 return selectedPrograms.has(String(programId));
-            });
-        }
-
-        function initTooltips(scope) {
-            if (!window.bootstrap || !bootstrap.Tooltip) {
-                return;
-            }
-
-            (scope || document).querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (element) {
-                bootstrap.Tooltip.getOrCreateInstance(element);
-            });
-        }
-
-        function disposeTooltips(scope) {
-            if (!window.bootstrap || !bootstrap.Tooltip) {
-                return;
-            }
-
-            (scope || document).querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (element) {
-                const tooltip = bootstrap.Tooltip.getInstance(element);
-                if (tooltip) {
-                    tooltip.hide();
-                    tooltip.dispose();
-                }
             });
         }
 
@@ -239,14 +340,71 @@
             return 'row-new-' + Date.now() + '-' + (nextTempId++);
         }
 
+        function buildRulesSummary(rowData) {
+            const parts = [];
+            if (rowData.metric_type) parts.push(rowData.metric_type.charAt(0).toUpperCase() + rowData.metric_type.slice(1));
+            if (rowData.contribution_basis) parts.push(rowData.contribution_basis.charAt(0).toUpperCase() + rowData.contribution_basis.slice(1));
+            if (rowData.user_grouping_mode) parts.push(rowData.user_grouping_mode.charAt(0).toUpperCase() + rowData.user_grouping_mode.slice(1));
+            if (rowData.target_quantity) {
+                const suffix = rowData.metric_type === 'time' ? ' hrs' : '';
+                parts.push(parseFloat(rowData.target_quantity).toFixed(1) + suffix);
+            }
+            if (rowData.include_additional_time) parts.push('Incl. prep/follow up');
+            return parts.join(' · ');
+        }
+
+        function buildAssignmentBadges(rowData) {
+            const teams = [];
+            (rowData.team_ids || []).forEach(function (teamId) {
+                const name = teamLookup[teamId];
+                if (name) teams.push(name);
+            });
+            const users = [];
+            (rowData.user_ids || []).forEach(function (userId) {
+                const name = userLookup[userId];
+                if (name) users.push(name);
+            });
+            return { teams: teams, users: users };
+        }
+
+        function renderAssignmentBadges(badges) {
+            const teamBadges = (badges.teams || []).map(function (name) {
+                return '<span class="badge bg-secondary-subtle text-secondary-emphasis border me-1 mb-1">' + escapeHtml(name) + '</span>';
+            }).join('');
+            const userBadges = (badges.users || []).map(function (name) {
+                return '<span class="badge bg-primary-subtle text-primary-emphasis border me-1 mb-1">' + escapeHtml(name) + '</span>';
+            }).join('');
+            const combined = teamBadges + userBadges;
+            return combined || '<span class="text-muted small">—</span>';
+        }
+
+        function enrichRowData(rowData) {
+            return Object.assign({}, rowData, {
+                contact_family_label: contactFamilyLookup[rowData.contact_family_id] || '',
+                activity_type_label: activityTypeLookup[rowData.activity_type_id] || '',
+                program_label: programLookup[rowData.program_id] || '',
+                rules_summary: buildRulesSummary(rowData),
+                assignment_badges: buildAssignmentBadges(rowData),
+            });
+        }
+
+        function initTooltips(scope) {
+            if (!window.bootstrap || !bootstrap.Tooltip) return;
+            (scope || document).querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (element) {
+                bootstrap.Tooltip.getOrCreateInstance(element);
+            });
+        }
+
+        function disposeTooltips(scope) {
+            if (!window.bootstrap || !bootstrap.Tooltip) return;
+            (scope || document).querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (element) {
+                const tooltip = bootstrap.Tooltip.getInstance(element);
+                if (tooltip) { tooltip.hide(); tooltip.dispose(); }
+            });
+        }
+
         function emptyStateRowMarkup() {
-            return `
-                <tr class="deliverable-empty-row">
-                    <td colspan="4" class="text-center text-muted py-4 small">
-                        Click "+ Add Deliverable" to create a deliverable for this agreement.
-                    </td>
-                </tr>
-            `;
+            return '<tr class="deliverable-empty-row"><td colspan="5" class="text-center text-muted py-4 small">Click "+ Add Deliverable" to create a deliverable for this agreement.</td></tr>';
         }
 
         function hasVisibleDeliverableRows() {
@@ -258,199 +416,514 @@
         function renderEmptyStateIfNeeded() {
             const emptyRow = tableBody.querySelector('.deliverable-empty-row');
             if (hasVisibleDeliverableRows()) {
-                if (emptyRow) {
-                    emptyRow.remove();
-                }
+                if (emptyRow) emptyRow.remove();
+                return;
+            }
+            if (!emptyRow) tableBody.insertAdjacentHTML('beforeend', emptyStateRowMarkup());
+        }
+
+        function getAgreementMembershipPool() {
+            const selectedTeamIds = selectedIdsFromPicker(agreementTeamPickerId);
+            const selectedUserIds = selectedIdsFromPicker(agreementUserPickerId);
+            const teamMemberIds = new Set();
+            selectedTeamIds.forEach(function (teamId) {
+                (teamMembersMap[teamId] || []).forEach(function (memberId) {
+                    teamMemberIds.add(String(memberId));
+                });
+            });
+            const directUserIds = selectedUserIds.filter(function (userId) {
+                return !teamMemberIds.has(String(userId));
+            });
+
+            return { selectedTeamIds, directUserIds, teamMemberIds };
+        }
+
+        function getSelectedAssignmentState() {
+            const userIds = [];
+            const teamIds = [];
+            editorFieldset.querySelectorAll('[data-deliverable-team-checkbox]:checked').forEach(function (cb) {
+                teamIds.push(cb.value);
+            });
+            editorFieldset.querySelectorAll('[data-deliverable-user-checkbox]:checked').forEach(function (cb) {
+                userIds.push(cb.value);
+            });
+            return { user_ids: userIds, team_ids: teamIds };
+        }
+
+        function renderAssignmentLedger(selectedUserIds, selectedTeamIds) {
+            const ledger = editorFieldset.querySelector('[data-deliverable-assignment-ledger]');
+            const selectAllBtn = editorFieldset.querySelector('[data-deliverable-select-all]');
+            if (!ledger) return;
+
+            const pool = getAgreementMembershipPool();
+            const selectedUsers = new Set((selectedUserIds || []).map(String));
+            const selectedTeams = new Set((selectedTeamIds || []).map(String));
+            const grouping = editorFieldset.querySelector('[data-deliverable-grouping]:checked')?.value || '';
+            const basis = editorFieldset.querySelector('[data-deliverable-basis]:checked')?.value || '';
+            const isIndividual = grouping === 'individual';
+
+            ledger.innerHTML = '';
+
+            if (basis !== 'user' || (pool.selectedTeamIds.length === 0 && pool.directUserIds.length === 0)) {
+                const empty = document.createElement('div');
+                empty.className = 'text-muted small py-2';
+                empty.setAttribute('data-deliverable-assignment-empty', '');
+                empty.textContent = 'Add teams or users to the agreement above before assigning this deliverable.';
+                ledger.appendChild(empty);
+                if (selectAllBtn) selectAllBtn.classList.add('d-none');
                 return;
             }
 
-            if (!emptyRow) {
-                tableBody.insertAdjacentHTML('beforeend', emptyStateRowMarkup());
+            if (selectAllBtn) selectAllBtn.classList.remove('d-none');
+
+            function createCheckbox(type, value, checked) {
+                const input = document.createElement('input');
+                input.type = 'checkbox';
+                input.className = 'form-check-input';
+                input.value = value;
+                input.checked = checked;
+                if (type === 'team') input.setAttribute('data-deliverable-team-checkbox', '');
+                if (type === 'user') input.setAttribute('data-deliverable-user-checkbox', '');
+                return input;
             }
-        }
 
-        function collectEditorData() {
-            const fieldPrefix = 'deliverable_editor';
-            const formData = new FormData(editorCard.closest('form'));
-
-            const userIds = [];
-            editorFieldset.querySelectorAll(`input[name="${fieldPrefix}[user_ids][]"]:checked`).forEach(function (checkbox) {
-                userIds.push(checkbox.value);
-            });
-
-            return {
-                id: editorCard.querySelector('[name="deliverable_editor[id]"]')?.value || '',
-                _delete: '0',
-                contact_family_id: formData.get(`${fieldPrefix}[contact_family_id]`) || '',
-                activity_type_id: formData.get(`${fieldPrefix}[activity_type_id]`) || '',
-                required_hours: formData.get(`${fieldPrefix}[required_hours]`) || '',
-                required_activities: formData.get(`${fieldPrefix}[required_activities]`) || '',
-                notes: formData.get(`${fieldPrefix}[notes]`) || '',
-                user_ids: userIds,
-            };
-        }
-
-        function setEditorData(rowKey, rowData) {
-            currentKey = rowKey;
-            editorKeyInput.value = rowKey || '';
-
-            const fieldPrefix = 'deliverable_editor';
-            editorCard.querySelector(`[name="${fieldPrefix}[id]"]`)?.remove();
-
-            const idInput = document.createElement('input');
-            idInput.type = 'hidden';
-            idInput.name = `${fieldPrefix}[id]`;
-            idInput.value = rowData.id || '';
-            editorCard.querySelector('[data-deliverable-editor-fields]')?.prepend(idInput);
-
-            editorCard.querySelector(`[name="${fieldPrefix}[contact_family_id]"]`).value = rowData.contact_family_id || '';
-            editorCard.querySelector(`[name="${fieldPrefix}[activity_type_id]"]`).value = rowData.activity_type_id || '';
-            editorCard.querySelector(`[name="${fieldPrefix}[required_hours]"]`).value = rowData.required_hours || '';
-            editorCard.querySelector(`[name="${fieldPrefix}[required_activities]"]`).value = rowData.required_activities || '';
-            editorCard.querySelector(`[name="${fieldPrefix}[notes]"]`).value = rowData.notes || '';
-
-            editorFieldset.querySelectorAll(`input[name="${fieldPrefix}[user_ids][]"]`).forEach(function (checkbox) {
-                checkbox.checked = Array.isArray(rowData.user_ids) && rowData.user_ids.map(String).includes(String(checkbox.value));
-            });
-
-            syncActivityTypeOptions();
-
-            if (editorModal) {
-                editorModal.show();
+            function bindMemberCheckbox(teamCheckbox, memberCheckbox) {
+                memberCheckbox.addEventListener('change', function () {
+                    if (teamCheckbox && !memberCheckbox.checked) {
+                        teamCheckbox.checked = false;
+                    }
+                });
             }
-        }
 
-        function clearEditor(showModal = true) {
-            currentKey = null;
-            editorKeyInput.value = '';
-            editorCard.querySelectorAll('[name^="deliverable_editor["]').forEach(function (input) {
-                if (input.type === 'checkbox') {
-                    input.checked = false;
-                } else if (input.name.endsWith('[contact_family_id]') || input.name.endsWith('[activity_type_id]') || input.name.endsWith('[required_hours]') || input.name.endsWith('[required_activities]') || input.name.endsWith('[notes]')) {
-                    input.value = '';
+            function renderTeamCard(teamId, memberIds) {
+                const card = document.createElement('div');
+                card.className = 'border rounded overflow-hidden bg-body mb-2';
+
+                const header = document.createElement('div');
+                header.className = 'd-flex align-items-center gap-2 px-2 py-1 bg-light';
+                const teamLabel = document.createElement('span');
+                teamLabel.className = 'fw-semibold small';
+                teamLabel.textContent = teamLookup[teamId] || ('Team ' + teamId);
+
+                let teamCheckbox = null;
+                if (!isIndividual) {
+                    teamCheckbox = createCheckbox('team', teamId, selectedTeams.has(String(teamId)));
+                    header.appendChild(teamCheckbox);
                 }
-            });
-            editorCard.querySelector('[name="deliverable_editor[id]"]')?.remove();
-            syncActivityTypeOptions();
+                header.appendChild(teamLabel);
+                card.appendChild(header);
 
-            if (showModal && editorModal) {
-                editorModal.show();
+                const memberCheckboxes = [];
+                memberIds.forEach(function (memberId) {
+                    const row = document.createElement('div');
+                    row.className = 'd-flex align-items-center gap-2 py-1 px-2 border-top ps-3';
+                    const userCheckbox = createCheckbox('user', memberId, selectedUsers.has(String(memberId)));
+                    const userLabel = document.createElement('span');
+                    userLabel.className = 'small text-muted';
+                    userLabel.textContent = userLookup[memberId] || ('User ' + memberId);
+                    row.appendChild(userCheckbox);
+                    row.appendChild(userLabel);
+                    card.appendChild(row);
+                    memberCheckboxes.push(userCheckbox);
+                    bindMemberCheckbox(teamCheckbox, userCheckbox);
+                });
+
+                if (teamCheckbox) {
+                    bindTeamCheckbox(teamCheckbox, memberCheckboxes);
+                }
+
+                ledger.appendChild(card);
+            }
+
+            function bindTeamCheckbox(teamCheckbox, memberCheckboxes) {
+                teamCheckbox.addEventListener('change', function () {
+                    if (teamCheckbox.checked) {
+                        memberCheckboxes.forEach(function (cb) { cb.checked = true; });
+                    }
+                });
+            }
+
+            pool.selectedTeamIds.forEach(function (teamId) {
+                renderTeamCard(teamId, teamMembersMap[teamId] || []);
+            });
+
+            if (pool.directUserIds.length > 0) {
+                const card = document.createElement('div');
+                card.className = 'border rounded overflow-hidden bg-body';
+                const header = document.createElement('div');
+                header.className = 'px-2 py-1 bg-light';
+                header.innerHTML = '<div class="fw-semibold small">Additional users</div>';
+                card.appendChild(header);
+
+                pool.directUserIds.forEach(function (userId) {
+                    const row = document.createElement('div');
+                    row.className = 'd-flex align-items-center gap-2 py-1 px-2 border-top';
+                    const userCheckbox = createCheckbox('user', userId, selectedUsers.has(String(userId)));
+                    const userLabel = document.createElement('span');
+                    userLabel.className = 'small';
+                    userLabel.textContent = userLookup[userId] || ('User ' + userId);
+                    row.appendChild(userCheckbox);
+                    row.appendChild(userLabel);
+                    card.appendChild(row);
+                });
+                ledger.appendChild(card);
+            }
+        }
+
+        function syncProgramFilterOptions() {
+            const select = editorFieldset.querySelector('[data-deliverable-program]');
+            if (!select) return;
+            const currentValue = select.value;
+            const activeProgramIds = selectedProgramIds();
+            select.innerHTML = '<option value="">Any selected agreement program</option>';
+            activeProgramIds.forEach(function (programId) {
+                const option = document.createElement('option');
+                option.value = programId;
+                option.textContent = programLookup[programId] || ('Program ' + programId);
+                if (currentValue === programId) option.selected = true;
+                select.appendChild(option);
+            });
+            if (currentValue && !activeProgramIds.includes(currentValue)) {
+                select.value = '';
             }
         }
 
         function syncActivityTypeOptions() {
-            const contactFamilySelect = editorCard.querySelector('[name="deliverable_editor[contact_family_id]"]');
-            const activityTypeSelect = editorCard.querySelector('[name="deliverable_editor[activity_type_id]"]');
+            const contactFamilySelect = editorFieldset.querySelector('[data-deliverable-contact-family]');
+            const activityTypeSelect = editorFieldset.querySelector('[data-deliverable-activity-type]');
             if (!contactFamilySelect || !activityTypeSelect) return;
 
             const activeProgramIds = selectedProgramIds();
             const currentValue = activityTypeSelect.value;
 
             Array.from(contactFamilySelect.options).forEach(function (option) {
-                if (!option.value) {
-                    option.hidden = false;
-                    option.disabled = false;
-                    return;
-                }
-
-                const visible = isAllowedByPrograms(contactFamilyProgramMap[String(option.value)] || [], true, activeProgramIds);
+                if (!option.value) { option.hidden = false; option.disabled = false; return; }
+                const programIds = JSON.parse(option.dataset.programIds || '[]');
+                const visible = isAllowedByPrograms(programIds, true, activeProgramIds);
                 option.hidden = !visible;
                 option.disabled = !visible;
             });
 
             if (contactFamilySelect.value) {
-                const selectedFamilyOption = contactFamilySelect.querySelector(`option[value="${CSS.escape(contactFamilySelect.value)}"]`);
-                if (!selectedFamilyOption || selectedFamilyOption.hidden) {
-                    contactFamilySelect.value = '';
-                }
+                const selectedFamilyOption = contactFamilySelect.querySelector('option[value="' + CSS.escape(contactFamilySelect.value) + '"]');
+                if (!selectedFamilyOption || selectedFamilyOption.hidden) contactFamilySelect.value = '';
             }
 
             Array.from(activityTypeSelect.options).forEach(function (option) {
-                if (!option.value) {
-                    option.hidden = false;
-                    option.disabled = false;
-                    return;
-                }
+                if (!option.value) { option.hidden = false; option.disabled = false; return; }
                 const matchesFamily = !contactFamilySelect.value || option.dataset.contactFamilyId === contactFamilySelect.value;
-                const matchesPrograms = isAllowedByPrograms(activityTypeProgramMap[String(option.value)] || [], true, activeProgramIds);
+                const programIds = JSON.parse(option.dataset.programIds || '[]');
+                const matchesPrograms = isAllowedByPrograms(programIds, true, activeProgramIds);
                 const matches = matchesFamily && matchesPrograms;
                 option.hidden = !matches;
                 option.disabled = !matches;
             });
 
             if (currentValue) {
-                const selectedOption = activityTypeSelect.querySelector(`option[value="${CSS.escape(currentValue)}"]`);
-                if (!selectedOption || selectedOption.hidden) {
-                    activityTypeSelect.value = '';
-                }
+                const selectedOption = activityTypeSelect.querySelector('option[value="' + CSS.escape(currentValue) + '"]');
+                if (!selectedOption || selectedOption.hidden) activityTypeSelect.value = '';
             }
 
-            editorFieldset.querySelectorAll('input[name="deliverable_editor[user_ids][]"]').forEach(function (checkbox) {
-                const visible = isAllowedByPrograms(userProgramMap[String(checkbox.value)] || [], false, activeProgramIds);
-                checkbox.disabled = !visible;
-                checkbox.checked = visible ? checkbox.checked : false;
-                const wrapper = checkbox.closest('.form-check');
-                if (wrapper) {
-                    wrapper.classList.toggle('d-none', !visible);
-                }
+            syncProgramFilterOptions();
+            syncEditorVisibility();
+        }
+
+        function syncTargetLabels() {
+            const metric = editorFieldset.querySelector('[data-deliverable-metric]:checked')?.value || '';
+            const isCompletion = metric === 'completion';
+            const labelText = isCompletion ? 'Target Completions' : 'Target Hours';
+
+            editorFieldset.querySelectorAll('[data-deliverable-target-label], [data-deliverable-target-label-locked]').forEach(function (el) {
+                el.innerHTML = labelText + ' <span class="text-danger">*</span>';
             });
+        }
+
+        function getTargetInput() {
+            const readonlyBlock = editorFieldset.querySelector('[data-deliverable-requirement-readonly]');
+            if (readonlyBlock && !readonlyBlock.classList.contains('d-none')) {
+                return editorFieldset.querySelector('[data-deliverable-target-locked]');
+            }
+            return editorFieldset.querySelector('[data-deliverable-target]');
+        }
+
+        function syncEditorVisibility() {
+            const basis = editorFieldset.querySelector('[data-deliverable-basis]:checked')?.value || '';
+            const metric = editorFieldset.querySelector('[data-deliverable-metric]:checked')?.value || '';
+            const familySelect = editorFieldset.querySelector('[data-deliverable-contact-family]');
+            const selectedOption = familySelect?.options[familySelect.selectedIndex];
+            const tracksAdditionalTime = selectedOption?.dataset.trackAdditionalTime === '1';
+
+            const groupingWrapper = editorFieldset.querySelector('[data-grouping-wrapper]');
+            const assignmentWrapper = editorFieldset.querySelector('[data-user-assignment-wrapper]');
+            const metricDetailsWrapper = editorFieldset.querySelector('[data-metric-details-wrapper]');
+            const additionalTimeWrapper = editorFieldset.querySelector('[data-additional-time-wrapper]');
+            const additionalTimeCheckbox = editorFieldset.querySelector('[data-deliverable-additional-time]');
+            const additionalTimeMessage = editorFieldset.querySelector('[data-additional-time-message]');
+            const hasContactFamily = !!(familySelect && familySelect.value);
+            const familyName = hasContactFamily
+                ? (selectedOption?.textContent?.trim() || contactFamilyLookup[familySelect.value] || 'selected')
+                : '';
+
+            if (groupingWrapper) groupingWrapper.classList.toggle('d-none', basis !== 'user');
+            if (assignmentWrapper) assignmentWrapper.classList.toggle('d-none', basis !== 'user');
+            if (metricDetailsWrapper) metricDetailsWrapper.classList.toggle('d-none', metric !== 'time' && metric !== 'completion');
+
+            const showAdditionalTime = metric === 'time' && tracksAdditionalTime && hasContactFamily;
+            if (additionalTimeWrapper) additionalTimeWrapper.classList.toggle('d-none', !showAdditionalTime);
+
+            if (additionalTimeMessage && showAdditionalTime) {
+                additionalTimeMessage.textContent = 'The ' + familyName + ' contact family requires prep and follow up time to be reported in activity logging. Should this time contribute to deliverable progress?';
+            }
+
+            if (additionalTimeCheckbox && !showAdditionalTime) {
+                additionalTimeCheckbox.checked = false;
+            }
+
+            syncTargetLabels();
+
+            const assignment = getSelectedAssignmentState();
+            renderAssignmentLedger(assignment.user_ids, assignment.team_ids);
+        }
+
+        function applyLockState(rowData) {
+            const classificationLocked = !!rowData.classification_locked;
+            const semanticLocked = !!rowData.semantic_locked;
+
+            editorFieldset.querySelector('[data-deliverable-classification-lock-notice]')?.classList.toggle('d-none', !classificationLocked);
+            editorFieldset.querySelector('[data-deliverable-semantic-lock-notice]')?.classList.toggle('d-none', !semanticLocked);
+            editorFieldset.querySelector('[data-deliverable-classification-editor]')?.classList.toggle('d-none', classificationLocked);
+            editorFieldset.querySelector('[data-deliverable-classification-readonly]')?.classList.toggle('d-none', !classificationLocked);
+            editorFieldset.querySelector('[data-deliverable-requirement-editor]')?.classList.toggle('d-none', semanticLocked);
+            editorFieldset.querySelector('[data-deliverable-requirement-readonly]')?.classList.toggle('d-none', !semanticLocked);
+
+            if (classificationLocked) {
+                editorFieldset.querySelector('[data-readonly-contact-family]').textContent = contactFamilyLookup[rowData.contact_family_id] || '—';
+                editorFieldset.querySelector('[data-readonly-activity-type]').textContent = activityTypeLookup[rowData.activity_type_id] || 'Any activity type';
+                editorFieldset.querySelector('[data-readonly-program]').textContent = programLookup[rowData.program_id] || 'Any selected agreement program';
+            }
+
+            if (semanticLocked) {
+                const metricLabels = { time: 'Time', completion: 'Completion' };
+                const basisLabels = { contact: 'By Contact', user: 'By User' };
+                const groupingLabels = { joint: 'Joint', individual: 'Individual' };
+                editorFieldset.querySelector('[data-readonly-metric]').textContent = metricLabels[rowData.metric_type] || '—';
+                editorFieldset.querySelector('[data-readonly-basis]').textContent = basisLabels[rowData.contribution_basis] || '—';
+                editorFieldset.querySelector('[data-readonly-grouping]').textContent = groupingLabels[rowData.user_grouping_mode] || '—';
+                editorFieldset.querySelector('[data-readonly-additional-time]').textContent = rowData.include_additional_time ? 'Yes' : 'No';
+            }
+
+            editorFieldset.querySelector('[data-deliverable-target]')?.toggleAttribute('required', !semanticLocked);
+            editorFieldset.querySelector('[data-deliverable-target-locked]')?.toggleAttribute('required', semanticLocked);
+        }
+
+        function collectEditorData() {
+            const fieldPrefix = 'deliverable_editor';
+            const basis = editorFieldset.querySelector('[data-deliverable-basis]:checked')?.value || '';
+            const assignment = getSelectedAssignmentState();
+
+            function fieldValue(selector, fallback) {
+                const el = editorFieldset.querySelector(selector);
+                if (!el) return fallback || '';
+                if (el.type === 'checkbox') return el.checked;
+                return el.value || '';
+            }
+
+            const targetInput = getTargetInput();
+
+            const rowData = {
+                id: editorCard.querySelector('[name="deliverable_editor[id]"]')?.value || '',
+                _delete: '0',
+                contact_family_id: fieldValue('[data-deliverable-contact-family]', ''),
+                activity_type_id: fieldValue('[data-deliverable-activity-type]', ''),
+                program_id: fieldValue('[data-deliverable-program]', ''),
+                metric_type: editorFieldset.querySelector('[data-deliverable-metric]:checked')?.value || '',
+                contribution_basis: basis,
+                user_grouping_mode: editorFieldset.querySelector('[data-deliverable-grouping]:checked')?.value || '',
+                include_additional_time: !!editorFieldset.querySelector('[data-deliverable-additional-time]')?.checked,
+                target_quantity: targetInput ? targetInput.value : '',
+                suggested_due_date: fieldValue('[data-deliverable-due-date]', ''),
+                sort_order: 0,
+                notes: fieldValue('[data-deliverable-notes]', ''),
+                user_ids: basis === 'user' ? assignment.user_ids : [],
+                team_ids: basis === 'user' && editorFieldset.querySelector('[data-deliverable-grouping]:checked')?.value === 'joint' ? assignment.team_ids : [],
+                classification_locked: !!rowStore[currentKey]?.classification_locked,
+                semantic_locked: !!rowStore[currentKey]?.semantic_locked,
+            };
+
+            if (rowData.classification_locked && rowStore[currentKey]) {
+                rowData.contact_family_id = rowStore[currentKey].contact_family_id;
+                rowData.activity_type_id = rowStore[currentKey].activity_type_id;
+                rowData.program_id = rowStore[currentKey].program_id;
+            }
+            if (rowData.semantic_locked && rowStore[currentKey]) {
+                rowData.metric_type = rowStore[currentKey].metric_type;
+                rowData.contribution_basis = rowStore[currentKey].contribution_basis;
+                rowData.user_grouping_mode = rowStore[currentKey].user_grouping_mode;
+                rowData.include_additional_time = rowStore[currentKey].include_additional_time;
+            }
+
+            return enrichRowData(rowData);
+        }
+
+        function setEditorData(rowKey, rowData) {
+            currentKey = rowKey;
+            editorKeyInput.value = rowKey || '';
+            const fieldPrefix = 'deliverable_editor';
+
+            editorCard.querySelector('[name="deliverable_editor[id]"]')?.remove();
+            const idInput = document.createElement('input');
+            idInput.type = 'hidden';
+            idInput.name = fieldPrefix + '[id]';
+            idInput.value = rowData.id || '';
+            editorFieldset.prepend(idInput);
+
+            const familySelect = editorFieldset.querySelector('[data-deliverable-contact-family]');
+            if (familySelect) familySelect.value = rowData.contact_family_id || '';
+            const typeSelect = editorFieldset.querySelector('[data-deliverable-activity-type]');
+            if (typeSelect) typeSelect.value = rowData.activity_type_id || '';
+
+            syncActivityTypeOptions();
+            const programSelect = editorFieldset.querySelector('[data-deliverable-program]');
+            if (programSelect) programSelect.value = rowData.program_id || '';
+
+            editorFieldset.querySelectorAll('[data-deliverable-metric]').forEach(function (radio) {
+                radio.checked = radio.value === (rowData.metric_type || '');
+            });
+            editorFieldset.querySelectorAll('[data-deliverable-basis]').forEach(function (radio) {
+                radio.checked = radio.value === (rowData.contribution_basis || '');
+            });
+            editorFieldset.querySelectorAll('[data-deliverable-grouping]').forEach(function (radio) {
+                radio.checked = radio.value === (rowData.user_grouping_mode || '');
+            });
+
+            const targetInput = getTargetInput();
+            if (targetInput) targetInput.value = rowData.target_quantity || '';
+            editorFieldset.querySelectorAll('[data-deliverable-target], [data-deliverable-target-locked]').forEach(function (input) {
+                if (input !== targetInput) input.value = rowData.target_quantity || '';
+            });
+            const dueInput = editorFieldset.querySelector('[data-deliverable-due-date]');
+            if (dueInput) dueInput.value = rowData.suggested_due_date || '';
+            const notesInput = editorFieldset.querySelector('[data-deliverable-notes]');
+            if (notesInput) notesInput.value = rowData.notes || '';
+            const additionalTime = editorFieldset.querySelector('[data-deliverable-additional-time]');
+            if (additionalTime) additionalTime.checked = !!rowData.include_additional_time;
+
+            applyLockState(rowData);
+            syncEditorVisibility();
+            renderAssignmentLedger(rowData.user_ids || [], rowData.team_ids || []);
+
+            if (editorModal) editorModal.show();
+        }
+
+        function clearEditor(showModal) {
+            currentKey = null;
+            editorKeyInput.value = '';
+            editorCard.querySelector('[name="deliverable_editor[id]"]')?.remove();
+
+            const familySelect = editorFieldset.querySelector('[data-deliverable-contact-family]');
+            if (familySelect) familySelect.value = '';
+            const typeSelect = editorFieldset.querySelector('[data-deliverable-activity-type]');
+            if (typeSelect) typeSelect.value = '';
+            const programSelect = editorFieldset.querySelector('[data-deliverable-program]');
+            if (programSelect) programSelect.value = '';
+
+            editorFieldset.querySelectorAll('[data-deliverable-metric], [data-deliverable-basis], [data-deliverable-grouping]').forEach(function (radio) {
+                radio.checked = false;
+            });
+            editorFieldset.querySelectorAll('[data-deliverable-target], [data-deliverable-target-locked], [data-deliverable-due-date], [data-deliverable-notes]').forEach(function (input) {
+                input.value = '';
+            });
+            const additionalTime = editorFieldset.querySelector('[data-deliverable-additional-time]');
+            if (additionalTime) additionalTime.checked = false;
+
+            applyLockState({ classification_locked: false, semantic_locked: false });
+            syncActivityTypeOptions();
+            renderAssignmentLedger([], []);
+
+            if (showModal !== false && editorModal) editorModal.show();
         }
 
         function readHiddenRowData(hiddenRow) {
             const rowKey = hiddenRow.dataset.deliverableHiddenRow;
-
             function findValue(field) {
-                return hiddenRow.querySelector(`input[name="deliverables[${CSS.escape(rowKey)}][${field}]"]`)?.value || '';
+                return hiddenRow.querySelector('input[name="deliverables[' + rowKey + '][' + field + ']"]')?.value || '';
+            }
+            function findCheckedArray(field) {
+                return Array.from(hiddenRow.querySelectorAll('input[name="deliverables[' + rowKey + '][' + field + '][]"]')).map(function (input) {
+                    return input.value;
+                });
             }
 
-            return {
-                rowKey: rowKey,
+            const stored = rowStore[rowKey] || {};
+            return enrichRowData({
+                row_key: rowKey,
                 id: findValue('id'),
                 _delete: findValue('_delete') || '0',
                 contact_family_id: findValue('contact_family_id'),
                 activity_type_id: findValue('activity_type_id'),
-                required_hours: findValue('required_hours'),
-                required_activities: findValue('required_activities'),
+                program_id: findValue('program_id'),
+                metric_type: findValue('metric_type'),
+                contribution_basis: findValue('contribution_basis'),
+                user_grouping_mode: findValue('user_grouping_mode'),
+                include_additional_time: findValue('include_additional_time') === '1',
+                target_quantity: findValue('target_quantity'),
+                suggested_due_date: findValue('suggested_due_date'),
+                sort_order: findValue('sort_order') || 0,
                 notes: findValue('notes'),
-                user_ids: Array.from(hiddenRow.querySelectorAll(`input[name="deliverables[${CSS.escape(rowKey)}][user_ids][]"]`)).map(function (input) {
-                    return input.value;
-                }),
+                user_ids: findCheckedArray('user_ids'),
+                team_ids: findCheckedArray('team_ids'),
+                classification_locked: !!stored.classification_locked,
+                semantic_locked: !!stored.semantic_locked,
+            });
+        }
+
+        function getAllowedMembershipIds() {
+            const pool = getAgreementMembershipPool();
+            const allowedUserIds = new Set(pool.directUserIds.map(String));
+            pool.selectedTeamIds.forEach(function (teamId) {
+                (teamMembersMap[teamId] || []).forEach(function (memberId) {
+                    allowedUserIds.add(String(memberId));
+                });
+            });
+            return {
+                allowedUserIds: allowedUserIds,
+                allowedTeamIds: new Set(pool.selectedTeamIds.map(String)),
             };
         }
 
-        function syncStoredRowsToPrograms() {
+        function syncStoredRowsToScope() {
             const activeProgramIds = selectedProgramIds();
+            const membership = getAllowedMembershipIds();
 
             Array.from(hiddenInputs.querySelectorAll('[data-deliverable-hidden-row]')).forEach(function (hiddenRow) {
                 const rowData = readHiddenRowData(hiddenRow);
-                const rowKey = rowData.rowKey;
-
-                if (!rowKey || rowData._delete === '1') {
-                    return;
-                }
+                const rowKey = rowData.row_key;
+                if (!rowKey || rowData._delete === '1') return;
 
                 const familyAllowed = !rowData.contact_family_id || isAllowedByPrograms(contactFamilyProgramMap[String(rowData.contact_family_id)] || [], true, activeProgramIds);
                 const typeAllowed = !rowData.activity_type_id || isAllowedByPrograms(activityTypeProgramMap[String(rowData.activity_type_id)] || [], true, activeProgramIds);
+                const programAllowed = !rowData.program_id || activeProgramIds.includes(String(rowData.program_id));
 
-                if (!familyAllowed || !typeAllowed) {
-                    if (rowData.id) {
-                        markRowDeleted(rowKey);
-                    } else {
-                        deleteRow(rowKey);
-                    }
-
+                if (!familyAllowed || !typeAllowed || !programAllowed) {
+                    if (rowData.id) markRowDeleted(rowKey);
+                    else deleteRow(rowKey);
                     delete rowStore[rowKey];
                     return;
                 }
 
                 const filteredUserIds = (rowData.user_ids || []).filter(function (userId) {
-                    return isAllowedByPrograms(userProgramMap[String(userId)] || [], false, activeProgramIds);
+                    return membership.allowedUserIds.has(String(userId));
+                });
+                const filteredTeamIds = (rowData.team_ids || []).filter(function (teamId) {
+                    return membership.allowedTeamIds.has(String(teamId));
                 });
 
-                if (filteredUserIds.length !== (rowData.user_ids || []).length) {
+                if (filteredUserIds.length !== (rowData.user_ids || []).length || filteredTeamIds.length !== (rowData.team_ids || []).length) {
                     rowData.user_ids = filteredUserIds;
-                    syncTableRow(rowKey, rowData);
-                    syncHiddenRow(rowKey, rowData);
+                    rowData.team_ids = filteredTeamIds;
+                    const enriched = enrichRowData(rowData);
+                    syncTableRow(rowKey, enriched);
+                    syncHiddenRow(rowKey, enriched);
                     return;
                 }
 
@@ -459,115 +932,88 @@
         }
 
         function rowMarkup(rowKey, rowData) {
-            const assignedNames = (rowData.user_ids || []).map(function (id) {
-                return userLookup[id] || id;
-            });
+            const assignmentBadges = renderAssignmentBadges(rowData.assignment_badges || buildAssignmentBadges(rowData));
 
-            const contactFamilyLabel = contactFamilyLookup[rowData.contact_family_id] || '—';
-            const activityTypeLabel = activityTypeLookup[rowData.activity_type_id] || 'Any activity type';
-            const badges = assignedNames.length
-                ? assignedNames.map(function (name) { return `<span class="badge bg-secondary me-1 mb-1">${escapeHtml(name)}</span>`; }).join('')
-                : '<span class="text-muted small">—</span>';
-
-            return `
-                <tr data-deliverable-row data-row-key="${escapeHtml(rowKey)}">
-                    <td>
-                        <div class="fw-semibold">${escapeHtml(contactFamilyLabel)}</div>
-                        <div class="text-muted small">${escapeHtml(activityTypeLabel)}</div>
-                    </td>
-                    <td class="text-wrap" style="min-width: 320px; max-width: 100%; white-space: normal;">${rowData.notes ? escapeHtml(rowData.notes) : '—'}</td>
-                    <td>${badges}</td>
-                    <td class="text-end text-nowrap">
-                        <div class="btn-group btn-group-sm" role="group" aria-label="Deliverable actions">
-                            <button type="button" class="btn btn-outline-secondary" data-deliverable-edit data-bs-toggle="tooltip" data-bs-title="Edit deliverable" aria-label="Edit deliverable">
-                                <i class="bi bi-pencil-square"></i>
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary" data-deliverable-duplicate data-bs-toggle="tooltip" data-bs-title="Duplicate deliverable" aria-label="Duplicate deliverable">
-                                <i class="bi bi-files"></i>
-                            </button>
-                            <button type="button" class="btn btn-outline-danger" data-deliverable-remove data-bs-toggle="tooltip" data-bs-title="Remove deliverable" aria-label="Remove deliverable">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `;
+            return '<tr data-deliverable-row data-row-key="' + escapeHtml(rowKey) + '" data-deliverable-row-data=\'' + JSON.stringify(rowData).replace(/'/g, '&#39;') + '\'>' +
+                '<td><div class="fw-semibold">' + escapeHtml(rowData.contact_family_label || '—') + '</div>' +
+                '<div class="text-muted small">' + escapeHtml(rowData.activity_type_label || 'Any activity type') + '</div>' +
+                (rowData.program_label ? '<div class="text-muted small">Program: ' + escapeHtml(rowData.program_label) + '</div>' : '') + '</td>' +
+                '<td><div class="small">' + escapeHtml(rowData.rules_summary || '—') + '</div></td>' +
+                '<td>' + assignmentBadges + '</td>' +
+                '<td class="text-wrap" style="min-width:200px;max-width:100%;white-space:normal;">' + (rowData.notes ? escapeHtml(rowData.notes) : '—') + '</td>' +
+                '<td class="text-end text-nowrap"><div class="btn-group btn-group-sm" role="group">' +
+                '<button type="button" class="btn btn-outline-secondary" data-deliverable-edit data-bs-toggle="tooltip" data-bs-title="Edit deliverable"><i class="bi bi-pencil-square"></i></button>' +
+                '<button type="button" class="btn btn-outline-secondary" data-deliverable-duplicate data-bs-toggle="tooltip" data-bs-title="Duplicate deliverable"><i class="bi bi-files"></i></button>' +
+                '<button type="button" class="btn btn-outline-danger" data-deliverable-remove data-bs-toggle="tooltip" data-bs-title="Remove deliverable"><i class="bi bi-trash"></i></button>' +
+                '</div></td></tr>';
         }
 
         function hiddenMarkup(rowKey, rowData) {
             const userInputs = (rowData.user_ids || []).map(function (id) {
-                return `<input type="hidden" name="deliverables[${escapeHtml(rowKey)}][user_ids][]" value="${escapeHtml(id)}">`;
+                return '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][user_ids][]" value="' + escapeHtml(id) + '">';
+            }).join('');
+            const teamInputs = (rowData.team_ids || []).map(function (id) {
+                return '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][team_ids][]" value="' + escapeHtml(id) + '">';
             }).join('');
 
-            return `
-                <div data-deliverable-hidden-row="${escapeHtml(rowKey)}">
-                    ${rowData.id ? `<input type="hidden" name="deliverables[${escapeHtml(rowKey)}][id]" value="${escapeHtml(rowData.id)}">` : ''}
-                    <input type="hidden" name="deliverables[${escapeHtml(rowKey)}][_delete]" value="${escapeHtml(rowData._delete || '0')}">
-                    <input type="hidden" name="deliverables[${escapeHtml(rowKey)}][contact_family_id]" value="${escapeHtml(rowData.contact_family_id || '')}">
-                    <input type="hidden" name="deliverables[${escapeHtml(rowKey)}][activity_type_id]" value="${escapeHtml(rowData.activity_type_id || '')}">
-                    <input type="hidden" name="deliverables[${escapeHtml(rowKey)}][required_hours]" value="${escapeHtml(rowData.required_hours || '')}">
-                    <input type="hidden" name="deliverables[${escapeHtml(rowKey)}][required_activities]" value="${escapeHtml(rowData.required_activities || '')}">
-                    <input type="hidden" name="deliverables[${escapeHtml(rowKey)}][notes]" value="${escapeHtml(rowData.notes || '')}">
-                    ${userInputs}
-                </div>
-            `;
+            return '<div data-deliverable-hidden-row="' + escapeHtml(rowKey) + '">' +
+                (rowData.id ? '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][id]" value="' + escapeHtml(rowData.id) + '">' : '') +
+                '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][_delete]" value="' + escapeHtml(rowData._delete || '0') + '">' +
+                '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][contact_family_id]" value="' + escapeHtml(rowData.contact_family_id || '') + '">' +
+                '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][activity_type_id]" value="' + escapeHtml(rowData.activity_type_id || '') + '">' +
+                '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][program_id]" value="' + escapeHtml(rowData.program_id || '') + '">' +
+                '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][metric_type]" value="' + escapeHtml(rowData.metric_type || '') + '">' +
+                '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][contribution_basis]" value="' + escapeHtml(rowData.contribution_basis || '') + '">' +
+                '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][user_grouping_mode]" value="' + escapeHtml(rowData.user_grouping_mode || '') + '">' +
+                '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][include_additional_time]" value="' + (rowData.include_additional_time ? '1' : '0') + '">' +
+                '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][target_quantity]" value="' + escapeHtml(rowData.target_quantity || '') + '">' +
+                '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][suggested_due_date]" value="' + escapeHtml(rowData.suggested_due_date || '') + '">' +
+                '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][sort_order]" value="' + escapeHtml(rowData.sort_order || '0') + '">' +
+                '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][notes]" value="' + escapeHtml(rowData.notes || '') + '">' +
+                userInputs + teamInputs + '</div>';
         }
 
         function syncHiddenRow(rowKey, rowData) {
-            const existing = hiddenInputs.querySelector(`[data-deliverable-hidden-row="${CSS.escape(rowKey)}"]`);
-            if (existing) {
-                existing.outerHTML = hiddenMarkup(rowKey, rowData);
-            } else {
-                hiddenInputs.insertAdjacentHTML('beforeend', hiddenMarkup(rowKey, rowData));
-            }
+            const existing = hiddenInputs.querySelector('[data-deliverable-hidden-row="' + CSS.escape(rowKey) + '"]');
+            if (existing) existing.outerHTML = hiddenMarkup(rowKey, rowData);
+            else hiddenInputs.insertAdjacentHTML('beforeend', hiddenMarkup(rowKey, rowData));
             rowStore[rowKey] = rowData;
         }
 
         function syncTableRow(rowKey, rowData) {
             const emptyRow = tableBody.querySelector('.deliverable-empty-row');
-            if (emptyRow) {
-                emptyRow.remove();
-            }
-
-            const existing = tableBody.querySelector(`[data-row-key="${CSS.escape(rowKey)}"]`);
-            if (existing) {
-                disposeTooltips(existing);
-            }
+            if (emptyRow) emptyRow.remove();
+            const existing = tableBody.querySelector('[data-row-key="' + CSS.escape(rowKey) + '"]');
+            if (existing) disposeTooltips(existing);
             const markup = rowMarkup(rowKey, rowData);
-            if (existing) {
-                existing.outerHTML = markup;
-            } else {
-                tableBody.insertAdjacentHTML('beforeend', markup);
-            }
+            if (existing) existing.outerHTML = markup;
+            else tableBody.insertAdjacentHTML('beforeend', markup);
             initTooltips(tableBody);
             rowStore[rowKey] = rowData;
         }
 
         function deleteRow(rowKey) {
-            const row = tableBody.querySelector(`[data-row-key="${CSS.escape(rowKey)}"]`);
-            const hidden = hiddenInputs.querySelector(`[data-deliverable-hidden-row="${CSS.escape(rowKey)}"]`);
-            if (row) {
-                disposeTooltips(row);
-            }
+            const row = tableBody.querySelector('[data-row-key="' + CSS.escape(rowKey) + '"]');
+            const hidden = hiddenInputs.querySelector('[data-deliverable-hidden-row="' + CSS.escape(rowKey) + '"]');
+            if (row) disposeTooltips(row);
             if (row) row.remove();
             if (hidden) hidden.remove();
-
+            delete rowStore[rowKey];
             renderEmptyStateIfNeeded();
         }
 
         function markRowDeleted(rowKey) {
-            const hidden = hiddenInputs.querySelector(`[data-deliverable-hidden-row="${CSS.escape(rowKey)}"]`);
+            const hidden = hiddenInputs.querySelector('[data-deliverable-hidden-row="' + CSS.escape(rowKey) + '"]');
             if (!hidden) return;
             const deleteInput = hidden.querySelector('input[name$="[_delete]"]');
             if (deleteInput) deleteInput.value = '1';
-
-            const row = tableBody.querySelector(`[data-row-key="${CSS.escape(rowKey)}"]`);
+            const row = tableBody.querySelector('[data-row-key="' + CSS.escape(rowKey) + '"]');
             if (row) {
                 disposeTooltips(row);
                 row.classList.add('table-active', 'text-muted');
                 row.style.display = 'none';
             }
-
+            if (rowStore[rowKey]) rowStore[rowKey]._delete = '1';
             renderEmptyStateIfNeeded();
         }
 
@@ -575,24 +1021,33 @@
             tableBody.querySelectorAll('[data-deliverable-row]').forEach(function (row) {
                 const rowKey = row.dataset.rowKey;
                 if (rowKey && !rowStore[rowKey] && row.dataset.deliverableRowData) {
-                    try {
-                        rowStore[rowKey] = JSON.parse(row.dataset.deliverableRowData);
-                    } catch (error) {
-                        rowStore[rowKey] = {};
-                    }
+                    try { rowStore[rowKey] = JSON.parse(row.dataset.deliverableRowData); } catch (e) { rowStore[rowKey] = {}; }
                 }
             });
-
             initTooltips(tableBody);
+        }
+
+        function rowHasContent(rowData) {
+            if (!rowData.contact_family_id || !rowData.metric_type || !rowData.contribution_basis) {
+                return false;
+            }
+
+            if (rowData.target_quantity === '' || rowData.target_quantity === null || rowData.target_quantity === undefined) {
+                return false;
+            }
+
+            if (rowData.contribution_basis === 'user' && !rowData.user_grouping_mode) {
+                return false;
+            }
+
+            return true;
         }
 
         tableBody.addEventListener('click', function (event) {
             const actionButton = event.target.closest('[data-deliverable-edit], [data-deliverable-duplicate], [data-deliverable-remove]');
             if (!actionButton) return;
-
             const row = actionButton.closest('[data-deliverable-row]');
             if (!row) return;
-
             const rowKey = row.dataset.rowKey;
             const payload = rowStore[rowKey] || {};
 
@@ -600,26 +1055,18 @@
                 setEditorData(rowKey, payload);
                 return;
             }
-
             if (actionButton.matches('[data-deliverable-duplicate]')) {
                 const duplicateKey = newRowKey();
-                const duplicate = { ...payload, id: '', _delete: '0' };
+                const duplicate = Object.assign({}, payload, { id: '', _delete: '0', classification_locked: false, semantic_locked: false });
                 delete duplicate.row_key;
                 syncTableRow(duplicateKey, duplicate);
                 syncHiddenRow(duplicateKey, duplicate);
                 return;
             }
-
             if (actionButton.matches('[data-deliverable-remove]')) {
-                if (payload.id) {
-                    markRowDeleted(rowKey);
-                    return;
-                }
-
-                deleteRow(rowKey);
-                if (currentKey === rowKey) {
-                    clearEditor(false);
-                }
+                if (payload.id) markRowDeleted(rowKey);
+                else deleteRow(rowKey);
+                if (currentKey === rowKey) clearEditor(false);
             }
         });
 
@@ -629,38 +1076,63 @@
                 currentKey = newKey;
                 clearEditor();
                 editorKeyInput.value = newKey;
-                editorModal?.show();
             });
         });
 
-        clearButton.addEventListener('click', function () {
-            clearEditor();
-        });
+        clearButton.addEventListener('click', function () { clearEditor(); });
 
         saveButton.addEventListener('click', function () {
             const rowData = collectEditorData();
             const rowKey = currentKey || newRowKey();
-
-            if (rowData.id === '' && rowData.contact_family_id === '' && rowData.activity_type_id === '' && rowData.required_hours === '' && rowData.required_activities === '' && rowData.notes === '' && rowData.user_ids.length === 0) {
-                return;
-            }
-
+            if (!rowHasContent(rowData)) return;
             syncTableRow(rowKey, rowData);
             syncHiddenRow(rowKey, rowData);
-            setEditorData(rowKey, rowData);
             editorModal?.hide();
         });
 
-        editorCard.querySelector('[name="deliverable_editor[contact_family_id]"]')?.addEventListener('change', syncActivityTypeOptions);
+        editorFieldset.querySelector('[data-deliverable-contact-family]')?.addEventListener('change', function () {
+            syncActivityTypeOptions();
+            syncEditorVisibility();
+        });
+        editorFieldset.querySelectorAll('[data-deliverable-metric], [data-deliverable-basis], [data-deliverable-grouping]').forEach(function (input) {
+            input.addEventListener('change', syncEditorVisibility);
+        });
+
+        editorFieldset.querySelector('[data-deliverable-select-all]')?.addEventListener('click', function () {
+            editorFieldset.querySelectorAll('[data-deliverable-team-checkbox]').forEach(function (cb) {
+                cb.checked = true;
+                cb.dispatchEvent(new Event('change'));
+            });
+            editorFieldset.querySelectorAll('[data-deliverable-user-checkbox]').forEach(function (cb) {
+                cb.checked = true;
+            });
+        });
 
         document.addEventListener('agreement-scope:change', function () {
             syncActivityTypeOptions();
-            syncStoredRowsToPrograms();
+            syncStoredRowsToScope();
+            if (editorModalEl.classList.contains('show')) {
+                const assignment = getSelectedAssignmentState();
+                renderAssignmentLedger(assignment.user_ids, assignment.team_ids);
+            }
+        });
+
+        const teamPicker = document.getElementById(agreementTeamPickerId);
+        const userPicker = document.getElementById(agreementUserPickerId);
+        [teamPicker, userPicker].forEach(function (picker) {
+            if (!picker) return;
+            picker.addEventListener('token-picker:change', function () {
+                syncStoredRowsToScope();
+                if (editorModalEl.classList.contains('show')) {
+                    const assignment = getSelectedAssignmentState();
+                    renderAssignmentLedger(assignment.user_ids, assignment.team_ids);
+                }
+            });
         });
 
         bindRows();
         syncActivityTypeOptions();
-        syncStoredRowsToPrograms();
+        syncStoredRowsToScope();
     });
 })();
 </script>

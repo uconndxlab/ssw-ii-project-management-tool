@@ -41,4 +41,16 @@ class Team extends Model
     {
         return $this->belongsToMany(Program::class, 'team_program')->withTimestamps();
     }
+
+    public function deliverables(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            AgreementDeliverable::class,
+            'deliverable_team',
+            'team_id',
+            'agreement_deliverable_id'
+        )
+            ->withPivot(['assigned_at', 'unassigned_at'])
+            ->withTimestamps();
+    }
 }
