@@ -31,37 +31,64 @@
         return implode(' · ', $parts);
     };
 
-    $buildAssignmentBadges = function (array $row) use ($teams, $users): array {
-        $teamNames = [];
+    $buildAssignmentGroups = function (array $row) use ($teams, $users): array {
+        $groups = [];
+        $groupedUserIds = collect();
+        $isJoint = ($row['user_grouping_mode'] ?? '') === 'joint';
+        $assignedUserIds = collect($row['user_ids'] ?? [])->map(fn ($id) => (int) $id);
+
         foreach ($row['team_ids'] ?? [] as $teamId) {
-            $name = $teams->firstWhere('id', (int) $teamId)?->name;
-            if ($name) {
-                $teamNames[] = $name;
+            $team = $teams->firstWhere('id', (int) $teamId);
+            if (!$team) {
+                continue;
             }
+
+            if ($isJoint) {
+                $teamUserNames = $team->users->sortBy('name')->pluck('name')->values()->all();
+                $groupedUserIds = $groupedUserIds->merge($team->users->pluck('id')->map(fn ($id) => (int) $id));
+            } else {
+                $teamUserNames = $assignedUserIds
+                    ->filter(fn (int $userId) => $team->users->contains('id', $userId))
+                    ->map(fn (int $userId) => $users->firstWhere('id', $userId)?->name)
+                    ->filter()
+                    ->values()
+                    ->all();
+                $groupedUserIds = $groupedUserIds->merge(
+                    $assignedUserIds->filter(fn (int $userId) => $team->users->contains('id', $userId))
+                );
+            }
+
+            $groups[] = [
+                'team_name' => $team->name,
+                'users' => $teamUserNames,
+            ];
         }
 
-        $userNames = [];
-        foreach ($row['user_ids'] ?? [] as $userId) {
-            $name = $users->firstWhere('id', (int) $userId)?->name;
-            if ($name) {
-                $userNames[] = $name;
-            }
+        $standaloneUsers = $assignedUserIds
+            ->diff($groupedUserIds)
+            ->map(fn (int $userId) => $users->firstWhere('id', $userId)?->name)
+            ->filter()
+            ->values()
+            ->all();
+
+        if (!empty($standaloneUsers)) {
+            $groups[] = [
+                'team_name' => null,
+                'users' => $standaloneUsers,
+            ];
         }
 
-        return [
-            'teams' => $teamNames,
-            'users' => $userNames,
-        ];
+        return $groups;
     };
 
-    $enrichRow = function (array $row, string $rowKey) use ($contactFamilies, $activityTypes, $programLookup, $buildRulesSummary, $buildAssignmentBadges): array {
+    $enrichRow = function (array $row, string $rowKey) use ($contactFamilies, $activityTypes, $programLookup, $buildRulesSummary, $buildAssignmentGroups): array {
         return array_merge($row, [
             'row_key' => $rowKey,
             'contact_family_label' => $contactFamilies->firstWhere('id', $row['contact_family_id'] ?? null)?->name,
             'activity_type_label' => $activityTypes->firstWhere('id', $row['activity_type_id'] ?? null)?->name,
             'program_label' => $programLookup->get((int) ($row['program_id'] ?? 0))?->name,
             'rules_summary' => $buildRulesSummary($row),
-            'assignment_badges' => $buildAssignmentBadges($row),
+            'assignment_groups' => $buildAssignmentGroups($row),
         ]);
     };
 
@@ -353,29 +380,76 @@
             return parts.join(' · ');
         }
 
-        function buildAssignmentBadges(rowData) {
-            const teams = [];
+        function buildAssignmentGroups(rowData) {
+            const groups = [];
+            const groupedUserIds = new Set();
+            const isJoint = rowData.user_grouping_mode === 'joint';
+            const assignedUserIds = (rowData.user_ids || []).map(String);
+
             (rowData.team_ids || []).forEach(function (teamId) {
-                const name = teamLookup[teamId];
-                if (name) teams.push(name);
+                const teamName = teamLookup[teamId];
+                const memberIds = teamMembersMap[teamId] || [];
+                if (!teamName) return;
+
+                let teamUserNames = [];
+                if (isJoint) {
+                    teamUserNames = memberIds.map(function (memberId) {
+                        groupedUserIds.add(String(memberId));
+                        return userLookup[memberId];
+                    }).filter(Boolean).sort();
+                } else {
+                    teamUserNames = assignedUserIds
+                        .filter(function (userId) { return memberIds.map(String).includes(String(userId)); })
+                        .map(function (userId) {
+                            groupedUserIds.add(String(userId));
+                            return userLookup[userId];
+                        })
+                        .filter(Boolean)
+                        .sort();
+                }
+
+                groups.push({ team_name: teamName, users: teamUserNames });
             });
-            const users = [];
-            (rowData.user_ids || []).forEach(function (userId) {
-                const name = userLookup[userId];
-                if (name) users.push(name);
-            });
-            return { teams: teams, users: users };
+
+            const standaloneUsers = assignedUserIds
+                .filter(function (userId) { return !groupedUserIds.has(String(userId)); })
+                .map(function (userId) { return userLookup[userId]; })
+                .filter(Boolean)
+                .sort();
+
+            if (standaloneUsers.length > 0) {
+                groups.push({ team_name: null, users: standaloneUsers });
+            }
+
+            return groups;
         }
 
-        function renderAssignmentBadges(badges) {
-            const teamBadges = (badges.teams || []).map(function (name) {
-                return '<span class="badge bg-secondary-subtle text-secondary-emphasis border me-1 mb-1">' + escapeHtml(name) + '</span>';
+        function renderAssignmentGroups(groups) {
+            if (!groups || groups.length === 0) {
+                return '<span class="text-muted small">—</span>';
+            }
+
+            return groups.map(function (group) {
+                let html = '<div class="mb-2 w-100">';
+                if (group.team_name) {
+                    html += '<div class="d-block mb-1"><span class="badge bg-secondary-subtle text-secondary-emphasis border">' + escapeHtml(group.team_name) + '</span></div>';
+                    if (group.users.length > 0) {
+                        html += '<div class="ps-2 d-flex flex-column align-items-start gap-1">';
+                        html += group.users.map(function (name) {
+                            return '<span class="badge bg-primary-subtle text-primary-emphasis border">' + escapeHtml(name) + '</span>';
+                        }).join('');
+                        html += '</div>';
+                    }
+                } else if (group.users.length > 0) {
+                    html += '<div class="d-flex flex-column align-items-start gap-1">';
+                    html += group.users.map(function (name) {
+                        return '<span class="badge bg-primary-subtle text-primary-emphasis border">' + escapeHtml(name) + '</span>';
+                    }).join('');
+                    html += '</div>';
+                }
+                html += '</div>';
+                return html;
             }).join('');
-            const userBadges = (badges.users || []).map(function (name) {
-                return '<span class="badge bg-primary-subtle text-primary-emphasis border me-1 mb-1">' + escapeHtml(name) + '</span>';
-            }).join('');
-            const combined = teamBadges + userBadges;
-            return combined || '<span class="text-muted small">—</span>';
         }
 
         function enrichRowData(rowData) {
@@ -384,7 +458,7 @@
                 activity_type_label: activityTypeLookup[rowData.activity_type_id] || '',
                 program_label: programLookup[rowData.program_id] || '',
                 rules_summary: buildRulesSummary(rowData),
-                assignment_badges: buildAssignmentBadges(rowData),
+                assignment_groups: buildAssignmentGroups(rowData),
             });
         }
 
@@ -932,14 +1006,14 @@
         }
 
         function rowMarkup(rowKey, rowData) {
-            const assignmentBadges = renderAssignmentBadges(rowData.assignment_badges || buildAssignmentBadges(rowData));
+            const assignmentBadges = renderAssignmentGroups(rowData.assignment_groups || buildAssignmentGroups(rowData));
 
             return '<tr data-deliverable-row data-row-key="' + escapeHtml(rowKey) + '" data-deliverable-row-data=\'' + JSON.stringify(rowData).replace(/'/g, '&#39;') + '\'>' +
                 '<td><div class="fw-semibold">' + escapeHtml(rowData.contact_family_label || '—') + '</div>' +
                 '<div class="text-muted small">' + escapeHtml(rowData.activity_type_label || 'Any activity type') + '</div>' +
                 (rowData.program_label ? '<div class="text-muted small">Program: ' + escapeHtml(rowData.program_label) + '</div>' : '') + '</td>' +
                 '<td><div class="small">' + escapeHtml(rowData.rules_summary || '—') + '</div></td>' +
-                '<td>' + assignmentBadges + '</td>' +
+                '<td class="text-wrap align-top" style="min-width:180px;max-width:280px;white-space:normal;">' + assignmentBadges + '</td>' +
                 '<td class="text-wrap" style="min-width:200px;max-width:100%;white-space:normal;">' + (rowData.notes ? escapeHtml(rowData.notes) : '—') + '</td>' +
                 '<td class="text-end text-nowrap"><div class="btn-group btn-group-sm" role="group">' +
                 '<button type="button" class="btn btn-outline-secondary" data-deliverable-edit data-bs-toggle="tooltip" data-bs-title="Edit deliverable"><i class="bi bi-pencil-square"></i></button>' +

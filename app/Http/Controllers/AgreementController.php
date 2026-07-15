@@ -6,6 +6,7 @@ use App\Http\Requests\AgreementRequest;
 use App\Models\Organization;
 use App\Models\Agreement;
 use App\Models\AgreementDeliverable;
+use App\Support\AgreementDeliverableDisplay;
 use App\Models\AgreementCertificationCandidate;
 use App\Models\ActivityType;
 use App\Models\ContactFamily;
@@ -195,13 +196,17 @@ class AgreementController extends Controller
         $agreement->load([
             'organizations',
             'states',
+            'projects',
+            'programs',
             'users',
             'teams.users',
-            'deliverables.activityType.contactFamily',
+            'deliverables.contactFamily',
+            'deliverables.activityType',
             'deliverables.program',
             'deliverables.users',
             'deliverables.teams',
             'deliverables.contributions.contributor',
+            'deliverables.contributions.activityHistory',
             'attachments',
             'certificationCandidates',
             'principalInvestigators',
@@ -236,49 +241,16 @@ class AgreementController extends Controller
             'activities' => $ytdActivities->count(),
         ];
 
-        $deliverableProgress = $agreement->deliverables
-            ->reject(fn (AgreementDeliverable $deliverable) => $deliverable->retired_at)
-            ->map(function (AgreementDeliverable $deliverable) {
-                $contributions = $deliverable->contributions;
-                $completedValue = $deliverable->metric_type === 'time'
-                    ? (float) $contributions->sum('credited_hours')
-                    : (float) $contributions->sum('credited_units');
+        $deliverableGroups = AgreementDeliverableDisplay::buildGroupedProgress($agreement);
 
-                $individualProgress = collect();
-                if ($deliverable->contribution_basis === 'user' && $deliverable->user_grouping_mode === 'individual') {
-                    $individualProgress = $contributions
-                        ->whereNotNull('contributor_user_id')
-                        ->groupBy('contributor_user_id')
-                        ->map(function ($userContributions) use ($deliverable) {
-                            $firstContribution = $userContributions->first();
-                            $user = $firstContribution?->contributor;
-
-                            if (!$user) {
-                                return null;
-                            }
-
-                            return [
-                                'user' => $user,
-                                'completed_value' => $deliverable->metric_type === 'time'
-                                    ? (float) $userContributions->sum('credited_hours')
-                                    : (float) $userContributions->sum('credited_units'),
-                            ];
-                        })
-                        ->filter()
-                        ->values();
-                }
-
-                return [
-                    'deliverable' => $deliverable,
-                    'completed_value' => $completedValue,
-                    'assigned_users' => $deliverable->users->filter(fn ($user) => !$user->pivot->unassigned_at)->values(),
-                    'assigned_teams' => $deliverable->teams->filter(fn ($team) => !$team->pivot->unassigned_at)->values(),
-                    'individual_progress' => $individualProgress,
-                ];
-            })
-            ->values();
-
-        return view('agreements.show', compact('agreement', 'recentActivities', 'programs', 'lifetimeTotals', 'ytdTotals', 'deliverableProgress'));
+        return view('agreements.show', compact(
+            'agreement',
+            'recentActivities',
+            'programs',
+            'lifetimeTotals',
+            'ytdTotals',
+            'deliverableGroups'
+        ));
     }
 
     public function edit(Agreement $agreement)

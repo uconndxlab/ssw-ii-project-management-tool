@@ -21,6 +21,8 @@
     'editRoute'      => null,
     'backRoute',
     'backLabel'      => 'Back',
+    'mainCardTitle'  => 'Relationships',
+    'activityFirst'  => false,
 ])
 
 {{-- ── Page Header ──────────────────────────────────────────────────────── --}}
@@ -63,29 +65,55 @@
     {{-- Relationships + Activity column (wide) --}}
     <div class="col-lg-8 d-flex flex-column gap-4">
 
-        {{-- Relationships card --}}
-        <div class="card shadow-sm">
-            <div class="card-header bg-light py-2">
-                <span class="text-muted fw-semibold small text-uppercase" style="letter-spacing:.05em;">
-                    Relationships
-                </span>
+        @if($activityFirst)
+            {{-- Recent Activity card --}}
+            <div class="card shadow-sm">
+                <div class="card-header bg-light py-2">
+                    <span class="text-muted fw-semibold small text-uppercase" style="letter-spacing:.05em;">
+                        Recent Activity
+                    </span>
+                </div>
+                <div class="card-body">
+                    {{ $activity }}
+                </div>
             </div>
-            <div class="card-body">
-                {{ $relationships }}
-            </div>
-        </div>
 
-        {{-- Recent Activity card --}}
-        <div class="card shadow-sm">
-            <div class="card-header bg-light py-2">
-                <span class="text-muted fw-semibold small text-uppercase" style="letter-spacing:.05em;">
-                    Recent Activity
-                </span>
+            {{-- Main content card --}}
+            <div class="card shadow-sm">
+                <div class="card-header bg-light py-2">
+                    <span class="text-muted fw-semibold small text-uppercase" style="letter-spacing:.05em;">
+                        {{ $mainCardTitle }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    {{ $relationships }}
+                </div>
             </div>
-            <div class="card-body">
-                {{ $activity }}
+        @else
+            {{-- Relationships card --}}
+            <div class="card shadow-sm">
+                <div class="card-header bg-light py-2">
+                    <span class="text-muted fw-semibold small text-uppercase" style="letter-spacing:.05em;">
+                        {{ $mainCardTitle }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    {{ $relationships }}
+                </div>
             </div>
-        </div>
+
+            {{-- Recent Activity card --}}
+            <div class="card shadow-sm">
+                <div class="card-header bg-light py-2">
+                    <span class="text-muted fw-semibold small text-uppercase" style="letter-spacing:.05em;">
+                        Recent Activity
+                    </span>
+                </div>
+                <div class="card-body">
+                    {{ $activity }}
+                </div>
+            </div>
+        @endif
 
     </div>
 </div>

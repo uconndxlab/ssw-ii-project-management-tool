@@ -106,6 +106,14 @@ class DeliverableContributionService
 
     private function syncHistoryForActivity(Activity $activity): void
     {
+        $existingTeamSnapshotsByAgreementUser = AgreementActivityHistory::query()
+            ->where('activity_id', $activity->id)
+            ->whereNotNull('contributor_user_id')
+            ->get()
+            ->mapWithKeys(fn (AgreementActivityHistory $history) => [
+                $history->agreement_id . ':' . $history->contributor_user_id => $history->team_ids_snapshot,
+            ]);
+
         AgreementActivityHistory::query()
             ->where('activity_id', $activity->id)
             ->delete();
@@ -178,6 +186,10 @@ class DeliverableContributionService
 
             foreach ($activity->participants as $participant) {
                 $userId = (int) $participant->id;
+                $snapshotKey = $agreement->id . ':' . $userId;
+                $teamIdsSnapshot = $existingTeamSnapshotsByAgreementUser->has($snapshotKey)
+                    ? $existingTeamSnapshotsByAgreementUser->get($snapshotKey)
+                    : $agreementTeamIdsByUser->get($userId, []);
 
                 $rows[] = [
                     'agreement_id' => $agreement->id,
@@ -192,7 +204,7 @@ class DeliverableContributionService
                     'prep_hours' => 0,
                     'follow_up_hours' => 0,
                     'program_ids_snapshot' => $programIds,
-                    'team_ids_snapshot' => $agreementTeamIdsByUser->get($userId, []),
+                    'team_ids_snapshot' => $teamIdsSnapshot,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ];
@@ -215,7 +227,7 @@ class DeliverableContributionService
                     'prep_hours' => (float) $participantTime->prep_hours,
                     'follow_up_hours' => (float) $participantTime->follow_up_hours,
                     'program_ids_snapshot' => $programIds,
-                    'team_ids_snapshot' => $agreementTeamIdsByUser->get($userId, []),
+                    'team_ids_snapshot' => $teamIdsSnapshot,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ];
@@ -426,8 +438,33 @@ class DeliverableContributionService
         Collection $eligibleUsersById,
         Collection $deliverableTeamsById
     ): ?string {
-        $user = $eligibleUsersById->get((int) $history->contributor_user_id);
         $activityDate = CarbonImmutable::parse($history->activity_date)->startOfDay();
+        $historyTeamIds = collect($history->team_ids_snapshot ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->values();
+
+        if ($deliverableTeamsById->isNotEmpty() && $historyTeamIds->isNotEmpty()) {
+            foreach ($historyTeamIds as $teamId) {
+                $team = $deliverableTeamsById->get($teamId);
+
+                if (!$team) {
+                    continue;
+                }
+
+                $assignedAt = $team->pivot->assigned_at
+                    ? CarbonImmutable::parse($team->pivot->assigned_at)->startOfDay()
+                    : null;
+                $unassignedAt = $team->pivot->unassigned_at
+                    ? CarbonImmutable::parse($team->pivot->unassigned_at)->startOfDay()
+                    : null;
+
+                if ((!$assignedAt || !$activityDate->lt($assignedAt)) && (!$unassignedAt || !$activityDate->gt($unassignedAt))) {
+                    return 'team';
+                }
+            }
+        }
+
+        $user = $eligibleUsersById->get((int) $history->contributor_user_id);
 
         if ($user) {
             $assignedAt = $user->pivot->assigned_at
@@ -439,33 +476,6 @@ class DeliverableContributionService
 
             if ((!$assignedAt || !$activityDate->lt($assignedAt)) && (!$unassignedAt || !$activityDate->gt($unassignedAt))) {
                 return $user->pivot->source_team_id ? 'team' : 'user';
-            }
-        }
-
-        if ($deliverableTeamsById->isEmpty()) {
-            return null;
-        }
-
-        $historyTeamIds = collect($history->team_ids_snapshot ?? [])
-            ->map(fn ($id) => (int) $id)
-            ->values();
-
-        foreach ($historyTeamIds as $teamId) {
-            $team = $deliverableTeamsById->get($teamId);
-
-            if (!$team) {
-                continue;
-            }
-
-            $assignedAt = $team->pivot->assigned_at
-                ? CarbonImmutable::parse($team->pivot->assigned_at)->startOfDay()
-                : null;
-            $unassignedAt = $team->pivot->unassigned_at
-                ? CarbonImmutable::parse($team->pivot->unassigned_at)->startOfDay()
-                : null;
-
-            if ((!$assignedAt || !$activityDate->lt($assignedAt)) && (!$unassignedAt || !$activityDate->gt($unassignedAt))) {
-                return 'team';
             }
         }
 

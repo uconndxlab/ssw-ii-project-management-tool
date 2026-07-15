@@ -1,9 +1,7 @@
 @php
     $rowKey = $row['row_key'];
-    $assignmentBadges = $row['assignment_badges'] ?? ['teams' => [], 'users' => []];
-    $teamNames = $assignmentBadges['teams'] ?? [];
-    $userNames = $assignmentBadges['users'] ?? [];
-    $hasAssignments = !empty($teamNames) || !empty($userNames);
+    $assignmentGroups = $row['assignment_groups'] ?? [];
+    $hasAssignments = !empty($assignmentGroups);
 @endphp
 
 <tr data-deliverable-row data-row-key="{{ $rowKey }}" data-deliverable-row-data='@json($row)' @if(!empty($row['_delete']) && $row['_delete'] === '1') class="table-active text-muted" style="display:none" @endif>
@@ -17,13 +15,29 @@
     <td>
         <div class="small">{{ $row['rules_summary'] ?: '—' }}</div>
     </td>
-    <td>
+    <td class="text-wrap align-top" style="min-width: 180px; max-width: 280px; white-space: normal;">
         @if($hasAssignments)
-            @foreach($teamNames as $name)
-                <span class="badge bg-secondary-subtle text-secondary-emphasis border me-1 mb-1">{{ $name }}</span>
-            @endforeach
-            @foreach($userNames as $name)
-                <span class="badge bg-primary-subtle text-primary-emphasis border me-1 mb-1">{{ $name }}</span>
+            @foreach($assignmentGroups as $group)
+                <div class="mb-2 w-100">
+                    @if(!empty($group['team_name']))
+                        <div class="d-block mb-1">
+                            <span class="badge bg-secondary-subtle text-secondary-emphasis border">{{ $group['team_name'] }}</span>
+                        </div>
+                        @if(!empty($group['users']))
+                            <div class="ps-2 d-flex flex-column align-items-start gap-1">
+                                @foreach($group['users'] as $name)
+                                    <span class="badge bg-primary-subtle text-primary-emphasis border">{{ $name }}</span>
+                                @endforeach
+                            </div>
+                        @endif
+                    @elseif(!empty($group['users']))
+                        <div class="d-flex flex-column align-items-start gap-1">
+                            @foreach($group['users'] as $name)
+                                <span class="badge bg-primary-subtle text-primary-emphasis border">{{ $name }}</span>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
             @endforeach
         @else
             <span class="text-muted small">—</span>
