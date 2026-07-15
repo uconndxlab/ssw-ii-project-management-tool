@@ -172,6 +172,7 @@ class AgreementController extends Controller
             ]);
 
             $this->syncAgreementRelations($agreement, $validated);
+            $this->softUnassignDeliverableUsersOutsideAgreementMembership($agreement);
             $this->syncAgreementCertificationCandidates($agreement, $validated['certification_candidates'] ?? []);
             $this->syncAgreementDeliverables($agreement, $validated['deliverables'] ?? []);
             $this->deliverableContributionService->syncForAgreement($agreement->fresh());
@@ -279,6 +280,7 @@ class AgreementController extends Controller
             ]);
 
             $this->syncAgreementRelations($agreement, $validated);
+            $this->softUnassignDeliverableUsersOutsideAgreementMembership($agreement);
             $this->syncAgreementCertificationCandidates($agreement, $validated['certification_candidates'] ?? []);
             $this->syncAgreementDeliverables($agreement, $validated['deliverables'] ?? []);
             $this->deliverableContributionService->syncForAgreement($agreement->fresh());
@@ -363,6 +365,33 @@ class AgreementController extends Controller
             $syncData[$fieldId] = ['is_required' => in_array($fieldId, $requiredFieldIds)];
         }
         $agreement->agreementLoggingFields()->sync($syncData);
+    }
+
+    private function softUnassignDeliverableUsersOutsideAgreementMembership(Agreement $agreement): void
+    {
+        $agreement->loadMissing(['users', 'teams.users', 'deliverables.users']);
+
+        $memberUserIds = $agreement->users
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->merge(
+                $agreement->teams->flatMap(
+                    fn (Team $team) => $team->users->pluck('id')->map(fn ($id) => (int) $id)
+                )
+            )
+            ->unique();
+
+        foreach ($agreement->deliverables as $deliverable) {
+            foreach ($deliverable->users as $user) {
+                if ($user->pivot->unassigned_at || $memberUserIds->contains((int) $user->id)) {
+                    continue;
+                }
+
+                $deliverable->users()->updateExistingPivot($user->id, [
+                    'unassigned_at' => now(),
+                ]);
+            }
+        }
     }
 
     private function syncAgreementDeliverables(Agreement $agreement, array $deliverables): void

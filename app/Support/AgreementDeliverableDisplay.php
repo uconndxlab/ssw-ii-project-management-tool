@@ -15,13 +15,15 @@ class AgreementDeliverableDisplay
     {
         $teamLookup = $agreement->teams->keyBy(fn (Team $team) => (int) $team->id);
         $agreementTeamIds = $teamLookup->keys();
+        $agreementMemberUserIds = self::buildAgreementMemberUserIds($agreement);
 
         $items = $agreement->deliverables
             ->reject(fn (AgreementDeliverable $deliverable) => $deliverable->retired_at)
             ->map(fn (AgreementDeliverable $deliverable) => self::buildDeliverableProgress(
                 $deliverable,
                 $teamLookup,
-                $agreementTeamIds
+                $agreementTeamIds,
+                $agreementMemberUserIds
             ))
             ->values();
 
@@ -72,7 +74,8 @@ class AgreementDeliverableDisplay
     private static function buildDeliverableProgress(
         AgreementDeliverable $deliverable,
         Collection $teamLookup,
-        Collection $agreementTeamIds
+        Collection $agreementTeamIds,
+        Collection $agreementMemberUserIds
     ): array {
         $contributions = $deliverable->contributions;
         $target = (float) ($deliverable->target_quantity ?? 0);
@@ -86,7 +89,11 @@ class AgreementDeliverableDisplay
             ? (float) $contributions->sum('credited_hours')
             : (float) $contributions->sum('credited_units');
 
-        $currentlyAssignedUserIds = self::currentlyAssignedUserIds($deliverable, $teamLookup);
+        $currentlyAssignedUserIds = self::currentlyAssignedUserIds(
+            $deliverable,
+            $teamLookup,
+            $agreementMemberUserIds
+        );
         $contributorSummaries = self::buildContributorSummaries(
             $contributions,
             $deliverable,
@@ -96,9 +103,14 @@ class AgreementDeliverableDisplay
         );
         $contributorByUserId = $contributorSummaries->keyBy('user_id');
 
-        $pastContributions = $contributorSummaries
-            ->filter(fn (array $summary) => !$currentlyAssignedUserIds->contains($summary['user_id']))
-            ->values();
+        $pastContributions = self::buildPastAssignees(
+            $deliverable,
+            $currentlyAssignedUserIds,
+            $contributorByUserId,
+            $teamLookup,
+            $target,
+            false
+        );
 
         $liveAssignmentGroups = collect();
         $individualProgress = collect();
@@ -108,12 +120,18 @@ class AgreementDeliverableDisplay
             $liveAssignmentGroups = self::buildLiveAssignmentGroups(
                 $deliverable,
                 $teamLookup,
+                $agreementMemberUserIds,
                 $currentlyAssignedUserIds,
                 $contributorByUserId
             );
         } elseif ($isIndividual) {
             $assignedUsers = $deliverable->users
-                ->filter(fn (User $user) => !$user->pivot->unassigned_at)
+                ->filter(fn (User $user) => self::isActivelyAssignedUser(
+                    $user,
+                    $deliverable,
+                    $teamLookup,
+                    $agreementMemberUserIds
+                ))
                 ->values();
 
             $individualProgress = $assignedUsers->map(function (User $user) use ($contributorByUserId, $target) {
@@ -123,9 +141,14 @@ class AgreementDeliverableDisplay
                 return self::memberRow($user, $summary, $completed, $target);
             })->values();
 
-            $pastIndividualProgress = $pastContributions->map(function (array $summary) use ($target) {
-                return self::memberRow($summary['user'], $summary, (float) $summary['completed_value'], $target, false);
-            });
+            $pastIndividualProgress = self::buildPastAssignees(
+                $deliverable,
+                $currentlyAssignedUserIds,
+                $contributorByUserId,
+                $teamLookup,
+                $target,
+                true
+            );
         }
 
         $metricParts = [ucfirst($deliverable->metric_type ?? 'deliverable')];
@@ -153,7 +176,11 @@ class AgreementDeliverableDisplay
             'individual_progress' => $individualProgress,
             'past_individual_progress' => $pastIndividualProgress,
             'shows_contributor_breakdown' => $deliverable->contribution_basis === 'user',
-            'assignment_groups' => self::buildTableAssignmentGroups($deliverable, $teamLookup),
+            'assignment_groups' => self::buildTableAssignmentGroups(
+                $deliverable,
+                $teamLookup,
+                $agreementMemberUserIds
+            ),
         ];
     }
 
@@ -164,7 +191,8 @@ class AgreementDeliverableDisplay
      */
     public static function buildTableAssignmentGroups(
         AgreementDeliverable $deliverable,
-        Collection $teamLookup
+        Collection $teamLookup,
+        Collection $agreementMemberUserIds
     ): array {
         $assignedTeams = $deliverable->teams
             ->filter(fn (Team $team) => !$team->pivot->unassigned_at)
@@ -200,6 +228,12 @@ class AgreementDeliverableDisplay
         }
 
         $standaloneUsers = $assignedUsers
+            ->filter(fn (User $user) => self::isActivelyAssignedUser(
+                $user,
+                $deliverable,
+                $teamLookup,
+                $agreementMemberUserIds
+            ))
             ->reject(fn (User $user) => $groupedUserIds->contains($user->id))
             ->sortBy('name')
             ->values();
@@ -218,6 +252,7 @@ class AgreementDeliverableDisplay
     private static function buildLiveAssignmentGroups(
         AgreementDeliverable $deliverable,
         Collection $teamLookup,
+        Collection $agreementMemberUserIds,
         Collection $currentlyAssignedUserIds,
         Collection $contributorByUserId
     ): Collection {
@@ -268,7 +303,12 @@ class AgreementDeliverableDisplay
         }
 
         $standaloneRows = $assignedUsers
-            ->filter(fn (User $user) => self::isActivelyAssignedUser($user, $deliverable, $teamLookup))
+            ->filter(fn (User $user) => self::isActivelyAssignedUser(
+                $user,
+                $deliverable,
+                $teamLookup,
+                $agreementMemberUserIds
+            ))
             ->reject(fn (User $user) => $groupedUserIds->contains((int) $user->id))
             ->map(function (User $user) use ($contributorByUserId, $deliverable, $teamLookup) {
                 $summary = $contributorByUserId->get((int) $user->id);
@@ -314,9 +354,14 @@ class AgreementDeliverableDisplay
     private static function isActivelyAssignedUser(
         User $user,
         AgreementDeliverable $deliverable,
-        Collection $teamLookup
+        Collection $teamLookup,
+        Collection $agreementMemberUserIds
     ): bool {
         if ($user->pivot->unassigned_at) {
+            return false;
+        }
+
+        if (!$agreementMemberUserIds->contains((int) $user->id)) {
             return false;
         }
 
@@ -332,18 +377,108 @@ class AgreementDeliverableDisplay
             ->contains($sourceTeamId);
 
         if (!$teamAssignedToDeliverable) {
-            return true;
+            return false;
         }
 
         return $teamLookup->get($sourceTeamId)?->users->contains('id', $user->id) ?? false;
     }
 
+    private static function buildAgreementMemberUserIds(Agreement $agreement): Collection
+    {
+        return $agreement->users
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->merge(
+                $agreement->teams->flatMap(
+                    fn (Team $team) => $team->users->pluck('id')->map(fn ($id) => (int) $id)
+                )
+            )
+            ->unique()
+            ->values();
+    }
+
+    private static function buildPastAssignees(
+        AgreementDeliverable $deliverable,
+        Collection $currentlyAssignedUserIds,
+        Collection $contributorByUserId,
+        Collection $teamLookup,
+        float $target,
+        bool $asIndividualRows
+    ): Collection {
+        $candidateUserIds = $deliverable->users
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->merge($contributorByUserId->keys()->map(fn ($id) => (int) $id))
+            ->unique()
+            ->reject(fn (int $userId) => $currentlyAssignedUserIds->contains($userId))
+            ->values();
+
+        return $candidateUserIds
+            ->map(function (int $userId) use (
+                $deliverable,
+                $contributorByUserId,
+                $teamLookup,
+                $target,
+                $asIndividualRows
+            ) {
+                $assignedUser = $deliverable->users->firstWhere('id', $userId);
+                $summary = $contributorByUserId->get($userId);
+                $user = $summary['user'] ?? $assignedUser;
+
+                if (!$user) {
+                    return null;
+                }
+
+                $completed = (float) ($summary['completed_value'] ?? 0);
+                $teamName = $summary['team_name']
+                    ?? self::resolveFormerAssigneeTeamName($assignedUser, $teamLookup);
+
+                if ($asIndividualRows) {
+                    return self::memberRow(
+                        $user,
+                        array_merge($summary ?? [], ['team_name' => $teamName]),
+                        $completed,
+                        $target,
+                        false
+                    );
+                }
+
+                return [
+                    'user_id' => $userId,
+                    'user' => $user,
+                    'team_name' => $teamName,
+                    'completed_value' => $completed,
+                    'source_assignment_type' => $assignedUser?->pivot?->source_team_id ? 'team' : 'user',
+                ];
+            })
+            ->filter()
+            ->sortBy(fn (array $row) => $row['user']->name ?? '')
+            ->values();
+    }
+
+    private static function resolveFormerAssigneeTeamName(
+        ?User $assignedUser,
+        Collection $teamLookup
+    ): ?string {
+        if (!$assignedUser?->pivot?->source_team_id) {
+            return null;
+        }
+
+        return $teamLookup->get((int) $assignedUser->pivot->source_team_id)?->name;
+    }
+
     private static function currentlyAssignedUserIds(
         AgreementDeliverable $deliverable,
-        Collection $teamLookup
+        Collection $teamLookup,
+        Collection $agreementMemberUserIds
     ): Collection {
         $directIds = $deliverable->users
-            ->filter(fn (User $user) => self::isActivelyAssignedUser($user, $deliverable, $teamLookup))
+            ->filter(fn (User $user) => self::isActivelyAssignedUser(
+                $user,
+                $deliverable,
+                $teamLookup,
+                $agreementMemberUserIds
+            ))
             ->pluck('id')
             ->map(fn ($id) => (int) $id);
 
@@ -358,7 +493,8 @@ class AgreementDeliverableDisplay
 
         $teamMemberIds = $activeTeamIds
             ->flatMap(fn (int $teamId) => $teamLookup->get($teamId)?->users?->pluck('id') ?? collect())
-            ->map(fn ($id) => (int) $id);
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn (int $userId) => $agreementMemberUserIds->contains($userId));
 
         return $directIds
             ->merge($teamMemberIds)
