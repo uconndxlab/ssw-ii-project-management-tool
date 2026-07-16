@@ -4,13 +4,13 @@
 
 @section('content')
 <div class="row justify-content-center mb-4">
-    <div class="col-md-6">
+    <div class="col-lg-10">
         <h1>Edit Organization</h1>
     </div>
 </div>
 
 <div class="row justify-content-center">
-    <div class="col-md-6">
+    <div class="col-lg-10">
         <form method="POST" action="{{ route('organizations.update', $organization) }}" id="organizations-edit-form">
             @csrf
             @method('PUT')

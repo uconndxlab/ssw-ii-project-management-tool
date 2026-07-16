@@ -118,6 +118,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Organizations this user is associated with.
+     */
+    public function organizations(): BelongsToMany
+    {
+        return $this->belongsToMany(Organization::class, 'organization_user')->withTimestamps();
+    }
+
+    /**
      * The supervisor of this user.
      */
     public function supervisor(): BelongsTo

@@ -682,7 +682,19 @@ class AgreementController extends Controller
     private function agreementFormData(?Agreement $agreement = null): array
     {
         $states = State::query()->get()->sortBy('name')->values();
-        $organizations = Organization::query()->with(['states', 'projects', 'programs'])->get()->sortBy('name')->values();
+        $organizations = Organization::query()
+            ->active()
+            ->with(['states', 'projects', 'programs'])
+            ->get();
+
+        if ($agreement) {
+            $agreement->loadMissing(['organizations.states', 'organizations.projects', 'organizations.programs']);
+            $organizations = $organizations
+                ->merge($agreement->organizations ?? collect())
+                ->unique('id');
+        }
+
+        $organizations = $organizations->sortBy('name')->values();
         $users = User::query()->with(['projects', 'programs'])->get()->sortBy('name')->values();
         $contactFamilies = ContactFamily::query()
             ->where('active', true)

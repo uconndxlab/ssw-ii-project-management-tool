@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Organization;
 use App\Models\Project;
 use App\Models\State;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class OrganizationController extends Controller
 {
@@ -13,13 +15,14 @@ class OrganizationController extends Controller
     {
         $states = State::orderBy('name', 'asc')->get(['id', 'name']);
 
-        $query = Organization::with(['states', 'projects', 'programs'])->withCount('agreements');
+        $query = Organization::with(['states', 'projects', 'programs', 'users'])->withCount('agreements');
 
         // Search
         $search = trim((string) $request->input('search', ''));
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('kfs_number', 'like', "%{$search}%")
                     ->orWhereHas('states', function ($stateQuery) use ($search) {
                         $stateQuery->where('name', 'like', "%{$search}%");
                     });
@@ -29,6 +32,13 @@ class OrganizationController extends Controller
         // Filter
         if ($request->filled('state_id')) {
             $query->whereHas('states', fn ($q) => $q->where('states.id', $request->integer('state_id')));
+        }
+
+        $status = $request->input('status');
+        if ($status === 'active') {
+            $query->where('active', true);
+        } elseif ($status === 'inactive') {
+            $query->where('active', false);
         }
 
         $query->orderBy('name');
@@ -50,13 +60,15 @@ class OrganizationController extends Controller
 
     public function show(Organization $organization)
     {
+        $organization->load(['states', 'projects', 'programs', 'users']);
+
         // Load agreements with relationships
         $agreements = $organization->agreements()->with(['states', 'users'])->get();
 
         // Get all activities for this organization's agreements
-        $allActivities = \App\Models\Activity::whereHas('agreements', function($query) use ($agreements) {
-                $query->whereIn('agreements.id', $agreements->pluck('id'));
-            })
+        $allActivities = \App\Models\Activity::whereHas('agreements', function ($query) use ($agreements) {
+            $query->whereIn('agreements.id', $agreements->pluck('id'));
+        })
             ->with(['activityType.contactFamily', 'user', 'agreements'])
             ->orderByDesc('engagement_date')
             ->get();
@@ -78,18 +90,18 @@ class OrganizationController extends Controller
         $teamMembers = collect($teamMembersMap)->sortBy('name');
 
         // YTD activities
-        $ytdActivities = $allActivities->filter(fn($e) => $e->engagement_date->year === now()->year);
+        $ytdActivities = $allActivities->filter(fn ($e) => $e->engagement_date->year === now()->year);
 
         // YTD totals
         $ytdTotals = [
             'activities' => $ytdActivities->count(),
-            'hours' => $ytdActivities->sum(fn($e) => $e->event_hours + ($e->prep_hours ?? 0) + ($e->followup_hours ?? 0)),
+            'hours' => $ytdActivities->sum(fn ($e) => $e->event_hours + ($e->prep_hours ?? 0) + ($e->followup_hours ?? 0)),
             'participants' => $ytdActivities->sum('participant_count'),
         ];
 
         // Breakdown by contact family
-        $contactFamilyBreakdown = $ytdActivities->groupBy(fn($e) => $e->activityType->contactFamily->name)
-            ->map(fn($group) => $group->count())
+        $contactFamilyBreakdown = $ytdActivities->groupBy(fn ($e) => $e->activityType->contactFamily->name)
+            ->map(fn ($group) => $group->count())
             ->sortDesc();
 
         return view('organizations.show', compact(
@@ -108,26 +120,24 @@ class OrganizationController extends Controller
         $projects = Project::with(['programs' => fn ($query) => $query->orderBy('name')])
             ->orderBy('name')
             ->get();
+        $users = User::query()->orderBy('name')->get();
 
-        return view('organizations.create', compact('states', 'projects'));
+        return view('organizations.create', compact('states', 'projects', 'users'));
     }
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'state_ids' => ['required', 'array', 'min:1'],
-            'state_ids.*' => ['exists:states,id'],
-            'program_ids' => ['nullable', 'array'],
-            'program_ids.*' => ['exists:programs,id'],
-            'project_ids' => ['nullable', 'array'],
-            'project_ids.*' => ['exists:projects,id'],
-        ]);
+        $validated = $this->validateOrganization($request);
 
-        $organization = Organization::create(['name' => $validated['name']]);
+        $organization = Organization::create([
+            'name' => $validated['name'],
+            'kfs_number' => $validated['kfs_number'] ?? null,
+            'active' => $request->boolean('active'),
+        ]);
         $organization->states()->sync($validated['state_ids']);
         $organization->programs()->sync($validated['program_ids'] ?? []);
         $organization->projects()->sync($validated['project_ids'] ?? []);
+        $organization->users()->sync($validated['user_ids'] ?? []);
 
         return redirect()
             ->route('organizations.index')
@@ -136,30 +146,29 @@ class OrganizationController extends Controller
 
     public function edit(Organization $organization)
     {
+        $organization->load(['states', 'projects', 'programs', 'users']);
         $states = State::orderBy('name', 'asc')->get();
         $projects = Project::with(['programs' => fn ($query) => $query->orderBy('name')])
             ->orderBy('name')
             ->get();
+        $users = User::query()->orderBy('name')->get();
 
-        return view('organizations.edit', compact('organization', 'states', 'projects'));
+        return view('organizations.edit', compact('organization', 'states', 'projects', 'users'));
     }
 
     public function update(Request $request, Organization $organization)
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'state_ids' => ['required', 'array', 'min:1'],
-            'state_ids.*' => ['exists:states,id'],
-            'program_ids' => ['nullable', 'array'],
-            'program_ids.*' => ['exists:programs,id'],
-            'project_ids' => ['nullable', 'array'],
-            'project_ids.*' => ['exists:projects,id'],
-        ]);
+        $validated = $this->validateOrganization($request, $organization);
 
-        $organization->update(['name' => $validated['name']]);
+        $organization->update([
+            'name' => $validated['name'],
+            'kfs_number' => $validated['kfs_number'] ?? null,
+            'active' => $request->boolean('active'),
+        ]);
         $organization->states()->sync($validated['state_ids']);
         $organization->programs()->sync($validated['program_ids'] ?? []);
         $organization->projects()->sync($validated['project_ids'] ?? []);
+        $organization->users()->sync($validated['user_ids'] ?? []);
 
         return redirect()
             ->route('organizations.index')
@@ -173,5 +182,32 @@ class OrganizationController extends Controller
         return redirect()
             ->route('organizations.index')
             ->with('success', 'Organization deleted successfully.');
+    }
+
+    private function validateOrganization(Request $request, ?Organization $organization = null): array
+    {
+        return $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'kfs_number' => [
+                'nullable',
+                'string',
+                'max:7',
+                'regex:/^[A-Za-z0-9]+$/',
+                Rule::unique('organizations', 'kfs_number')->ignore($organization?->id),
+            ],
+            'active' => ['nullable', 'boolean'],
+            'state_ids' => ['required', 'array', 'min:1'],
+            'state_ids.*' => ['exists:states,id'],
+            'program_ids' => ['nullable', 'array'],
+            'program_ids.*' => ['exists:programs,id'],
+            'project_ids' => ['nullable', 'array'],
+            'project_ids.*' => ['exists:projects,id'],
+            'user_ids' => ['nullable', 'array'],
+            'user_ids.*' => ['exists:users,id'],
+        ], [
+            'kfs_number.regex' => 'The KFS number must be 1-7 alphanumeric characters.',
+            'kfs_number.max' => 'The KFS number must be 1-7 alphanumeric characters.',
+            'kfs_number.unique' => 'This KFS number is already assigned to another organization.',
+        ]);
     }
 }

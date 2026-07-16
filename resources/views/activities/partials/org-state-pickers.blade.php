@@ -10,9 +10,13 @@
             ->whereIn('id', $agreementIds)
             ->get();
         
-        // Get union of all organizations from selected agreements
+        // Get union of all organizations from selected agreements (active only,
+        // plus any inactive orgs already selected on the current form).
+        $previouslySelectedOrganizationIds = collect($selectedOrganizationIds ?? [])->map(fn ($id) => (int) $id);
         $availableOrganizations = $selectedAgreements
-            ->flatMap(fn($agreement) => $agreement->organizations)
+            ->flatMap(fn ($agreement) => $agreement->organizations)
+            ->filter(fn ($organization) => $organization->active
+                || $previouslySelectedOrganizationIds->contains((int) $organization->id))
             ->unique('id')
             ->sortBy('name')
             ->values();
@@ -34,7 +38,7 @@
         }
     } else {
         // No agreements selected - show all (for internal activities)
-        $availableOrganizations = \App\Models\Organization::orderBy('name')->get();
+        $availableOrganizations = \App\Models\Organization::active()->orderBy('name')->get();
         $availableStates = \App\Models\State::orderBy('name')->get();
     }
     

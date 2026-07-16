@@ -4,9 +4,11 @@
             <thead class="table-light">
                 <tr>
                     <th>Name</th>
+                    <th>KFS</th>
                     <th>State(s)</th>
                     <th>Projects</th>
                     <th>Programs</th>
+                    <th>Status</th>
                     <th>Agreements</th>
                     <th>Created</th>
                     <th class="text-end" style="width:{{ auth()->user()->isAdmin() ? '170px' : '80px' }};">Actions</th>
@@ -20,6 +22,7 @@
                             {{ $organization->name }}
                         </a>
                     </td>
+                    <td class="text-muted small">{{ $organization->kfs_number ?: '—' }}</td>
                     <td>
                         @foreach($organization->states as $state)
                             <span class="badge bg-info text-dark me-1">{{ $state->name }}</span>
@@ -37,6 +40,13 @@
                             <span class="badge bg-warning-subtle text-warning-emphasis border me-1">{{ $program->name }}</span>
                         @endforeach
                         @if($organization->programs->isEmpty())<span class="text-muted">—</span>@endif
+                    </td>
+                    <td>
+                        @if($organization->active)
+                            <span class="badge bg-success">Active</span>
+                        @else
+                            <span class="badge bg-secondary">Inactive</span>
+                        @endif
                     </td>
                     <td>
                         <span class="badge bg-secondary">{{ $organization->agreements_count ?? $organization->agreements->count() }}</span>
@@ -58,7 +68,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="7" class="text-center py-5">
+                    <td colspan="9" class="text-center py-5">
                         <p class="text-muted mb-2">No organizations found.</p>
                         @if(auth()->user()->isAdmin())
                             <a href="{{ route('organizations.create') }}" class="btn btn-sm btn-primary">Create Organization</a>

@@ -17,12 +17,33 @@
             <dt class="col-5 text-muted fw-normal small">Name</dt>
             <dd class="col-7 mb-2 fw-semibold">{{ $organization->name }}</dd>
 
+            <dt class="col-5 text-muted fw-normal small">Status</dt>
+            <dd class="col-7 mb-2">
+                @if($organization->active)
+                    <span class="badge bg-success">Active</span>
+                @else
+                    <span class="badge bg-secondary">Inactive</span>
+                @endif
+            </dd>
+
+            <dt class="col-5 text-muted fw-normal small">KFS Number</dt>
+            <dd class="col-7 mb-2">{{ $organization->kfs_number ?: '—' }}</dd>
+
             <dt class="col-5 text-muted fw-normal small">State(s)</dt>
             <dd class="col-7 mb-2">
                 @forelse($organization->states as $state)
                     <a href="{{ route('states.show', $state) }}" class="badge bg-info text-dark text-decoration-none me-1">
                         {{ $state->name }}
                     </a>
+                @empty
+                    <span class="text-muted">—</span>
+                @endforelse
+            </dd>
+
+            <dt class="col-5 text-muted fw-normal small">Associated Users</dt>
+            <dd class="col-7 mb-2">
+                @forelse($organization->users as $user)
+                    <span class="badge bg-primary-subtle text-primary-emphasis border me-1 mb-1">{{ $user->name }}</span>
                 @empty
                     <span class="text-muted">—</span>
                 @endforelse

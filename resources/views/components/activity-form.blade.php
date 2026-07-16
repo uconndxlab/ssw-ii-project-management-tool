@@ -23,13 +23,20 @@
 ])
 
 @php
-    $agreementConfigs = $agreements->mapWithKeys(function ($agreement) {
+    $availableOrganizationIds = collect($organizations)->pluck('id')->map(fn ($id) => (string) $id)->all();
+
+    $agreementConfigs = $agreements->mapWithKeys(function ($agreement) use ($availableOrganizationIds) {
         $deliverables = $agreement->deliverables ?? collect();
 
         return [
             $agreement->id => [
                 'name' => $agreement->name,
-                'organization_ids' => $agreement->organizations->pluck('id')->map(fn($id) => (string) $id)->values()->all(),
+                'organization_ids' => $agreement->organizations
+                    ->pluck('id')
+                    ->map(fn ($id) => (string) $id)
+                    ->filter(fn ($id) => in_array($id, $availableOrganizationIds, true))
+                    ->values()
+                    ->all(),
                 'state_ids' => $agreement->states->pluck('id')->map(fn($id) => (string) $id)->values()->all(),
                 'participant_user_ids' => $agreement->users
                     ->pluck('id')

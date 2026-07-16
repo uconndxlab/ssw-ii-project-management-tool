@@ -221,7 +221,7 @@ class ActivityController extends Controller
     {
         $agreements = $this->getVisibleAgreements()->load('agreementLoggingFields');
         $states = State::orderBy('name')->get();
-        $organizations = Organization::orderBy('name')->get();
+        $organizations = Organization::active()->orderBy('name')->get();
         $contactFamilies = ContactFamily::where('active', true)
             ->with(['contactFamilyLoggingFields', 'activityTypes' => function ($query) {
                 $query->where('active', true)
@@ -379,7 +379,14 @@ class ActivityController extends Controller
 
         $agreements = $this->getVisibleAgreements()->load('agreementLoggingFields');
         $states = State::orderBy('name')->get();
-        $organizations = Organization::orderBy('name')->get();
+        $activity->loadMissing('organizations');
+        $organizations = Organization::active()
+            ->orderBy('name')
+            ->get()
+            ->merge($activity->organizations)
+            ->unique('id')
+            ->sortBy('name')
+            ->values();
         $contactFamilies = ContactFamily::where('active', true)
             ->with(['contactFamilyLoggingFields', 'activityTypes' => function ($query) {
                 $query->where('active', true)
@@ -470,7 +477,7 @@ class ActivityController extends Controller
             ->findOrFail($baseValidated['contact_family_id']);
         $activityType = ActivityType::with('activityTypeLoggingFields')->findOrFail($baseValidated['activity_type_id']);
 
-        $this->validateAgreementCoverageSelections($baseValidated, $agreements);
+        $this->validateAgreementCoverageSelections($baseValidated, $agreements, $activity);
         $this->validateAgreementClassificationSelections($baseValidated, $agreements);
         $this->validateAgreementProjectProgramSelections($baseValidated, $agreements);
         $this->validateAgreementParticipantSelections($baseValidated, $agreements, $activity);
@@ -634,7 +641,7 @@ class ActivityController extends Controller
         return $attributes;
     }
 
-    private function validateAgreementCoverageSelections(array $validated, $agreements): void
+    private function validateAgreementCoverageSelections(array $validated, $agreements, ?Activity $activity = null): void
     {
         if (empty($validated['agreement_ids'])) {
             return;
@@ -669,6 +676,24 @@ class ActivityController extends Controller
             throw ValidationException::withMessages([
                 'state_ids' => 'Selected states must belong to at least one chosen agreement.',
             ]);
+        }
+
+        if ($selectedOrganizationIds->isNotEmpty()) {
+            $previouslySelectedOrganizationIds = collect($activity?->organizations?->pluck('id') ?? [])
+                ->map(fn ($id) => (int) $id);
+
+            $inactiveOrganizationIds = Organization::query()
+                ->whereKey($selectedOrganizationIds)
+                ->where('active', false)
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->reject(fn ($id) => $previouslySelectedOrganizationIds->contains($id));
+
+            if ($inactiveOrganizationIds->isNotEmpty()) {
+                throw ValidationException::withMessages([
+                    'organization_ids' => 'Inactive organizations cannot be newly added to an activity.',
+                ]);
+            }
         }
     }
 

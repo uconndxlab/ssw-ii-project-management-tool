@@ -147,10 +147,29 @@ class AgreementRequest extends FormRequest
                 ->values();
 
             if ($organizationIds->isNotEmpty()) {
-                $invalidOrganizationIds = Organization::query()
+                $previouslySelectedOrganizationIds = collect();
+                if ($this->route('agreement') instanceof Agreement) {
+                    $previouslySelectedOrganizationIds = $this->route('agreement')
+                        ->organizations()
+                        ->pluck('organizations.id')
+                        ->map(fn ($id) => (int) $id);
+                }
+
+                $organizations = Organization::query()
                     ->whereKey($organizationIds)
                     ->with('programs:id')
-                    ->get()
+                    ->get();
+
+                $inactiveOrganizationIds = $organizations
+                    ->filter(fn (Organization $organization) => !$organization->active
+                        && !$previouslySelectedOrganizationIds->contains((int) $organization->id))
+                    ->pluck('id');
+
+                if ($inactiveOrganizationIds->isNotEmpty()) {
+                    $validator->errors()->add('organization_ids', 'Inactive organizations cannot be newly added to an agreement.');
+                }
+
+                $invalidOrganizationIds = $organizations
                     ->filter(fn (Organization $organization) => !$matchesSelectedPrograms(
                         $organization->programs->pluck('id')->map(fn ($id) => (int) $id)->values(),
                         false
