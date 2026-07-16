@@ -17,6 +17,7 @@ use App\Models\State;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\DeliverableContributionService;
+use App\Services\AgreementDuplicationService;
 use App\Support\DeliverableHistoryScope;
 use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
@@ -25,8 +26,10 @@ use Illuminate\Support\Facades\Auth;
 
 class AgreementController extends Controller
 {
-    public function __construct(private DeliverableContributionService $deliverableContributionService)
-    {
+    public function __construct(
+        private DeliverableContributionService $deliverableContributionService,
+        private AgreementDuplicationService $agreementDuplicationService,
+    ) {
     }
 
     public function index(Request $request)
@@ -58,7 +61,16 @@ class AgreementController extends Controller
         $organizations = $organizationsQuery->get(['id', 'name'])->sortBy('name')->values();
         $states = State::query()->get(['id', 'name'])->sortBy('name')->values();
 
-        $query = Agreement::with(['organizations', 'states', 'users']);
+        $query = Agreement::with([
+            'organizations',
+            'states',
+            'projects',
+            'programs',
+            'teams.users',
+            'users',
+        ])->withCount([
+            'deliverables as active_deliverables_count' => fn ($builder) => $builder->whereNull('retired_at'),
+        ]);
 
         // Visibility enforcement: non-admins only see assigned agreements
         if (!Auth::user()->isAdmin()) {
@@ -260,6 +272,17 @@ class AgreementController extends Controller
         abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can edit agreements.');
 
         return view('agreements.edit', $this->agreementFormData($agreement));
+    }
+
+    public function duplicate(Agreement $agreement)
+    {
+        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can duplicate agreements.');
+
+        $copy = $this->agreementDuplicationService->duplicate($agreement);
+
+        return redirect()
+            ->route('agreements.edit', $copy)
+            ->with('success', 'Agreement duplicated. Review the copy and save any changes.');
     }
 
     public function update(AgreementRequest $request, Agreement $agreement)

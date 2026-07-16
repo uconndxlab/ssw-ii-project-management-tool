@@ -31,6 +31,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     
     // Agreements - visible to all authenticated users (with visibility filtering in controller)
+    Route::post('/agreements/{agreement}/duplicate', [AgreementController::class, 'duplicate'])->name('agreements.duplicate');
     Route::resource('agreements', AgreementController::class);
     
     // HTMX endpoints for agreement user management
