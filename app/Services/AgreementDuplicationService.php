@@ -40,7 +40,16 @@ class AgreementDuplicationService
                 'time_tracking_mode' => $source->time_tracking_mode,
             ]);
 
-            $copy->organizations()->sync($source->organizations->pluck('id')->all());
+            $copy->organizations()->sync(
+                $source->organizations
+                    ->mapWithKeys(fn ($organization) => [
+                        $organization->id => [
+                            'payor_source' => (bool) $organization->pivot->payor_source,
+                            'recipient' => (bool) $organization->pivot->recipient,
+                        ],
+                    ])
+                    ->all()
+            );
             $copy->states()->sync($source->states->pluck('id')->all());
             $copy->projects()->sync($source->projects->pluck('id')->all());
             $copy->programs()->sync($source->programs->pluck('id')->all());

@@ -14,7 +14,6 @@
     );
     $selectedProgramIds = old('program_ids', $agreement?->programs?->pluck('id')->toArray() ?? []);
 
-    $selectedOrganizationIds = old('organization_ids', $agreement?->organizations?->pluck('id')->toArray() ?? []);
     $selectedStateIds = old('state_ids', $agreement?->states?->pluck('id')->toArray() ?? []);
     $selectedAgreementLoggingFieldIds = old('agreement_logging_field_ids', $agreementLoggingFieldCollection->pluck('id')->toArray());
     $requiredAgreementLoggingFieldIds = old(
@@ -95,42 +94,25 @@
             />
         </div>
 
-        <div class="row">
-            <div class="col-md-6">
-                <div class="mb-3">
-                    <label class="form-label">Organizations</label>
-                    <x-token-picker
-                        picker-id="agreement-organizations"
-                        name="organization_ids[]"
-                        :items="$organizations"
-                        :selected-ids="$selectedOrganizationIds"
-                        placeholder="Search organizations..."
-                        disabled-placeholder="Select at least one program first..."
-                        :disabled="empty($selectedProgramIds)"
-                        :height="'300px'"
-                    />
-                    @error('organization_ids')
-                        <div class="text-danger small mt-1">{{ $message }}</div>
-                    @enderror
-                </div>
-            </div>
+        @include('agreements.partials.organizations-section', [
+            'agreement' => $agreement,
+            'organizations' => $organizations,
+            'selectedProgramIds' => $selectedProgramIds,
+        ])
 
-            <div class="col-md-6">
-                <div class="mb-3">
-                    <label class="form-label">States</label>
-                    <x-token-picker
-                        picker-id="agreement-states"
-                        name="state_ids[]"
-                        :items="$states"
-                        :selected-ids="$selectedStateIds"
-                        placeholder="Search states..."
-                        :height="'300px'"
-                    />
-                    @error('state_ids')
-                        <div class="text-danger small mt-1">{{ $message }}</div>
-                    @enderror
-                </div>
-            </div>
+        <div class="mb-3">
+            <label class="form-label">States</label>
+            <x-token-picker
+                picker-id="agreement-states"
+                name="state_ids[]"
+                :items="$states"
+                :selected-ids="$selectedStateIds"
+                placeholder="Search states..."
+                :height="'220px'"
+            />
+            @error('state_ids')
+                <div class="text-danger small mt-1">{{ $message }}</div>
+            @enderror
         </div>
 
         <div class="mb-3">
@@ -390,6 +372,7 @@
         const teamPicker = document.getElementById('agreement-{{ $agreement ? 'edit' : 'create' }}-teams');
         const userPicker = document.getElementById('agreement-{{ $agreement ? 'edit' : 'create' }}-users');
         const membershipSection = document.querySelector('[data-agreement-membership-section]');
+        const organizationsSection = document.querySelector('[data-agreement-organizations-section]');
 
         if (!programPicker) {
             return;
@@ -423,6 +406,12 @@
                 !hasSelectedPrograms,
                 'Select at least one program first...'
             );
+
+            if (organizationsSection) {
+                organizationsSection.dispatchEvent(new CustomEvent('agreement-scope:change', {
+                    bubbles: true,
+                }));
+            }
 
             if (membershipSection) {
                 membershipSection.dataset.programAllowedUserIds = JSON.stringify(allowedIds(userProgramMap, selectedProgramIds, false));

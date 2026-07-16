@@ -19,7 +19,8 @@
                         </a>
                     </th>
                     <th style="min-width: 180px;">Scope</th>
-                    <th style="min-width: 160px;">Location</th>
+                    <th style="min-width: 120px;">Organizations</th>
+                    <th style="min-width: 120px;">Location</th>
                     <th style="min-width: 150px;">
                         <a class="text-decoration-none fw-semibold text-dark"
                            href="{{ $url('start_date') }}"
@@ -39,6 +40,12 @@
                         ->pluck('id')
                         ->merge($agreement->users->pluck('id'))
                         ->unique()
+                        ->count();
+                    $payorSourceCount = $agreement->organizations
+                        ->filter(fn ($organization) => (bool) $organization->pivot->payor_source)
+                        ->count();
+                    $recipientCount = $agreement->organizations
+                        ->filter(fn ($organization) => (bool) $organization->pivot->recipient)
                         ->count();
                 @endphp
                 <tr>
@@ -69,13 +76,23 @@
                         </div>
                     </td>
                     <td>
-                        <div class="d-flex flex-wrap gap-1 mb-1">
-                            @forelse($agreement->organizations as $org)
-                                <span class="badge bg-secondary text-wrap text-break text-start" style="white-space: normal; max-width: 100%;">{{ $org->name }}</span>
-                            @empty
-                                <span class="text-muted small">No orgs</span>
-                            @endforelse
-                        </div>
+                        @if($agreement->organizations->isEmpty())
+                            <span class="text-muted small">None</span>
+                        @else
+                            <div class="d-flex flex-wrap gap-1">
+                                <span class="badge bg-secondary">
+                                    {{ $agreement->organizations->count() }} total
+                                </span>
+                                <span class="badge bg-secondary-subtle text-secondary-emphasis border">
+                                    {{ $payorSourceCount }} payor
+                                </span>
+                                <span class="badge bg-secondary-subtle text-secondary-emphasis border">
+                                    {{ $recipientCount }} recipient{{ $recipientCount === 1 ? '' : 's' }}
+                                </span>
+                            </div>
+                        @endif
+                    </td>
+                    <td>
                         <div class="d-flex flex-wrap gap-1">
                             @forelse($agreement->states as $state)
                                 <span class="badge bg-info text-dark">{{ $state->name }}</span>
@@ -160,7 +177,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="6" class="text-center py-5">
+                    <td colspan="7" class="text-center py-5">
                         <p class="text-muted mb-2">
                             @if(auth()->user()->isAdmin()) No agreements found.
                             @else You are not assigned to any agreements.

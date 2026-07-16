@@ -34,6 +34,10 @@ class AgreementRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'organization_ids' => ['nullable', 'array'],
             'organization_ids.*' => ['exists:organizations,id'],
+            'organization_payor_source_ids' => ['nullable', 'array'],
+            'organization_payor_source_ids.*' => ['distinct', 'exists:organizations,id'],
+            'organization_recipient_ids' => ['nullable', 'array'],
+            'organization_recipient_ids.*' => ['distinct', 'exists:organizations,id'],
             'state_ids' => ['nullable', 'array'],
             'state_ids.*' => ['exists:states,id'],
             'project_ids' => ['nullable', 'array'],
@@ -179,6 +183,28 @@ class AgreementRequest extends FormRequest
                 if ($invalidOrganizationIds->isNotEmpty()) {
                     $validator->errors()->add('organization_ids', 'Selected organizations must match one of the selected programs.');
                 }
+            }
+
+            $selectedOrganizationIdSet = $organizationIds->all();
+
+            $orphanPayorSourceIds = collect($this->input('organization_payor_source_ids', []))
+                ->filter(fn ($id) => $id !== null && $id !== '')
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->reject(fn ($id) => in_array($id, $selectedOrganizationIdSet, true));
+
+            if ($orphanPayorSourceIds->isNotEmpty()) {
+                $validator->errors()->add('organization_payor_source_ids', 'Payor source organizations must be selected on the agreement.');
+            }
+
+            $orphanRecipientIds = collect($this->input('organization_recipient_ids', []))
+                ->filter(fn ($id) => $id !== null && $id !== '')
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->reject(fn ($id) => in_array($id, $selectedOrganizationIdSet, true));
+
+            if ($orphanRecipientIds->isNotEmpty()) {
+                $validator->errors()->add('organization_recipient_ids', 'Recipient organizations must be selected on the agreement.');
             }
 
             $directUserIds = collect($this->input('user_ids', []))

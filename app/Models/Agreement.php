@@ -35,7 +35,9 @@ class Agreement extends Model
 
     public function organizations(): BelongsToMany
     {
-        return $this->belongsToMany(Organization::class, 'agreement_organization')->withTimestamps();
+        return $this->belongsToMany(Organization::class, 'agreement_organization')
+            ->withPivot(['payor_source', 'recipient'])
+            ->withTimestamps();
     }
 
     public function states(): BelongsToMany

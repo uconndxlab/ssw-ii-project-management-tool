@@ -65,15 +65,24 @@
 
             <dt class="col-5 text-muted fw-normal small">Organizations</dt>
             <dd class="col-7 mb-2" style="min-width: 0;">
-                <div class="d-flex flex-wrap gap-1 w-100" style="min-width: 0;">
-                    @forelse($agreement->organizations as $org)
-                        <a href="{{ route('organizations.show', $org) }}"
-                           class="badge bg-secondary text-break text-start {{ $badgeLinkClass }}"
-                           style="white-space: normal; line-height: 1.35; max-width: 100%; flex: 1 1 100%;">{{ $org->name }}</a>
-                    @empty
-                        <span class="text-muted small">None</span>
-                    @endforelse
-                </div>
+                @forelse($agreement->organizations->sortBy('name') as $org)
+                    <div class="small py-1 {{ $loop->last ? '' : 'border-bottom' }}">
+                        <div class="d-flex flex-wrap align-items-center gap-1">
+                            <a href="{{ route('organizations.show', $org) }}" class="fw-semibold text-decoration-underline">{{ $org->name }}</a>
+                            @if($org->pivot->payor_source)
+                                <span class="badge bg-secondary-subtle text-secondary-emphasis border">Payor source</span>
+                            @endif
+                            @if($org->pivot->recipient)
+                                <span class="badge bg-secondary-subtle text-secondary-emphasis border">Recipient</span>
+                            @endif
+                        </div>
+                        @if($org->pivot->payor_source && $org->kfs_number)
+                            <div class="text-muted">{{ $org->kfs_number }}</div>
+                        @endif
+                    </div>
+                @empty
+                    <span class="text-muted small">None</span>
+                @endforelse
             </dd>
 
             <dt class="col-5 text-muted fw-normal small">States</dt>

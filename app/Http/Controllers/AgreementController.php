@@ -352,7 +352,27 @@ class AgreementController extends Controller
         $selectedProjectIds = array_values(array_unique($validated['project_ids'] ?? []));
         $selectedProgramIds = array_values(array_unique($validated['program_ids'] ?? []));
 
-        $agreement->organizations()->sync($validated['organization_ids'] ?? []);
+        $organizationIds = collect($validated['organization_ids'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+        $payorSourceIds = collect($validated['organization_payor_source_ids'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->unique();
+        $recipientIds = collect($validated['organization_recipient_ids'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->unique();
+
+        $organizationSync = $organizationIds
+            ->mapWithKeys(fn (int $organizationId) => [
+                $organizationId => [
+                    'payor_source' => $payorSourceIds->contains($organizationId),
+                    'recipient' => $recipientIds->contains($organizationId),
+                ],
+            ])
+            ->all();
+
+        $agreement->organizations()->sync($organizationSync);
         $agreement->states()->sync($validated['state_ids'] ?? []);
         $agreement->projects()->sync($selectedProjectIds);
         $agreement->programs()->sync($selectedProgramIds);
