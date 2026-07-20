@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\AdminUserRequest;
+use App\Models\Program;
 use App\Models\Project;
 use App\Models\User;
 use App\Support\UserDeliverableReporting;
@@ -14,6 +15,7 @@ class AdminUserController extends Controller
     public function index(Request $request)
     {
         $query = User::query()->with([
+            'supervisor:id,name',
             'projects:id,name',
             'programs:id,name,project_id',
             'teams.projects:id,name',
@@ -32,23 +34,90 @@ class AdminUserController extends Controller
             $query->where('role', $request->input('role'));
         }
 
+        if ($request->filled('project_id')) {
+            $projectId = (int) $request->input('project_id');
+            $query->where(function ($q) use ($projectId) {
+                $q->whereHas('projects', fn ($relation) => $relation->where('projects.id', $projectId))
+                    ->orWhereHas('teams.projects', fn ($relation) => $relation->where('projects.id', $projectId));
+            });
+        }
+
+        if ($request->filled('program_id')) {
+            $programId = (int) $request->input('program_id');
+            $query->where(function ($q) use ($programId) {
+                $q->whereHas('programs', fn ($relation) => $relation->where('programs.id', $programId))
+                    ->orWhereHas('teams.programs', fn ($relation) => $relation->where('programs.id', $programId));
+            });
+        }
+
+        // Placeholder until user active/inactive is persisted on the model.
+        // if ($request->input('active') === 'inactive') { ... }
+
         $sort      = $request->input('sort', 'name');
         $direction = $request->input('direction', 'asc') === 'desc' ? 'desc' : 'asc';
 
-        match ($sort) {
-            'email'   => $query->orderBy('email', $direction),
-            'role'    => $query->orderBy('role', $direction),
-            'created' => $query->orderBy('created_at', $direction),
-            default   => $query->orderBy('name', $direction),
-        };
+        $this->applyUserIndexSort($query, $sort, $direction);
 
         $users = $query->paginate(20)->withQueryString();
+
+        $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
+        $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
 
         if ($request->header('HX-Request')) {
             return view('admin.users.partials.table', compact('users', 'sort', 'direction'));
         }
 
-        return view('admin.users.index', compact('users', 'sort', 'direction'));
+        return view('admin.users.index', compact('users', 'sort', 'direction', 'filterProjects', 'filterPrograms'));
+    }
+
+    private function applyUserIndexSort($query, string $sort, string $direction): void
+    {
+        $dir = $direction === 'desc' ? 'DESC' : 'ASC';
+
+        match ($sort) {
+            'email' => $query->orderBy('users.email', $direction),
+            'role' => $query->orderBy('users.role', $direction),
+            'supervisor' => $query->orderBy(
+                User::query()->select('name')->whereColumn('id', 'users.supervisor_id'),
+                $direction
+            ),
+            'active' => $query->orderBy('users.name', $direction),
+            'projects' => $query->orderByRaw($this->minAssignedProjectNameSql()." {$dir}"),
+            'programs' => $query->orderByRaw($this->minAssignedProgramNameSql()." {$dir}"),
+            default => $query->orderBy('users.name', $direction),
+        };
+    }
+
+    private function minAssignedProjectNameSql(): string
+    {
+        return "COALESCE((
+            SELECT MIN(sorted.name) FROM (
+                SELECT p.name
+                FROM projects p
+                INNER JOIN user_project up ON up.project_id = p.id AND up.user_id = users.id
+                UNION
+                SELECT p.name
+                FROM projects p
+                INNER JOIN team_project tp ON tp.project_id = p.id
+                INNER JOIN team_user tu ON tu.team_id = tp.team_id AND tu.user_id = users.id
+            ) AS sorted
+        ), '')";
+    }
+
+    private function minAssignedProgramNameSql(): string
+    {
+        return "COALESCE((
+            SELECT MIN(sorted.name) FROM (
+                SELECT p.name
+                FROM programs p
+                INNER JOIN user_program up ON up.program_id = p.id AND up.user_id = users.id
+                UNION
+                SELECT p.name
+                FROM programs p
+                INNER JOIN team_program tp ON tp.program_id = p.id
+                INNER JOIN team_user tu ON tu.team_id = tp.team_id AND tu.user_id = users.id
+            ) AS sorted
+        ), '')";
     }
 
     public function create()

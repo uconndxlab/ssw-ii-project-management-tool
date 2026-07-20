@@ -2,7 +2,6 @@
     $s    = $sort ?? 'name';
     $d    = $direction ?? 'asc';
     $flip = fn($col) => ($s === $col && $d === 'asc') ? 'desc' : 'asc';
-    $icon = fn($col) => $s === $col ? ($d === 'asc' ? ' ↑' : ' ↓') : '';
     $url  = fn($col) => route('admin.users.index', array_merge(request()->query(), ['sort' => $col, 'direction' => $flip($col), 'page' => 1]));
 @endphp
 
@@ -12,36 +11,27 @@
             <thead class="table-light">
                 <tr>
                     <th>
-                        <a class="text-decoration-none fw-semibold text-dark"
-                           href="{{ $url('name') }}"
-                           hx-get="{{ $url('name') }}" hx-target="#users-table" hx-push-url="true">
-                            Name{!! $icon('name') !!}
-                        </a>
+                        <x-table-sort-link column="name" label="Name" :sort="$s" :direction="$d" :url="$url('name')" />
                     </th>
                     <th>
-                        <a class="text-decoration-none fw-semibold text-dark"
-                           href="{{ $url('email') }}"
-                           hx-get="{{ $url('email') }}" hx-target="#users-table" hx-push-url="true">
-                            Email{!! $icon('email') !!}
-                        </a>
+                        <x-table-sort-link column="email" label="Email" :sort="$s" :direction="$d" :url="$url('email')" />
                     </th>
                     <th>
-                        <a class="text-decoration-none fw-semibold text-dark"
-                           href="{{ $url('role') }}"
-                           hx-get="{{ $url('role') }}" hx-target="#users-table" hx-push-url="true">
-                            Role{!! $icon('role') !!}
-                        </a>
+                        <x-table-sort-link column="role" label="Role" :sort="$s" :direction="$d" :url="$url('role')" />
                     </th>
-                    <th>Projects</th>
-                    <th>Programs</th>
                     <th>
-                        <a class="text-decoration-none fw-semibold text-dark"
-                           href="{{ $url('created') }}"
-                           hx-get="{{ $url('created') }}" hx-target="#users-table" hx-push-url="true">
-                            Created{!! $icon('created') !!}
-                        </a>
+                        <x-table-sort-link column="supervisor" label="Supervisor" :sort="$s" :direction="$d" :url="$url('supervisor')" />
                     </th>
-                    <th class="text-end" style="width:220px;">Actions</th>
+                    <th>
+                        <x-table-sort-link column="active" label="Active" :sort="$s" :direction="$d" :url="$url('active')" />
+                    </th>
+                    <th>
+                        <x-table-sort-link column="projects" label="Projects" :sort="$s" :direction="$d" :url="$url('projects')" />
+                    </th>
+                    <th>
+                        <x-table-sort-link column="programs" label="Programs" :sort="$s" :direction="$d" :url="$url('programs')" />
+                    </th>
+                    <th class="text-end fw-normal" style="width:220px;">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -62,6 +52,18 @@
                             @endif">
                             {{ ucfirst($user->role) }}
                         </span>
+                    </td>
+                    <td class="small">
+                        @if($user->supervisor)
+                            <a href="{{ route('users.show', $user->supervisor) }}" class="text-decoration-none">
+                                {{ $user->supervisor->name }}
+                            </a>
+                        @else
+                            <span class="text-muted">—</span>
+                        @endif
+                    </td>
+                    <td>
+                        <span class="badge bg-success">Active</span>
                     </td>
                     <td>
                         <div class="d-flex flex-wrap gap-1">
@@ -101,7 +103,6 @@
                             @endforelse
                         </div>
                     </td>
-                    <td class="text-muted small">{{ $user->created_at->format('M d, Y') }}</td>
                     <td class="text-end text-nowrap">
                         @php $actionKey = 'user-actions-' . $user->id; @endphp
                         <div class="btn-group btn-group-sm" role="group" aria-label="User actions for {{ $user->name }}">
@@ -137,7 +138,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="7" class="text-center py-5">
+                    <td colspan="8" class="text-center py-5">
                         <p class="text-muted mb-2">No users found.</p>
                         <a href="{{ route('admin.users.create') }}" class="btn btn-sm btn-primary">Create User</a>
                     </td>
@@ -171,6 +172,23 @@
         document.body.addEventListener('htmx:afterSwap', function (event) {
             if (event.target && event.target.id === 'users-table') {
                 initUsersTableTooltips(event.target);
+
+                var params = new URLSearchParams(window.location.search);
+                var form = document.getElementById('user-filters');
+                if (form) {
+                    if (params.has('sort')) {
+                        var sortInput = form.querySelector('[name=sort]');
+                        if (sortInput) {
+                            sortInput.value = params.get('sort');
+                        }
+                    }
+                    if (params.has('direction')) {
+                        var directionInput = form.querySelector('[name=direction]');
+                        if (directionInput) {
+                            directionInput.value = params.get('direction');
+                        }
+                    }
+                }
             }
         });
     })();
