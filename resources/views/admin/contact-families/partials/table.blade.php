@@ -23,9 +23,6 @@
                         <x-table-sort-link column="activity_types" label="Activity Types" :sort="$s" :direction="$d" :url="$url('activity_types')" target="#cf-table" />
                     </th>
                     <th>
-                        <x-table-sort-link column="sort_order" label="Sort Order" :sort="$s" :direction="$d" :url="$url('sort_order')" target="#cf-table" />
-                    </th>
-                    <th>
                         <x-table-sort-link column="active" label="Status" :sort="$s" :direction="$d" :url="$url('active')" target="#cf-table" />
                     </th>
                     <th class="text-end fw-normal" style="width:140px;">Actions</th>
@@ -50,7 +47,6 @@
                         @endforelse
                     </td>
                     <td><span class="badge bg-secondary">{{ $family->activity_types_count }}</span></td>
-                    <td class="text-muted small">{{ $family->sort_order }}</td>
                     <td>
                         @if($family->active)
                             <span class="badge bg-success">Active</span>

@@ -45,7 +45,7 @@ class ContactFamilyController extends Controller
             });
         }
 
-        $sort = $request->input('sort', 'sort_order');
+        $sort = $request->input('sort', 'name');
         $direction = $request->input('direction', 'asc') === 'desc' ? 'desc' : 'asc';
 
         $this->applyContactFamilyIndexSort($query, $sort, $direction);
@@ -75,7 +75,6 @@ class ContactFamilyController extends Controller
         match ($sort) {
             'name' => $query->orderBy('contact_families.name', $direction),
             'activity_types' => $query->orderBy('activity_types_count', $direction)->orderBy('contact_families.name'),
-            'sort_order' => $query->orderBy('contact_families.sort_order', $direction)->orderBy('contact_families.name'),
             'active' => $query->orderBy('contact_families.active', $direction)->orderBy('contact_families.name'),
             'projects' => $query->orderByRaw($this->minContactFamilyProjectNameSql()." {$dir}")->orderBy('contact_families.name'),
             'programs' => $query->orderByRaw($this->minContactFamilyProgramNameSql()." {$dir}")->orderBy('contact_families.name'),

@@ -26,13 +26,13 @@ class ActivityTypeController extends Controller
             ->orderBy('name', 'asc')
             ->get(['id', 'name']);
 
-        $query = ActivityType::with(['contactFamily', 'projects', 'programs']);
+        $query = ActivityType::query()->with(['contactFamily', 'projects', 'programs']);
 
         // Search
         $search = trim((string) $request->input('search', ''));
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
+                $q->where('activity_types.name', 'like', "%{$search}%")
                     ->orWhereHas('contactFamily', function ($familyQuery) use ($search) {
                         $familyQuery->where('name', 'like', "%{$search}%");
                     });
@@ -41,11 +41,11 @@ class ActivityTypeController extends Controller
 
         // Filters
         if ($request->filled('contact_family_id')) {
-            $query->where('contact_family_id', $request->integer('contact_family_id'));
+            $query->where('activity_types.contact_family_id', $request->integer('contact_family_id'));
         }
 
         if ($request->filled('active')) {
-            $query->where('active', $request->input('active') === '1');
+            $query->where('activity_types.active', $request->input('active') === '1');
         }
 
         if ($request->filled('project_id')) {
@@ -107,10 +107,9 @@ class ActivityTypeController extends Controller
             case 'contact_family':
                 $query->join('contact_families', 'activity_types.contact_family_id', '=', 'contact_families.id')
                     ->select('activity_types.*')
-                    ->orderBy('contact_families.sort_order')
                     ->orderBy('contact_families.name', $direction)
-                    ->orderBy('activity_types.sort_order')
-                    ->orderBy('activity_types.name');
+                    ->orderBy('contact_families.sort_order', $direction)
+                    ->orderBy('activity_types.name', $direction);
                 break;
 
             case 'duration_days':
