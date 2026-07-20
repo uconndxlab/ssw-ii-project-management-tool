@@ -65,7 +65,7 @@
                                  tabindex="0"
                                  aria-label="Upload attachments by dropping files or browsing">
                                 <div class="fw-semibold text-primary">Drop files here or click to browse</div>
-                                <div class="small text-primary">PDF, Word, Excel, or text files. Max 10MB each.</div>
+                                <div class="small text-primary">PDF, Word, Excel, or text files. Max {{ (int) round(config('uploads.max_file_kb') / 1024) }}MB each.</div>
                             </div>
                         </td>
                     </tr>

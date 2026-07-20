@@ -1008,7 +1008,7 @@ class ActivityController extends Controller
             'decimal' => array_merge($prefix, ['numeric']),
             'checkbox' => array_merge($prefix, ['boolean']),
             'select' => array_merge($prefix, [Rule::in($options)]),
-            'document' => array_merge($required ? ['required'] : ['nullable'], ['file', 'mimes:pdf,doc,docx,xls,xlsx,png,jpg,jpeg', 'max:10240']),
+            'document' => array_merge($required ? ['required'] : ['nullable'], ['file', 'mimes:pdf,doc,docx,xls,xlsx,png,jpg,jpeg', 'max:'.config('uploads.max_file_kb')]),
             'textarea', 'text' => array_merge($prefix, ['string', 'max:5000']),
             default => array_merge($prefix, ['string', 'max:5000']),
         };

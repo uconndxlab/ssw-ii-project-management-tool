@@ -89,7 +89,7 @@ class AgreementRequest extends FormRequest
             'deliverables.*._delete' => ['nullable', 'boolean'],
 
             'attachments' => ['nullable', 'array'],
-            'attachments.*' => ['file', 'max:10240', 'mimes:pdf,doc,docx,xls,xlsx,txt'],
+            'attachments.*' => ['file', 'max:'.config('uploads.max_file_kb'), 'mimes:pdf,doc,docx,xls,xlsx,txt'],
         ];
     }
 
