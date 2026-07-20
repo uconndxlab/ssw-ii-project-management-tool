@@ -1,8 +1,8 @@
 @php
-    $s    = $sort ?? 'name';
+    $s    = $sort ?? 'sort_order';
     $d    = $direction ?? 'asc';
     $flip = fn($col) => ($s === $col && $d === 'asc') ? 'desc' : 'asc';
-    $url  = fn($col) => route('activity-types.index', array_merge(request()->query(), ['sort' => $col, 'direction' => $flip($col), 'page' => 1]));
+    $url  = fn($col) => route('contact-families.index', array_merge(request()->query(), ['sort' => $col, 'direction' => $flip($col)]));
 @endphp
 
 <div class="card shadow-sm">
@@ -11,78 +11,74 @@
             <thead class="table-light">
                 <tr>
                     <th>
-                        <x-table-sort-link column="name" label="Name" :sort="$s" :direction="$d" :url="$url('name')" target="#activity-types-table" />
+                        <x-table-sort-link column="name" label="Name" :sort="$s" :direction="$d" :url="$url('name')" target="#cf-table" />
                     </th>
                     <th>
-                        <x-table-sort-link column="contact_family" label="Contact Family" :sort="$s" :direction="$d" :url="$url('contact_family')" target="#activity-types-table" />
+                        <x-table-sort-link column="projects" label="Projects" :sort="$s" :direction="$d" :url="$url('projects')" target="#cf-table" />
                     </th>
                     <th>
-                        <x-table-sort-link column="projects" label="Projects" :sort="$s" :direction="$d" :url="$url('projects')" target="#activity-types-table" />
+                        <x-table-sort-link column="programs" label="Programs" :sort="$s" :direction="$d" :url="$url('programs')" target="#cf-table" />
                     </th>
                     <th>
-                        <x-table-sort-link column="programs" label="Programs" :sort="$s" :direction="$d" :url="$url('programs')" target="#activity-types-table" />
+                        <x-table-sort-link column="activity_types" label="Activity Types" :sort="$s" :direction="$d" :url="$url('activity_types')" target="#cf-table" />
                     </th>
                     <th>
-                        <x-table-sort-link column="duration_days" label="Duration (Days)" :sort="$s" :direction="$d" :url="$url('duration_days')" target="#activity-types-table" />
+                        <x-table-sort-link column="sort_order" label="Sort Order" :sort="$s" :direction="$d" :url="$url('sort_order')" target="#cf-table" />
                     </th>
                     <th>
-                        <x-table-sort-link column="duration_hours" label="Duration (Hours)" :sort="$s" :direction="$d" :url="$url('duration_hours')" target="#activity-types-table" />
-                    </th>
-                    <th>
-                        <x-table-sort-link column="active" label="Status" :sort="$s" :direction="$d" :url="$url('active')" target="#activity-types-table" />
+                        <x-table-sort-link column="active" label="Status" :sort="$s" :direction="$d" :url="$url('active')" target="#cf-table" />
                     </th>
                     <th class="text-end fw-normal" style="width:140px;">Actions</th>
                 </tr>
             </thead>
             <tbody>
-                @forelse($activityTypes as $type)
+                @forelse($contactFamilies as $family)
                 <tr>
-                    <td class="fw-semibold">{{ $type->name }}</td>
-                    <td class="text-muted small">{{ $type->contactFamily->name }}</td>
+                    <td class="fw-semibold">{{ $family->name }}</td>
                     <td>
-                        @forelse($type->projects->sortBy('name') as $project)
+                        @forelse($family->projects->sortBy('name') as $project)
                             <x-entity-relation-badge kind="project" :href="route('projects.show', $project)" class="me-1 mb-1">{{ $project->name }}</x-entity-relation-badge>
                         @empty
                             <span class="text-muted small">All projects</span>
                         @endforelse
                     </td>
                     <td>
-                        @forelse($type->programs->sortBy('name') as $program)
+                        @forelse($family->programs->sortBy('name') as $program)
                             <x-entity-relation-badge kind="program" :href="route('programs.show', $program)" class="me-1 mb-1">{{ $program->name }}</x-entity-relation-badge>
                         @empty
                             <span class="text-muted small">All programs</span>
                         @endforelse
                     </td>
-                    <td>{{ $type->duration_days }}</td>
-                    <td>{{ $type->duration_hours }}</td>
+                    <td><span class="badge bg-secondary">{{ $family->activity_types_count }}</span></td>
+                    <td class="text-muted small">{{ $family->sort_order }}</td>
                     <td>
-                        @if($type->active)
+                        @if($family->active)
                             <span class="badge bg-success">Active</span>
                         @else
                             <span class="badge bg-secondary">Inactive</span>
                         @endif
                     </td>
                     <td class="text-end text-nowrap">
-                        @php $actionKey = 'activity-type-actions-' . $type->id; @endphp
-                        <div class="btn-group btn-group-sm" role="group" aria-label="Activity type actions for {{ $type->name }}">
-                            <a href="{{ route('activity-types.edit', $type) }}"
+                        @php $actionKey = 'contact-family-actions-' . $family->id; @endphp
+                        <div class="btn-group btn-group-sm" role="group" aria-label="Contact family actions for {{ $family->name }}">
+                            <a href="{{ route('contact-families.edit', $family) }}"
                                class="btn btn-outline-secondary"
                                data-bs-toggle="tooltip"
-                               data-bs-title="Edit activity type"
-                               aria-label="Edit activity type">
+                               data-bs-title="Edit contact family"
+                               aria-label="Edit contact family">
                                 <i class="bi bi-pencil-square"></i>
                             </a>
                             <button type="submit"
                                     form="{{ $actionKey }}-delete"
                                     class="btn btn-outline-danger"
                                     data-bs-toggle="tooltip"
-                                    data-bs-title="Delete activity type"
-                                    aria-label="Delete activity type"
-                                    onclick="return confirm('Delete {{ addslashes($type->name) }}?')">
+                                    data-bs-title="Delete contact family"
+                                    aria-label="Delete contact family"
+                                    onclick="return confirm('Delete {{ addslashes($family->name) }}?')">
                                 <i class="bi bi-trash"></i>
                             </button>
                         </div>
-                        <form id="{{ $actionKey }}-delete" method="POST" action="{{ route('activity-types.destroy', $type) }}" class="d-none">
+                        <form id="{{ $actionKey }}-delete" method="POST" action="{{ route('contact-families.destroy', $family) }}" class="d-none">
                             @csrf
                             @method('DELETE')
                         </form>
@@ -90,43 +86,40 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="8" class="text-center py-5">
-                        <p class="text-muted mb-2">No activity types found.</p>
-                        <a href="{{ route('activity-types.create') }}" class="btn btn-sm btn-primary">Add Activity Type</a>
+                    <td colspan="7" class="text-center py-5">
+                        <p class="text-muted mb-2">No contact families found.</p>
+                        <a href="{{ route('contact-families.create') }}" class="btn btn-sm btn-primary">Add Contact Family</a>
                     </td>
                 </tr>
                 @endforelse
             </tbody>
         </table>
     </div>
-    <div class="card-footer bg-white">
-        <x-htmx-pagination :paginator="$activityTypes" target="#activity-types-table" />
-    </div>
 </div>
 
 @once
     <script>
     (function () {
-        function initActivityTypesTableTooltips(scope) {
+        function initContactFamiliesTableTooltips(scope) {
             if (!window.bootstrap || !bootstrap.Tooltip) {
                 return;
             }
 
-            (scope || document).querySelectorAll('#activity-types-table [data-bs-toggle="tooltip"]').forEach(function (element) {
+            (scope || document).querySelectorAll('#cf-table [data-bs-toggle="tooltip"]').forEach(function (element) {
                 bootstrap.Tooltip.getOrCreateInstance(element);
             });
         }
 
         document.addEventListener('DOMContentLoaded', function () {
-            initActivityTypesTableTooltips();
+            initContactFamiliesTableTooltips();
         });
 
         document.body.addEventListener('htmx:afterSwap', function (event) {
-            if (event.target && event.target.id === 'activity-types-table') {
-                initActivityTypesTableTooltips(event.target);
+            if (event.target && event.target.id === 'cf-table') {
+                initContactFamiliesTableTooltips(event.target);
 
                 var params = new URLSearchParams(window.location.search);
-                var form = document.getElementById('activity-type-filters');
+                var form = document.getElementById('cf-filters');
                 if (form) {
                     if (params.has('sort')) {
                         var sortInput = form.querySelector('[name=sort]');

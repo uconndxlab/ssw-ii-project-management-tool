@@ -14,12 +14,22 @@
 
 <div class="card shadow-sm mb-3">
     <div class="card-body py-2">
-        @include('logging-fields.partials.filters')
+        @include('logging-fields.partials.filters', [
+            'sort' => $sort,
+            'direction' => $direction,
+            'filterProjects' => $filterProjects,
+            'filterPrograms' => $filterPrograms,
+            'filterContactFamilies' => $filterContactFamilies,
+        ])
     </div>
 </div>
 
 <div id="logging-fields-table">
-    @include('logging-fields.partials.table', ['loggingFields' => $loggingFields])
+    @include('logging-fields.partials.table', [
+        'loggingFields' => $loggingFields,
+        'sort' => $sort,
+        'direction' => $direction,
+    ])
 </div>
 
 @endsection

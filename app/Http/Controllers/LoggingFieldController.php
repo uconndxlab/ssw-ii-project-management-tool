@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ContactFamily;
 use App\Models\LoggingField;
+use App\Models\Program;
+use App\Models\Project;
 use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -46,23 +49,86 @@ class LoggingFieldController extends Controller
             $query->where($request->availability, true);
         }
 
-        // Sort
-        $sortBy = $request->get('sort_by', 'sort_order');
-        $sortDir = $request->get('sort_dir', 'asc');
-
-        if ($sortBy === 'sort_order') {
-            $query->orderBy('sort_order', 'asc')->orderBy('name', 'asc');
-        } else {
-            $query->orderBy($sortBy, $sortDir);
+        if ($request->filled('project_id')) {
+            $projectId = (int) $request->input('project_id');
+            $query->where(function ($q) use ($projectId) {
+                $q->whereHas('projects', fn ($relation) => $relation->where('projects.id', $projectId))
+                    ->orWhereDoesntHave('projects');
+            });
         }
+
+        if ($request->filled('program_id')) {
+            $programId = (int) $request->input('program_id');
+            $query->where(function ($q) use ($programId) {
+                $q->whereHas('programs', fn ($relation) => $relation->where('programs.id', $programId))
+                    ->orWhereDoesntHave('programs');
+            });
+        }
+
+        if ($request->filled('contact_family_id')) {
+            $query->whereHas('contactFamilies', fn ($relation) => $relation->where('contact_families.id', $request->integer('contact_family_id')));
+        }
+
+        $sort = $request->input('sort', 'sort_order');
+        $direction = $request->input('direction', 'asc') === 'desc' ? 'desc' : 'asc';
+
+        $this->applyLoggingFieldIndexSort($query, $sort, $direction);
 
         $loggingFields = $query->paginate(20)->withQueryString();
 
+        $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
+        $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
+        $filterContactFamilies = ContactFamily::query()->orderBy('sort_order')->orderBy('name')->get(['id', 'name']);
+
         if ($request->header('HX-Request')) {
-            return view('logging-fields.partials.table', compact('loggingFields'));
+            return view('logging-fields.partials.table', compact('loggingFields', 'sort', 'direction'));
         }
 
-        return view('logging-fields.index', compact('loggingFields'));
+        return view('logging-fields.index', compact(
+            'loggingFields',
+            'sort',
+            'direction',
+            'filterProjects',
+            'filterPrograms',
+            'filterContactFamilies',
+        ));
+    }
+
+    private function applyLoggingFieldIndexSort($query, string $sort, string $direction): void
+    {
+        $dir = $direction === 'desc' ? 'DESC' : 'ASC';
+
+        match ($sort) {
+            'name' => $query->orderBy('logging_fields.name', $direction),
+            'field_type' => $query->orderBy('logging_fields.field_type', $direction)->orderBy('logging_fields.name'),
+            'availability' => $query->orderBy('logging_fields.available_in_agreements', $direction)
+                ->orderBy('logging_fields.available_in_contact_families', $direction)
+                ->orderBy('logging_fields.available_in_activities', $direction)
+                ->orderBy('logging_fields.name'),
+            'is_active' => $query->orderBy('logging_fields.is_active', $direction)->orderBy('logging_fields.name'),
+            'sort_order' => $query->orderBy('logging_fields.sort_order', $direction)->orderBy('logging_fields.name'),
+            'projects' => $query->orderByRaw($this->minLoggingFieldProjectNameSql()." {$dir}")->orderBy('logging_fields.name'),
+            'programs' => $query->orderByRaw($this->minLoggingFieldProgramNameSql()." {$dir}")->orderBy('logging_fields.name'),
+            default => $query->orderBy('logging_fields.sort_order', $direction)->orderBy('logging_fields.name'),
+        };
+    }
+
+    private function minLoggingFieldProjectNameSql(): string
+    {
+        return "COALESCE((
+            SELECT MIN(p.name)
+            FROM projects p
+            INNER JOIN logging_field_project lfp ON lfp.project_id = p.id AND lfp.logging_field_id = logging_fields.id
+        ), '')";
+    }
+
+    private function minLoggingFieldProgramNameSql(): string
+    {
+        return "COALESCE((
+            SELECT MIN(p.name)
+            FROM programs p
+            INNER JOIN logging_field_program lfp ON lfp.program_id = p.id AND lfp.logging_field_id = logging_fields.id
+        ), '')";
     }
 
     /**

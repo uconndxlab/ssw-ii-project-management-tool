@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\ContactFamily;
 use App\Models\LoggingField;
+use App\Models\Program;
+use App\Models\Project;
 use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -19,18 +21,84 @@ class ContactFamilyController extends Controller
 
     public function index(Request $request)
     {
-        $query = ContactFamily::withCount('activityTypes')
-            ->with(['projects', 'programs'])
-            ->orderBy('sort_order', 'asc')
-            ->orderBy('name', 'asc');
+        $query = ContactFamily::query()
+            ->withCount('activityTypes')
+            ->with(['projects', 'programs']);
 
         if ($request->filled('search')) {
-            $query->where('name', 'like', '%' . $request->input('search') . '%');
+            $query->where('name', 'like', '%'.$request->input('search').'%');
         }
+
+        if ($request->filled('project_id')) {
+            $projectId = (int) $request->input('project_id');
+            $query->where(function ($q) use ($projectId) {
+                $q->whereHas('projects', fn ($relation) => $relation->where('projects.id', $projectId))
+                    ->orWhereDoesntHave('projects');
+            });
+        }
+
+        if ($request->filled('program_id')) {
+            $programId = (int) $request->input('program_id');
+            $query->where(function ($q) use ($programId) {
+                $q->whereHas('programs', fn ($relation) => $relation->where('programs.id', $programId))
+                    ->orWhereDoesntHave('programs');
+            });
+        }
+
+        $sort = $request->input('sort', 'sort_order');
+        $direction = $request->input('direction', 'asc') === 'desc' ? 'desc' : 'asc';
+
+        $this->applyContactFamilyIndexSort($query, $sort, $direction);
 
         $contactFamilies = $query->get();
 
-        return view('admin.contact-families.index', compact('contactFamilies'));
+        $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
+        $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
+
+        if ($request->header('HX-Request')) {
+            return view('admin.contact-families.partials.table', compact('contactFamilies', 'sort', 'direction'));
+        }
+
+        return view('admin.contact-families.index', compact(
+            'contactFamilies',
+            'sort',
+            'direction',
+            'filterProjects',
+            'filterPrograms',
+        ));
+    }
+
+    private function applyContactFamilyIndexSort($query, string $sort, string $direction): void
+    {
+        $dir = $direction === 'desc' ? 'DESC' : 'ASC';
+
+        match ($sort) {
+            'name' => $query->orderBy('contact_families.name', $direction),
+            'activity_types' => $query->orderBy('activity_types_count', $direction)->orderBy('contact_families.name'),
+            'sort_order' => $query->orderBy('contact_families.sort_order', $direction)->orderBy('contact_families.name'),
+            'active' => $query->orderBy('contact_families.active', $direction)->orderBy('contact_families.name'),
+            'projects' => $query->orderByRaw($this->minContactFamilyProjectNameSql()." {$dir}")->orderBy('contact_families.name'),
+            'programs' => $query->orderByRaw($this->minContactFamilyProgramNameSql()." {$dir}")->orderBy('contact_families.name'),
+            default => $query->orderBy('contact_families.sort_order', $direction)->orderBy('contact_families.name'),
+        };
+    }
+
+    private function minContactFamilyProjectNameSql(): string
+    {
+        return "COALESCE((
+            SELECT MIN(p.name)
+            FROM projects p
+            INNER JOIN contact_family_project cfp ON cfp.project_id = p.id AND cfp.contact_family_id = contact_families.id
+        ), '')";
+    }
+
+    private function minContactFamilyProgramNameSql(): string
+    {
+        return "COALESCE((
+            SELECT MIN(p.name)
+            FROM programs p
+            INNER JOIN contact_family_program cfp ON cfp.program_id = p.id AND cfp.contact_family_id = contact_families.id
+        ), '')";
     }
 
     public function create()
@@ -123,7 +191,7 @@ class ContactFamilyController extends Controller
     public function update(Request $request, ContactFamily $contactFamily)
     {
         $validator = Validator::make($request->all(), [
-            'name' => ['required', 'string', 'max:255', 'unique:contact_families,name,' . $contactFamily->id],
+            'name' => ['required', 'string', 'max:255', 'unique:contact_families,name,'.$contactFamily->id],
             'active' => ['boolean'],
             'track_additional_time' => ['boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
@@ -183,7 +251,6 @@ class ContactFamilyController extends Controller
 
     public function destroy(ContactFamily $contactFamily)
     {
-        // Check if contact family has activity types
         if ($contactFamily->activityTypes()->count() > 0) {
             return redirect()
                 ->route('contact-families.index')

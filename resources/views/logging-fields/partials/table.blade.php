@@ -1,9 +1,8 @@
 @php
-    $s    = request('sort_by', 'sort_order');
-    $d    = request('sort_dir', 'asc');
+    $s    = $sort ?? 'sort_order';
+    $d    = $direction ?? 'asc';
     $flip = fn($col) => ($s === $col && $d === 'asc') ? 'desc' : 'asc';
-    $icon = fn($col) => $s === $col ? ($d === 'asc' ? ' ↑' : ' ↓') : '';
-    $url  = fn($col) => route('logging-fields.index', array_merge(request()->query(), ['sort_by' => $col, 'sort_dir' => $flip($col), 'page' => 1]));
+    $url  = fn($col) => route('logging-fields.index', array_merge(request()->query(), ['sort' => $col, 'direction' => $flip($col), 'page' => 1]));
 @endphp
 
 <div class="card shadow-sm">
@@ -12,28 +11,18 @@
             <thead class="table-light">
                 <tr>
                     <th>
-                        <a class="text-decoration-none fw-semibold text-dark"
-                           href="{{ $url('name') }}"
-                           hx-get="{{ $url('name') }}" hx-target="#logging-fields-table" hx-swap="innerHTML" hx-push-url="true">
-                            Field Name{!! $icon('name') !!}
-                        </a>
+                        <x-table-sort-link column="name" label="Field Name" :sort="$s" :direction="$d" :url="$url('name')" target="#logging-fields-table" />
                     </th>
                     <th>
-                        <a class="text-decoration-none fw-semibold text-dark"
-                           href="{{ $url('field_type') }}"
-                           hx-get="{{ $url('field_type') }}" hx-target="#logging-fields-table" hx-swap="innerHTML" hx-push-url="true">
-                            Field Type{!! $icon('field_type') !!}
-                        </a>
+                        <x-table-sort-link column="field_type" label="Field Type" :sort="$s" :direction="$d" :url="$url('field_type')" target="#logging-fields-table" />
                     </th>
-                    <th>Available In</th>
                     <th>
-                        <a class="text-decoration-none fw-semibold text-dark"
-                           href="{{ $url('is_active') }}"
-                           hx-get="{{ $url('is_active') }}" hx-target="#logging-fields-table" hx-swap="innerHTML" hx-push-url="true">
-                            Status{!! $icon('is_active') !!}
-                        </a>
+                        <x-table-sort-link column="availability" label="Available In" :sort="$s" :direction="$d" :url="$url('availability')" target="#logging-fields-table" />
                     </th>
-                    <th class="text-end" style="width:200px;">Actions</th>
+                    <th>
+                        <x-table-sort-link column="is_active" label="Status" :sort="$s" :direction="$d" :url="$url('is_active')" target="#logging-fields-table" />
+                    </th>
+                    <th class="text-end fw-normal" style="width:200px;">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -71,16 +60,37 @@
                             <span class="badge bg-secondary">Inactive</span>
                         @endif
                     </td>
-                    <td class="text-end">
-                        <div class="d-flex gap-1 justify-content-end flex-nowrap">
-                            <a href="{{ route('logging-fields.show', $field) }}" class="btn btn-sm btn-outline-primary">View</a>
-                            <a href="{{ route('logging-fields.edit', $field) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
-                            <form method="POST" action="{{ route('logging-fields.destroy', $field) }}" class="d-inline">
-                                @csrf @method('DELETE')
-                                <button type="submit" class="btn btn-sm btn-outline-danger"
-                                    onclick="return confirm('Delete field {{ addslashes($field->name) }}?')">Delete</button>
-                            </form>
+                    <td class="text-end text-nowrap">
+                        @php $actionKey = 'logging-field-actions-' . $field->id; @endphp
+                        <div class="btn-group btn-group-sm" role="group" aria-label="Logging field actions for {{ $field->name }}">
+                            <a href="{{ route('logging-fields.show', $field) }}"
+                               class="btn btn-outline-primary"
+                               data-bs-toggle="tooltip"
+                               data-bs-title="View logging field"
+                               aria-label="View logging field">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{{ route('logging-fields.edit', $field) }}"
+                               class="btn btn-outline-secondary"
+                               data-bs-toggle="tooltip"
+                               data-bs-title="Edit logging field"
+                               aria-label="Edit logging field">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                            <button type="submit"
+                                    form="{{ $actionKey }}-delete"
+                                    class="btn btn-outline-danger"
+                                    data-bs-toggle="tooltip"
+                                    data-bs-title="Delete logging field"
+                                    aria-label="Delete logging field"
+                                    onclick="return confirm('Delete field {{ addslashes($field->name) }}?')">
+                                <i class="bi bi-trash"></i>
+                            </button>
                         </div>
+                        <form id="{{ $actionKey }}-delete" method="POST" action="{{ route('logging-fields.destroy', $field) }}" class="d-none">
+                            @csrf
+                            @method('DELETE')
+                        </form>
                     </td>
                 </tr>
                 @empty
@@ -98,3 +108,46 @@
         <x-htmx-pagination :paginator="$loggingFields" target="#logging-fields-table" />
     </div>
 </div>
+
+@once
+    <script>
+    (function () {
+        function initLoggingFieldsTableTooltips(scope) {
+            if (!window.bootstrap || !bootstrap.Tooltip) {
+                return;
+            }
+
+            (scope || document).querySelectorAll('#logging-fields-table [data-bs-toggle="tooltip"]').forEach(function (element) {
+                bootstrap.Tooltip.getOrCreateInstance(element);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            initLoggingFieldsTableTooltips();
+        });
+
+        document.body.addEventListener('htmx:afterSwap', function (event) {
+            if (event.target && event.target.id === 'logging-fields-table') {
+                initLoggingFieldsTableTooltips(event.target);
+
+                var params = new URLSearchParams(window.location.search);
+                var form = document.getElementById('logging-field-filters');
+                if (form) {
+                    if (params.has('sort')) {
+                        var sortInput = form.querySelector('[name=sort]');
+                        if (sortInput) {
+                            sortInput.value = params.get('sort');
+                        }
+                    }
+                    if (params.has('direction')) {
+                        var directionInput = form.querySelector('[name=direction]');
+                        if (directionInput) {
+                            directionInput.value = params.get('direction');
+                        }
+                    }
+                }
+            }
+        });
+    })();
+    </script>
+@endonce

@@ -6,6 +6,8 @@ use App\Models\AgreementDeliverable;
 use App\Models\ActivityType;
 use App\Models\ContactFamily;
 use App\Models\LoggingField;
+use App\Models\Program;
+use App\Models\Project;
 use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -46,9 +48,60 @@ class ActivityTypeController extends Controller
             $query->where('active', $request->input('active') === '1');
         }
 
+        if ($request->filled('project_id')) {
+            $projectId = (int) $request->input('project_id');
+            $query->where(function ($q) use ($projectId) {
+                $q->whereHas('projects', fn ($relation) => $relation->where('projects.id', $projectId))
+                    ->orWhereDoesntHave('projects');
+            });
+        }
+
+        if ($request->filled('program_id')) {
+            $programId = (int) $request->input('program_id');
+            $query->where(function ($q) use ($programId) {
+                $q->whereHas('programs', fn ($relation) => $relation->where('programs.id', $programId))
+                    ->orWhereDoesntHave('programs');
+            });
+        }
+
         // Sorting
         $sort = $request->input('sort', 'name');
         $direction = $request->input('direction', 'asc') === 'desc' ? 'desc' : 'asc';
+
+        $this->applyActivityTypeIndexSort($query, $sort, $direction);
+
+        $activityTypes = $query->paginate(20)->withQueryString();
+
+        $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
+        $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
+
+        if ($request->header('HX-Request') === 'true' && $request->input('partial') === 'filters') {
+            return view('admin.activity-types.partials.filters', compact(
+                'contactFamilies',
+                'sort',
+                'direction',
+                'filterProjects',
+                'filterPrograms',
+            ));
+        }
+
+        if ($request->header('HX-Request') === 'true') {
+            return view('admin.activity-types.partials.table', compact('activityTypes', 'sort', 'direction'));
+        }
+
+        return view('admin.activity-types.index', compact(
+            'activityTypes',
+            'contactFamilies',
+            'sort',
+            'direction',
+            'filterProjects',
+            'filterPrograms',
+        ));
+    }
+
+    private function applyActivityTypeIndexSort($query, string $sort, string $direction): void
+    {
+        $dir = $direction === 'desc' ? 'DESC' : 'ASC';
 
         switch ($sort) {
             case 'contact_family':
@@ -61,42 +114,53 @@ class ActivityTypeController extends Controller
                 break;
 
             case 'duration_days':
-                $query->orderBy('duration_days', $direction)
-                    ->orderBy('name');
+                $query->orderBy('activity_types.duration_days', $direction)
+                    ->orderBy('activity_types.name');
                 break;
 
             case 'duration_hours':
-                $query->orderBy('duration_hours', $direction)
-                    ->orderBy('name');
+                $query->orderBy('activity_types.duration_hours', $direction)
+                    ->orderBy('activity_types.name');
                 break;
 
             case 'active':
-                $query->orderBy('active', $direction)
-                    ->orderBy('name');
+                $query->orderBy('activity_types.active', $direction)
+                    ->orderBy('activity_types.name');
+                break;
+
+            case 'projects':
+                $query->orderByRaw($this->minActivityTypeProjectNameSql()." {$dir}")
+                    ->orderBy('activity_types.name');
+                break;
+
+            case 'programs':
+                $query->orderByRaw($this->minActivityTypeProgramNameSql()." {$dir}")
+                    ->orderBy('activity_types.name');
                 break;
 
             case 'name':
             default:
-                $query->orderBy('name', $direction);
+                $query->orderBy('activity_types.name', $direction);
                 break;
         }
+    }
 
-        $activityTypes = $query->paginate(20)->withQueryString();
+    private function minActivityTypeProjectNameSql(): string
+    {
+        return "COALESCE((
+            SELECT MIN(p.name)
+            FROM projects p
+            INNER JOIN activity_type_project atp ON atp.project_id = p.id AND atp.activity_type_id = activity_types.id
+        ), '')";
+    }
 
-        if ($request->header('HX-Request') === 'true' && $request->input('partial') === 'filters') {
-            return view('admin.activity-types.partials.filters', compact('contactFamilies', 'sort', 'direction'));
-        }
-
-        if ($request->header('HX-Request') === 'true') {
-            return view('admin.activity-types.partials.table', compact('activityTypes', 'sort', 'direction'));
-        }
-
-        return view('admin.activity-types.index', compact(
-            'activityTypes',
-            'contactFamilies',
-            'sort',
-            'direction'
-        ));
+    private function minActivityTypeProgramNameSql(): string
+    {
+        return "COALESCE((
+            SELECT MIN(p.name)
+            FROM programs p
+            INNER JOIN activity_type_program atp ON atp.program_id = p.id AND atp.activity_type_id = activity_types.id
+        ), '')";
     }
 
     public function create()

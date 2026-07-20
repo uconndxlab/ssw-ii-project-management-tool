@@ -44,6 +44,7 @@
                id="{{ $inputId }}"
                name="{{ $inputName }}"
                accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg">
+        <div class="form-text">PDF, Word, Excel, or image files. Max {{ (int) round(config('uploads.max_file_kb') / 1024) }}MB.</div>
         @if(!empty($value))
             <div class="mt-1 small">
                 <span class="text-muted">Current file:</span>

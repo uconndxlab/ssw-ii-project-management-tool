@@ -19,6 +19,8 @@
                 'contactFamilies' => $contactFamilies,
                 'sort'            => $sort,
                 'direction'       => $direction,
+                'filterProjects'  => $filterProjects,
+                'filterPrograms'  => $filterPrograms,
             ])
         </div>
     </div>
