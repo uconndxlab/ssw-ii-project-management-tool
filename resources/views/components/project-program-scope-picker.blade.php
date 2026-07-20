@@ -17,6 +17,8 @@
     'projectHeight' => '260px',
     'programHeight' => '260px',
     'programBadgeClass' => 'bg-primary',
+    'projectEmptySelectionLabel' => 'All projects',
+    'programEmptySelectionLabel' => 'All programs',
 ])
 
 @php
@@ -59,6 +61,7 @@
                 :selected-ids="$selectedProjectIds"
                 :placeholder="$projectPlaceholder"
                 :height="$projectHeight"
+                :empty-selection-label="$projectEmptySelectionLabel"
             />
             @if($projectHelpText)
                 <div class="form-text">{{ $projectHelpText }}</div>
@@ -79,6 +82,7 @@
                 :disabled-placeholder="$disabledPlaceholder"
                 :disabled="empty($selectedProjectIds)"
                 :height="$programHeight"
+                :empty-selection-label="$programEmptySelectionLabel"
             />
             @if($programHelpText)
                 <div class="form-text">{{ $programHelpText }}</div>
@@ -126,6 +130,54 @@
         let forceProgramDisabled = false;
         let forcedProgramDisabledPlaceholder = defaultDisabledPlaceholder;
 
+        function effectiveProgramIds(projectIds, programIds) {
+            if (programIds.length > 0) {
+                return programIds.slice();
+            }
+
+            const effective = [];
+
+            if (projectIds.length === 0) {
+                Object.keys(projectProgramMap).forEach(function (projectId) {
+                    const ids = Array.isArray(projectProgramMap[projectId]) ? projectProgramMap[projectId] : [];
+                    ids.forEach(function (programId) {
+                        const normalized = String(programId);
+                        if (!effective.includes(normalized)) {
+                            effective.push(normalized);
+                        }
+                    });
+                });
+
+                return effective;
+            }
+
+            projectIds.forEach(function (projectId) {
+                const ids = Array.isArray(projectProgramMap[projectId]) ? projectProgramMap[projectId] : [];
+                ids.forEach(function (programId) {
+                    const normalized = String(programId);
+                    if (!effective.includes(normalized)) {
+                        effective.push(normalized);
+                    }
+                });
+            });
+
+            return effective;
+        }
+
+        function notifyScopeChange() {
+            const projectIds = selectedIds(projectPicker);
+            const programIds = selectedIds(programPicker);
+
+            section.dispatchEvent(new CustomEvent('project-program-scope:change', {
+                bubbles: true,
+                detail: {
+                    projectIds: projectIds,
+                    programIds: programIds,
+                    effectiveProgramIds: effectiveProgramIds(projectIds, programIds),
+                },
+            }));
+        }
+
         function refreshProgramPicker() {
             const projectIds = selectedIds(projectPicker);
             let allowedProgramIds = [];
@@ -157,6 +209,8 @@
                 detail: allowedProgramIds,
                 bubbles: true,
             }));
+
+            notifyScopeChange();
         }
 
         section.addEventListener('project-program-scope:restrict', function (event) {
@@ -174,6 +228,7 @@
         });
 
         projectPicker.addEventListener('token-picker:change', refreshProgramPicker);
+        programPicker.addEventListener('token-picker:change', notifyScopeChange);
         refreshProgramPicker();
         section.dataset.projectProgramScopeInitialized = 'true';
     }

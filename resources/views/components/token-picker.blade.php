@@ -14,6 +14,7 @@
     'height' => '300px',
     'disabled' => false,
     'disabledPlaceholder' => null,
+    'emptySelectionLabel' => null,
 ])
 
 @php
@@ -41,7 +42,8 @@
      data-disabled-placeholder="{{ $disabledPlaceholder ?? $placeholder }}"
      data-open-on-focus="{{ $openOnFocus ? 'true' : 'false' }}"
      data-disabled="{{ $disabled ? 'true' : 'false' }}"
-    data-show-selected="{{ $showSelected ? 'true' : 'false' }}"
+     data-show-selected="{{ $showSelected ? 'true' : 'false' }}"
+     data-empty-selection-label="{{ $emptySelectionLabel ?? '' }}"
      data-selected='@json($selectedIds)'>
     <div class="d-flex flex-wrap gap-1 mb-2 {{ $showSelected ? '' : 'd-none' }}" data-token-selected></div>
 
@@ -93,6 +95,7 @@
         const defaultPlaceholder = picker.dataset.placeholder || 'Search...';
         let disabledPlaceholder = picker.dataset.disabledPlaceholder || defaultPlaceholder;
         const showSelected = picker.dataset.showSelected === 'true';
+        const emptySelectionLabel = (picker.dataset.emptySelectionLabel || '').trim();
         const options = parseJson(optionsNode, []);
         const initialSelected = new Set(parseJson({ textContent: picker.dataset.selected || '[]' }, []));
         const selected = new Set(Array.from(initialSelected));
@@ -147,6 +150,13 @@
             }
 
             selectedWrap.innerHTML = '';
+
+            if (selected.size === 0 && emptySelectionLabel !== '') {
+                const allBadge = document.createElement('span');
+                allBadge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle d-inline-flex align-items-center';
+                allBadge.textContent = emptySelectionLabel;
+                selectedWrap.appendChild(allBadge);
+            }
 
             selectedArray().forEach(function (value) {
                 const option = optionByValue(value);

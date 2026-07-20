@@ -57,6 +57,27 @@ class ProjectProgramScope
         }
     }
 
+    /**
+     * Program IDs implied by project/program scope when the form leaves programs empty (all programs in scope).
+     */
+    public static function effectiveProgramIds(array $projectIds, array $programIds): array
+    {
+        $projectIds = self::normalizeIds($projectIds);
+        $programIds = self::normalizeIds($programIds);
+
+        if ($programIds !== []) {
+            return $programIds;
+        }
+
+        $query = Program::query()->where('active', true);
+
+        if ($projectIds !== []) {
+            $query->whereIn('project_id', $projectIds);
+        }
+
+        return $query->pluck('id')->all();
+    }
+
     public static function matchesSelectedPrograms(Collection $scopedProgramIds, array $selectedProgramIds, bool $allowGlobal): bool
     {
         if ($scopedProgramIds->isEmpty()) {

@@ -63,17 +63,14 @@ class ContactFamilyController extends Controller
         ]);
 
         $validator->after(function ($validator) use ($request) {
-            $selectedProgramIds = ProjectProgramScope::normalizeIds($request->input('program_ids', []));
+            $projectIds = ProjectProgramScope::normalizeIds($request->input('project_ids', []));
+            $programIds = ProjectProgramScope::normalizeIds($request->input('program_ids', []));
 
-            ProjectProgramScope::validateSelection(
-                $validator,
-                ProjectProgramScope::normalizeIds($request->input('project_ids', [])),
-                $selectedProgramIds
-            );
+            ProjectProgramScope::validateSelection($validator, $projectIds, $programIds);
 
             ProjectProgramScope::validateScopedAssignments(
                 $validator,
-                $selectedProgramIds,
+                ProjectProgramScope::effectiveProgramIds($projectIds, $programIds),
                 ProjectProgramScope::normalizeIds($request->input('contact_family_logging_field_ids', [])),
                 LoggingField::class,
                 'contact_family_logging_field_ids',
@@ -141,17 +138,14 @@ class ContactFamilyController extends Controller
         ]);
 
         $validator->after(function ($validator) use ($request) {
-            $selectedProgramIds = ProjectProgramScope::normalizeIds($request->input('program_ids', []));
+            $projectIds = ProjectProgramScope::normalizeIds($request->input('project_ids', []));
+            $programIds = ProjectProgramScope::normalizeIds($request->input('program_ids', []));
 
-            ProjectProgramScope::validateSelection(
-                $validator,
-                ProjectProgramScope::normalizeIds($request->input('project_ids', [])),
-                $selectedProgramIds
-            );
+            ProjectProgramScope::validateSelection($validator, $projectIds, $programIds);
 
             ProjectProgramScope::validateScopedAssignments(
                 $validator,
-                $selectedProgramIds,
+                ProjectProgramScope::effectiveProgramIds($projectIds, $programIds),
                 ProjectProgramScope::normalizeIds($request->input('contact_family_logging_field_ids', [])),
                 LoggingField::class,
                 'contact_family_logging_field_ids',

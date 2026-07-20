@@ -121,25 +121,15 @@
 @once
 <script>
 (function () {
-    function selectedIdsFromPicker(picker) {
-        if (!picker) {
-            return [];
-        }
-
-        return Array.from(picker.querySelectorAll('[data-token-inputs] input')).map(function (input) {
-            return String(input.value);
-        });
-    }
-
-    function refreshScopedLoggingFields(programPicker) {
-        const selectedPrograms = new Set(selectedIdsFromPicker(programPicker));
+    function refreshScopedLoggingFields(effectiveProgramIds) {
+        const selectedPrograms = new Set((effectiveProgramIds || []).map(String));
 
         document.querySelectorAll('[data-scoped-logging-field-option]').forEach(function (option) {
             const programIds = JSON.parse(option.dataset.programIds || '[]').map(String);
             const isGlobal = option.dataset.global === 'true';
-            const visible = isGlobal || (selectedPrograms.size > 0 && programIds.some(function (programId) {
+            const visible = isGlobal || programIds.some(function (programId) {
                 return selectedPrograms.has(programId);
-            }));
+            });
 
             option.classList.toggle('d-none', !visible);
             option.querySelectorAll('input').forEach(function (input) {
@@ -151,18 +141,8 @@
         });
     }
 
-    document.addEventListener('DOMContentLoaded', function () {
-        const programPicker = document.getElementById('{{ $scopeId }}-programs');
-
-        if (!programPicker) {
-            return;
-        }
-
-        programPicker.addEventListener('token-picker:change', function () {
-            refreshScopedLoggingFields(programPicker);
-        });
-
-        refreshScopedLoggingFields(programPicker);
+    document.addEventListener('project-program-scope:change', function (event) {
+        refreshScopedLoggingFields(event.detail?.effectiveProgramIds || []);
     });
 })();
 </script>
