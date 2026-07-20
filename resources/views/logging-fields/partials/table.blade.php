@@ -17,6 +17,12 @@
                         <x-table-sort-link column="field_type" label="Field Type" :sort="$s" :direction="$d" :url="$url('field_type')" target="#logging-fields-table" />
                     </th>
                     <th>
+                        <x-table-sort-link column="projects" label="Projects" :sort="$s" :direction="$d" :url="$url('projects')" target="#logging-fields-table" />
+                    </th>
+                    <th>
+                        <x-table-sort-link column="programs" label="Programs" :sort="$s" :direction="$d" :url="$url('programs')" target="#logging-fields-table" />
+                    </th>
+                    <th>
                         <x-table-sort-link column="availability" label="Available In" :sort="$s" :direction="$d" :url="$url('availability')" target="#logging-fields-table" />
                     </th>
                     <th>
@@ -37,6 +43,28 @@
                         @endif
                     </td>
                     <td><span class="badge bg-secondary">{{ ucfirst($field->field_type) }}</span></td>
+                    <td>
+                        <div class="d-flex flex-wrap gap-1">
+                            @forelse($field->projects->sortBy('name') as $project)
+                                <x-entity-relation-badge kind="project" :href="route('projects.show', $project)">
+                                    {{ $project->name }}
+                                </x-entity-relation-badge>
+                            @empty
+                                <span class="text-muted small">All projects</span>
+                            @endforelse
+                        </div>
+                    </td>
+                    <td>
+                        <div class="d-flex flex-wrap gap-1">
+                            @forelse($field->programs->sortBy('name') as $program)
+                                <x-entity-relation-badge kind="program" :href="route('programs.show', $program)">
+                                    {{ $program->name }}
+                                </x-entity-relation-badge>
+                            @empty
+                                <span class="text-muted small">All programs</span>
+                            @endforelse
+                        </div>
+                    </td>
                     <td>
                         <div class="d-flex flex-wrap gap-1">
                             @if($field->available_in_agreements)
@@ -95,7 +123,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="5" class="text-center py-5">
+                    <td colspan="7" class="text-center py-5">
                         <p class="text-muted mb-2">No logging fields found.</p>
                         <a href="{{ route('logging-fields.create') }}" class="btn btn-sm btn-primary">Create Logging Field</a>
                     </td>

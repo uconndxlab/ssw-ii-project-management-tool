@@ -18,7 +18,10 @@ class LoggingFieldController extends Controller
      */
     public function index(Request $request)
     {
-        $query = LoggingField::query();
+        $query = LoggingField::query()->with([
+            'projects:id,name',
+            'programs:id,name',
+        ]);
 
         // Search filter
         if ($request->filled('search')) {
