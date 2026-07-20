@@ -2,7 +2,6 @@
     $s    = $sort ?? 'name';
     $d    = $direction ?? 'asc';
     $flip = fn($col) => ($s === $col && $d === 'asc') ? 'desc' : 'asc';
-    $icon = fn($col) => $s === $col ? ($d === 'asc' ? ' ↑' : ' ↓') : '';
     $url  = fn($col) => route('teams.index', array_merge(request()->query(), ['sort' => $col, 'direction' => $flip($col), 'page' => 1]));
 @endphp
 
@@ -12,27 +11,21 @@
             <thead class="table-light">
                 <tr>
                     <th>
-                        <a class="text-decoration-none fw-semibold text-dark"
-                           href="{{ $url('name') }}"
-                           hx-get="{{ $url('name') }}" hx-target="#teams-table" hx-push-url="true">
-                            Name{!! $icon('name') !!}
-                        </a>
+                        <x-table-sort-link column="name" label="Name" :sort="$s" :direction="$d" :url="$url('name')" target="#teams-table" />
                     </th>
                     <th>
-                        <a class="text-decoration-none fw-semibold text-dark"
-                           href="{{ $url('members') }}"
-                           hx-get="{{ $url('members') }}" hx-target="#teams-table" hx-push-url="true">
-                            Members{!! $icon('members') !!}
-                        </a>
+                        <x-table-sort-link column="members" label="Members" :sort="$s" :direction="$d" :url="$url('members')" target="#teams-table" />
                     </th>
                     <th>
-                        <a class="text-decoration-none fw-semibold text-dark"
-                           href="{{ $url('active') }}"
-                           hx-get="{{ $url('active') }}" hx-target="#teams-table" hx-push-url="true">
-                            Status{!! $icon('active') !!}
-                        </a>
+                        <x-table-sort-link column="active" label="Status" :sort="$s" :direction="$d" :url="$url('active')" target="#teams-table" />
                     </th>
-                    <th class="text-end" style="width:170px;">Actions</th>
+                    <th>
+                        <x-table-sort-link column="projects" label="Projects" :sort="$s" :direction="$d" :url="$url('projects')" target="#teams-table" />
+                    </th>
+                    <th>
+                        <x-table-sort-link column="programs" label="Programs" :sort="$s" :direction="$d" :url="$url('programs')" target="#teams-table" />
+                    </th>
+                    <th class="text-end fw-normal" style="width:170px;">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -53,21 +46,64 @@
                             <span class="badge bg-secondary">Inactive</span>
                         @endif
                     </td>
-                    <td class="text-end">
-                        <div class="d-flex gap-1 justify-content-end flex-nowrap">
-                            <a href="{{ route('teams.show', $team) }}" class="btn btn-sm btn-outline-primary">View</a>
-                            <a href="{{ route('teams.edit', $team) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
-                            <form method="POST" action="{{ route('teams.destroy', $team) }}" class="d-inline">
-                                @csrf @method('DELETE')
-                                <button type="submit" class="btn btn-sm btn-outline-danger"
-                                    onclick="return confirm('Delete team {{ addslashes($team->name) }}?')">Delete</button>
-                            </form>
+                    <td>
+                        <div class="d-flex flex-wrap gap-1">
+                            @forelse($team->projects->sortBy('name') as $project)
+                                <x-entity-relation-badge kind="project" :href="route('projects.show', $project)">
+                                    {{ $project->name }}
+                                </x-entity-relation-badge>
+                            @empty
+                                <span class="text-muted small">—</span>
+                            @endforelse
                         </div>
+                    </td>
+                    <td>
+                        <div class="d-flex flex-wrap gap-1">
+                            @forelse($team->programs->sortBy('name') as $program)
+                                <x-entity-relation-badge kind="program" :href="route('programs.show', $program)">
+                                    {{ $program->name }}
+                                </x-entity-relation-badge>
+                            @empty
+                                <span class="text-muted small">—</span>
+                            @endforelse
+                        </div>
+                    </td>
+                    <td class="text-end text-nowrap">
+                        @php $actionKey = 'team-actions-' . $team->id; @endphp
+                        <div class="btn-group btn-group-sm" role="group" aria-label="Team actions for {{ $team->name }}">
+                            <a href="{{ route('teams.show', $team) }}"
+                               class="btn btn-outline-primary"
+                               data-bs-toggle="tooltip"
+                               data-bs-title="View team"
+                               aria-label="View team">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{{ route('teams.edit', $team) }}"
+                               class="btn btn-outline-secondary"
+                               data-bs-toggle="tooltip"
+                               data-bs-title="Edit team"
+                               aria-label="Edit team">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                            <button type="submit"
+                                    form="{{ $actionKey }}-delete"
+                                    class="btn btn-outline-danger"
+                                    data-bs-toggle="tooltip"
+                                    data-bs-title="Delete team"
+                                    aria-label="Delete team"
+                                    onclick="return confirm('Delete team {{ addslashes($team->name) }}?')">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                        <form id="{{ $actionKey }}-delete" method="POST" action="{{ route('teams.destroy', $team) }}" class="d-none">
+                            @csrf
+                            @method('DELETE')
+                        </form>
                     </td>
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="4" class="text-center py-5">
+                    <td colspan="6" class="text-center py-5">
                         <p class="text-muted mb-2">No teams found.</p>
                         <a href="{{ route('teams.create') }}" class="btn btn-sm btn-primary">Create Team</a>
                     </td>
@@ -80,3 +116,46 @@
         <x-htmx-pagination :paginator="$teams" target="#teams-table" />
     </div>
 </div>
+
+@once
+    <script>
+    (function () {
+        function initTeamsTableTooltips(scope) {
+            if (!window.bootstrap || !bootstrap.Tooltip) {
+                return;
+            }
+
+            (scope || document).querySelectorAll('#teams-table [data-bs-toggle="tooltip"]').forEach(function (element) {
+                bootstrap.Tooltip.getOrCreateInstance(element);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            initTeamsTableTooltips();
+        });
+
+        document.body.addEventListener('htmx:afterSwap', function (event) {
+            if (event.target && event.target.id === 'teams-table') {
+                initTeamsTableTooltips(event.target);
+
+                var params = new URLSearchParams(window.location.search);
+                var form = document.getElementById('team-filters');
+                if (form) {
+                    if (params.has('sort')) {
+                        var sortInput = form.querySelector('[name=sort]');
+                        if (sortInput) {
+                            sortInput.value = params.get('sort');
+                        }
+                    }
+                    if (params.has('direction')) {
+                        var directionInput = form.querySelector('[name=direction]');
+                        if (directionInput) {
+                            directionInput.value = params.get('direction');
+                        }
+                    }
+                }
+            }
+        });
+    })();
+    </script>
+@endonce

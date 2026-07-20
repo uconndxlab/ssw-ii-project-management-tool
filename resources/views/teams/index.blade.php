@@ -14,7 +14,12 @@
 
 <div class="card shadow-sm mb-3">
     <div class="card-body py-2">
-        @include('teams.partials.filters', ['sort' => $sort, 'direction' => $direction])
+        @include('teams.partials.filters', [
+            'sort' => $sort,
+            'direction' => $direction,
+            'filterProjects' => $filterProjects,
+            'filterPrograms' => $filterPrograms,
+        ])
     </div>
 </div>
 
