@@ -6,7 +6,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -143,6 +142,133 @@ class User extends Authenticatable
         )
             ->withPivot(['assigned_at', 'unassigned_at', 'source_team_id'])
             ->withTimestamps();
+    }
+
+    /**
+     * Projects, programs, and agreements grouped by direct assignment vs team-only access.
+     * Requires teams (with nested projects, programs, agreements) and direct relations loaded.
+     *
+     * @return array{
+     *     direct: array{projects: \Illuminate\Support\Collection, programs: \Illuminate\Support\Collection, agreements: \Illuminate\Support\Collection},
+     *     viaTeams: array{projects: \Illuminate\Support\Collection, programs: \Illuminate\Support\Collection, agreements: \Illuminate\Support\Collection},
+     *     totals: array{projects: int, programs: int, agreements: int, teams: int},
+     *     index: array{projects: \Illuminate\Support\Collection, programs: \Illuminate\Support\Collection},
+     * }
+     */
+    public function getScopeBySource(): array
+    {
+        $directProjects = $this->projects;
+        $directPrograms = $this->programs;
+        $directAgreements = $this->agreements;
+
+        $directProjectIds = $directProjects->pluck('id');
+        $directProgramIds = $directPrograms->pluck('id');
+        $directAgreementIds = $directAgreements->pluck('id');
+
+        $teamOnlyProjects = collect();
+        foreach ($this->teams as $team) {
+            foreach ($team->projects as $project) {
+                if ($directProjectIds->contains($project->id)) {
+                    continue;
+                }
+                $teamOnlyProjects->put($project->id, $project);
+            }
+        }
+        $teamOnlyProjects = $teamOnlyProjects->sortBy('name')->values();
+
+        $teamOnlyPrograms = collect();
+        foreach ($this->teams as $team) {
+            foreach ($team->programs as $program) {
+                if ($directProgramIds->contains($program->id)) {
+                    continue;
+                }
+                $teamOnlyPrograms->put($program->id, $program);
+            }
+        }
+        $teamOnlyPrograms = $teamOnlyPrograms->sortBy('name')->values();
+
+        $viaTeamAgreements = [];
+        foreach ($this->teams as $team) {
+            foreach ($team->agreements as $agreement) {
+                if ($directAgreementIds->contains($agreement->id)) {
+                    continue;
+                }
+                $agreementId = $agreement->id;
+                if (! isset($viaTeamAgreements[$agreementId])) {
+                    $viaTeamAgreements[$agreementId] = [
+                        'agreement' => $agreement,
+                        'teams' => collect(),
+                    ];
+                }
+                $viaTeamAgreements[$agreementId]['teams']->push($team);
+            }
+        }
+
+        $viaTeamAgreementRows = collect($viaTeamAgreements)
+            ->map(function (array $row) {
+                $row['teams'] = $row['teams']->unique('id')->sortBy('name')->values();
+
+                return $row;
+            })
+            ->sortBy(fn (array $row) => $row['agreement']->name)
+            ->values();
+
+        $allProjects = $directProjects->merge($teamOnlyProjects)->unique('id');
+        $allPrograms = $directPrograms->merge($teamOnlyPrograms)->unique('id');
+        $allAgreements = $directAgreements->merge($viaTeamAgreementRows->pluck('agreement'))->unique('id');
+
+        $indexProjects = $directProjects->sortBy('name')->map(fn ($project) => [
+            'model' => $project,
+            'viaTeam' => false,
+            'teamNames' => null,
+        ])->concat($teamOnlyProjects->map(fn ($project) => [
+            'model' => $project,
+            'viaTeam' => true,
+            'teamNames' => $this->teamsProvidingRelation('projects', $project->id)->pluck('name')->join(', '),
+        ]))->values();
+
+        $indexPrograms = $directPrograms->sortBy('name')->map(fn ($program) => [
+            'model' => $program,
+            'viaTeam' => false,
+            'teamNames' => null,
+        ])->concat($teamOnlyPrograms->map(fn ($program) => [
+            'model' => $program,
+            'viaTeam' => true,
+            'teamNames' => $this->teamsProvidingRelation('programs', $program->id)->pluck('name')->join(', '),
+        ]))->values();
+
+        return [
+            'direct' => [
+                'projects' => $directProjects->sortBy('name')->values(),
+                'programs' => $directPrograms->sortBy('name')->values(),
+                'agreements' => $directAgreements->sortBy('name')->values(),
+            ],
+            'viaTeams' => [
+                'projects' => $teamOnlyProjects,
+                'programs' => $teamOnlyPrograms,
+                'agreements' => $viaTeamAgreementRows,
+            ],
+            'totals' => [
+                'projects' => $allProjects->count(),
+                'programs' => $allPrograms->count(),
+                'agreements' => $allAgreements->count(),
+                'teams' => $this->teams->count(),
+            ],
+            'index' => [
+                'projects' => $indexProjects,
+                'programs' => $indexPrograms,
+            ],
+        ];
+    }
+
+    /**
+     * Teams this user belongs to that grant access to the given related entity.
+     */
+    private function teamsProvidingRelation(string $relation, int $entityId)
+    {
+        return $this->teams->filter(function ($team) use ($relation, $entityId) {
+            return $team->{$relation}->contains('id', $entityId);
+        })->sortBy('name')->values();
     }
 
 

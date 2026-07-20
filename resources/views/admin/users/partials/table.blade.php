@@ -46,6 +46,7 @@
             </thead>
             <tbody>
                 @forelse($users as $user)
+                @php $scope = $user->getScopeBySource(); @endphp
                 <tr>
                     <td>
                         <a href="{{ route('users.show', $user) }}" class="fw-semibold text-decoration-none text-dark">
@@ -64,8 +65,18 @@
                     </td>
                     <td>
                         <div class="d-flex flex-wrap gap-1">
-                            @forelse($user->projects->sortBy('name') as $project)
-                                <span class="badge bg-primary-subtle text-primary-emphasis border">{{ $project->name }}</span>
+                            @forelse($scope['index']['projects'] as $entry)
+                                @php
+                                    $project = $entry['model'];
+                                    $viaTeamTitle = $entry['viaTeam'] && $entry['teamNames']
+                                        ? 'Via team: ' . $entry['teamNames']
+                                        : null;
+                                @endphp
+                                <x-entity-relation-badge
+                                    kind="project"
+                                    :href="route('projects.show', $project)"
+                                    :title="$viaTeamTitle"
+                                >{{ $project->name }}</x-entity-relation-badge>
                             @empty
                                 <span class="text-muted small">—</span>
                             @endforelse
@@ -73,24 +84,55 @@
                     </td>
                     <td>
                         <div class="d-flex flex-wrap gap-1">
-                            @forelse($user->programs->sortBy('name') as $program)
-                                <span class="badge bg-warning-subtle text-warning-emphasis border">{{ $program->name }}</span>
+                            @forelse($scope['index']['programs'] as $entry)
+                                @php
+                                    $program = $entry['model'];
+                                    $viaTeamTitle = $entry['viaTeam'] && $entry['teamNames']
+                                        ? 'Via team: ' . $entry['teamNames']
+                                        : null;
+                                @endphp
+                                <x-entity-relation-badge
+                                    kind="program"
+                                    :href="route('programs.show', $program)"
+                                    :title="$viaTeamTitle"
+                                >{{ $program->name }}</x-entity-relation-badge>
                             @empty
                                 <span class="text-muted small">—</span>
                             @endforelse
                         </div>
                     </td>
                     <td class="text-muted small">{{ $user->created_at->format('M d, Y') }}</td>
-                    <td class="text-end">
-                        <div class="d-flex gap-1 justify-content-end flex-nowrap">
-                            <a href="{{ route('users.show', $user) }}" class="btn btn-sm btn-outline-primary">View</a>
-                            <a href="{{ route('admin.users.edit', $user) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
-                            <form method="POST" action="{{ route('admin.users.destroy', $user) }}" class="d-inline">
-                                @csrf @method('DELETE')
-                                <button type="submit" class="btn btn-sm btn-outline-danger"
-                                    onclick="return confirm('Delete {{ addslashes($user->name) }}?')">Delete</button>
-                            </form>
+                    <td class="text-end text-nowrap">
+                        @php $actionKey = 'user-actions-' . $user->id; @endphp
+                        <div class="btn-group btn-group-sm" role="group" aria-label="User actions for {{ $user->name }}">
+                            <a href="{{ route('users.show', $user) }}"
+                               class="btn btn-outline-primary"
+                               data-bs-toggle="tooltip"
+                               data-bs-title="View user"
+                               aria-label="View user">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{{ route('admin.users.edit', $user) }}"
+                               class="btn btn-outline-secondary"
+                               data-bs-toggle="tooltip"
+                               data-bs-title="Edit user"
+                               aria-label="Edit user">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                            <button type="submit"
+                                    form="{{ $actionKey }}-delete"
+                                    class="btn btn-outline-danger"
+                                    data-bs-toggle="tooltip"
+                                    data-bs-title="Delete user"
+                                    aria-label="Delete user"
+                                    onclick="return confirm('Delete {{ addslashes($user->name) }}?')">
+                                <i class="bi bi-trash"></i>
+                            </button>
                         </div>
+                        <form id="{{ $actionKey }}-delete" method="POST" action="{{ route('admin.users.destroy', $user) }}" class="d-none">
+                            @csrf
+                            @method('DELETE')
+                        </form>
                     </td>
                 </tr>
                 @empty
@@ -108,3 +150,29 @@
         <x-htmx-pagination :paginator="$users" target="#users-table" />
     </div>
 </div>
+
+@once
+    <script>
+    (function () {
+        function initUsersTableTooltips(scope) {
+            if (!window.bootstrap || !bootstrap.Tooltip) {
+                return;
+            }
+
+            (scope || document).querySelectorAll('#users-table [data-bs-toggle="tooltip"]').forEach(function (element) {
+                bootstrap.Tooltip.getOrCreateInstance(element);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            initUsersTableTooltips();
+        });
+
+        document.body.addEventListener('htmx:afterSwap', function (event) {
+            if (event.target && event.target.id === 'users-table') {
+                initUsersTableTooltips(event.target);
+            }
+        });
+    })();
+    </script>
+@endonce

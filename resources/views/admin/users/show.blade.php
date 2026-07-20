@@ -3,6 +3,11 @@
 @section('title', $user->name)
 
 @section('content')
+@php
+    $direct = $scopeBySource['direct'];
+    $viaTeams = $scopeBySource['viaTeams'];
+@endphp
+
 <x-entity-show
     title="{{ $user->name }}"
     type="{{ ucfirst($user->role) }}"
@@ -10,10 +15,12 @@
     backRoute="{{ route('admin.users.index') }}"
     editRoute="{{ route('admin.users.edit', $user) }}"
     backLabel="All Users"
+    mainCardTitle="Agreements"
+    :activityFirst="true"
 >
     {{-- ── Summary ─────────────────────────────────────────────────────── --}}
     <x-slot:summary>
-        <dl class="row mb-0">
+        <dl class="row mb-0" style="min-width: 0;">
             <dt class="col-5 text-muted fw-normal small">Name</dt>
             <dd class="col-7 mb-2 fw-semibold">{{ $user->name }}</dd>
 
@@ -34,7 +41,7 @@
             <dt class="col-5 text-muted fw-normal small">Supervisor</dt>
             <dd class="col-7 mb-2">
                 @if($user->supervisor)
-                    <a href="{{ route('users.show', $user->supervisor) }}" class="text-decoration-none">
+                    <a href="{{ route('users.show', $user->supervisor) }}" class="text-decoration-underline">
                         {{ $user->supervisor->name }}
                     </a>
                 @else
@@ -42,24 +49,61 @@
                 @endif
             </dd>
 
-            <dt class="col-5 text-muted fw-normal small">Agreements</dt>
-            <dd class="col-7 mb-2">
-                <span class="badge bg-success rounded-pill">{{ $user->agreements->count() }}</span>
-            </dd>
-
             <dt class="col-5 text-muted fw-normal small">Projects</dt>
             <dd class="col-7 mb-2">
-                <span class="badge bg-primary rounded-pill">{{ $user->projects->count() }}</span>
+                <div class="d-flex flex-wrap gap-1">
+                    @forelse($direct['projects'] as $project)
+                        <x-entity-relation-badge kind="project" :href="route('projects.show', $project)">{{ $project->name }}</x-entity-relation-badge>
+                    @empty
+                        @if($viaTeams['projects']->isEmpty())
+                            <span class="text-muted small">None</span>
+                        @endif
+                    @endforelse
+                </div>
+                @if($viaTeams['projects']->isNotEmpty())
+                    <div class="small text-muted mt-2 mb-1">Via teams</div>
+                    <div class="d-flex flex-wrap gap-1">
+                        @foreach($viaTeams['projects'] as $project)
+                            <x-entity-relation-badge kind="project" :href="route('projects.show', $project)">{{ $project->name }}</x-entity-relation-badge>
+                        @endforeach
+                    </div>
+                @endif
             </dd>
 
             <dt class="col-5 text-muted fw-normal small">Programs</dt>
             <dd class="col-7 mb-2">
-                <span class="badge bg-info text-dark rounded-pill">{{ $user->programs->count() }}</span>
+                <div class="d-flex flex-wrap gap-1">
+                    @forelse($direct['programs'] as $program)
+                        <x-entity-relation-badge kind="program" :href="route('programs.show', $program)">{{ $program->name }}</x-entity-relation-badge>
+                    @empty
+                        @if($viaTeams['programs']->isEmpty())
+                            <span class="text-muted small">None</span>
+                        @endif
+                    @endforelse
+                </div>
+                @if($viaTeams['programs']->isNotEmpty())
+                    <div class="small text-muted mt-2 mb-1">Via teams</div>
+                    <div class="d-flex flex-wrap gap-1">
+                        @foreach($viaTeams['programs'] as $program)
+                            <x-entity-relation-badge kind="program" :href="route('programs.show', $program)">{{ $program->name }}</x-entity-relation-badge>
+                        @endforeach
+                    </div>
+                @endif
             </dd>
 
             <dt class="col-5 text-muted fw-normal small">Teams</dt>
             <dd class="col-7 mb-2">
-                <span class="badge bg-warning text-dark rounded-pill">{{ $user->teams->count() }}</span>
+                <div class="d-flex flex-wrap gap-1">
+                    @forelse($user->teams->sortBy('name') as $team)
+                        <x-entity-relation-badge
+                            kind="team"
+                            :href="route('teams.show', $team)"
+                            :title="$team->active ? 'Active' : 'Inactive'"
+                        >{{ $team->name }}</x-entity-relation-badge>
+                    @empty
+                        <span class="text-muted small">None</span>
+                    @endforelse
+                </div>
             </dd>
 
             <dt class="col-5 text-muted fw-normal small">Joined</dt>
@@ -67,94 +111,9 @@
         </dl>
     </x-slot:summary>
 
-    {{-- ── Relationships ───────────────────────────────────────────────── --}}
+    {{-- ── Agreements & deliverables ───────────────────────────────────── --}}
     <x-slot:relationships>
-        <div class="row g-4">
-            <div class="col-md-6">
-                <h6 class="fw-semibold mb-3">
-                    Projects
-                    <span class="badge bg-primary rounded-pill ms-1">{{ $user->projects->count() }}</span>
-                </h6>
-                @forelse($user->projects->sortBy('name') as $project)
-                    <div class="py-2 border-bottom">
-                        <a href="{{ route('projects.show', $project) }}" class="text-decoration-none fw-semibold d-block">
-                            {{ $project->name }}
-                        </a>
-                        @if($project->description)
-                            <small class="text-muted">{{ $project->description }}</small>
-                        @endif
-                    </div>
-                @empty
-                    <p class="text-muted small mb-0">No projects assigned.</p>
-                @endforelse
-            </div>
-
-            <div class="col-md-6">
-                <h6 class="fw-semibold mb-3">
-                    Programs
-                    <span class="badge bg-info text-dark rounded-pill ms-1">{{ $user->programs->count() }}</span>
-                </h6>
-                @forelse($user->programs->sortBy('name') as $program)
-                    <div class="py-2 border-bottom">
-                        <a href="{{ route('programs.show', $program) }}" class="text-decoration-none fw-semibold d-block">
-                            {{ $program->name }}
-                        </a>
-                        @if($program->project)
-                            <small class="text-muted">{{ $program->project->name }}</small>
-                        @endif
-                    </div>
-                @empty
-                    <p class="text-muted small mb-0">No programs assigned.</p>
-                @endforelse
-            </div>
-
-            {{-- Agreements --}}
-            <div class="col-md-6">
-                <h6 class="fw-semibold mb-3">
-                    Agreements
-                    <span class="badge bg-success rounded-pill ms-1">{{ $user->agreements->count() }}</span>
-                </h6>
-                @forelse($user->agreements->sortBy('name') as $agreement)
-                    <div class="py-2 border-bottom">
-                        <a href="{{ route('agreements.show', $agreement) }}" class="text-decoration-none fw-semibold d-block">
-                            {{ $agreement->name }}
-                        </a>
-                        @if($agreement->organizations->isNotEmpty())
-                            <small class="text-muted">{{ $agreement->organizations->pluck('name')->join(', ') }}</small>
-                        @endif
-                        @if($agreement->states->isNotEmpty())
-                            <div class="mt-1">
-                                @foreach($agreement->states as $state)
-                                    <span class="badge bg-info text-dark">{{ $state->name }}</span>
-                                @endforeach
-                            </div>
-                        @endif
-                    </div>
-                @empty
-                    <p class="text-muted small mb-0">Not assigned to any agreements.</p>
-                @endforelse
-            </div>
-
-            {{-- Teams --}}
-            <div class="col-md-6">
-                <h6 class="fw-semibold mb-3">
-                    Teams
-                    <span class="badge bg-warning text-dark rounded-pill ms-1">{{ $user->teams->count() }}</span>
-                </h6>
-                @forelse($user->teams->sortBy('name') as $team)
-                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
-                        <span class="fw-semibold">{{ $team->name }}</span>
-                        @if($team->active)
-                            <span class="badge bg-success">Active</span>
-                        @else
-                            <span class="badge bg-secondary">Inactive</span>
-                        @endif
-                    </div>
-                @empty
-                    <p class="text-muted small mb-0">Not a member of any teams.</p>
-                @endforelse
-            </div>
-        </div>
+        @include('admin.users.partials.agreement-reports', ['agreementReports' => $agreementReports])
     </x-slot:relationships>
 
     {{-- ── Recent Activity ─────────────────────────────────────────────── --}}
@@ -181,9 +140,7 @@
                             <td>{{ $activity->activityType->name ?? '—' }}</td>
                             <td>
                                 @foreach($activity->agreements->take(2) as $agr)
-                                    <a href="{{ route('agreements.show', $agr) }}" class="badge bg-secondary text-decoration-none me-1">
-                                        {{ $agr->name }}
-                                    </a>
+                                    <x-entity-relation-badge kind="agreement" :href="route('agreements.show', $agr)" class="me-1">{{ $agr->name }}</x-entity-relation-badge>
                                 @endforeach
                             </td>
                             <td class="text-end">—</td>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\AdminUserRequest;
 use App\Models\Project;
 use App\Models\User;
+use App\Support\UserDeliverableReporting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -15,6 +16,8 @@ class AdminUserController extends Controller
         $query = User::query()->with([
             'projects:id,name',
             'programs:id,name,project_id',
+            'teams.projects:id,name',
+            'teams.programs:id,name,project_id',
         ]);
 
         if ($request->filled('search')) {
@@ -102,7 +105,20 @@ class AdminUserController extends Controller
 
     public function show(User $user)
     {
-        $user->load(['supervisor', 'projects', 'programs.project', 'agreements.organizations', 'agreements.states', 'teams']);
+        $user->load([
+            'supervisor',
+            'projects',
+            'programs.project',
+            'agreements.organizations',
+            'agreements.states',
+            'teams.projects',
+            'teams.programs.project',
+            'teams.agreements.organizations',
+            'teams.agreements.states',
+        ]);
+
+        $scopeBySource = $user->getScopeBySource();
+        $agreementReports = UserDeliverableReporting::buildAgreementReports($user);
 
         $recentActivities = $user->activities()
             ->with(['activityType', 'agreements'])
@@ -110,7 +126,7 @@ class AdminUserController extends Controller
             ->take(10)
             ->get();
 
-        return view('admin.users.show', compact('user', 'recentActivities'));
+        return view('admin.users.show', compact('user', 'recentActivities', 'scopeBySource', 'agreementReports'));
     }
 
     public function destroy(User $user)

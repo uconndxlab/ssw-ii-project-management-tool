@@ -27,6 +27,107 @@ class AgreementDeliverableDisplay
             ))
             ->values();
 
+        return self::groupProgressItems($items);
+    }
+
+    /**
+     * Deliverable progress grouped and filtered to items the user can contribute to, with user_focus stats.
+     */
+    public static function buildGroupedProgressForUser(Agreement $agreement, User $user): Collection
+    {
+        $userId = (int) $user->id;
+
+        $items = $agreement->deliverables
+            ->reject(fn (AgreementDeliverable $deliverable) => $deliverable->retired_at)
+            ->filter(fn (AgreementDeliverable $deliverable) => self::userCanContributeToDeliverable($agreement, $deliverable, $user))
+            ->map(function (AgreementDeliverable $deliverable) use ($agreement, $userId) {
+                $teamLookup = $agreement->teams->keyBy(fn (Team $team) => (int) $team->id);
+                $agreementTeamIds = $teamLookup->keys();
+                $agreementMemberUserIds = self::buildAgreementMemberUserIds($agreement);
+
+                $progress = self::buildDeliverableProgress(
+                    $deliverable,
+                    $teamLookup,
+                    $agreementTeamIds,
+                    $agreementMemberUserIds
+                );
+
+                return self::focusProgressOnUser($progress, $userId);
+            })
+            ->values();
+
+        return self::groupProgressItems($items);
+    }
+
+    public static function userCanContributeToDeliverable(
+        Agreement $agreement,
+        AgreementDeliverable $deliverable,
+        User $user
+    ): bool {
+        $teamLookup = $agreement->teams->keyBy(fn (Team $team) => (int) $team->id);
+        $memberIds = self::buildAgreementMemberUserIds($agreement);
+        $userId = (int) $user->id;
+
+        if (!$memberIds->contains($userId)) {
+            return false;
+        }
+
+        if ($deliverable->contribution_basis === 'contact') {
+            return true;
+        }
+
+        return self::currentlyAssignedUserIds($deliverable, $teamLookup, $memberIds)->contains($userId);
+    }
+
+    private static function focusProgressOnUser(array $progress, int $userId): array
+    {
+        if ($progress['is_individual']) {
+            $row = $progress['individual_progress']->first(fn (array $individual) => (int) $individual['user']->id === $userId);
+            $target = (float) ($row['target'] ?? $progress['target']);
+            $completed = (float) ($row['completed_value'] ?? 0);
+            $progress['user_focus'] = [
+                'completed' => $completed,
+                'target' => $target,
+                'percent' => $target > 0 ? min(100, ($completed / $target) * 100) : 0,
+                'shared' => false,
+            ];
+
+            return $progress;
+        }
+
+        if ($progress['is_joint']) {
+            $completed = 0.0;
+            foreach ($progress['live_assignment_groups'] as $group) {
+                foreach ($group['users'] as $row) {
+                    if ((int) $row['user_id'] === $userId) {
+                        $completed = (float) $row['completed_value'];
+                        break 2;
+                    }
+                }
+            }
+
+            $progress['user_focus'] = [
+                'completed' => $completed,
+                'target' => null,
+                'percent' => null,
+                'shared' => true,
+            ];
+
+            return $progress;
+        }
+
+        $progress['user_focus'] = [
+            'completed' => (float) $progress['completed_value'],
+            'target' => (float) $progress['target'],
+            'percent' => (float) $progress['percent'],
+            'shared' => true,
+        ];
+
+        return $progress;
+    }
+
+    private static function groupProgressItems(Collection $items): Collection
+    {
         return $items
             ->groupBy(fn (array $item) => (int) ($item['deliverable']->contact_family_id ?? 0))
             ->map(function (Collection $familyItems) {
