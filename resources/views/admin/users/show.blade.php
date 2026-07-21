@@ -154,7 +154,7 @@
                             <td>{{ $activity->activityType->name ?? '—' }}</td>
                             <td>
                                 @foreach($activity->agreements->take(2) as $agr)
-                                    <x-entity-relation-badge kind="agreement" :href="route('agreements.show', $agr)" class="me-1">{{ $agr->name }}</x-entity-relation-badge>
+                                    <x-entity-relation-badge kind="agreement" :href="$agr->isLinkable() ? route('agreements.show', $agr) : null" class="me-1">{{ $agr->name }}</x-entity-relation-badge>
                                 @endforeach
                             </td>
                             <td class="text-end">—</td>

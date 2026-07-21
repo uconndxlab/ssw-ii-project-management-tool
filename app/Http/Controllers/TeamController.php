@@ -158,6 +158,11 @@ class TeamController extends Controller
             'agreements.deliverables.teams',
         ]);
 
+        $team->setRelation(
+            'agreements',
+            $team->agreements->where('active', true)->values()
+        );
+
         // Build per-member deliverable map from already-loaded data (no extra queries)
         $memberDeliverables = [];
         foreach ($team->users as $user) {

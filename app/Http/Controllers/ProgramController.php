@@ -97,7 +97,7 @@ class ProgramController extends Controller
         $recentActivities = $program->activities->sortByDesc('engagement_date')->take(10);
 
         // Unique agreements directly linked to the program
-        $agreements = $program->agreements->sortBy('name');
+        $agreements = $program->agreements->where('active', true)->sortBy('name');
 
         // Unique users across all agreements
         $staffMap = [];

@@ -30,11 +30,12 @@ class ActivityController extends Controller
         $visibleAgreements = $this->getVisibleAgreements()->load(['organizations', 'states']);
 
         $visibleAgreementIds = $visibleAgreements->pluck('id');
+        $indexAgreementIds = $this->getActivityIndexAgreementIds();
 
         $query = Activity::query()
             ->with(['agreements.organizations', 'agreements.states', 'user', 'activityType', 'organizations', 'states'])
-            ->whereHas('agreements', function ($q) use ($visibleAgreementIds) {
-                $q->whereIn('agreements.id', $visibleAgreementIds);
+            ->whereHas('agreements', function ($q) use ($indexAgreementIds) {
+                $q->whereIn('agreements.id', $indexAgreementIds);
             });
 
         // Search
@@ -309,6 +310,8 @@ class ActivityController extends Controller
             ->values()
             ->all();
 
+        $this->assertAgreementIdsAreActive($baseValidated['agreement_ids'] ?? []);
+
         $agreements = $this->resolveSelectedAgreements($baseValidated['agreement_ids'] ?? []);
         $contactFamily = ContactFamily::with('contactFamilyLoggingFields')
             ->findOrFail($baseValidated['contact_family_id']);
@@ -358,11 +361,15 @@ class ActivityController extends Controller
 
     public function show(Activity $activity)
     {
-        // Authorization: admin or assigned to at least one agreement
+        // Authorization: admin, agreement access, or activity owner
         if (!Auth::user()->isAdmin()) {
-            $agreementIds = $activity->agreements->pluck('id');
-            $hasAccess = Auth::user()->agreements()->whereIn('agreements.id', $agreementIds)->exists();
-            if (!$hasAccess && $agreementIds->isEmpty()) {
+            $activity->loadMissing('agreements');
+            $hasAgreementAccess = $activity->agreements->contains(
+                fn (Agreement $agreement) => Auth::user()->hasAccessToAgreement($agreement),
+            );
+            $isOwner = (int) $activity->user_id === (int) Auth::id();
+
+            if (!$hasAgreementAccess || !$isOwner) {
                 abort(403, 'You do not have access to this activity.');
             }
         }
@@ -397,6 +404,12 @@ class ActivityController extends Controller
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
+        $activity->load(['activityType.contactFamily', 'activityType.activityTypeLoggingFields', 'agreements', 'states', 'organizations', 'projects', 'programs', 'participants', 'participantTimes.user', 'contactTime', 'loggingFieldAnswers']);
+        $agreements = $agreements
+            ->merge($activity->agreements)
+            ->unique('id')
+            ->sortBy('name')
+            ->values();
         $agreements->load([
             'organizations',
             'states',
@@ -406,7 +419,6 @@ class ActivityController extends Controller
             'projects.programs',
             'programs',
         ]);
-        $activity->load(['activityType.contactFamily', 'activityType.activityTypeLoggingFields', 'agreements', 'states', 'organizations', 'projects', 'programs', 'participants', 'participantTimes.user', 'contactTime', 'loggingFieldAnswers']);
         $currentContactFamilyId = old('contact_family_id', $activity->activityType?->contactFamily?->id);
 
         return view('activities.edit', compact(
@@ -472,6 +484,13 @@ class ActivityController extends Controller
             ->values()
             ->all();
 
+        $this->assertAgreementIdsAreActive(
+            $this->newlySelectedAgreementIds(
+                $baseValidated['agreement_ids'] ?? [],
+                $activity->agreements->pluck('id')->all(),
+            ),
+        );
+
         $agreements = $this->resolveSelectedAgreements($baseValidated['agreement_ids'] ?? []);
         $contactFamily = ContactFamily::with('contactFamilyLoggingFields')
             ->findOrFail($baseValidated['contact_family_id']);
@@ -536,10 +555,55 @@ class ActivityController extends Controller
     private function getVisibleAgreements()
     {
         if (Auth::user()->isAdmin()) {
-            return Agreement::with('organizations')->orderBy('name')->get();
+            return Agreement::query()->active()->with('organizations')->orderBy('name')->get();
         }
 
-        return Auth::user()->agreements()->with('organizations')->orderBy('name')->get();
+        return Auth::user()->accessibleAgreementsQuery()
+            ->where('agreements.active', true)
+            ->with('organizations')
+            ->orderBy('name')
+            ->get();
+    }
+
+    /**
+     * Agreement IDs whose activities appear on the activity index (includes inactive assignments for history).
+     */
+    private function getActivityIndexAgreementIds()
+    {
+        if (Auth::user()->isAdmin()) {
+            return Agreement::query()->pluck('id');
+        }
+
+        return Auth::user()->accessibleAgreementsQuery()->pluck('agreements.id');
+    }
+
+    private function assertAgreementIdsAreActive(array $agreementIds, array $allowedInactiveIds = []): void
+    {
+        if ($agreementIds === []) {
+            return;
+        }
+
+        $query = Agreement::query()
+            ->whereIn('id', $agreementIds)
+            ->where('active', false);
+
+        if ($allowedInactiveIds !== []) {
+            $query->whereNotIn('id', $allowedInactiveIds);
+        }
+
+        if ($query->exists()) {
+            throw ValidationException::withMessages([
+                'agreement_ids' => 'One or more selected agreements are inactive.',
+            ]);
+        }
+    }
+
+    private function newlySelectedAgreementIds(array $selectedIds, array $existingIds): array
+    {
+        return array_values(array_diff(
+            array_map('intval', $selectedIds),
+            array_map('intval', $existingIds),
+        ));
     }
 
     /**
@@ -551,7 +615,7 @@ class ActivityController extends Controller
             return;
         }
 
-        $hasAccess = Auth::user()->agreements()->where('agreements.id', $agreementId)->exists();
+        $hasAccess = Auth::user()->hasAccessToAgreement($agreementId);
 
         if (!$hasAccess) {
             abort(403, 'You do not have access to this agreement.');
@@ -572,9 +636,12 @@ class ActivityController extends Controller
             abort(403, 'You can only edit your own activities.');
         }
 
-        // Also verify they still have access to the agreement
-        $agreementIds = $activity->agreements->pluck('id');
-        $hasAccess = Auth::user()->agreements()->whereIn('agreements.id', $agreementIds)->exists();
+        $activity->loadMissing('agreements');
+
+        // Also verify they still have access to a linked agreement
+        $hasAccess = $activity->agreements->contains(
+            fn (Agreement $agreement) => Auth::user()->hasAccessToAgreement($agreement),
+        );
         if (!$hasAccess) {
             abort(403, 'You do not have access to this activity.');
         }

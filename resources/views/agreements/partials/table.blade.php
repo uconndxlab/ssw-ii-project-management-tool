@@ -1,9 +1,8 @@
 @php
     $s    = $sort ?? 'name';
     $d    = $direction ?? 'asc';
-    $flip = fn($col) => ($s === $col && $d === 'asc') ? 'desc' : 'asc';
-    $icon = fn($col) => $s === $col ? ($d === 'asc' ? ' ↑' : ' ↓') : '';
-    $url  = fn($col) => route('agreements.index', array_merge(request()->query(), ['sort' => $col, 'direction' => $flip($col), 'page' => 1]));
+    $flip = fn ($col) => ($s === $col && $d === 'asc') ? 'desc' : 'asc';
+    $url  = fn ($col) => route('agreements.index', array_merge(request()->query(), ['sort' => $col, 'direction' => $flip($col), 'page' => 1]));
 @endphp
 
 <div class="card shadow-sm">
@@ -11,48 +10,44 @@
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
                 <tr>
-                    <th style="min-width: 220px;">
-                        <a class="text-decoration-none fw-semibold text-dark"
-                           href="{{ $url('name') }}"
-                           hx-get="{{ $url('name') }}" hx-target="#agreements-table" hx-push-url="true">
-                            Agreement{!! $icon('name') !!}
-                        </a>
+                    <th style="min-width: 200px;">
+                        <x-table-sort-link column="name" label="Agreement" :sort="$s" :direction="$d" :url="$url('name')" target="#agreements-table" />
                     </th>
-                    <th style="min-width: 180px;">Scope</th>
-                    <th style="min-width: 120px;">Organizations</th>
-                    <th style="min-width: 120px;">Location</th>
-                    <th style="min-width: 150px;">
-                        <a class="text-decoration-none fw-semibold text-dark"
-                           href="{{ $url('start_date') }}"
-                           hx-get="{{ $url('start_date') }}" hx-target="#agreements-table" hx-push-url="true">
-                            Timeline{!! $icon('start_date') !!}
-                        </a>
+                    <th style="min-width: 140px;">
+                        <x-table-sort-link column="projects" label="Project" :sort="$s" :direction="$d" :url="$url('projects')" target="#agreements-table" />
                     </th>
-                    <th style="min-width: 180px;">Staff &amp; Deliverables</th>
+                    <th style="min-width: 140px;">
+                        <x-table-sort-link column="programs" label="Program" :sort="$s" :direction="$d" :url="$url('programs')" target="#agreements-table" />
+                    </th>
+                    <th style="min-width: 120px;">
+                        <x-table-sort-link column="states" label="Location" :sort="$s" :direction="$d" :url="$url('states')" target="#agreements-table" />
+                    </th>
+                    <th class="text-nowrap">
+                        <x-table-sort-link column="start_date" label="Start Date" :sort="$s" :direction="$d" :url="$url('start_date')" target="#agreements-table" />
+                    </th>
+                    <th class="text-nowrap">
+                        <x-table-sort-link column="end_date" label="End Date" :sort="$s" :direction="$d" :url="$url('end_date')" target="#agreements-table" />
+                    </th>
+                    <th>
+                        <x-table-sort-link column="active" label="Status" :sort="$s" :direction="$d" :url="$url('active')" target="#agreements-table" />
+                    </th>
+                    <th style="min-width: 120px;">
+                        <x-table-sort-link column="principal_investigators" label="PI" :sort="$s" :direction="$d" :url="$url('principal_investigators')" target="#agreements-table" />
+                    </th>
                     <th class="text-end text-nowrap" style="width:{{ auth()->user()->isAdmin() ? '130px' : '52px' }};">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($agreements as $agreement)
-                @php
-                    $teamMemberCount = $agreement->teams
-                        ->flatMap(fn ($team) => $team->users)
-                        ->pluck('id')
-                        ->merge($agreement->users->pluck('id'))
-                        ->unique()
-                        ->count();
-                    $payorSourceCount = $agreement->organizations
-                        ->filter(fn ($organization) => (bool) $organization->pivot->payor_source)
-                        ->count();
-                    $recipientCount = $agreement->organizations
-                        ->filter(fn ($organization) => (bool) $organization->pivot->recipient)
-                        ->count();
-                @endphp
                 <tr>
                     <td>
-                        <a href="{{ route('agreements.show', $agreement) }}" class="fw-semibold text-decoration-none text-dark d-block">
-                            {{ $agreement->name }}
-                        </a>
+                        @if($agreement->isLinkable())
+                            <a href="{{ route('agreements.show', $agreement) }}" class="fw-semibold text-decoration-none text-dark d-block">
+                                {{ $agreement->name }}
+                            </a>
+                        @else
+                            <span class="fw-semibold text-dark d-block">{{ $agreement->name }}</span>
+                        @endif
                         @if($agreement->abstract)
                             <div class="text-muted small text-truncate" style="max-width: 320px;" title="{{ $agreement->abstract }}">
                                 {{ $agreement->abstract }}
@@ -60,71 +55,51 @@
                         @endif
                     </td>
                     <td>
-                        <div class="d-flex flex-wrap gap-1 mb-1">
-                            @forelse($agreement->projects->sortBy('name') as $project)
-                                <span class="badge bg-primary-subtle text-primary-emphasis border">{{ $project->name }}</span>
-                            @empty
-                                <span class="text-muted small">No projects</span>
-                            @endforelse
-                        </div>
                         <div class="d-flex flex-wrap gap-1">
-                            @forelse($agreement->programs->sortBy('name') as $program)
-                                <span class="badge bg-warning-subtle text-warning-emphasis border">{{ $program->name }}</span>
+                            @forelse($agreement->projects->sortBy('name') as $project)
+                                <x-entity-relation-badge kind="project" :href="route('projects.show', $project)">
+                                    {{ $project->name }}
+                                </x-entity-relation-badge>
                             @empty
-                                <span class="text-muted small">No programs</span>
+                                <span class="text-muted small">—</span>
                             @endforelse
                         </div>
                     </td>
                     <td>
-                        @if($agreement->organizations->isEmpty())
-                            <span class="text-muted small">None</span>
-                        @else
-                            <div class="d-flex flex-wrap gap-1">
-                                <span class="badge bg-secondary">
-                                    {{ $agreement->organizations->count() }} total
-                                </span>
-                                <span class="badge bg-secondary-subtle text-secondary-emphasis border">
-                                    {{ $payorSourceCount }} payor
-                                </span>
-                                <span class="badge bg-secondary-subtle text-secondary-emphasis border">
-                                    {{ $recipientCount }} recipient{{ $recipientCount === 1 ? '' : 's' }}
-                                </span>
-                            </div>
-                        @endif
+                        <div class="d-flex flex-wrap gap-1">
+                            @forelse($agreement->programs->sortBy('name') as $program)
+                                <x-entity-relation-badge kind="program" :href="route('programs.show', $program)">
+                                    {{ $program->name }}
+                                </x-entity-relation-badge>
+                            @empty
+                                <span class="text-muted small">—</span>
+                            @endforelse
+                        </div>
                     </td>
                     <td>
                         <div class="d-flex flex-wrap gap-1">
                             @forelse($agreement->states as $state)
                                 <span class="badge bg-info text-dark">{{ $state->name }}</span>
                             @empty
-                                <span class="text-muted small">No states</span>
+                                <span class="text-muted small">—</span>
                             @endforelse
                         </div>
                     </td>
-                    <td class="small">
-                        <div>{{ $agreement->start_date?->format('M d, Y') ?? '—' }} → {{ $agreement->end_date?->format('M d, Y') ?? '—' }}</div>
-                        @if($agreement->extension_start_date || $agreement->extension_end_date)
-                            <div class="text-muted mt-1">
-                                Ext. {{ $agreement->extension_start_date?->format('M d, Y') ?? '—' }}
-                                → {{ $agreement->extension_end_date?->format('M d, Y') ?? '—' }}
-                            </div>
-                        @endif
-                        @if($agreement->time_tracking_mode)
-                            <div class="text-muted mt-1">{{ $agreement->time_tracking_mode->label() }}</div>
+                    <td class="small text-nowrap">{{ $agreement->start_date?->format('M d, Y') ?? '—' }}</td>
+                    <td class="small text-nowrap">{{ $agreement->end_date?->format('M d, Y') ?? '—' }}</td>
+                    <td>
+                        @if($agreement->active)
+                            <span class="badge bg-success">Active</span>
+                        @else
+                            <span class="badge bg-secondary">Inactive</span>
                         @endif
                     </td>
                     <td class="small">
-                        <div class="d-flex flex-wrap gap-1 mb-2">
-                            @forelse($agreement->teams->sortBy('name') as $team)
-                                <span class="badge bg-secondary-subtle text-secondary-emphasis border">{{ $team->name }}</span>
-                            @empty
-                                <span class="text-muted">No teams</span>
-                            @endforelse
-                        </div>
-                        <div class="text-muted">
-                            {{ $teamMemberCount }} staff
-                            · {{ $agreement->active_deliverables_count ?? 0 }} deliverable{{ ($agreement->active_deliverables_count ?? 0) === 1 ? '' : 's' }}
-                        </div>
+                        @if($agreement->principalInvestigators->isEmpty())
+                            <span class="text-muted">—</span>
+                        @else
+                            {{ $agreement->principalInvestigators->sortBy('name')->pluck('name')->join(', ') }}
+                        @endif
                     </td>
                     <td class="text-end text-nowrap">
                         @php $actionKey = 'agreement-actions-' . $agreement->id; @endphp
@@ -177,7 +152,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="7" class="text-center py-5">
+                    <td colspan="9" class="text-center py-5">
                         <p class="text-muted mb-2">
                             @if(auth()->user()->isAdmin()) No agreements found.
                             @else You are not assigned to any agreements.

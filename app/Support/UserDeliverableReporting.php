@@ -21,6 +21,7 @@ class UserDeliverableReporting
         }
 
         $agreements = Agreement::query()
+            ->active()
             ->whereIn('id', $accessMeta->keys())
             ->with([
                 'organizations',

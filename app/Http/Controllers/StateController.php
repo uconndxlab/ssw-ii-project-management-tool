@@ -51,6 +51,11 @@ class StateController extends Controller
     {
         $state->load(['organizations.agreements', 'agreements.organizations', 'agreements.users']);
 
+        $state->setRelation(
+            'agreements',
+            $state->agreements->where('active', true)->values()
+        );
+
         // Deduplicate staff across all agreements in this state, tagging agreement names
         $staffMembersMap = [];
         foreach ($state->agreements as $agreement) {

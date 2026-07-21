@@ -13,6 +13,7 @@ class Agreement extends Model
 {
     protected $fillable = [
         'name',
+        'active',
         'project_id',
         'abstract',
         'start_date',
@@ -25,6 +26,7 @@ class Agreement extends Model
     protected function casts(): array
     {
         return [
+            'active' => 'boolean',
             'start_date' => 'date',
             'end_date' => 'date',
             'extension_start_date' => 'date',
@@ -169,7 +171,50 @@ class Agreement extends Model
         ];
     }
 
+    public function isLinkable(?User $user = null): bool
+    {
+        if (!$this->active) {
+            return false;
+        }
+
+        $user = $user ?? auth()->user();
+
+        if ($user === null) {
+            return false;
+        }
+
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        return $user->hasAccessToAgreement($this);
+    }
+
+    /**
+     * Agreements the user may access (direct assignment, team membership, or PI role).
+     *
+     * @param  Builder<Agreement>  $query
+     * @return Builder<Agreement>
+     */
+    public function scopeAccessibleBy(Builder $query, User $user): Builder
+    {
+        return $query->where(function (Builder $builder) use ($user) {
+            $builder
+                ->whereHas('users', fn (Builder $relation) => $relation->where('users.id', $user->id))
+                ->orWhereHas('teams.users', fn (Builder $relation) => $relation->where('users.id', $user->id))
+                ->orWhereHas(
+                    'principalInvestigators',
+                    fn (Builder $relation) => $relation->where('users.id', $user->id),
+                );
+        });
+    }
+
     public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('agreements.active', true);
+    }
+
+    public function scopeWithinFundingPeriod(Builder $query): Builder
     {
         $today = now()->toDateString();
 
@@ -193,6 +238,6 @@ class Agreement extends Model
 
     public function scopeCurrent(Builder $query): Builder
     {
-        return $this->scopeActive($query);
+        return $this->scopeWithinFundingPeriod($query);
     }
 }

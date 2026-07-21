@@ -27,6 +27,15 @@
     {{-- ── Summary ─────────────────────────────────────────────────────── --}}
     <x-slot:summary>
         <dl class="row mb-0" style="min-width: 0;">
+            <dt class="col-5 text-muted fw-normal small">Status</dt>
+            <dd class="col-7 mb-2">
+                @if($agreement->active)
+                    <span class="badge bg-success">Active</span>
+                @else
+                    <span class="badge bg-secondary">Inactive</span>
+                @endif
+            </dd>
+
             <dt class="col-5 text-muted fw-normal small">Start Date</dt>
             <dd class="col-7 mb-2">{{ $agreement->start_date?->format('M d, Y') ?? '—' }}</dd>
 
@@ -199,10 +208,19 @@
 
     {{-- ── Recent Activity ─────────────────────────────────────────────── --}}
     <x-slot:activity>
+        @if(!$agreement->active)
+            <div class="alert alert-secondary py-2 small mb-3 mb-0">
+                Activity logging is disabled for inactive agreements. Historical activities are shown below.
+            </div>
+        @endif
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-            <a href="{{ route('activities.create') }}?agreement_id={{ $agreement->id }}" class="btn btn-sm btn-success">
-                Log Activity
-            </a>
+            @if($agreement->active)
+                <a href="{{ route('activities.create') }}?agreement_id={{ $agreement->id }}" class="btn btn-sm btn-success">
+                    Log Activity
+                </a>
+            @else
+                <span class="btn btn-sm btn-success disabled" aria-disabled="true">Log Activity</span>
+            @endif
             @if($recentActivities->isNotEmpty())
                 <a href="{{ route('activities.index') }}?agreement_id={{ $agreement->id }}" class="btn btn-sm btn-outline-secondary">
                     View All Activities

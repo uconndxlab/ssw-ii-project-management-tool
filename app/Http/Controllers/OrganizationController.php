@@ -95,7 +95,7 @@ class OrganizationController extends Controller
         $organization->load(['states', 'projects', 'programs', 'users']);
 
         // Load agreements with relationships
-        $agreements = $organization->agreements()->with(['states', 'users'])->get();
+        $agreements = $organization->agreements()->active()->with(['states', 'users'])->get();
 
         // Get all activities for this organization's agreements
         $allActivities = \App\Models\Activity::whereHas('agreements', function ($query) use ($agreements) {

@@ -18,7 +18,7 @@
                             @if($activity->agreements?->isNotEmpty())
                                 • 
                                 @foreach($activity->agreements as $agreement)
-                                    <a href="{{ route('agreements.show', $agreement) }}" class="text-decoration-none">{{ $agreement->name }}</a>@if(!$loop->last), @endif
+                                    <x-agreement-link :agreement="$agreement" class="text-decoration-none" />@if(!$loop->last), @endif
                                 @endforeach
                             @endif
                         </small>

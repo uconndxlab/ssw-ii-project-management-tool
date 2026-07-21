@@ -58,7 +58,11 @@
                 @if($myAgreements->isNotEmpty())
                 <div class="list-group list-group-flush">
                     @foreach($myAgreements as $agreement)
+                    @if($agreement->isLinkable())
                     <a href="{{ route('agreements.show', $agreement) }}" class="list-group-item list-group-item-action">
+                    @else
+                    <div class="list-group-item">
+                    @endif
                         <div class="d-flex justify-content-between align-items-start">
 
                             <!-- Left side -->
@@ -80,7 +84,11 @@
                             </div>
 
                         </div>
+                    @if($agreement->isLinkable())
                     </a>
+                    @else
+                    </div>
+                    @endif
                     @endforeach
                 </div>
                 @else
@@ -116,7 +124,11 @@
                                 <td>
                                     <div class="small">
                                         @forelse($activity->agreements as $agreement)
-                                            <span class="badge bg-secondary me-1 mb-1">{{ $agreement->name }}</span>
+                                            @if($agreement->isLinkable())
+                                                <a href="{{ route('agreements.show', $agreement) }}" class="badge bg-secondary text-decoration-none me-1 mb-1">{{ $agreement->name }}</a>
+                                            @else
+                                                <span class="badge bg-secondary me-1 mb-1">{{ $agreement->name }}</span>
+                                            @endif
                                         @empty
                                             <span class="text-muted small">None</span>
                                         @endforelse

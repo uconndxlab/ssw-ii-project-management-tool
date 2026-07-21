@@ -61,9 +61,13 @@
                 </h6>
                 @forelse($state->agreements->sortBy('name') as $agreement)
                     <div class="py-2 border-bottom">
-                        <a href="{{ route('agreements.show', $agreement) }}" class="text-decoration-none fw-semibold d-block small">
-                            {{ $agreement->name }}
-                        </a>
+                        @if($agreement->isLinkable())
+                            <a href="{{ route('agreements.show', $agreement) }}" class="text-decoration-none fw-semibold d-block small">
+                                {{ $agreement->name }}
+                            </a>
+                        @else
+                            <span class="fw-semibold d-block small text-body">{{ $agreement->name }}</span>
+                        @endif
                         @if($agreement->organizations->isNotEmpty())
                             <small class="text-muted">{{ $agreement->organizations->pluck('name')->join(', ') }}</small>
                         @endif

@@ -7,9 +7,13 @@
         @endphp
         <div class="mb-4 pb-4 {{ !$loop->last ? 'border-bottom' : '' }}">
             <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-                <a href="{{ route('agreements.show', $agreement) }}" class="h5 fw-semibold text-decoration-underline mb-0">
-                    {{ $agreement->name }}
-                </a>
+                @if($agreement->isLinkable())
+                    <a href="{{ route('agreements.show', $agreement) }}" class="h5 fw-semibold text-decoration-underline mb-0">
+                        {{ $agreement->name }}
+                    </a>
+                @else
+                    <span class="h5 fw-semibold mb-0">{{ $agreement->name }}</span>
+                @endif
                 @if(!$report['direct'])
                     @foreach($report['teams'] as $team)
                         <x-entity-relation-badge kind="team" :href="route('teams.show', $team)">{{ $team->name }}</x-entity-relation-badge>

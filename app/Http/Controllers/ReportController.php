@@ -63,7 +63,7 @@ class ReportController extends Controller
 
         // Visibility enforcement: non-admins only see their assigned agreements
         if (!Auth::user()->isAdmin()) {
-            $agreementIds = Auth::user()->agreements()->pluck('agreements.id');
+            $agreementIds = Auth::user()->accessibleAgreementsQuery()->pluck('agreements.id');
             $query->whereHas('agreements', function ($q) use ($agreementIds) {
                 $q->whereIn('agreements.id', $agreementIds);
             });
@@ -149,10 +149,14 @@ class ReportController extends Controller
     private function getVisibleAgreements()
     {
         if (Auth::user()->isAdmin()) {
-            return Agreement::with('organizations')->orderBy('name')->get();
+            return Agreement::query()->active()->with('organizations')->orderBy('name')->get();
         }
 
-        return Auth::user()->agreements()->with('organizations')->orderBy('name')->get();
+        return Auth::user()->accessibleAgreementsQuery()
+            ->where('agreements.active', true)
+            ->with('organizations')
+            ->orderBy('name')
+            ->get();
     }
 
     private function verifyAgreementAccess(int $agreementId): void
@@ -161,9 +165,7 @@ class ReportController extends Controller
             return;
         }
 
-        $hasAccess = Auth::user()->agreements()->where('agreements.id', $agreementId)->exists();
-
-        if (!$hasAccess) {
+        if (!Auth::user()->hasAccessToAgreement($agreementId)) {
             abort(403, 'You do not have access to this agreement.');
         }
     }

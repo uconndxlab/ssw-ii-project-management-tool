@@ -34,128 +34,129 @@ class AgreementController extends Controller
 
     public function index(Request $request)
     {
-        $baseQuery = Agreement::query();
-
-        // Visibility enforcement: non-admins only see assigned agreements
-        if (!Auth::user()->isAdmin()) {
-            $baseQuery->whereHas('users', function ($q) {
-                $q->where('user_id', Auth::id());
-            });
-        }
-
-        // Build organizations list for cascading filters
-        $organizationsQuery = Organization::query();
-
-        if ($request->filled('state_id')) {
-            $stateId = $request->integer('state_id');
-
-            $organizationsQuery->whereHas('agreements.states', function ($q) use ($stateId) {
-                $q->where('states.id', $stateId);
-
-                if (!Auth::user()->isAdmin()) {
-                    // Additional filtering handled by agreement visibility
-                }
-            });
-        }
-
-        $organizations = $organizationsQuery->get(['id', 'name'])->sortBy('name')->values();
         $states = State::query()->get(['id', 'name'])->sortBy('name')->values();
+        $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
+        $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
 
-        $query = Agreement::with([
-            'organizations',
+        $query = Agreement::query()->with([
             'states',
-            'projects',
-            'programs',
-            'teams.users',
-            'users',
-        ])->withCount([
-            'deliverables as active_deliverables_count' => fn ($builder) => $builder->whereNull('retired_at'),
+            'projects:id,name',
+            'programs:id,name',
+            'principalInvestigators:id,name',
         ]);
 
-        // Visibility enforcement: non-admins only see assigned agreements
         if (!Auth::user()->isAdmin()) {
-            $query->whereHas('users', function ($q) {
-                $q->where('user_id', Auth::id());
-            });
+            $query->accessibleBy(Auth::user())
+                ->active();
+        } elseif ($request->filled('active')) {
+            $query->where('agreements.active', $request->input('active') === '1');
         }
 
-        // Search
         $search = trim((string) $request->input('search', ''));
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                    ->orWhereHas('organizations', function ($orgQuery) use ($search) {
-                        $orgQuery->where('name', 'like', "%{$search}%");
-                    })
-                    ->orWhereHas('states', function ($stateQuery) use ($search) {
-                        $stateQuery->where('name', 'like', "%{$search}%");
-                    });
+                    ->orWhereHas('states', fn ($stateQuery) => $stateQuery->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('projects', fn ($projectQuery) => $projectQuery->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('programs', fn ($programQuery) => $programQuery->where('name', 'like', "%{$search}%"));
             });
         }
 
-        // Cascading filters
         if ($request->filled('state_id')) {
-            $query->whereHas('states', function ($q) use ($request) {
-                $q->where('states.id', $request->integer('state_id'));
-            });
+            $query->whereHas('states', fn ($q) => $q->where('states.id', $request->integer('state_id')));
         }
 
-        if ($request->filled('organization_id')) {
-            $query->whereHas('organizations', function ($q) use ($request) {
-                $q->where('organizations.id', $request->integer('organization_id'));
-            });
+        if ($request->filled('project_id')) {
+            $projectId = (int) $request->input('project_id');
+            $query->whereHas('projects', fn ($relation) => $relation->where('projects.id', $projectId));
         }
 
-        // Sorting
+        if ($request->filled('program_id')) {
+            $programId = (int) $request->input('program_id');
+            $query->whereHas('programs', fn ($relation) => $relation->where('programs.id', $programId));
+        }
+
         $sort = $request->input('sort', 'name');
         $direction = $request->input('direction', 'asc') === 'desc' ? 'desc' : 'asc';
 
-        switch ($sort) {
-            case 'organization':
-                $query->join('organizations', 'agreements.organization_id', '=', 'organizations.id')
-                    ->select('agreements.*')
-                    ->orderBy('organizations.name', $direction);
-                break;
-
-            case 'state':
-                $query->join('states', 'agreements.state_id', '=', 'states.id')
-                    ->select('agreements.*')
-                    ->orderBy('states.name', $direction);
-                break;
-
-            case 'start_date':
-                $query->orderBy('start_date', $direction);
-                break;
-
-            case 'team_members':
-                $query->withCount('users')->orderBy('users_count', $direction);
-                break;
-
-            case 'name':
-            default:
-                $query->orderBy('name', $direction);
-                break;
-        }
+        $this->applyAgreementIndexSort($query, $sort, $direction);
 
         $agreements = $query->paginate(20)->withQueryString();
 
-        // HTMX: filters only
         if ($request->header('HX-Request') === 'true' && $request->input('partial') === 'filters') {
-            return view('agreements.partials.filters', compact('organizations', 'states', 'sort', 'direction'));
+            return view('agreements.partials.filters', compact(
+                'states',
+                'filterProjects',
+                'filterPrograms',
+                'sort',
+                'direction',
+            ));
         }
 
-        // HTMX: table only
         if ($request->header('HX-Request') === 'true') {
             return view('agreements.partials.table', compact('agreements', 'sort', 'direction'));
         }
 
         return view('agreements.index', compact(
             'agreements',
-            'organizations',
             'states',
+            'filterProjects',
+            'filterPrograms',
             'sort',
-            'direction'
+            'direction',
         ));
+    }
+
+    private function applyAgreementIndexSort($query, string $sort, string $direction): void
+    {
+        $dir = $direction === 'desc' ? 'DESC' : 'ASC';
+
+        match ($sort) {
+            'start_date' => $query->orderBy('agreements.start_date', $direction),
+            'end_date' => $query->orderBy('agreements.end_date', $direction),
+            'active' => $query->orderBy('agreements.active', $direction)->orderBy('agreements.name', 'asc'),
+            'projects' => $query->orderByRaw($this->minAgreementProjectNameSql()." {$dir}"),
+            'programs' => $query->orderByRaw($this->minAgreementProgramNameSql()." {$dir}"),
+            'states' => $query->orderByRaw($this->minAgreementStateNameSql()." {$dir}"),
+            'principal_investigators' => $query->orderByRaw($this->minAgreementPrincipalInvestigatorNameSql()." {$dir}"),
+            default => $query->orderBy('agreements.name', $direction),
+        };
+    }
+
+    private function minAgreementProjectNameSql(): string
+    {
+        return "COALESCE((
+            SELECT MIN(p.name)
+            FROM projects p
+            INNER JOIN agreement_project ap ON ap.project_id = p.id AND ap.agreement_id = agreements.id
+        ), '')";
+    }
+
+    private function minAgreementProgramNameSql(): string
+    {
+        return "COALESCE((
+            SELECT MIN(p.name)
+            FROM programs p
+            INNER JOIN agreement_program ap ON ap.program_id = p.id AND ap.agreement_id = agreements.id
+        ), '')";
+    }
+
+    private function minAgreementStateNameSql(): string
+    {
+        return "COALESCE((
+            SELECT MIN(s.name)
+            FROM states s
+            INNER JOIN agreement_state ast ON ast.state_id = s.id AND ast.agreement_id = agreements.id
+        ), '')";
+    }
+
+    private function minAgreementPrincipalInvestigatorNameSql(): string
+    {
+        return "COALESCE((
+            SELECT MIN(u.name)
+            FROM users u
+            INNER JOIN agreement_principal_investigator api ON api.user_id = u.id AND api.agreement_id = agreements.id
+        ), '')";
     }
 
     public function create()
@@ -174,6 +175,7 @@ class AgreementController extends Controller
         $agreement = DB::transaction(function () use ($validated, $projectIds) {
             $agreement = Agreement::create([
                 'name' => $validated['name'],
+                'active' => true,
                 'project_id' => $projectIds[0] ?? null,
                 'abstract' => $validated['abstract'] ?? null,
                 'start_date' => $validated['start_date'],
@@ -201,8 +203,11 @@ class AgreementController extends Controller
 
     public function show(Agreement $agreement)
     {
-        // Visibility enforcement
-        if (!Auth::user()->isAdmin() && !$agreement->users->contains(Auth::id())) {
+        if (!$agreement->active && !Auth::user()->isAdmin()) {
+            abort(403, 'Unauthorized access to this agreement.');
+        }
+
+        if (!Auth::user()->isAdmin() && !Auth::user()->hasAccessToAgreement($agreement)) {
             abort(403, 'Unauthorized access to this agreement.');
         }
 
@@ -293,6 +298,7 @@ class AgreementController extends Controller
         DB::transaction(function () use ($agreement, $validated, $projectIds) {
             $agreement->update([
                 'name' => $validated['name'],
+                'active' => array_key_exists('active', $validated) ? (bool) $validated['active'] : $agreement->active,
                 'project_id' => $projectIds[0] ?? null,
                 'abstract' => $validated['abstract'] ?? null,
                 'start_date' => $validated['start_date'],

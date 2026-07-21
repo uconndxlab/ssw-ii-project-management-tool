@@ -99,6 +99,21 @@ class User extends Authenticatable
         return $this->belongsToMany(Agreement::class, 'agreement_user')->withTimestamps();
     }
 
+    /**
+     * @return Builder<Agreement>
+     */
+    public function accessibleAgreementsQuery(): Builder
+    {
+        return Agreement::query()->accessibleBy($this);
+    }
+
+    public function hasAccessToAgreement(Agreement|int $agreement): bool
+    {
+        $agreementId = $agreement instanceof Agreement ? (int) $agreement->id : (int) $agreement;
+
+        return $this->accessibleAgreementsQuery()->whereKey($agreementId)->exists();
+    }
+
     public function principalInvestigatorAgreements(): BelongsToMany
     {
         return $this->belongsToMany(Agreement::class, 'agreement_principal_investigator')->withTimestamps();

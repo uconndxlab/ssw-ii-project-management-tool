@@ -136,9 +136,13 @@
                 </h6>
                 @forelse($agreements as $agreement)
                     <div class="py-2 border-bottom">
-                        <a href="{{ route('agreements.show', $agreement) }}" class="text-decoration-none fw-semibold d-block">
-                            {{ $agreement->name }}
-                        </a>
+                        @if($agreement->isLinkable())
+                            <a href="{{ route('agreements.show', $agreement) }}" class="text-decoration-none fw-semibold d-block">
+                                {{ $agreement->name }}
+                            </a>
+                        @else
+                            <span class="fw-semibold d-block text-body">{{ $agreement->name }}</span>
+                        @endif
                         <div class="d-flex flex-wrap gap-1 mt-1">
                             @foreach($agreement->states as $state)
                                 <a href="{{ route('states.show', $state) }}" class="badge bg-info text-dark text-decoration-none">

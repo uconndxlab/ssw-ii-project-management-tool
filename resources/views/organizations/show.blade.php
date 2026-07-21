@@ -91,9 +91,13 @@
                 </div>
                 @forelse($agreements as $agreement)
                     <div class="py-2 border-bottom">
-                        <a href="{{ route('agreements.show', $agreement) }}" class="text-decoration-none fw-semibold d-block">
-                            {{ $agreement->name }}
-                        </a>
+                        @if($agreement->isLinkable())
+                            <a href="{{ route('agreements.show', $agreement) }}" class="text-decoration-none fw-semibold d-block">
+                                {{ $agreement->name }}
+                            </a>
+                        @else
+                            <span class="fw-semibold d-block text-body">{{ $agreement->name }}</span>
+                        @endif
                         <div class="d-flex gap-2 mt-1 flex-wrap">
                             @foreach($agreement->states as $state)
                                 <a href="{{ route('states.show', $state) }}" class="badge bg-info text-dark text-decoration-none">
@@ -193,9 +197,11 @@
                             </td>
                             <td>
                                 @foreach($activity->agreements->take(1) as $agr)
-                                    <a href="{{ route('agreements.show', $agr) }}" class="text-decoration-none badge bg-secondary">
-                                        {{ $agr->name }}
-                                    </a>
+                                    @if($agr->isLinkable())
+                                        <a href="{{ route('agreements.show', $agr) }}" class="text-decoration-none badge bg-secondary">{{ $agr->name }}</a>
+                                    @else
+                                        <span class="badge bg-secondary">{{ $agr->name }}</span>
+                                    @endif
                                 @endforeach
                             </td>
                             <td class="small">{{ $activity->activityType->name }}</td>

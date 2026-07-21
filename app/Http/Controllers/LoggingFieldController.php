@@ -209,7 +209,7 @@ class LoggingFieldController extends Controller
     public function show(LoggingField $loggingField)
     {
         $loggingField->load(['agreements' => function ($query) {
-            $query->select('agreements.id', 'agreements.name')->orderBy('agreements.name');
+            $query->active()->select('agreements.id', 'agreements.name', 'agreements.active')->orderBy('agreements.name');
         }, 'contactFamilies' => function ($query) {
             $query->select('contact_families.id', 'contact_families.name')->orderBy('contact_families.name');
         }]);

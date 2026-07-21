@@ -97,9 +97,13 @@
                     @foreach($agreementsWithDeliverables as $agreement)
                         <div class="mb-4">
                             <h6 class="mb-2">
-                                <a href="{{ route('agreements.show', $agreement) }}" class="text-decoration-none">
-                                    {{ $agreement->name }}
-                                </a>
+                                @if($agreement->isLinkable())
+                                    <a href="{{ route('agreements.show', $agreement) }}" class="text-decoration-none">
+                                        {{ $agreement->name }}
+                                    </a>
+                                @else
+                                    <span class="text-body">{{ $agreement->name }}</span>
+                                @endif
                                 @if($agreement->start_date && $agreement->end_date)
                                     <small class="text-muted fw-normal ms-2">
                                         {{ $agreement->start_date->format('M Y') }} – {{ $agreement->end_date->format('M Y') }}
@@ -185,9 +189,13 @@
                                             @foreach($memberDeliverables[$member->id] as $entry)
                                             <tr>
                                                 <td>
-                                                    <a href="{{ route('agreements.show', $entry['agreement']) }}" class="text-decoration-none">
-                                                        {{ $entry['agreement']->name }}
-                                                    </a>
+                                                    @if($entry['agreement']->isLinkable())
+                                                        <a href="{{ route('agreements.show', $entry['agreement']) }}" class="text-decoration-none">
+                                                            {{ $entry['agreement']->name }}
+                                                        </a>
+                                                    @else
+                                                        <span>{{ $entry['agreement']->name }}</span>
+                                                    @endif
                                                 </td>
                                                 <td>{{ $entry['deliverable']->activityType?->name ?? '—' }}</td>
                                                 <td class="text-center">{{ $entry['deliverable']->metric_type ? ucfirst($entry['deliverable']->metric_type) : '—' }}</td>

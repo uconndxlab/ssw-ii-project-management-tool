@@ -31,6 +31,7 @@ class AgreementDuplicationService
         return DB::transaction(function () use ($source) {
             $copy = Agreement::create([
                 'name' => $this->buildCopyName($source->name),
+                'active' => $source->active,
                 'project_id' => $source->project_id,
                 'abstract' => $source->abstract,
                 'start_date' => $source->start_date,

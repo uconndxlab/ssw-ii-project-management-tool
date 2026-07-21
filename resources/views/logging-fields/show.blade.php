@@ -125,9 +125,13 @@
                             @foreach($loggingField->agreements as $agreement)
                                 <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
                                     <div>
-                                        <a href="{{ route('agreements.show', $agreement) }}" class="text-decoration-none">
-                                            {{ $agreement->name }}
-                                        </a>
+                                        @if($agreement->isLinkable())
+                                            <a href="{{ route('agreements.show', $agreement) }}" class="text-decoration-none">
+                                                {{ $agreement->name }}
+                                            </a>
+                                        @else
+                                            <span>{{ $agreement->name }}</span>
+                                        @endif
                                         @if($agreement->pivot->is_required)
                                             <span class="badge bg-warning text-dark ms-2">Required</span>
                                         @endif

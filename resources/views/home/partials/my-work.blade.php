@@ -10,7 +10,11 @@
                 <h6 class="mb-3">My Agreements</h6>
                 <div class="list-group list-group-sm">
                     @foreach($myAgreements->take(5) as $agreement)
-                        <a href="{{ route('agreements.show', $agreement) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        @if($agreement->isLinkable())
+                            <a href="{{ route('agreements.show', $agreement) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        @else
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                        @endif
                             <div>
                                 <div class="fw-bold">{{ $agreement->name }}</div>
                                 <small class="text-muted">
@@ -22,7 +26,11 @@
                                 </small>
                             </div>
                             <span class="badge bg-secondary rounded-pill">{{ $agreement->activities_count ?? 0 }}</span>
-                        </a>
+                        @if($agreement->isLinkable())
+                            </a>
+                        @else
+                            </div>
+                        @endif
                     @endforeach
                 </div>
                 @if($myAgreements->count() > 5)
@@ -88,9 +96,7 @@
                         </td>
                         <td>
                             @if($deliverable->agreement)
-                                <a href="{{ route('agreements.show', $deliverable->agreement) }}" class="text-decoration-none">
-                                    {{ $deliverable->agreement->name }}
-                                </a>
+                                <x-agreement-link :agreement="$deliverable->agreement" class="text-decoration-none" />
                             @else
                                 <span class="text-muted">—</span>
                             @endif

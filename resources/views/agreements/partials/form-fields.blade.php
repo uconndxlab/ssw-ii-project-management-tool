@@ -68,6 +68,8 @@
     $loggingFieldProgramMap = $agreementLoggingFields->mapWithKeys(fn ($field) => [
         (string) $field->id => $field->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all(),
     ])->all();
+
+    $isActiveDefault = old('active', $agreement?->exists ? $agreement->active : true);
 @endphp
 
 <div class="card mb-4">
@@ -86,6 +88,25 @@
                 <div class="invalid-feedback">{{ $message }}</div>
             @enderror
         </div>
+
+        @if($agreement?->exists)
+            <div class="mb-3">
+                <div class="form-check form-switch">
+                    <input type="hidden" name="active" value="0">
+                    <input type="checkbox"
+                           class="form-check-input @error('active') is-invalid @enderror"
+                           id="active"
+                           name="active"
+                           value="1"
+                           @checked(filter_var($isActiveDefault, FILTER_VALIDATE_BOOLEAN))>
+                    <label class="form-check-label" for="active">Active</label>
+                </div>
+                <div class="form-text">Inactive agreements are hidden from lists and activity logging. Assignments and historical data are kept.</div>
+                @error('active')
+                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                @enderror
+            </div>
+        @endif
 
         <div class="mb-4">
             <x-project-program-scope-picker

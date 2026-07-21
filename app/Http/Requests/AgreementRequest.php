@@ -32,6 +32,7 @@ class AgreementRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
+            'active' => ['sometimes', 'boolean'],
             'organization_ids' => ['nullable', 'array'],
             'organization_ids.*' => ['exists:organizations,id'],
             'organization_payor_source_ids' => ['nullable', 'array'],

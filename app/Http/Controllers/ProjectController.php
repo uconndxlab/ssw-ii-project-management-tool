@@ -78,6 +78,7 @@ class ProjectController extends Controller
         // Collect unique agreements across all programs
         $agreements = $project->programs
             ->flatMap(fn ($p) => $p->agreements)
+            ->filter(fn ($agreement) => $agreement->active)
             ->unique('id')
             ->sortBy('name');
 

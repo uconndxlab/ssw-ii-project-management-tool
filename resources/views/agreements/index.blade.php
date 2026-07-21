@@ -18,10 +18,11 @@
     <div class="card-body py-2">
         <div id="agreement-filters-container">
             @include('agreements.partials.filters', [
-                'states'        => $states,
-                'organizations' => $organizations,
-                'sort'          => $sort,
-                'direction'     => $direction,
+                'states'          => $states,
+                'filterProjects'  => $filterProjects,
+                'filterPrograms'  => $filterPrograms,
+                'sort'            => $sort,
+                'direction'       => $direction,
             ])
         </div>
     </div>

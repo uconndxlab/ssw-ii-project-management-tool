@@ -57,7 +57,7 @@ class DashboardController extends Controller
             ->limit(10)
             ->get();
 
-        // Get all agreements with stats
+        // Get all agreements with stats (boolean active only)
         $agreements = Agreement::active()
             ->with(['organizations', 'states'])
             ->withCount('activities')
@@ -76,18 +76,20 @@ class DashboardController extends Controller
     protected function userHome($user)
     {
         // Get user's agreements
-        $myAgreements = $user->agreements()
-            ->active()
+        $myAgreements = $user->accessibleAgreementsQuery()
+            ->where('agreements.active', true)
             ->with(['organizations', 'states'])
             ->withCount('activities')
             ->withMax('activities', 'engagement_date')
             ->get();
-        
-        // Get activities for user's agreements
-        $agreementIds = $myAgreements->pluck('id');
-        
+
+        $allAssignedAgreementIds = $user->accessibleAgreementsQuery()->pluck('agreements.id');
+
+        // Get activities for user's agreements (include inactive agreements for history)
+        $agreementIds = $allAssignedAgreementIds;
+
         // My recent activities (last 10)
-        $myActivities = Activity::whereHas('agreements', function($query) use ($agreementIds) {
+        $myActivities = Activity::whereHas('agreements', function ($query) use ($agreementIds) {
                 $query->whereIn('agreements.id', $agreementIds);
             })
             ->with(['activityType.contactFamily', 'user', 'agreements', 'participants'])
@@ -111,6 +113,7 @@ class DashboardController extends Controller
         // Deliverables assigned to this user
         $myAssignedDeliverables = $user->deliverables()
             ->wherePivotNull('unassigned_at')
+            ->whereHas('agreement', fn ($query) => $query->where('active', true))
             ->with(['agreement.organizations', 'activityType', 'contactFamily'])
             ->get();
 

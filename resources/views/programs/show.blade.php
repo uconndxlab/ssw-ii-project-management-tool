@@ -88,9 +88,13 @@
                 </h6>
                 @forelse($agreements as $agreement)
                     <div class="py-2 border-bottom">
-                        <a href="{{ route('agreements.show', $agreement) }}" class="text-decoration-none fw-semibold d-block">
-                            {{ $agreement->name }}
-                        </a>
+                        @if($agreement->isLinkable())
+                            <a href="{{ route('agreements.show', $agreement) }}" class="text-decoration-none fw-semibold d-block">
+                                {{ $agreement->name }}
+                            </a>
+                        @else
+                            <span class="fw-semibold d-block text-body">{{ $agreement->name }}</span>
+                        @endif
                         <div class="d-flex flex-wrap gap-1 mt-1">
                             @foreach($agreement->states as $state)
                                 <a href="{{ route('states.show', $state) }}" class="badge bg-info text-dark text-decoration-none">
@@ -192,9 +196,11 @@
                             <td>{{ $activity->activityType->name ?? '—' }}</td>
                             <td>
                                 @foreach($activity->agreements->take(2) as $agr)
-                                    <a href="{{ route('agreements.show', $agr) }}" class="badge bg-secondary text-decoration-none me-1">
-                                        {{ $agr->name }}
-                                    </a>
+                                    @if($agr->isLinkable())
+                                        <a href="{{ route('agreements.show', $agr) }}" class="badge bg-secondary text-decoration-none me-1">{{ $agr->name }}</a>
+                                    @else
+                                        <span class="badge bg-secondary me-1">{{ $agr->name }}</span>
+                                    @endif
                                 @endforeach
                             </td>
                             <td class="text-end">—</td>

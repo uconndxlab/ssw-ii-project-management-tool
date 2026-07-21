@@ -34,10 +34,10 @@ class SearchController extends Controller
             });
 
         if (! Auth::user()->isAdmin()) {
-            $agreementsQuery->whereHas('users', fn ($q) => $q->where('user_id', Auth::id()));
+            $agreementsQuery->accessibleBy(Auth::user());
         }
 
-        $agreements = $agreementsQuery->orderBy('name')->limit(10)->get();
+        $agreements = $agreementsQuery->active()->orderBy('name')->limit(10)->get();
 
         // Organizations — visible to all
         $organizations = Organization::with('states')

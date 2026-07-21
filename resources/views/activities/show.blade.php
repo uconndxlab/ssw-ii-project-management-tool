@@ -39,7 +39,11 @@
                     </div>
                     <div class="col-md-8">
                         @forelse($activity->agreements as $agreement)
-                            <span class="badge bg-secondary me-1 mb-1">{{ $agreement->name }}</span>
+                            @if($agreement->isLinkable())
+                                <a href="{{ route('agreements.show', $agreement) }}" class="badge bg-secondary text-decoration-none me-1 mb-1">{{ $agreement->name }}</a>
+                            @else
+                                <span class="badge bg-secondary me-1 mb-1">{{ $agreement->name }}</span>
+                            @endif
                         @empty
                             <span class="text-muted small">None assigned</span>
                         @endforelse
