@@ -553,6 +553,7 @@ class AgreementDeliverableDisplay
                 ];
             })
             ->filter()
+            ->filter(fn (array $row) => (float) ($row['completed_value'] ?? 0) > 0)
             ->sortBy(fn (array $row) => $row['user']->name ?? '')
             ->values();
     }

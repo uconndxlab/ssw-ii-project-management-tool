@@ -122,6 +122,8 @@ class DashboardController extends Controller
             'my_total_hours_ytd'      => $myYtdHours,
         ];
 
-        return view('home', compact('myAgreements', 'myActivities', 'stats', 'user', 'myActivities', 'myAgreements', 'myAssignedDeliverables'));
+        $recentActivities = collect();
+
+        return view('home', compact('myAgreements', 'myActivities', 'stats', 'user', 'myActivities', 'myAgreements', 'myAssignedDeliverables', 'recentActivities'));
     }
 }

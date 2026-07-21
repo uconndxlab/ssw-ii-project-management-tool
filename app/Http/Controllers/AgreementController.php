@@ -808,33 +808,6 @@ class AgreementController extends Controller
             ->with('success', 'Agreement deleted successfully.');
     }
 
-    // HTMX endpoint for user assignment
-    public function assignUser(Request $request, Agreement $agreement)
-    {
-        $validated = $request->validate([
-            'user_id' => ['required', 'exists:users,id'],
-        ]);
-
-        $user = User::query()->findOrFail($validated['user_id']);
-
-        if (!$user->isActive()) {
-            abort(422, 'Inactive users cannot be assigned to agreements.');
-        }
-
-        $agreement->users()->attach($validated['user_id']);
-        $agreement->load('users');
-
-        return view('agreements.partials.user-list', compact('agreement'));
-    }
-
-    public function removeUser(Request $request, Agreement $agreement, User $user)
-    {
-        $agreement->users()->detach($user->id);
-        $agreement->load('users');
-
-        return view('agreements.partials.user-list', compact('agreement'));
-    }
-
     /**
      * Download an agreement attachment.
      */

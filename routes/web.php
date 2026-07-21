@@ -34,17 +34,9 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::post('/agreements/{agreement}/duplicate', [AgreementController::class, 'duplicate'])->name('agreements.duplicate');
     Route::resource('agreements', AgreementController::class);
     
-    // HTMX endpoints for agreement user management
-    Route::post('/agreements/{agreement}/assign-user', [AgreementController::class, 'assignUser'])->name('agreements.assign-user');
-    Route::delete('/agreements/{agreement}/remove-user/{user}', [AgreementController::class, 'removeUser'])->name('agreements.remove-user');
-
     // Agreement attachment routes
     Route::get('/agreements/{agreement}/attachments/{attachment}/download', [AgreementController::class, 'downloadAttachment'])->name('agreements.attachments.download');
     
-    // HTMX endpoint for activity participant selection
-    Route::get('/activities/participants-for-agreement', [ActivityController::class, 'getParticipantsForAgreement'])
-        ->name('activities.participants-for-agreement');
-
     // Activities - visible to all authenticated users (with visibility filtering in controller)
     Route::get('/activities', [ActivityController::class, 'index'])->name('activities.index');
     Route::get('/activities/create', [ActivityController::class, 'create'])->name('activities.create');

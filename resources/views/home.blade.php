@@ -26,7 +26,7 @@
     @include('home.partials.search')
 
     <!-- Recent System Activity -->
-    @include('home.partials.recent-activity')
+    @include('home.partials.recent-activity', ['recentActivities' => $recentActivities ?? collect()])
 </div>
 
 @endsection
