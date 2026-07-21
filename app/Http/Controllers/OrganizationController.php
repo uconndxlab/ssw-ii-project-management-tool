@@ -3,10 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Organization;
+use App\Models\Program;
 use App\Models\Project;
 use App\Models\State;
 use App\Models\User;
+use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
 class OrganizationController extends Controller
@@ -15,7 +18,13 @@ class OrganizationController extends Controller
     {
         $states = State::orderBy('name', 'asc')->get(['id', 'name']);
 
-        $query = Organization::with(['states', 'projects', 'programs', 'users'])->withCount('agreements');
+        $query = Organization::query()
+            ->with([
+                'states:id,name',
+                'projects:id,name',
+                'programs:id,name',
+            ])
+            ->withCount('agreements');
 
         // Search
         $search = trim((string) $request->input('search', ''));
@@ -41,21 +50,44 @@ class OrganizationController extends Controller
             $query->where('active', false);
         }
 
-        $query->orderBy('name');
+        if ($request->filled('project_id')) {
+            $projectId = (int) $request->input('project_id');
+            $query->whereHas('projects', fn ($relation) => $relation->where('projects.id', $projectId));
+        }
+
+        if ($request->filled('program_id')) {
+            $programId = (int) $request->input('program_id');
+            $query->whereHas('programs', fn ($relation) => $relation->where('programs.id', $programId));
+        }
+
+        $sort = $request->input('sort', 'name');
+        $direction = $request->input('direction', 'asc') === 'desc' ? 'desc' : 'asc';
+
+        $this->applyOrganizationIndexSort($query, $sort, $direction);
 
         $organizations = $query->paginate(20)->withQueryString();
 
+        $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
+        $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
+
         // HTMX: filters only
         if ($request->header('HX-Request') === 'true' && $request->input('partial') === 'filters') {
-            return view('organizations.partials.filters', compact('states'));
+            return view('organizations.partials.filters', compact('states', 'filterProjects', 'filterPrograms', 'sort', 'direction'));
         }
 
         // HTMX: table only
         if ($request->header('HX-Request') === 'true') {
-            return view('organizations.partials.table', compact('organizations'));
+            return view('organizations.partials.table', compact('organizations', 'sort', 'direction'));
         }
 
-        return view('organizations.index', compact('organizations', 'states'));
+        return view('organizations.index', compact(
+            'organizations',
+            'states',
+            'filterProjects',
+            'filterPrograms',
+            'sort',
+            'direction',
+        ));
     }
 
     public function show(Organization $organization)
@@ -117,9 +149,7 @@ class OrganizationController extends Controller
     public function create()
     {
         $states = State::orderBy('name', 'asc')->get();
-        $projects = Project::with(['programs' => fn ($query) => $query->orderBy('name')])
-            ->orderBy('name')
-            ->get();
+        $projects = ProjectProgramScope::activeProjectsWithPrograms();
         $users = User::query()->orderBy('name')->get();
 
         return view('organizations.create', compact('states', 'projects', 'users'));
@@ -135,8 +165,8 @@ class OrganizationController extends Controller
             'active' => $request->boolean('active'),
         ]);
         $organization->states()->sync($validated['state_ids']);
-        $organization->programs()->sync($validated['program_ids'] ?? []);
-        $organization->projects()->sync($validated['project_ids'] ?? []);
+        $organization->programs()->sync(ProjectProgramScope::normalizeIds($validated['program_ids'] ?? []));
+        $organization->projects()->sync(ProjectProgramScope::normalizeIds($validated['project_ids'] ?? []));
         $organization->users()->sync($validated['user_ids'] ?? []);
 
         return redirect()
@@ -148,9 +178,7 @@ class OrganizationController extends Controller
     {
         $organization->load(['states', 'projects', 'programs', 'users']);
         $states = State::orderBy('name', 'asc')->get();
-        $projects = Project::with(['programs' => fn ($query) => $query->orderBy('name')])
-            ->orderBy('name')
-            ->get();
+        $projects = ProjectProgramScope::activeProjectsWithPrograms();
         $users = User::query()->orderBy('name')->get();
 
         return view('organizations.edit', compact('organization', 'states', 'projects', 'users'));
@@ -166,8 +194,8 @@ class OrganizationController extends Controller
             'active' => $request->boolean('active'),
         ]);
         $organization->states()->sync($validated['state_ids']);
-        $organization->programs()->sync($validated['program_ids'] ?? []);
-        $organization->projects()->sync($validated['project_ids'] ?? []);
+        $organization->programs()->sync(ProjectProgramScope::normalizeIds($validated['program_ids'] ?? []));
+        $organization->projects()->sync(ProjectProgramScope::normalizeIds($validated['project_ids'] ?? []));
         $organization->users()->sync($validated['user_ids'] ?? []);
 
         return redirect()
@@ -186,7 +214,7 @@ class OrganizationController extends Controller
 
     private function validateOrganization(Request $request, ?Organization $organization = null): array
     {
-        return $request->validate([
+        $validator = Validator::make($request->all(), [
             'name' => ['required', 'string', 'max:255'],
             'kfs_number' => [
                 'nullable',
@@ -199,9 +227,9 @@ class OrganizationController extends Controller
             'state_ids' => ['required', 'array', 'min:1'],
             'state_ids.*' => ['exists:states,id'],
             'program_ids' => ['nullable', 'array'],
-            'program_ids.*' => ['exists:programs,id'],
+            'program_ids.*' => ['distinct', 'exists:programs,id'],
             'project_ids' => ['nullable', 'array'],
-            'project_ids.*' => ['exists:projects,id'],
+            'project_ids.*' => ['distinct', 'exists:projects,id'],
             'user_ids' => ['nullable', 'array'],
             'user_ids.*' => ['exists:users,id'],
         ], [
@@ -209,5 +237,58 @@ class OrganizationController extends Controller
             'kfs_number.max' => 'The KFS number must be 1-7 alphanumeric characters.',
             'kfs_number.unique' => 'This KFS number is already assigned to another organization.',
         ]);
+
+        $validator->after(function ($validator) use ($request) {
+            ProjectProgramScope::validateSelection(
+                $validator,
+                ProjectProgramScope::normalizeIds($request->input('project_ids', [])),
+                ProjectProgramScope::normalizeIds($request->input('program_ids', []))
+            );
+        });
+
+        return $validator->validate();
+    }
+
+    private function applyOrganizationIndexSort($query, string $sort, string $direction): void
+    {
+        $dir = $direction === 'desc' ? 'DESC' : 'ASC';
+
+        match ($sort) {
+            'kfs' => $query->orderByRaw("COALESCE(organizations.kfs_number, '') {$dir}")->orderBy('organizations.name', 'asc'),
+            'states' => $query->orderByRaw($this->minOrganizationStateNameSql()." {$dir}")->orderBy('organizations.name', 'asc'),
+            'projects' => $query->orderByRaw($this->minOrganizationProjectNameSql()." {$dir}")->orderBy('organizations.name', 'asc'),
+            'programs' => $query->orderByRaw($this->minOrganizationProgramNameSql()." {$dir}")->orderBy('organizations.name', 'asc'),
+            'status', 'active' => $query->orderBy('organizations.active', $direction)->orderBy('organizations.name', 'asc'),
+            'agreements' => $query->orderBy('agreements_count', $direction)->orderBy('organizations.name', 'asc'),
+            'created' => $query->orderBy('organizations.created_at', $direction)->orderBy('organizations.name', 'asc'),
+            default => $query->orderBy('organizations.name', $direction),
+        };
+    }
+
+    private function minOrganizationStateNameSql(): string
+    {
+        return "COALESCE((
+            SELECT MIN(s.name)
+            FROM states s
+            INNER JOIN organization_state os ON os.state_id = s.id AND os.organization_id = organizations.id
+        ), '')";
+    }
+
+    private function minOrganizationProjectNameSql(): string
+    {
+        return "COALESCE((
+            SELECT MIN(p.name)
+            FROM projects p
+            INNER JOIN organization_project op ON op.project_id = p.id AND op.organization_id = organizations.id
+        ), '')";
+    }
+
+    private function minOrganizationProgramNameSql(): string
+    {
+        return "COALESCE((
+            SELECT MIN(p.name)
+            FROM programs p
+            INNER JOIN organization_program op ON op.program_id = p.id AND op.organization_id = organizations.id
+        ), '')";
     }
 }

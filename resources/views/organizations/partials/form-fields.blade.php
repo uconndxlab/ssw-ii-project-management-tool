@@ -93,8 +93,10 @@
                 :projects="$projects"
                 :selected-project-ids="old('project_ids', $organization?->projects?->pluck('id')->toArray() ?? [])"
                 :selected-program-ids="old('program_ids', $organization?->programs?->pluck('id')->toArray() ?? [])"
+                project-empty-selection-label="None"
+                program-empty-selection-label="None"
                 project-help-text="Select the projects this organization participates in."
-                program-help-text="Programs are limited to the selected projects."
+                program-help-text="Programs are limited to the selected projects. Leave both empty if the organization is not scoped to a project or program."
                 program-badge-class="bg-primary"
             />
         </x-section-card>

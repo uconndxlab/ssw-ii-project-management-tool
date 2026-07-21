@@ -4,7 +4,7 @@
       hx-swap="innerHTML"
       hx-push-url="true">
     <div class="row g-2 align-items-center">
-        <div class="col">
+        <div class="col-md-3">
             <input type="text" name="search" class="form-control form-control-sm"
                    placeholder="Search organizations…" value="{{ request('search') }}"
                    hx-get="{{ route('organizations.index') }}"
@@ -35,10 +35,38 @@
                 <option value="inactive" @selected(request('status') === 'inactive')>Inactive</option>
             </select>
         </div>
-        @if(request()->hasAny(['search', 'state_id', 'status']))
+        <div class="col-md-2">
+            <select name="project_id" class="form-select form-select-sm"
+                    hx-get="{{ route('organizations.index') }}" hx-trigger="change"
+                    hx-target="#organizations-table" hx-swap="innerHTML"
+                    hx-push-url="true" hx-include="#organization-filters">
+                <option value="">All Projects</option>
+                @foreach($filterProjects ?? [] as $project)
+                    <option value="{{ $project->id }}" @selected((string) request('project_id') === (string) $project->id)>
+                        {{ $project->name }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+        <div class="col-md-2">
+            <select name="program_id" class="form-select form-select-sm"
+                    hx-get="{{ route('organizations.index') }}" hx-trigger="change"
+                    hx-target="#organizations-table" hx-swap="innerHTML"
+                    hx-push-url="true" hx-include="#organization-filters">
+                <option value="">All Programs</option>
+                @foreach($filterPrograms ?? [] as $program)
+                    <option value="{{ $program->id }}" @selected((string) request('program_id') === (string) $program->id)>
+                        {{ $program->name }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+        @if(request()->hasAny(['search', 'state_id', 'status', 'project_id', 'program_id']))
         <div class="col-auto">
             <a href="{{ route('organizations.index') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
         </div>
         @endif
     </div>
+    <input type="hidden" name="sort"      value="{{ $sort ?? 'name' }}">
+    <input type="hidden" name="direction" value="{{ $direction ?? 'asc' }}">
 </form>
