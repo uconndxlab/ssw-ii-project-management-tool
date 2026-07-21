@@ -108,7 +108,25 @@ class AgreementRequest extends FormRequest
                 ->unique()
                 ->values();
 
-            if ($programIds->isNotEmpty() && $projectIds->isEmpty()) {
+            $stateIds = collect($this->input('state_ids', []))
+                ->filter(fn ($id) => $id !== null && $id !== '')
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values();
+
+            if ($programIds->isEmpty()) {
+                $validator->errors()->add('program_ids', 'Select at least one program.');
+            }
+
+            if ($stateIds->isEmpty()) {
+                $validator->errors()->add('state_ids', 'Select at least one state.');
+            }
+
+            if ($validator->errors()->isNotEmpty()) {
+                return;
+            }
+
+            if ($projectIds->isEmpty()) {
                 $validator->errors()->add('project_ids', 'Select at least one project before assigning programs.');
 
                 return;
@@ -131,17 +149,26 @@ class AgreementRequest extends FormRequest
             }
 
             $selectedProgramIdSet = $programIds->map(fn ($id) => (int) $id)->values();
+            $selectedStateIdSet = $stateIds->map(fn ($id) => (int) $id)->values();
 
-            $matchesSelectedPrograms = function (Collection $scopedProgramIds, bool $allowGlobal) use ($selectedProgramIdSet): bool {
-                if ($scopedProgramIds->isEmpty()) {
+            $matchesSelectedScope = function (Collection $scopedIds, bool $allowGlobal, Collection $selectedIdSet): bool {
+                if ($scopedIds->isEmpty()) {
                     return $allowGlobal;
                 }
 
-                if ($selectedProgramIdSet->isEmpty()) {
+                if ($selectedIdSet->isEmpty()) {
                     return false;
                 }
 
-                return $scopedProgramIds->intersect($selectedProgramIdSet)->isNotEmpty();
+                return $scopedIds->intersect($selectedIdSet)->isNotEmpty();
+            };
+
+            $matchesSelectedPrograms = function (Collection $scopedProgramIds, bool $allowGlobal) use ($matchesSelectedScope, $selectedProgramIdSet): bool {
+                return $matchesSelectedScope($scopedProgramIds, $allowGlobal, $selectedProgramIdSet);
+            };
+
+            $matchesSelectedStates = function (Collection $scopedStateIds, bool $allowGlobal) use ($matchesSelectedScope, $selectedStateIdSet): bool {
+                return $matchesSelectedScope($scopedStateIds, $allowGlobal, $selectedStateIdSet);
             };
 
             $organizationIds = collect($this->input('organization_ids', []))
@@ -161,7 +188,7 @@ class AgreementRequest extends FormRequest
 
                 $organizations = Organization::query()
                     ->whereKey($organizationIds)
-                    ->with('programs:id')
+                    ->with(['programs:id', 'states:id'])
                     ->get();
 
                 $inactiveOrganizationIds = $organizations
@@ -174,14 +201,17 @@ class AgreementRequest extends FormRequest
                 }
 
                 $invalidOrganizationIds = $organizations
-                    ->filter(fn (Organization $organization) => !$matchesSelectedPrograms(
-                        $organization->programs->pluck('id')->map(fn ($id) => (int) $id)->values(),
-                        false
-                    ))
+                    ->filter(function (Organization $organization) use ($matchesSelectedPrograms, $matchesSelectedStates) {
+                        $organizationProgramIds = $organization->programs->pluck('id')->map(fn ($id) => (int) $id)->values();
+                        $organizationStateIds = $organization->states->pluck('id')->map(fn ($id) => (int) $id)->values();
+
+                        return !$matchesSelectedPrograms($organizationProgramIds, false)
+                            || !$matchesSelectedStates($organizationStateIds, false);
+                    })
                     ->pluck('id');
 
                 if ($invalidOrganizationIds->isNotEmpty()) {
-                    $validator->errors()->add('organization_ids', 'Selected organizations must match one of the selected programs.');
+                    $validator->errors()->add('organization_ids', 'Selected organizations must match at least one selected program and one selected state.');
                 }
             }
 

@@ -53,6 +53,10 @@
         (string) $organization->id => $organization->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all(),
     ])->all();
 
+    $organizationStateMap = $organizations->mapWithKeys(fn ($organization) => [
+        (string) $organization->id => $organization->states->pluck('id')->map(fn ($id) => (string) $id)->values()->all(),
+    ])->all();
+
     $userProgramMap = $users->mapWithKeys(fn ($user) => [
         (string) $user->id => $user->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all(),
     ])->all();
@@ -89,19 +93,15 @@
                 :projects="$projects"
                 :selected-project-ids="$selectedProjectIds"
                 :selected-program-ids="$selectedProgramIds"
+                project-label="Projects *"
+                program-label="Programs *"
                 project-help-text="Select the projects this agreement belongs to."
-                program-help-text="Programs determine which organizations, teams, users, logging fields, contact families, and activity types are available below."
+                program-help-text="Programs determine which teams, users, logging fields, contact families, and activity types are available below. Organizations also require at least one program and one state."
             />
         </div>
 
-        @include('agreements.partials.organizations-section', [
-            'agreement' => $agreement,
-            'organizations' => $organizations,
-            'selectedProgramIds' => $selectedProgramIds,
-        ])
-
         <div class="mb-3">
-            <label class="form-label">States</label>
+            <label class="form-label">States <span class="text-danger">*</span></label>
             <x-token-picker
                 picker-id="agreement-states"
                 name="state_ids[]"
@@ -110,10 +110,20 @@
                 placeholder="Search states..."
                 :height="'220px'"
             />
+            <small class="text-muted d-block mt-2">
+                Select the states this agreement applies to. Organizations are limited to those linked to the selected states and programs.
+            </small>
             @error('state_ids')
                 <div class="text-danger small mt-1">{{ $message }}</div>
             @enderror
         </div>
+
+        @include('agreements.partials.organizations-section', [
+            'agreement' => $agreement,
+            'organizations' => $organizations,
+            'selectedProgramIds' => $selectedProgramIds,
+            'selectedStateIds' => $selectedStateIds,
+        ])
 
         <div class="mb-3">
             <label for="abstract" class="form-label">Abstract</label>
@@ -327,6 +337,15 @@
         }, []);
     }
 
+    function allowedOrganizationIds(organizationProgramMap, organizationStateMap, selectedProgramIds, selectedStateIds) {
+        const programAllowed = new Set(allowedIds(organizationProgramMap, selectedProgramIds, false));
+        const stateAllowed = new Set(allowedIds(organizationStateMap, selectedStateIds, false));
+
+        return Array.from(programAllowed).filter(function (organizationId) {
+            return stateAllowed.has(String(organizationId));
+        });
+    }
+
     function setPickerRestriction(picker, allowedIds, shouldDisable, disabledPlaceholder) {
         if (!picker) {
             return;
@@ -368,6 +387,7 @@
 
     document.addEventListener('DOMContentLoaded', function () {
         const programPicker = document.getElementById('agreement-scope-programs');
+        const statePicker = document.getElementById('agreement-states');
         const organizationPicker = document.getElementById('agreement-organizations');
         const teamPicker = document.getElementById('agreement-{{ $agreement ? 'edit' : 'create' }}-teams');
         const userPicker = document.getElementById('agreement-{{ $agreement ? 'edit' : 'create' }}-users');
@@ -379,18 +399,34 @@
         }
 
         const organizationProgramMap = normalizeProgramMap(@json($organizationProgramMap));
+        const organizationStateMap = normalizeProgramMap(@json($organizationStateMap));
         const teamProgramMap = normalizeProgramMap(@json($teamProgramMap));
         const userProgramMap = normalizeProgramMap(@json($userProgramMap));
 
         function refreshAgreementScope() {
             const selectedProgramIds = selectedIdsFromPicker(programPicker);
+            const selectedStateIds = selectedIdsFromPicker(statePicker);
             const hasSelectedPrograms = selectedProgramIds.length > 0;
+            const hasSelectedStates = selectedStateIds.length > 0;
+            const canSelectOrganizations = hasSelectedPrograms && hasSelectedStates;
+            const organizationDisabledPlaceholder = !hasSelectedPrograms && !hasSelectedStates
+                ? 'Select at least one program and state first...'
+                : (!hasSelectedPrograms
+                    ? 'Select at least one program first...'
+                    : 'Select at least one state first...');
 
             setPickerRestriction(
                 organizationPicker,
-                allowedIds(organizationProgramMap, selectedProgramIds, false),
-                !hasSelectedPrograms,
-                'Select at least one program first...'
+                canSelectOrganizations
+                    ? allowedOrganizationIds(
+                        organizationProgramMap,
+                        organizationStateMap,
+                        selectedProgramIds,
+                        selectedStateIds
+                    )
+                    : [],
+                !canSelectOrganizations,
+                organizationDisabledPlaceholder
             );
 
             setPickerRestriction(
@@ -430,6 +466,9 @@
         }
 
         programPicker.addEventListener('token-picker:change', refreshAgreementScope);
+        if (statePicker) {
+            statePicker.addEventListener('token-picker:change', refreshAgreementScope);
+        }
         refreshAgreementScope();
     });
 })();

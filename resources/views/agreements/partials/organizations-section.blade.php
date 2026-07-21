@@ -1,5 +1,6 @@
 @php
     $agreement = $agreement ?? null;
+    $selectedStateIds = $selectedStateIds ?? [];
     $selectedOrganizationIds = old('organization_ids', $agreement?->organizations?->pluck('id')->toArray() ?? []);
 
     $selectedPayorSourceIds = old(
@@ -48,15 +49,15 @@
                         value-key="value"
                         search-key="search"
                         placeholder="Search organizations..."
-                        disabled-placeholder="Select at least one program first..."
-                        :disabled="empty($selectedProgramIds)"
+                        disabled-placeholder="Select at least one program and state first..."
+                        :disabled="empty($selectedProgramIds) || empty($selectedStateIds)"
                         :open-on-focus="false"
                         :show-selected="false"
                         :height="'300px'"
                     />
 
                     <small class="text-muted d-block mt-2">
-                        Search and add organizations involved in this agreement. Classify each organization in the ledger.
+                        Available organizations must be linked to at least one selected program and one selected state. Classify each organization in the ledger.
                     </small>
 
                     @error('organization_ids')
