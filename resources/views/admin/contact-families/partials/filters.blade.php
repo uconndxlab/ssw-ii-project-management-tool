@@ -1,4 +1,5 @@
 <form id="cf-filters"
+      data-table-filter-form
       hx-get="{{ route('contact-families.index') }}"
       hx-target="#cf-table"
       hx-swap="innerHTML"
@@ -38,11 +39,10 @@
                 @endforeach
             </select>
         </div>
-        @if(request()->hasAny(['search', 'project_id', 'program_id']))
-        <div class="col-auto">
-            <a href="{{ route('contact-families.index') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
-        </div>
-        @endif
+        <x-table-filter-clear
+            :href="route('contact-families.index')"
+            :filter-keys="['search', 'project_id', 'program_id']"
+        />
     </div>
     <input type="hidden" name="sort"      value="{{ $sort ?? 'sort_order' }}">
     <input type="hidden" name="direction" value="{{ $direction ?? 'asc' }}">

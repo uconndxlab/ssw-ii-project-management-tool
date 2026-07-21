@@ -1,4 +1,5 @@
 <form id="activity-type-filters"
+      data-table-filter-form
       hx-get="{{ route('activity-types.index') }}"
       hx-target="#activity-types-table"
       hx-swap="innerHTML"
@@ -61,11 +62,10 @@
                 <option value="0" @selected(request('active') === '0')>Inactive</option>
             </select>
         </div>
-        @if(request()->hasAny(['search', 'contact_family_id', 'project_id', 'program_id', 'active']))
-        <div class="col-auto">
-            <a href="{{ route('activity-types.index') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
-        </div>
-        @endif
+        <x-table-filter-clear
+            :href="route('activity-types.index')"
+            :filter-keys="['search', 'contact_family_id', 'project_id', 'program_id', 'active']"
+        />
     </div>
     <input type="hidden" name="sort"      value="{{ $sort ?? 'name' }}">
     <input type="hidden" name="direction" value="{{ $direction ?? 'asc' }}">

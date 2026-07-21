@@ -1,4 +1,5 @@
 <form id="organization-filters"
+      data-table-filter-form
       hx-get="{{ route('organizations.index') }}"
       hx-target="#organizations-table"
       hx-swap="innerHTML"
@@ -61,11 +62,10 @@
                 @endforeach
             </select>
         </div>
-        @if(request()->hasAny(['search', 'state_id', 'status', 'project_id', 'program_id']))
-        <div class="col-auto">
-            <a href="{{ route('organizations.index') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
-        </div>
-        @endif
+        <x-table-filter-clear
+            :href="route('organizations.index')"
+            :filter-keys="['search', 'state_id', 'status', 'project_id', 'program_id']"
+        />
     </div>
     <input type="hidden" name="sort"      value="{{ $sort ?? 'name' }}">
     <input type="hidden" name="direction" value="{{ $direction ?? 'asc' }}">

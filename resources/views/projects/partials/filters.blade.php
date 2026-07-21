@@ -1,4 +1,5 @@
 <form id="project-filters"
+      data-table-filter-form
       hx-get="{{ route('projects.index') }}"
       hx-target="#projects-table"
       hx-swap="innerHTML"
@@ -22,10 +23,9 @@
                 <option value="0" @selected(request('active') === '0')>Inactive Only</option>
             </select>
         </div>
-        @if(request()->hasAny(['search', 'active']))
-        <div class="col-auto">
-            <a href="{{ route('projects.index') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
-        </div>
-        @endif
+        <x-table-filter-clear
+            :href="route('projects.index')"
+            :filter-keys="['search', 'active']"
+        />
     </div>
 </form>

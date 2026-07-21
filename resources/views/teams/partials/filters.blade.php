@@ -1,4 +1,5 @@
 <form id="team-filters"
+      data-table-filter-form
       hx-get="{{ route('teams.index') }}"
       hx-target="#teams-table"
       hx-swap="innerHTML"
@@ -48,11 +49,10 @@
                 @endforeach
             </select>
         </div>
-        @if(request()->hasAny(['search', 'active', 'project_id', 'program_id']))
-        <div class="col-auto">
-            <a href="{{ route('teams.index') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
-        </div>
-        @endif
+        <x-table-filter-clear
+            :href="route('teams.index')"
+            :filter-keys="['search', 'active', 'project_id', 'program_id']"
+        />
     </div>
     <input type="hidden" name="sort"      value="{{ $sort ?? 'name' }}">
     <input type="hidden" name="direction" value="{{ $direction ?? 'asc' }}">

@@ -1,4 +1,5 @@
 <form id="logging-field-filters"
+      data-table-filter-form
       hx-get="{{ route('logging-fields.index') }}"
       hx-target="#logging-fields-table"
       hx-swap="innerHTML"
@@ -108,11 +109,10 @@
                 <option value="available_in_activities" @selected(request('availability') === 'available_in_activities')>Activities</option>
             </select>
         </div>
-        @if(request()->hasAny(['search', 'status', 'field_type', 'availability', 'project_id', 'program_id', 'contact_family_id']))
-        <div class="col-auto">
-            <a href="{{ route('logging-fields.index') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
-        </div>
-        @endif
+        <x-table-filter-clear
+            :href="route('logging-fields.index')"
+            :filter-keys="['search', 'status', 'field_type', 'availability', 'project_id', 'program_id', 'contact_family_id']"
+        />
     </div>
 
     <input type="hidden" name="sort" value="{{ $sort ?? 'sort_order' }}">

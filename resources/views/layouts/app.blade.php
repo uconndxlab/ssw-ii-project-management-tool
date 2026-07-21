@@ -105,6 +105,103 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
+        (function () {
+            var defaultIgnoredNames = ['sort', 'direction', 'page', 'partial'];
+
+            function ignoredNamesForForm(form) {
+                var ignored = new Set(defaultIgnoredNames);
+                (form.dataset.tableFilterIgnore || '')
+                    .split(',')
+                    .map(function (name) { return name.trim(); })
+                    .filter(Boolean)
+                    .forEach(function (name) { ignored.add(name); });
+
+                return ignored;
+            }
+
+            function formHasActiveFilters(form) {
+                var ignored = ignoredNamesForForm(form);
+                var hasFilter = false;
+
+                form.querySelectorAll('input, select, textarea').forEach(function (element) {
+                    if (!element.name || element.disabled) {
+                        return;
+                    }
+
+                    if (ignored.has(element.name)) {
+                        return;
+                    }
+
+                    if (element.type === 'checkbox' || element.type === 'radio') {
+                        if (element.checked && String(element.value || '').trim() !== '') {
+                            hasFilter = true;
+                        }
+
+                        return;
+                    }
+
+                    if (String(element.value || '').trim() !== '') {
+                        hasFilter = true;
+                    }
+                });
+
+                return hasFilter;
+            }
+
+            function initTableFilterClearTooltips(scope) {
+                if (!window.bootstrap || !bootstrap.Tooltip) {
+                    return;
+                }
+
+                var root = scope || document;
+                root.querySelectorAll('[data-table-filter-clear-wrap] [data-bs-toggle="tooltip"]').forEach(function (element) {
+                    bootstrap.Tooltip.getOrCreateInstance(element);
+                });
+            }
+
+            window.syncTableFilterClearButtons = function (scope) {
+                var root = scope || document;
+                root.querySelectorAll('[data-table-filter-form]').forEach(function (form) {
+                    var wrap = form.querySelector('[data-table-filter-clear-wrap]');
+                    if (!wrap) {
+                        return;
+                    }
+
+                    wrap.classList.toggle('d-none', !formHasActiveFilters(form));
+                });
+
+                initTableFilterClearTooltips(root);
+            };
+
+            document.addEventListener('DOMContentLoaded', function () {
+                syncTableFilterClearButtons();
+            });
+
+            document.body.addEventListener('input', function (event) {
+                var form = event.target && event.target.closest
+                    ? event.target.closest('[data-table-filter-form]')
+                    : null;
+                if (form) {
+                    syncTableFilterClearButtons(form);
+                }
+            });
+
+            document.body.addEventListener('change', function (event) {
+                var form = event.target && event.target.closest
+                    ? event.target.closest('[data-table-filter-form]')
+                    : null;
+                if (form) {
+                    syncTableFilterClearButtons(form);
+                }
+            });
+
+            document.body.addEventListener('htmx:afterSettle', function () {
+                syncTableFilterClearButtons();
+            });
+        })();
+    </script>
+
+    <script>
         // Attach CSRF token to every HTMX request globally
         document.addEventListener('htmx:configRequest', function (evt) {
             var meta = document.querySelector('meta[name="csrf-token"]');

@@ -1,5 +1,6 @@
 <form
     id="activity-filters"
+    data-table-filter-form
     hx-get="{{ route('activities.index') }}"
     hx-target="#activities-table"
     hx-swap="innerHTML"
@@ -146,12 +147,12 @@
             </select>
         </div>
 
-        <div class="col-md-12">
-            <div class="d-flex justify-content-end">
-                <a href="{{ route('activities.index') }}" class="btn btn-outline-secondary">
-                    Reset
-                </a>
-            </div>
+        <div class="col-md-auto d-flex align-items-end pb-1">
+            <x-table-filter-clear
+                :href="route('activities.index')"
+                :filter-keys="['search', 'state_id', 'organization_id', 'agreement_id', 'activity_type_id']"
+                wrapper-class=""
+            />
         </div>
     </div>
 

@@ -1,4 +1,5 @@
 <form id="program-filters"
+      data-table-filter-form
       hx-get="{{ route('programs.index') }}"
       hx-target="#programs-table"
       hx-swap="innerHTML"
@@ -22,11 +23,10 @@
                 <option value="inactive" @selected(request('status') === 'inactive')>Inactive</option>
             </select>
         </div>
-        @if(request()->hasAny(['search', 'status']))
-        <div class="col-auto">
-            <a href="{{ route('programs.index') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
-        </div>
-        @endif
+        <x-table-filter-clear
+            :href="route('programs.index')"
+            :filter-keys="['search', 'status']"
+        />
     </div>
     <input type="hidden" name="sort"      value="{{ $sort ?? 'name' }}">
     <input type="hidden" name="direction" value="{{ $direction ?? 'asc' }}">

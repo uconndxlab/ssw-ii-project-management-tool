@@ -1,4 +1,5 @@
 <form id="agreement-filters"
+      data-table-filter-form
       hx-get="{{ route('agreements.index') }}"
       hx-target="#agreements-table"
       hx-swap="innerHTML"
@@ -40,11 +41,10 @@
                 @endforeach
             </select>
         </div>
-        @if(request()->hasAny(['search', 'state_id', 'organization_id']))
-        <div class="col-auto">
-            <a href="{{ route('agreements.index') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
-        </div>
-        @endif
+        <x-table-filter-clear
+            :href="route('agreements.index')"
+            :filter-keys="['search', 'state_id', 'organization_id']"
+        />
     </div>
     <input type="hidden" name="sort"      value="{{ $sort ?? 'name' }}">
     <input type="hidden" name="direction" value="{{ $direction ?? 'asc' }}">

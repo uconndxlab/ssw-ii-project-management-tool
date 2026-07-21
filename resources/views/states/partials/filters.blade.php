@@ -1,4 +1,5 @@
 <form id="state-filters"
+      data-table-filter-form
       hx-get="{{ route('states.index') }}"
       hx-target="#states-table"
       hx-swap="innerHTML"
@@ -15,11 +16,10 @@
                    hx-push-url="true"
                    hx-include="#state-filters">
         </div>
-        <div class="col-auto">
-            @if(request()->hasAny(['search']))
-                <a href="{{ route('states.index') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
-            @endif
-        </div>
+        <x-table-filter-clear
+            :href="route('states.index')"
+            :filter-keys="['search']"
+        />
     </div>
 
 </form>

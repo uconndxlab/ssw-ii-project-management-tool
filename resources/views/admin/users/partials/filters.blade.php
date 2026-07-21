@@ -1,4 +1,6 @@
 <form id="user-filters"
+      data-table-filter-form
+      data-table-filter-ignore="active"
       hx-get="{{ route('admin.users.index') }}"
       hx-target="#users-table"
       hx-swap="innerHTML"
@@ -57,11 +59,10 @@
             </select>
             <input type="hidden" name="active" value="active">
         </div>
-        @if(request()->hasAny(['search', 'role', 'project_id', 'program_id']))
-        <div class="col-auto">
-            <a href="{{ route('admin.users.index') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
-        </div>
-        @endif
+        <x-table-filter-clear
+            :href="route('admin.users.index')"
+            :filter-keys="['search', 'role', 'project_id', 'program_id']"
+        />
     </div>
     <input type="hidden" name="sort"      value="{{ $sort ?? 'name' }}">
     <input type="hidden" name="direction" value="{{ $direction ?? 'asc' }}">
