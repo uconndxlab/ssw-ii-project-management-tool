@@ -13,6 +13,6 @@ return [
     |
     */
 
-    'max_file_kb' => (int) env('UPLOAD_MAX_KB', 25600),
+    'max_file_kb' => (int) env('UPLOAD_MAX_KB', 51200),
 
 ];
