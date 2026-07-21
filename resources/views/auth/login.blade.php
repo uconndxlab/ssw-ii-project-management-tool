@@ -9,6 +9,10 @@
             <div class="card-body p-5">
                 <h3 class="card-title text-center mb-4">Login</h3>
 
+                @if(session('error'))
+                    <div class="alert alert-danger">{{ session('error') }}</div>
+                @endif
+
                 @if ($errors->any())
                     <div class="alert alert-danger">
                         <ul class="mb-0">

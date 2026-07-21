@@ -99,7 +99,7 @@ class TeamController extends Controller
         // Admin-only authorization
         abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can create teams.');
 
-        $users = User::query()->orderBy('name', 'asc')->get();
+        $users = User::query()->active()->orderBy('name', 'asc')->get();
         $projects = ProjectProgramScope::activeProjectsWithPrograms();
 
         return view('teams.create', compact('users', 'projects'));
@@ -182,7 +182,7 @@ class TeamController extends Controller
         // Admin-only authorization
         abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can edit teams.');
 
-        $users = User::query()->orderBy('name', 'asc')->get();
+        $users = User::query()->active()->orderBy('name', 'asc')->get();
         $projects = ProjectProgramScope::activeProjectsWithPrograms();
         $team->load(['users', 'projects', 'programs']);
 

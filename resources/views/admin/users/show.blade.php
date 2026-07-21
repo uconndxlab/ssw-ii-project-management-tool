@@ -20,7 +20,21 @@
 >
     {{-- ── Summary ─────────────────────────────────────────────────────── --}}
     <x-slot:summary>
+        @if(!$user->active)
+            <div class="alert alert-light border small mb-3 py-2">
+                Membership was cleared when this user was deactivated. Activity history and contributions below are unchanged.
+            </div>
+        @endif
         <dl class="row mb-0" style="min-width: 0;">
+            <dt class="col-5 text-muted fw-normal small">Status</dt>
+            <dd class="col-7 mb-2">
+                @if($user->active)
+                    <span class="badge bg-success">Active</span>
+                @else
+                    <span class="badge bg-secondary">Inactive</span>
+                @endif
+            </dd>
+
             <dt class="col-5 text-muted fw-normal small">Name</dt>
             <dd class="col-7 mb-2 fw-semibold">{{ $user->name }}</dd>
 

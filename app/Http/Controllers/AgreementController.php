@@ -715,7 +715,7 @@ class AgreementController extends Controller
         }
 
         $organizations = $organizations->sortBy('name')->values();
-        $users = User::query()->with(['projects', 'programs'])->get()->sortBy('name')->values();
+        $users = User::query()->active()->with(['projects', 'programs'])->get()->sortBy('name')->values();
         $contactFamilies = ContactFamily::query()
             ->where('active', true)
             ->with(['projects', 'programs'])
@@ -814,6 +814,12 @@ class AgreementController extends Controller
         $validated = $request->validate([
             'user_id' => ['required', 'exists:users,id'],
         ]);
+
+        $user = User::query()->findOrFail($validated['user_id']);
+
+        if (!$user->isActive()) {
+            abort(422, 'Inactive users cannot be assigned to agreements.');
+        }
 
         $agreement->users()->attach($validated['user_id']);
         $agreement->load('users');

@@ -63,7 +63,11 @@
                         @endif
                     </td>
                     <td>
-                        <span class="badge bg-success">Active</span>
+                        @if($user->active)
+                            <span class="badge bg-success">Active</span>
+                        @else
+                            <span class="badge bg-secondary">Inactive</span>
+                        @endif
                     </td>
                     <td>
                         <div class="d-flex flex-wrap gap-1">

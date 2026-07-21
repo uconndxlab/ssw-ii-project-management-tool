@@ -4,13 +4,13 @@
 
 @section('content')
 <div class="row justify-content-center mb-4">
-    <div class="col-md-8">
+    <div class="col-lg-10">
         <h1>Edit User</h1>
     </div>
 </div>
 
 <div class="row justify-content-center">
-    <div class="col-md-8">
+    <div class="col-lg-10">
         @if ($errors->any())
             <div class="alert alert-danger">
                 <ul class="mb-0">

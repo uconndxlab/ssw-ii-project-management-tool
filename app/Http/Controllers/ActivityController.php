@@ -864,6 +864,23 @@ class ActivityController extends Controller
                 ->all();
 
             $allowedParticipantIds = array_values(array_unique(array_merge($allowedParticipantIds, $historicalParticipantIds)));
+        } else {
+            $historicalParticipantIds = [];
+        }
+
+        $newParticipantIds = $selectedParticipantIds->diff($historicalParticipantIds ?? []);
+
+        if ($newParticipantIds->isNotEmpty()) {
+            $hasInactiveNewParticipants = User::query()
+                ->whereKey($newParticipantIds)
+                ->where('active', false)
+                ->exists();
+
+            if ($hasInactiveNewParticipants) {
+                throw ValidationException::withMessages([
+                    'participant_user_ids' => 'Inactive users cannot be added as activity participants.',
+                ]);
+            }
         }
 
         if ($selectedParticipantIds->diff($allowedParticipantIds)->isNotEmpty()) {

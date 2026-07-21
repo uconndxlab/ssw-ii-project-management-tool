@@ -6,12 +6,18 @@ use App\Http\Requests\AdminUserRequest;
 use App\Models\Program;
 use App\Models\Project;
 use App\Models\User;
+use App\Services\UserDeactivationService;
 use App\Support\UserDeliverableReporting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class AdminUserController extends Controller
 {
+    public function __construct(
+        private UserDeactivationService $userDeactivationService,
+    ) {
+    }
+
     public function index(Request $request)
     {
         $query = User::query()->with([
@@ -50,8 +56,12 @@ class AdminUserController extends Controller
             });
         }
 
-        // Placeholder until user active/inactive is persisted on the model.
-        // if ($request->input('active') === 'inactive') { ... }
+        $status = $request->input('status');
+        if ($status === 'active') {
+            $query->where('active', true);
+        } elseif ($status === 'inactive') {
+            $query->where('active', false);
+        }
 
         $sort      = $request->input('sort', 'name');
         $direction = $request->input('direction', 'asc') === 'desc' ? 'desc' : 'asc';
@@ -81,7 +91,7 @@ class AdminUserController extends Controller
                 User::query()->select('name')->whereColumn('id', 'users.supervisor_id'),
                 $direction
             ),
-            'active' => $query->orderBy('users.name', $direction),
+            'active' => $query->orderBy('users.active', $direction)->orderBy('users.name', $direction),
             'projects' => $query->orderByRaw($this->minAssignedProjectNameSql()." {$dir}"),
             'programs' => $query->orderByRaw($this->minAssignedProgramNameSql()." {$dir}"),
             default => $query->orderBy('users.name', $direction),
@@ -128,16 +138,22 @@ class AdminUserController extends Controller
     public function store(AdminUserRequest $request)
     {
         $validated = $request->validated();
+        $isActive = $request->boolean('active');
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => $validated['password'],
             'role' => $validated['role'],
+            'active' => $isActive,
             'supervisor_id' => $validated['supervisor_id'] ?? null,
         ]);
 
-        $this->syncScopeAssignments($user, $validated);
+        if ($isActive) {
+            $this->syncScopeAssignments($user, $validated);
+        } else {
+            $this->userDeactivationService->revokeMembership($user);
+        }
 
         return redirect()
             ->route('admin.users.index')
@@ -152,11 +168,14 @@ class AdminUserController extends Controller
     public function update(AdminUserRequest $request, User $user)
     {
         $validated = $request->validated();
+        $wasActive = $user->isActive();
+        $isActive = $request->boolean('active');
 
         $attributes = [
             'name' => $validated['name'],
             'email' => $validated['email'],
             'role' => $validated['role'],
+            'active' => $isActive,
             'supervisor_id' => $validated['supervisor_id'] ?? null,
         ];
 
@@ -165,7 +184,14 @@ class AdminUserController extends Controller
         }
 
         $user->update($attributes);
-        $this->syncScopeAssignments($user, $validated);
+
+        if (!$isActive) {
+            if ($wasActive) {
+                $this->userDeactivationService->revokeMembership($user);
+            }
+        } else {
+            $this->syncScopeAssignments($user, $validated);
+        }
 
         return redirect()
             ->route('admin.users.index')
@@ -215,7 +241,7 @@ class AdminUserController extends Controller
 
     private function supervisorOptions(?User $user = null)
     {
-        $query = User::query()->orderBy('name', 'asc');
+        $query = User::query()->active()->orderBy('name', 'asc');
 
         if ($user?->exists) {
             $query->whereKeyNot($user->id);

@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Models\Program;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\Validator;
@@ -26,7 +27,11 @@ class AdminUserRequest extends FormRequest
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($userId)],
             'password' => [$userId ? 'nullable' : 'required', Password::defaults()],
             'role' => ['required', 'in:admin,staff,consultant'],
-            'supervisor_id' => ['nullable', 'exists:users,id'],
+            'active' => ['nullable', 'boolean'],
+            'supervisor_id' => [
+                'nullable',
+                Rule::exists('users', 'id')->where(fn ($query) => $query->where('active', true)),
+            ],
             'project_ids' => ['nullable', 'array'],
             'project_ids.*' => ['distinct', 'exists:projects,id'],
             'program_ids' => ['nullable', 'array'],
@@ -39,18 +44,42 @@ class AdminUserRequest extends FormRequest
         $validator->after(function (Validator $validator) {
             $user = $this->route('user');
 
-            if (!$user instanceof User) {
-                return;
+            if (!$this->boolean('active')) {
+                if ($user instanceof User && Auth::id() === $user->id) {
+                    $validator->errors()->add('active', 'You cannot deactivate your own user account.');
+                }
+
+                if ($user instanceof User && $user->isAdmin() && $user->isActive()) {
+                    $otherActiveAdmins = User::query()
+                        ->where('role', 'admin')
+                        ->where('active', true)
+                        ->whereKeyNot($user->id)
+                        ->exists();
+
+                    if (!$otherActiveAdmins) {
+                        $validator->errors()->add('active', 'You cannot deactivate the last active administrator.');
+                    }
+                }
             }
 
-            $supervisorId = $this->input('supervisor_id');
+            if ($user instanceof User) {
+                $supervisorId = $this->input('supervisor_id');
 
-            if ($supervisorId === null || $supervisorId === '') {
-                return;
-            }
+                if ($supervisorId !== null && $supervisorId !== '') {
+                    if ($this->wouldCreateCircularReference($user, (int) $supervisorId)) {
+                        $validator->errors()->add('supervisor_id', 'This supervisor assignment would create a circular reporting structure.');
+                    }
+                }
+            } else {
+                $supervisorId = $this->input('supervisor_id');
 
-            if ($this->wouldCreateCircularReference($user, (int) $supervisorId)) {
-                $validator->errors()->add('supervisor_id', 'This supervisor assignment would create a circular reporting structure.');
+                if ($supervisorId !== null && $supervisorId !== '') {
+                    $supervisor = User::query()->find((int) $supervisorId);
+
+                    if ($supervisor && !$supervisor->isActive()) {
+                        $validator->errors()->add('supervisor_id', 'The selected supervisor is inactive.');
+                    }
+                }
             }
 
             $projectIds = collect($this->input('project_ids', []))
@@ -100,6 +129,10 @@ class AdminUserRequest extends FormRequest
             $supervisor = User::query()->find($currentSupervisorId);
 
             if (!$supervisor) {
+                return false;
+            }
+
+            if (!$supervisor->isActive()) {
                 return false;
             }
 

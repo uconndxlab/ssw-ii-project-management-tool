@@ -150,7 +150,7 @@ class OrganizationController extends Controller
     {
         $states = State::orderBy('name', 'asc')->get();
         $projects = ProjectProgramScope::activeProjectsWithPrograms();
-        $users = User::query()->orderBy('name')->get();
+        $users = User::query()->active()->orderBy('name')->get();
 
         return view('organizations.create', compact('states', 'projects', 'users'));
     }
@@ -179,7 +179,7 @@ class OrganizationController extends Controller
         $organization->load(['states', 'projects', 'programs', 'users']);
         $states = State::orderBy('name', 'asc')->get();
         $projects = ProjectProgramScope::activeProjectsWithPrograms();
-        $users = User::query()->orderBy('name')->get();
+        $users = User::query()->active()->orderBy('name')->get();
 
         return view('organizations.edit', compact('organization', 'states', 'projects', 'users'));
     }

@@ -1,6 +1,5 @@
 <form id="user-filters"
       data-table-filter-form
-      data-table-filter-ignore="active"
       hx-get="{{ route('admin.users.index') }}"
       hx-target="#users-table"
       hx-swap="innerHTML"
@@ -52,16 +51,18 @@
             </select>
         </div>
         <div class="col-md-2">
-            <select class="form-select form-select-sm" disabled
-                    title="User active/inactive status will be available in a future release"
-                    aria-label="Active status filter (coming soon)">
-                <option selected>Active</option>
+            <select name="status" class="form-select form-select-sm"
+                    hx-get="{{ route('admin.users.index') }}" hx-trigger="change"
+                    hx-target="#users-table" hx-swap="innerHTML"
+                    hx-push-url="true" hx-include="#user-filters">
+                <option value="">All Statuses</option>
+                <option value="active" @selected(request('status') === 'active')>Active</option>
+                <option value="inactive" @selected(request('status') === 'inactive')>Inactive</option>
             </select>
-            <input type="hidden" name="active" value="active">
         </div>
         <x-table-filter-clear
             :href="route('admin.users.index')"
-            :filter-keys="['search', 'role', 'project_id', 'program_id']"
+            :filter-keys="['search', 'role', 'project_id', 'program_id', 'status']"
         />
     </div>
     <input type="hidden" name="sort"      value="{{ $sort ?? 'name' }}">

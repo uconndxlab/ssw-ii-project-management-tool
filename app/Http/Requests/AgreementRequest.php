@@ -243,6 +243,17 @@ class AgreementRequest extends FormRequest
                 ->unique()
                 ->values();
 
+            if ($directUserIds->isNotEmpty()) {
+                $hasInactiveDirectUsers = User::query()
+                    ->whereKey($directUserIds)
+                    ->where('active', false)
+                    ->exists();
+
+                if ($hasInactiveDirectUsers) {
+                    $validator->errors()->add('user_ids', 'Inactive users cannot be assigned to agreements.');
+                }
+            }
+
             $teamIds = collect($this->input('team_ids', []))
                 ->filter(fn ($id) => $id !== null && $id !== '')
                 ->map(fn ($id) => (int) $id)
@@ -304,6 +315,17 @@ class AgreementRequest extends FormRequest
                 ->map(fn ($id) => (int) $id)
                 ->unique()
                 ->values();
+
+            if ($principalInvestigatorIds->isNotEmpty()) {
+                $hasInactivePrincipalInvestigators = User::query()
+                    ->whereKey($principalInvestigatorIds)
+                    ->where('active', false)
+                    ->exists();
+
+                if ($hasInactivePrincipalInvestigators) {
+                    $validator->errors()->add('principal_investigator_ids', 'Inactive users cannot be principal investigators.');
+                }
+            }
 
             if ($principalInvestigatorIds->isEmpty()) {
                 $validator->errors()->add('principal_investigator_ids', 'Select at least one principal investigator. Use the PI toggle on a selected user.');
@@ -519,6 +541,10 @@ class AgreementRequest extends FormRequest
                 }
 
                 if ($deliverableUserIds->isNotEmpty()) {
+                    if (User::query()->whereKey($deliverableUserIds)->where('active', false)->exists()) {
+                        $validator->errors()->add("deliverables.{$deliverableIndex}.user_ids", 'Inactive users cannot be assigned to deliverables.');
+                    }
+
                     $invalidDeliverableUserIds = User::query()
                         ->whereKey($deliverableUserIds)
                         ->with('programs:id')
