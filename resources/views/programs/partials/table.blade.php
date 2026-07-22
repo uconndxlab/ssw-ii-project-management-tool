@@ -18,7 +18,7 @@
                             Name{!! $icon('name') !!}
                         </a>
                     </th>
-                    <th>Project</th>
+                    <th>Projects</th>
                     <th>
                         <a class="text-decoration-none fw-semibold text-dark"
                            href="{{ $url('status') }}"
@@ -45,10 +45,12 @@
                         </a>
                     </td>
                     <td>
-                        @if($program->project)
-                            <a href="{{ route('projects.show', $program->project) }}" class="text-decoration-none text-muted small">
-                                {{ $program->project->name }}
-                            </a>
+                        @if($program->projects->isNotEmpty())
+                            <div class="d-flex flex-wrap gap-1">
+                                @foreach($program->projects->sortBy('name') as $project)
+                                    <a href="{{ route('projects.show', $project) }}" class="text-decoration-none text-muted small">{{ $project->name }}</a>@if(!$loop->last)<span class="text-muted small">,</span>@endif
+                                @endforeach
+                            </div>
                         @else
                             <span class="text-muted small">—</span>
                         @endif

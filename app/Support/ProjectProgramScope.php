@@ -44,13 +44,18 @@ class ProjectProgramScope
             return;
         }
 
-        $programProjectIds = Program::query()
-            ->whereKey($programIds)
-            ->pluck('project_id', 'id');
+        $projectIds = self::normalizeIds($projectIds);
+        $programIds = self::normalizeIds($programIds);
 
-        $invalidPrograms = $programProjectIds
-            ->filter(fn ($projectId) => !in_array((int) $projectId, $projectIds, true))
-            ->keys();
+        $validProgramIds = Program::query()
+            ->whereKey($programIds)
+            ->whereHas('projects', fn ($query) => $query->whereIn('projects.id', $projectIds))
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id);
+
+        $invalidPrograms = collect($programIds)
+            ->map(fn ($id) => (int) $id)
+            ->diff($validProgramIds);
 
         if ($invalidPrograms->isNotEmpty()) {
             $validator->errors()->add($programKey, 'Each selected program must belong to one of the selected projects.');
@@ -72,7 +77,7 @@ class ProjectProgramScope
         $query = Program::query()->where('active', true);
 
         if ($projectIds !== []) {
-            $query->whereIn('project_id', $projectIds);
+            $query->whereHas('projects', fn ($relation) => $relation->whereIn('projects.id', $projectIds));
         }
 
         return $query->pluck('id')->all();
@@ -124,5 +129,128 @@ class ProjectProgramScope
         if ($invalidEntityIds->isNotEmpty()) {
             $validator->errors()->add($errorKey, $message);
         }
+    }
+
+    /**
+     * Programs that would have no projects if the given project were deleted.
+     *
+     * @return Collection<int, Program>
+     */
+    public static function programsOrphanedByDeletingProject(Project $project): Collection
+    {
+        return Program::query()
+            ->whereHas('projects', fn ($query) => $query->whereKey($project->id))
+            ->whereDoesntHave('projects', fn ($query) => $query->where('projects.id', '!=', $project->id))
+            ->orderBy('name')
+            ->get();
+    }
+
+    /**
+     * View data for the project/program scope picker Blade component.
+     *
+     * @param  Collection<int, Project>  $projects
+     * @return array{
+     *     scopeProjects: Collection,
+     *     selectedProjectIds: list<string>,
+     *     selectedProgramIds: list<string>,
+     *     programOptions: list<array<string, mixed>>,
+     *     programProjectIdsMap: array<string, list<string>>,
+     *     projectProgramMap: array<string, list<string>>,
+     *     projectNamesMap: array<string, string>,
+     *     projectPickerId: string,
+     *     programPickerId: string,
+     * }
+     */
+    public static function scopePickerViewData(
+        Collection $projects,
+        array $selectedProjectIds,
+        array $selectedProgramIds,
+        string $scopeId,
+        string $programBadgeClass = 'bg-primary-subtle text-primary-emphasis border',
+    ): array {
+        $scopeProjects = $projects instanceof Collection ? $projects : collect($projects);
+
+        $selectedProjectIds = collect($selectedProjectIds)
+            ->map(fn ($id) => (string) $id)
+            ->values()
+            ->all();
+
+        $selectedProgramIds = collect($selectedProgramIds)
+            ->map(fn ($id) => (string) $id)
+            ->values()
+            ->all();
+
+        $programsById = [];
+
+        foreach ($scopeProjects as $project) {
+            foreach ($project->programs as $program) {
+                $programKey = (string) $program->id;
+
+                if (!isset($programsById[$programKey])) {
+                    $programsById[$programKey] = [
+                        'id' => $program->id,
+                        'name' => $program->name,
+                        'projectIds' => [],
+                    ];
+                }
+
+                $programsById[$programKey]['projectIds'][] = (string) $project->id;
+            }
+        }
+
+        $programOptions = collect($programsById)
+            ->sortBy(fn ($program) => $program['name'])
+            ->values()
+            ->map(function ($program) use ($programBadgeClass, $selectedProjectIds, $scopeProjects) {
+                $contextProjectIds = collect($program['projectIds'])
+                    ->intersect($selectedProjectIds)
+                    ->values();
+
+                $contextNames = $contextProjectIds
+                    ->map(fn ($projectId) => optional($scopeProjects->firstWhere('id', (int) $projectId))->name)
+                    ->filter()
+                    ->values()
+                    ->all();
+
+                return [
+                    'id' => $program['id'],
+                    'name' => $program['name'],
+                    'contextLabels' => $contextNames,
+                    'contextBadgeClass' => $programBadgeClass,
+                ];
+            })
+            ->all();
+
+        $programProjectIdsMap = collect($programsById)
+            ->mapWithKeys(fn ($program, $programId) => [
+                $programId => collect($program['projectIds'])->unique()->values()->all(),
+            ])
+            ->all();
+
+        $projectProgramMap = $scopeProjects->mapWithKeys(function ($project) {
+            return [
+                (string) $project->id => $project->programs
+                    ->pluck('id')
+                    ->map(fn ($id) => (string) $id)
+                    ->values()
+                    ->all(),
+            ];
+        })->all();
+
+        $projectNamesMap = $scopeProjects->mapWithKeys(fn ($project) => [
+            (string) $project->id => $project->name,
+        ])->all();
+
+        return [
+            'scopeProjects' => $scopeProjects,
+            'selectedProjectIds' => $selectedProjectIds,
+            'selectedProgramIds' => $selectedProgramIds,
+            'programOptions' => $programOptions,
+            'programProjectIdsMap' => $programProjectIdsMap,
+            'projectProgramMap' => $projectProgramMap,
+            'projectNamesMap' => $projectNamesMap,
+            'projectPickerId' => $scopeId.'-projects',
+            'programPickerId' => $scopeId.'-programs',
+        ];
     }
 }

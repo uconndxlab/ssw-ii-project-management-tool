@@ -23,9 +23,9 @@ class AdminUserController extends Controller
         $query = User::query()->with([
             'supervisor:id,name',
             'projects:id,name',
-            'programs:id,name,project_id',
+            'programs:id,name',
             'teams.projects:id,name',
-            'teams.programs:id,name,project_id',
+            'teams.programs:id,name',
         ]);
 
         if ($request->filled('search')) {
@@ -203,11 +203,11 @@ class AdminUserController extends Controller
         $user->load([
             'supervisor',
             'projects',
-            'programs.project',
+            'programs.projects',
             'agreements.organizations',
             'agreements.states',
             'teams.projects',
-            'teams.programs.project',
+            'teams.programs.projects',
             'teams.agreements.organizations',
             'teams.agreements.states',
         ]);
@@ -252,7 +252,7 @@ class AdminUserController extends Controller
 
     private function userFormData(User $user): array
     {
-        $user->loadMissing(['projects', 'programs.project']);
+        $user->loadMissing(['projects', 'programs.projects']);
 
         $selectedProjectIds = $user->projects->pluck('id');
         $selectedProgramIds = $user->programs->pluck('id');
@@ -267,12 +267,12 @@ class AdminUserController extends Controller
             })
             ->with(['programs' => function ($query) use ($selectedProgramIds) {
                 $query->where(function ($programQuery) use ($selectedProgramIds) {
-                    $programQuery->where('active', true);
+                    $programQuery->where('programs.active', true);
 
                     if ($selectedProgramIds->isNotEmpty()) {
-                        $programQuery->orWhereIn('id', $selectedProgramIds);
+                        $programQuery->orWhereIn('programs.id', $selectedProgramIds);
                     }
-                })->orderBy('name');
+                })->orderBy('programs.name');
             }])
             ->orderBy('name')
             ->get();

@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests;
 
-use App\Models\Program;
+use App\Support\ProjectProgramScope;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -101,17 +101,11 @@ class AdminUserRequest extends FormRequest
             }
 
             if ($programIds->isNotEmpty()) {
-                $programProjectIds = Program::query()
-                    ->whereKey($programIds)
-                    ->pluck('project_id', 'id');
-
-                $invalidPrograms = $programProjectIds
-                    ->filter(fn ($projectId) => !$projectIds->contains((int) $projectId))
-                    ->keys();
-
-                if ($invalidPrograms->isNotEmpty()) {
-                    $validator->errors()->add('program_ids', 'Each selected program must belong to one of the selected projects.');
-                }
+                ProjectProgramScope::validateSelection(
+                    $validator,
+                    $projectIds->all(),
+                    $programIds->all()
+                );
             }
         });
     }

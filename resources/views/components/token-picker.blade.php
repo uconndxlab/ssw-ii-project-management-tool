@@ -28,7 +28,11 @@
             'label' => (string) data_get($item, $labelKey),
             'search' => strtolower((string) data_get($item, $searchKey, data_get($item, $labelKey))),
             'context' => data_get($item, 'context'),
-            'contextBadgeClass' => data_get($item, 'contextBadgeClass', 'bg-primary'),
+            'contextLabels' => array_values(array_filter(
+                data_get($item, 'contextLabels') ?? (data_get($item, 'context') ? [data_get($item, 'context')] : []),
+                fn ($label) => $label !== null && $label !== ''
+            )),
+            'contextBadgeClass' => data_get($item, 'contextBadgeClass', 'bg-primary-subtle text-primary-emphasis border'),
         ];
     })->filter(fn ($option) => $option['value'] !== '')->values()->all();
 @endphp
@@ -179,6 +183,20 @@
             });
         }
 
+        function appendContextBadges(textWrap, opt) {
+            const badgeClass = opt.contextBadgeClass || 'bg-primary-subtle text-primary-emphasis border';
+            const labels = Array.isArray(opt.contextLabels) && opt.contextLabels.length > 0
+                ? opt.contextLabels
+                : (opt.context ? [String(opt.context)] : []);
+
+            labels.forEach(function (label) {
+                const badge = document.createElement('span');
+                badge.className = 'badge ' + badgeClass;
+                badge.textContent = String(label);
+                textWrap.appendChild(badge);
+            });
+        }
+
         function filteredOptions(term) {
             const q = (term || '').trim().toLowerCase();
             return options.filter(function (opt) {
@@ -239,12 +257,7 @@
 
                     textWrap.appendChild(text);
 
-                    if (opt.context) {
-                        const badge = document.createElement('span');
-                        badge.className = 'badge ' + (opt.contextBadgeClass || 'bg-primary');
-                        badge.textContent = opt.context;
-                        textWrap.appendChild(badge);
-                    }
+                    appendContextBadges(textWrap, opt);
 
                     row.appendChild(checkbox);
                     row.appendChild(textWrap);
@@ -297,6 +310,30 @@
             }
             writeHiddenInputs();
             picker.dispatchEvent(new CustomEvent('token-picker:change', { bubbles: true }));
+        });
+
+        picker.addEventListener('token-picker:update-option-contexts', function (event) {
+            const contexts = typeof event.detail === 'object' && event.detail !== null ? event.detail : {};
+
+            options.forEach(function (opt) {
+                if (Object.prototype.hasOwnProperty.call(contexts, String(opt.value))) {
+                    const context = contexts[String(opt.value)];
+
+                    if (Array.isArray(context)) {
+                        opt.contextLabels = context.filter(function (label) {
+                            return label !== null && String(label).trim() !== '';
+                        });
+                        opt.context = null;
+                    } else {
+                        opt.context = context && String(context).trim() !== '' ? String(context) : null;
+                        opt.contextLabels = opt.context ? [opt.context] : [];
+                    }
+                }
+            });
+
+            if (!listWrap.classList.contains('d-none')) {
+                renderList(true);
+            }
         });
 
         picker.addEventListener('token-picker:set-disabled', function (event) {

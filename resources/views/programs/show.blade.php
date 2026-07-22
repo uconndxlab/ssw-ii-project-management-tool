@@ -23,10 +23,14 @@
                 @endif
             </dd>
 
-            <dt class="col-5 text-muted fw-normal small">Project</dt>
+            <dt class="col-5 text-muted fw-normal small">Projects</dt>
             <dd class="col-7 mb-2">
-                @if($program->project)
-                    <x-entity-relation-badge kind="project" :href="route('projects.show', $program->project)">{{ $program->project->name }}</x-entity-relation-badge>
+                @if($program->projects->isNotEmpty())
+                    <div class="d-flex flex-wrap gap-1">
+                        @foreach($program->projects->sortBy('name') as $project)
+                            <x-entity-relation-badge kind="project" :href="route('projects.show', $project)">{{ $project->name }}</x-entity-relation-badge>
+                        @endforeach
+                    </div>
                 @else
                     <span class="text-muted">—</span>
                 @endif

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Project;
+use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -117,6 +118,17 @@ class ProjectController extends Controller
     public function destroy(Project $project)
     {
         abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can delete projects.');
+
+        $orphanedPrograms = ProjectProgramScope::programsOrphanedByDeletingProject($project);
+
+        if ($orphanedPrograms->isNotEmpty()) {
+            $names = $orphanedPrograms->pluck('name')->join(', ');
+
+            return redirect()
+                ->route('projects.index')
+                ->with('error', 'Cannot delete this project because it is the only project for: '.$names.'. Assign those programs to another project first.');
+        }
+
         $project->delete();
 
         return redirect()

@@ -93,7 +93,6 @@
                 :selected-program-ids="$selectedProgramIds"
                 project-help-text="Select the projects this user can work within."
                 program-help-text="Programs are limited to the selected projects."
-                program-badge-class="bg-primary"
             />
         </x-section-card>
     </div>

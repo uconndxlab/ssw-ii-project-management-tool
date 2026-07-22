@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
@@ -14,7 +13,6 @@ class Program extends Model
         'name',
         'description',
         'active',
-        'project_id',
     ];
 
     protected function casts(): array
@@ -39,9 +37,9 @@ class Program extends Model
         return $this->hasMany(AgreementCertificationCandidate::class);
     }
 
-    public function project(): BelongsTo
+    public function projects(): BelongsToMany
     {
-        return $this->belongsTo(Project::class);
+        return $this->belongsToMany(Project::class, 'program_project')->withTimestamps();
     }
 
     public function organizations(): BelongsToMany

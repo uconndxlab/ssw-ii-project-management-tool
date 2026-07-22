@@ -54,20 +54,23 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="project_id" class="form-label">Project</label>
-                        <select class="form-select @error('project_id') is-invalid @enderror"
-                                id="project_id"
-                                name="project_id"
-                                required>
-                            <option value="">Select project...</option>
-                            @foreach($projects as $project)
-                                <option value="{{ $project->id }}" {{ old('project_id') == $project->id ? 'selected' : '' }}>
-                                    {{ $project->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('project_id')
-                            <div class="invalid-feedback">{{ $message }}</div>
+                        <label class="form-label">Projects</label>
+                        @php
+                            $selectedProjectIds = old('project_ids', []);
+                        @endphp
+                        <x-token-picker
+                            picker-id="program-create-projects"
+                            name="project_ids[]"
+                            :items="$projects"
+                            :selected-ids="$selectedProjectIds"
+                            placeholder="Search projects..."
+                            height="220px"
+                        />
+                        @error('project_ids')
+                            <div class="text-danger small mt-1">{{ $message }}</div>
+                        @enderror
+                        @error('project_ids.*')
+                            <div class="text-danger small mt-1">{{ $message }}</div>
                         @enderror
                     </div>
 

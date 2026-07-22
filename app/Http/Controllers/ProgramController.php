@@ -4,21 +4,20 @@ namespace App\Http\Controllers;
 
 use App\Models\Program;
 use App\Models\Project;
+use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
 
 class ProgramController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Program::with('project');
+        $query = Program::with('projects');
 
-        // Search
         $search = trim((string) $request->input('search', ''));
         if ($search !== '') {
             $query->where('name', 'like', "%{$search}%");
         }
 
-        // Status filter
         $status = $request->input('status');
         if ($status === 'active') {
             $query->where('active', true);
@@ -26,7 +25,6 @@ class ProgramController extends Controller
             $query->where('active', false);
         }
 
-        // Sorting
         $sort = $request->input('sort', 'name');
         $direction = $request->input('direction', 'asc') === 'desc' ? 'desc' : 'asc';
 
@@ -47,7 +45,6 @@ class ProgramController extends Controller
 
         $programs = $query->paginate(20)->withQueryString();
 
-        // HTMX: table only
         if ($request->header('HX-Request') === 'true') {
             return view('programs.partials.table', compact('programs', 'sort', 'direction'));
         }
@@ -58,6 +55,7 @@ class ProgramController extends Controller
     public function create()
     {
         $projects = Project::where('active', true)->orderBy('name')->get();
+
         return view('programs.create', compact('projects'));
     }
 
@@ -67,15 +65,17 @@ class ProgramController extends Controller
             'name' => ['required', 'string', 'max:255', 'unique:programs'],
             'description' => ['nullable', 'string'],
             'active' => ['nullable', 'boolean'],
-            'project_id' => ['required', 'exists:projects,id'],
+            'project_ids' => ['required', 'array', 'min:1'],
+            'project_ids.*' => ['distinct', 'exists:projects,id'],
         ]);
 
-        Program::create([
+        $program = Program::create([
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
             'active' => $validated['active'] ?? true,
-            'project_id' => $validated['project_id'],
         ]);
+
+        $program->projects()->sync(ProjectProgramScope::normalizeIds($validated['project_ids']));
 
         return redirect()
             ->route('programs.index')
@@ -85,7 +85,7 @@ class ProgramController extends Controller
     public function show(Program $program)
     {
         $program->load([
-            'project',
+            'projects',
             'activities.activityType',
             'activities.user',
             'activities.agreements',
@@ -121,8 +121,14 @@ class ProgramController extends Controller
 
     public function edit(Program $program)
     {
-        $projects = Project::where('active', true)->orderBy('name')->get();
-        $program->load('project');
+        $program->load('projects');
+
+        $projects = Project::query()
+            ->where('active', true)
+            ->orWhereHas('programs', fn ($query) => $query->whereKey($program->id))
+            ->orderBy('name')
+            ->get();
+
         return view('programs.edit', compact('program', 'projects'));
     }
 
@@ -132,15 +138,17 @@ class ProgramController extends Controller
             'name' => ['required', 'string', 'max:255', 'unique:programs,name,' . $program->id],
             'description' => ['nullable', 'string'],
             'active' => ['nullable', 'boolean'],
-            'project_id' => ['required', 'exists:projects,id'],
+            'project_ids' => ['required', 'array', 'min:1'],
+            'project_ids.*' => ['distinct', 'exists:projects,id'],
         ]);
 
         $program->update([
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
             'active' => $validated['active'] ?? false,
-            'project_id' => $validated['project_id'],
         ]);
+
+        $program->projects()->sync(ProjectProgramScope::normalizeIds($validated['project_ids']));
 
         return redirect()
             ->route('programs.index')

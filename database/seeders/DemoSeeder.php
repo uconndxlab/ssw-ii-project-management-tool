@@ -143,13 +143,16 @@ class DemoSeeder extends Seeder
         $programs = [];
 
         foreach ($programNames as $name) {
-            $programs[] = Program::firstOrCreate(
+            $program = Program::firstOrCreate(
                 ['name' => $name],
                 [
                     'active' => true,
-                    'project_id' => $project->id,
                 ]
             );
+
+            $program->projects()->syncWithoutDetaching([$project->id]);
+
+            $programs[] = $program;
         }
 
         return $programs;

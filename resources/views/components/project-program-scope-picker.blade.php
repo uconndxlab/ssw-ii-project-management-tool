@@ -16,52 +16,29 @@
     'programHelpText' => null,
     'projectHeight' => '260px',
     'programHeight' => '260px',
-    'programBadgeClass' => 'bg-primary',
-    'projectEmptySelectionLabel' => 'All projects',
-    'programEmptySelectionLabel' => 'All programs',
+    'programBadgeClass' => 'bg-primary-subtle text-primary-emphasis border',
+    'projectEmptySelectionLabel' => null,
+    'programEmptySelectionLabel' => null,
 ])
 
-@php
-    $selectedProjectIds = collect($selectedProjectIds)->map(fn ($id) => (string) $id)->values()->all();
-    $selectedProgramIds = collect($selectedProgramIds)->map(fn ($id) => (string) $id)->values()->all();
+@php($scopePicker = App\Support\ProjectProgramScope::scopePickerViewData(collect($projects ?? []), $selectedProjectIds, $selectedProgramIds, $scopeId, $programBadgeClass))
 
-    $programOptions = $projects->flatMap(function ($project) use ($programBadgeClass) {
-        return $project->programs->map(function ($program) use ($project, $programBadgeClass) {
-            return [
-                'id' => $program->id,
-                'name' => $program->name,
-                'context' => $project->name,
-                'contextBadgeClass' => $programBadgeClass,
-            ];
-        });
-    })->values();
-
-    $projectProgramMap = $projects->mapWithKeys(function ($project) {
-        return [
-            (string) $project->id => $project->programs
-                ->pluck('id')
-                ->map(fn ($id) => (string) $id)
-                ->values()
-                ->all(),
-        ];
-    })->all();
-
-    $projectPickerId = $scopeId . '-projects';
-    $programPickerId = $scopeId . '-programs';
-@endphp
-
-<div data-project-program-scope data-scope-id="{{ $scopeId }}" data-project-program-map='@json($projectProgramMap)'>
+<div data-project-program-scope
+     data-scope-id="{{ $scopeId }}"
+     data-project-program-map='@json($scopePicker['projectProgramMap'])'
+     data-program-project-ids-map='@json($scopePicker['programProjectIdsMap'])'
+     data-project-names-map='@json($scopePicker['projectNamesMap'])'>
     <div class="row g-3">
         <div class="col-md-6">
             <label class="form-label">{{ $projectLabel }}</label>
             <x-token-picker
-                :picker-id="$projectPickerId"
+                :picker-id="$scopePicker['projectPickerId']"
                 :name="$projectFieldName"
-                :items="$projects"
-                :selected-ids="$selectedProjectIds"
+                :items="$scopePicker['scopeProjects']"
+                :selected-ids="$scopePicker['selectedProjectIds']"
                 :placeholder="$projectPlaceholder"
                 :height="$projectHeight"
-                :empty-selection-label="$projectEmptySelectionLabel"
+                :empty-selection-label="$projectEmptySelectionLabel ?? ''"
             />
             @if($projectHelpText)
                 <div class="form-text">{{ $projectHelpText }}</div>
@@ -74,15 +51,15 @@
         <div class="col-md-6">
             <label class="form-label">{{ $programLabel }}</label>
             <x-token-picker
-                :picker-id="$programPickerId"
+                :picker-id="$scopePicker['programPickerId']"
                 :name="$programFieldName"
-                :options="$programOptions"
-                :selected-ids="$selectedProgramIds"
+                :options="$scopePicker['programOptions']"
+                :selected-ids="$scopePicker['selectedProgramIds']"
                 :placeholder="$programPlaceholder"
                 :disabled-placeholder="$disabledPlaceholder"
-                :disabled="empty($selectedProjectIds)"
+                :disabled="empty($scopePicker['selectedProjectIds'])"
                 :height="$programHeight"
-                :empty-selection-label="$programEmptySelectionLabel"
+                :empty-selection-label="$programEmptySelectionLabel ?? ''"
             />
             @if($programHelpText)
                 <div class="form-text">{{ $programHelpText }}</div>
@@ -125,10 +102,44 @@
         }
 
         const projectProgramMap = parseJson(section.dataset.projectProgramMap, {});
+        const programProjectIdsMap = parseJson(section.dataset.programProjectIdsMap, {});
+        const projectNamesMap = parseJson(section.dataset.projectNamesMap, {});
         const defaultDisabledPlaceholder = programPicker.dataset.disabledPlaceholder || 'Select at least one project first...';
         let externalAllowedProgramIds = null;
         let forceProgramDisabled = false;
         let forcedProgramDisabledPlaceholder = defaultDisabledPlaceholder;
+
+        function programContextLabels(projectIds) {
+            const contexts = {};
+
+            Object.keys(programProjectIdsMap).forEach(function (programId) {
+                const linkedProjectIds = Array.isArray(programProjectIdsMap[programId])
+                    ? programProjectIdsMap[programId].map(String)
+                    : [];
+                const names = projectIds
+                    .map(String)
+                    .filter(function (projectId) {
+                        return linkedProjectIds.includes(String(projectId));
+                    })
+                    .map(function (projectId) {
+                        return projectNamesMap[String(projectId)] || '';
+                    })
+                    .filter(function (name) {
+                        return name !== '';
+                    });
+
+                contexts[String(programId)] = names;
+            });
+
+            return contexts;
+        }
+
+        function updateProgramOptionContexts(projectIds) {
+            programPicker.dispatchEvent(new CustomEvent('token-picker:update-option-contexts', {
+                detail: programContextLabels(projectIds),
+                bubbles: true,
+            }));
+        }
 
         function effectiveProgramIds(projectIds, programIds) {
             if (programIds.length > 0) {
@@ -210,6 +221,7 @@
                 bubbles: true,
             }));
 
+            updateProgramOptionContexts(projectIds);
             notifyScopeChange();
         }
 

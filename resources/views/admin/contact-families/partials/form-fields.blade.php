@@ -33,6 +33,8 @@
                 :projects="$projects"
                 :selected-project-ids="$selectedProjectIds"
                 :selected-program-ids="$selectedProgramIds"
+                project-empty-selection-label="All projects"
+                program-empty-selection-label="All programs"
                 project-help-text="Optional project scope for reporting and agreement-form filtering."
                 program-help-text="Leave projects and programs empty to make this contact family available everywhere."
             />
