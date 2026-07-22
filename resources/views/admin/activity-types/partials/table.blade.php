@@ -107,24 +107,8 @@
 @once
     <script>
     (function () {
-        function initActivityTypesTableTooltips(scope) {
-            if (!window.bootstrap || !bootstrap.Tooltip) {
-                return;
-            }
-
-            (scope || document).querySelectorAll('#activity-types-table [data-bs-toggle="tooltip"]').forEach(function (element) {
-                bootstrap.Tooltip.getOrCreateInstance(element);
-            });
-        }
-
-        document.addEventListener('DOMContentLoaded', function () {
-            initActivityTypesTableTooltips();
-        });
-
         document.body.addEventListener('htmx:afterSwap', function (event) {
             if (event.target && event.target.id === 'activity-types-table') {
-                initActivityTypesTableTooltips(event.target);
-
                 var params = new URLSearchParams(window.location.search);
                 var form = document.getElementById('activity-type-filters');
                 if (form) {

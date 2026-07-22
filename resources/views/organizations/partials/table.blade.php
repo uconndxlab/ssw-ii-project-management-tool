@@ -143,24 +143,8 @@
 @once
     <script>
     (function () {
-        function initOrganizationsTableTooltips(scope) {
-            if (!window.bootstrap || !bootstrap.Tooltip) {
-                return;
-            }
-
-            (scope || document).querySelectorAll('#organizations-table [data-bs-toggle="tooltip"]').forEach(function (element) {
-                bootstrap.Tooltip.getOrCreateInstance(element);
-            });
-        }
-
-        document.addEventListener('DOMContentLoaded', function () {
-            initOrganizationsTableTooltips();
-        });
-
         document.body.addEventListener('htmx:afterSwap', function (event) {
             if (event.target && event.target.id === 'organizations-table') {
-                initOrganizationsTableTooltips(event.target);
-
                 var params = new URLSearchParams(window.location.search);
                 var form = document.getElementById('organization-filters');
                 if (form) {

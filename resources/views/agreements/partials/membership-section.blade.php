@@ -215,30 +215,6 @@
         });
     }
 
-    function initializeMembershipTooltips(scope) {
-        if (!window.bootstrap || !bootstrap.Tooltip) {
-            return;
-        }
-
-        scope.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (element) {
-            bootstrap.Tooltip.getOrCreateInstance(element);
-        });
-    }
-
-    function disposeMembershipTooltips(scope) {
-        if (!window.bootstrap || !bootstrap.Tooltip || !scope) {
-            return;
-        }
-
-        scope.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (element) {
-            const tooltip = bootstrap.Tooltip.getInstance(element);
-
-            if (tooltip) {
-                tooltip.dispose();
-            }
-        });
-    }
-
     function getMembershipPickers(section) {
         const scope = section.closest('.card-body') || document;
 
@@ -335,7 +311,7 @@
         const selectedUserIds = getSelectedIdsFromTokenPicker(tokenPicker);
         const selectedTeamMemberIds = new Set();
 
-        disposeMembershipTooltips(body);
+        disposeTooltips(body);
 
         selectedTeamIds.forEach(function (teamId) {
             const memberIds = Array.isArray(teamMembers[teamId]) ? teamMembers[teamId] : [];
@@ -359,7 +335,7 @@
             button.setAttribute('data-bs-toggle', 'tooltip');
             button.setAttribute('data-bs-title', label);
             button.addEventListener('click', function () {
-                disposeMembershipTooltips(body);
+                disposeTooltips(body);
                 onClick();
             });
 
@@ -507,7 +483,7 @@
 
         const hasRows = body.children.length > 0;
         emptyState.classList.toggle('d-none', hasRows);
-        initializeMembershipTooltips(body);
+        initTooltips(body);
     }
 
     function syncAdditionalUserRestrictions(section) {

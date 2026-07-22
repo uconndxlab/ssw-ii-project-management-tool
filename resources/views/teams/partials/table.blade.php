@@ -120,24 +120,8 @@
 @once
     <script>
     (function () {
-        function initTeamsTableTooltips(scope) {
-            if (!window.bootstrap || !bootstrap.Tooltip) {
-                return;
-            }
-
-            (scope || document).querySelectorAll('#teams-table [data-bs-toggle="tooltip"]').forEach(function (element) {
-                bootstrap.Tooltip.getOrCreateInstance(element);
-            });
-        }
-
-        document.addEventListener('DOMContentLoaded', function () {
-            initTeamsTableTooltips();
-        });
-
         document.body.addEventListener('htmx:afterSwap', function (event) {
             if (event.target && event.target.id === 'teams-table') {
-                initTeamsTableTooltips(event.target);
-
                 var params = new URLSearchParams(window.location.search);
                 var form = document.getElementById('team-filters');
                 if (form) {

@@ -462,21 +462,6 @@
             });
         }
 
-        function initTooltips(scope) {
-            if (!window.bootstrap || !bootstrap.Tooltip) return;
-            (scope || document).querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (element) {
-                bootstrap.Tooltip.getOrCreateInstance(element);
-            });
-        }
-
-        function disposeTooltips(scope) {
-            if (!window.bootstrap || !bootstrap.Tooltip) return;
-            (scope || document).querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (element) {
-                const tooltip = bootstrap.Tooltip.getInstance(element);
-                if (tooltip) { tooltip.hide(); tooltip.dispose(); }
-            });
-        }
-
         function emptyStateRowMarkup() {
             return '<tr class="deliverable-empty-row"><td colspan="5" class="text-center text-muted py-4 small">Click "+ Add Deliverable" to create a deliverable for this agreement.</td></tr>';
         }

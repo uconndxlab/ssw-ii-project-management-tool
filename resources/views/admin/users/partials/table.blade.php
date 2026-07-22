@@ -159,24 +159,8 @@
 @once
     <script>
     (function () {
-        function initUsersTableTooltips(scope) {
-            if (!window.bootstrap || !bootstrap.Tooltip) {
-                return;
-            }
-
-            (scope || document).querySelectorAll('#users-table [data-bs-toggle="tooltip"]').forEach(function (element) {
-                bootstrap.Tooltip.getOrCreateInstance(element);
-            });
-        }
-
-        document.addEventListener('DOMContentLoaded', function () {
-            initUsersTableTooltips();
-        });
-
         document.body.addEventListener('htmx:afterSwap', function (event) {
             if (event.target && event.target.id === 'users-table') {
-                initUsersTableTooltips(event.target);
-
                 var params = new URLSearchParams(window.location.search);
                 var form = document.getElementById('user-filters');
                 if (form) {

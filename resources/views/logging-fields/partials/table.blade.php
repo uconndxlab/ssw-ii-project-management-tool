@@ -140,24 +140,8 @@
 @once
     <script>
     (function () {
-        function initLoggingFieldsTableTooltips(scope) {
-            if (!window.bootstrap || !bootstrap.Tooltip) {
-                return;
-            }
-
-            (scope || document).querySelectorAll('#logging-fields-table [data-bs-toggle="tooltip"]').forEach(function (element) {
-                bootstrap.Tooltip.getOrCreateInstance(element);
-            });
-        }
-
-        document.addEventListener('DOMContentLoaded', function () {
-            initLoggingFieldsTableTooltips();
-        });
-
         document.body.addEventListener('htmx:afterSwap', function (event) {
             if (event.target && event.target.id === 'logging-fields-table') {
-                initLoggingFieldsTableTooltips(event.target);
-
                 var params = new URLSearchParams(window.location.search);
                 var form = document.getElementById('logging-field-filters');
                 if (form) {

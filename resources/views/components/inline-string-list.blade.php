@@ -216,30 +216,6 @@
 
         let nextTempId = 1;
 
-        function initTooltips(scope) {
-            if (!window.bootstrap || !bootstrap.Tooltip) {
-                return;
-            }
-
-            (scope || document).querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (element) {
-                bootstrap.Tooltip.getOrCreateInstance(element);
-            });
-        }
-
-        function disposeTooltips(scope) {
-            if (!window.bootstrap || !bootstrap.Tooltip) {
-                return;
-            }
-
-            (scope || document).querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (element) {
-                const tooltip = bootstrap.Tooltip.getInstance(element);
-                if (tooltip) {
-                    tooltip.hide();
-                    tooltip.dispose();
-                }
-            });
-        }
-
         function visibleRows() {
             return Object.values(rows).filter(function (row) {
                 return row._delete !== '1';

@@ -186,30 +186,6 @@
         );
     }
 
-    function initializeOrganizationTooltips(scope) {
-        if (!window.bootstrap || !bootstrap.Tooltip) {
-            return;
-        }
-
-        scope.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (element) {
-            bootstrap.Tooltip.getOrCreateInstance(element);
-        });
-    }
-
-    function disposeOrganizationTooltips(scope) {
-        if (!window.bootstrap || !bootstrap.Tooltip || !scope) {
-            return;
-        }
-
-        scope.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (element) {
-            const tooltip = bootstrap.Tooltip.getInstance(element);
-
-            if (tooltip) {
-                tooltip.dispose();
-            }
-        });
-    }
-
     function renderOrganizationsLedger(section) {
         const organizationPicker = getOrganizationPicker(section);
         const body = section.querySelector('[data-organizations-ledger]');
@@ -225,7 +201,7 @@
         const selectedRecipientIds = new Set(getHiddenInputIds(section, '[data-organization-recipient-inputs]'));
         const selectedOrganizationIds = getSelectedIdsFromTokenPicker(organizationPicker);
 
-        disposeOrganizationTooltips(body);
+        disposeTooltips(body);
         body.innerHTML = '';
 
         function createRemoveButton(organizationId) {
@@ -237,7 +213,7 @@
             button.setAttribute('data-bs-toggle', 'tooltip');
             button.setAttribute('data-bs-title', 'Remove organization');
             button.addEventListener('click', function () {
-                disposeOrganizationTooltips(body);
+                disposeTooltips(body);
                 const nextOrganizationIds = getSelectedIdsFromTokenPicker(organizationPicker).filter(function (value) {
                     return value !== String(organizationId);
                 });
@@ -348,7 +324,7 @@
         });
 
         emptyState.classList.toggle('d-none', selectedOrganizationIds.length > 0);
-        initializeOrganizationTooltips(body);
+        initTooltips(body);
     }
 
     function initializeOrganizationsSection(section) {

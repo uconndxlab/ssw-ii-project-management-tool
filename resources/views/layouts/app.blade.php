@@ -159,18 +159,23 @@
                 });
             }
 
-            window.initTooltips = initTooltips;
-
-            function initTableFilterClearTooltips(scope) {
+            function disposeTooltips(scope) {
                 if (!window.bootstrap || !bootstrap.Tooltip) {
                     return;
                 }
 
                 var root = scope || document;
-                root.querySelectorAll('[data-table-filter-clear-wrap] [data-bs-toggle="tooltip"]').forEach(function (element) {
-                    bootstrap.Tooltip.getOrCreateInstance(element);
+                root.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (element) {
+                    var tooltip = bootstrap.Tooltip.getInstance(element);
+                    if (tooltip) {
+                        tooltip.hide();
+                        tooltip.dispose();
+                    }
                 });
             }
+
+            window.initTooltips = initTooltips;
+            window.disposeTooltips = disposeTooltips;
 
             window.syncTableFilterClearButtons = function (scope) {
                 var root = scope || document;
@@ -183,7 +188,7 @@
                     wrap.classList.toggle('d-none', !formHasActiveFilters(form));
                 });
 
-                initTableFilterClearTooltips(root);
+                initTooltips(root);
             };
 
             document.addEventListener('DOMContentLoaded', function () {

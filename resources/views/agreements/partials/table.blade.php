@@ -171,29 +171,3 @@
         <x-htmx-pagination :paginator="$agreements" target="#agreements-table" />
     </div>
 </div>
-
-@once
-    <script>
-    (function () {
-        function initAgreementTableTooltips(scope) {
-            if (!window.bootstrap || !bootstrap.Tooltip) {
-                return;
-            }
-
-            (scope || document).querySelectorAll('#agreements-table [data-bs-toggle="tooltip"]').forEach(function (element) {
-                bootstrap.Tooltip.getOrCreateInstance(element);
-            });
-        }
-
-        document.addEventListener('DOMContentLoaded', function () {
-            initAgreementTableTooltips();
-        });
-
-        document.body.addEventListener('htmx:afterSwap', function (event) {
-            if (event.target && event.target.id === 'agreements-table') {
-                initAgreementTableTooltips(event.target);
-            }
-        });
-    })();
-    </script>
-@endonce
