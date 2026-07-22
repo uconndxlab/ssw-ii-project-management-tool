@@ -148,6 +148,19 @@
                 return hasFilter;
             }
 
+            function initTooltips(scope) {
+                if (!window.bootstrap || !bootstrap.Tooltip) {
+                    return;
+                }
+
+                var root = scope || document;
+                root.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (element) {
+                    bootstrap.Tooltip.getOrCreateInstance(element);
+                });
+            }
+
+            window.initTooltips = initTooltips;
+
             function initTableFilterClearTooltips(scope) {
                 if (!window.bootstrap || !bootstrap.Tooltip) {
                     return;
@@ -175,6 +188,7 @@
 
             document.addEventListener('DOMContentLoaded', function () {
                 syncTableFilterClearButtons();
+                initTooltips();
             });
 
             document.body.addEventListener('input', function (event) {
@@ -197,6 +211,7 @@
 
             document.body.addEventListener('htmx:afterSettle', function () {
                 syncTableFilterClearButtons();
+                initTooltips();
             });
         })();
     </script>

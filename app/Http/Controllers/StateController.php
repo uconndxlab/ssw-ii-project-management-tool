@@ -69,7 +69,13 @@ class StateController extends Controller
         }
         $staffMembers = collect($staffMembersMap)->sortBy('name');
 
-        return view('states.show', compact('state', 'staffMembers'));
+        $recentActivities = $state->activities()
+            ->with(['activityType', 'user', 'agreements'])
+            ->orderByDesc('engagement_date')
+            ->limit(10)
+            ->get();
+
+        return view('states.show', compact('state', 'staffMembers', 'recentActivities'));
     }
 
     public function edit(State $state)

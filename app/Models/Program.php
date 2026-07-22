@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 
 class Program extends Model
 {
@@ -51,5 +52,28 @@ class Program extends Model
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'user_program')->withTimestamps();
+    }
+
+    /**
+     * Active agreements linked via agreement_program, plus any linked to activities on this program.
+     */
+    public function agreementsForDisplay(): Collection
+    {
+        $pivotIds = $this->agreements()
+            ->where('agreements.active', true)
+            ->pluck('agreements.id');
+
+        $activityLinkedIds = Agreement::query()
+            ->where('active', true)
+            ->whereHas('activities', function ($query) {
+                $query->whereHas('programs', fn ($programQuery) => $programQuery->where('programs.id', $this->id));
+            })
+            ->pluck('id');
+
+        return Agreement::query()
+            ->whereIn('id', $pivotIds->merge($activityLinkedIds)->unique())
+            ->with('states')
+            ->orderBy('name')
+            ->get();
     }
 }

@@ -132,40 +132,7 @@
 
     {{-- ── Recent Activity ─────────────────────────────────────────────── --}}
     <x-slot:activity>
-        @if($recentActivities->isNotEmpty())
-            <div class="table-responsive">
-                <table class="table table-sm table-hover mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Date</th>
-                            <th>Type</th>
-                            <th>Agreement</th>
-                            <th class="text-end">Hours</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($recentActivities as $activity)
-                        <tr>
-                            <td>
-                                <a href="{{ route('activities.show', $activity) }}" class="text-decoration-none text-dark">
-                                    {{ $activity->engagement_date->format('M d, Y') }}
-                                </a>
-                            </td>
-                            <td>{{ $activity->activityType->name ?? '—' }}</td>
-                            <td>
-                                @foreach($activity->agreements->take(2) as $agr)
-                                    <x-entity-relation-badge kind="agreement" :href="$agr->isLinkable() ? route('agreements.show', $agr) : null" class="me-1">{{ $agr->name }}</x-entity-relation-badge>
-                                @endforeach
-                            </td>
-                            <td class="text-end">—</td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        @else
-            <p class="text-muted mb-0">No activities logged by this user yet.</p>
-        @endif
+        <x-recent-activity-table :activities="$recentActivities" variant="user" empty-message="No activities logged by this user yet." />
     </x-slot:activity>
 </x-entity-show>
 @endsection

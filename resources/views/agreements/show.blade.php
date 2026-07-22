@@ -229,32 +229,7 @@
         </div>
 
         @if($recentActivities->isNotEmpty())
-            <div class="table-responsive">
-                <table class="table table-hover table-sm mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Date</th>
-                            <th>Contact Family</th>
-                            <th>Activity Type</th>
-                            <th>Logged By</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($recentActivities as $activity)
-                            <tr>
-                                <td>
-                                    <a href="{{ route('activities.show', $activity) }}" class="text-decoration-none text-dark">
-                                        {{ $activity->engagement_date->format('M d, Y') }}
-                                    </a>
-                                </td>
-                                <td><span class="badge bg-primary">{{ $activity->activityType->contactFamily->name }}</span></td>
-                                <td class="small">{{ $activity->activityType->name }}</td>
-                                <td class="small text-muted">{{ $activity->user->name }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
+            <x-recent-activity-table :activities="$recentActivities" variant="agreement" />
         @else
             <div class="text-center py-3">
                 <p class="text-muted mb-0">No activities logged for this agreement yet.</p>

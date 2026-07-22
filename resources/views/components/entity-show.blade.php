@@ -50,7 +50,7 @@
 
     {{-- Summary column (narrow) --}}
     <div class="col-lg-4">
-        <div class="card shadow-sm h-100">
+        <div class="card shadow-sm entity-show-card h-100">
             <div class="card-header bg-light py-2">
                 <span class="text-muted fw-semibold small text-uppercase" style="letter-spacing:.05em;">
                     Summary
@@ -67,7 +67,7 @@
 
         @if($activityFirst)
             {{-- Recent Activity card --}}
-            <div class="card shadow-sm">
+            <div class="card shadow-sm entity-show-card">
                 <div class="card-header bg-light py-2">
                     <span class="text-muted fw-semibold small text-uppercase" style="letter-spacing:.05em;">
                         Recent Activity
@@ -79,7 +79,7 @@
             </div>
 
             {{-- Main content card --}}
-            <div class="card shadow-sm">
+            <div class="card shadow-sm entity-show-card">
                 <div class="card-header bg-light py-2">
                     <span class="text-muted fw-semibold small text-uppercase" style="letter-spacing:.05em;">
                         {{ $mainCardTitle }}
@@ -91,7 +91,7 @@
             </div>
         @else
             {{-- Relationships card --}}
-            <div class="card shadow-sm">
+            <div class="card shadow-sm entity-show-card">
                 <div class="card-header bg-light py-2">
                     <span class="text-muted fw-semibold small text-uppercase" style="letter-spacing:.05em;">
                         {{ $mainCardTitle }}
@@ -103,7 +103,7 @@
             </div>
 
             {{-- Recent Activity card --}}
-            <div class="card shadow-sm">
+            <div class="card shadow-sm entity-show-card">
                 <div class="card-header bg-light py-2">
                     <span class="text-muted fw-semibold small text-uppercase" style="letter-spacing:.05em;">
                         Recent Activity

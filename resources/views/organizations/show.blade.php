@@ -31,13 +31,13 @@
 
             <dt class="col-5 text-muted fw-normal small">State(s)</dt>
             <dd class="col-7 mb-2">
-                @forelse($organization->states as $state)
-                    <a href="{{ route('states.show', $state) }}" class="badge bg-info text-dark text-decoration-none me-1">
-                        {{ $state->name }}
-                    </a>
-                @empty
-                    <span class="text-muted">—</span>
-                @endforelse
+                <div class="d-flex flex-wrap gap-1">
+                    @forelse($organization->states as $state)
+                        <x-entity-relation-badge kind="state" :href="route('states.show', $state)">{{ $state->name }}</x-entity-relation-badge>
+                    @empty
+                        <span class="text-muted small">—</span>
+                    @endforelse
+                </div>
             </dd>
 
             <dt class="col-5 text-muted fw-normal small">Associated Users</dt>
@@ -51,7 +51,7 @@
 
             <dt class="col-5 text-muted fw-normal small">Agreements</dt>
             <dd class="col-7 mb-2">
-                <span class="badge bg-success rounded-pill">{{ $agreements->count() }}</span>
+                <span class="badge bg-success-subtle text-success-emphasis border rounded-pill">{{ $agreements->count() }}</span>
             </dd>
 
             <dt class="col-5 text-muted fw-normal small">Staff</dt>
@@ -77,39 +77,33 @@
 
     {{-- ── Relationships ───────────────────────────────────────────────── --}}
     <x-slot:relationships>
-        <div class="row g-4">
-            {{-- Agreements --}}
-            <div class="col-md-7">
+        <div class="row g-4 align-items-stretch">
+            <div class="col-md-7 d-flex flex-column">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="fw-semibold mb-0">
                         Agreements
-                        <span class="badge bg-success rounded-pill ms-1">{{ $agreements->count() }}</span>
+                        <span class="badge bg-success-subtle text-success-emphasis border rounded-pill ms-1">{{ $agreements->count() }}</span>
                     </h6>
                     @if(auth()->user()->isAdmin())
                         <a href="{{ route('agreements.create') }}" class="btn btn-sm btn-outline-success">+ New</a>
                     @endif
                 </div>
-                @forelse($agreements as $agreement)
-                    <div class="py-2 border-bottom">
-                        @if($agreement->isLinkable())
-                            <a href="{{ route('agreements.show', $agreement) }}" class="text-decoration-none fw-semibold d-block">
-                                {{ $agreement->name }}
-                            </a>
-                        @else
-                            <span class="fw-semibold d-block text-body">{{ $agreement->name }}</span>
-                        @endif
-                        <div class="d-flex gap-2 mt-1 flex-wrap">
-                            @foreach($agreement->states as $state)
-                                <a href="{{ route('states.show', $state) }}" class="badge bg-info text-dark text-decoration-none">
-                                    {{ $state->name }}
-                                </a>
-                            @endforeach
-                            <small class="text-muted">{{ $agreement->users->count() }} staff</small>
-                        </div>
-                    </div>
-                @empty
-                    <p class="text-muted small mb-0">No agreements yet.</p>
-                @endforelse
+                <x-relationship-scroll-panel
+                    title="Linked agreements"
+                    :count="$agreements->count()"
+                    header-badge-class="bg-success-subtle text-success-emphasis border"
+                    class="flex-grow-1"
+                >
+                    @forelse($agreements as $agreement)
+                        <x-relationship-list-item
+                            :href="$agreement->isLinkable() ? route('agreements.show', $agreement) : null"
+                            :title="$agreement->name"
+                            :subtitle="$agreement->abstract ? \Illuminate\Support\Str::limit($agreement->abstract, 150) : null"
+                        />
+                    @empty
+                        <p class="text-muted small mb-0 py-2">No agreements yet.</p>
+                    @endforelse
+                </x-relationship-scroll-panel>
             </div>
 
             {{-- Team Members --}}
@@ -176,42 +170,7 @@
             <div class="d-flex justify-content-end mb-2">
                 <a href="{{ route('activities.create') }}" class="btn btn-sm btn-outline-success">Log Activity</a>
             </div>
-            <div class="table-responsive">
-                <table class="table table-sm table-hover mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Date</th>
-                            <th>Agreement</th>
-                            <th>Type</th>
-                            <th class="text-end">Hours</th>
-                            <th>By</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($recentActivities as $activity)
-                        <tr>
-                            <td>
-                                <a href="{{ route('activities.show', $activity) }}" class="text-decoration-none text-dark">
-                                    {{ $activity->engagement_date->format('M d, Y') }}
-                                </a>
-                            </td>
-                            <td>
-                                @foreach($activity->agreements->take(1) as $agr)
-                                    @if($agr->isLinkable())
-                                        <a href="{{ route('agreements.show', $agr) }}" class="text-decoration-none badge bg-secondary">{{ $agr->name }}</a>
-                                    @else
-                                        <span class="badge bg-secondary">{{ $agr->name }}</span>
-                                    @endif
-                                @endforeach
-                            </td>
-                            <td class="small">{{ $activity->activityType->name }}</td>
-                            <td class="text-end">{{ 0 }}</td>
-                            <td class="small text-muted">{{ $activity->user->name }}</td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
+            <x-recent-activity-table :activities="$recentActivities" variant="organization" />
         @else
             <div class="text-center py-3">
                 <p class="text-muted mb-2">No activities logged yet.</p>

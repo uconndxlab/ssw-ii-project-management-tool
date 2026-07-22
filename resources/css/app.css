@@ -1,5 +1,6 @@
 :root {
-    --app-page-bg: #f3f4f6;
+    --app-page-bg: #dde1e6;
+    --app-surface-inset: #e8eaed;
 }
 
 body {
@@ -8,6 +9,11 @@ body {
 
 main {
     min-height: calc(100vh - 56px);
+}
+
+.entity-show-card {
+    border: 1px solid rgba(0, 0, 0, 0.07);
+    box-shadow: 0 0.2rem 0.75rem rgba(0, 0, 0, 0.07);
 }
 
 .required-label::after {

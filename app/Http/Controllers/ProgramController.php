@@ -89,30 +89,16 @@ class ProgramController extends Controller
             'activities.activityType',
             'activities.user',
             'activities.agreements',
-            'agreements.states',
-            'agreements.users',
             'organizations.states',
         ]);
 
-        $recentActivities = $program->activities->sortByDesc('engagement_date')->take(10);
+        $recentActivities = $program->activities
+            ->sortByDesc('engagement_date')
+            ->take(10)
+            ->values();
 
-        // Unique agreements directly linked to the program
-        $agreements = $program->agreements->where('active', true)->sortBy('name');
+        $agreements = $program->agreementsForDisplay();
 
-        // Unique users across all agreements
-        $staffMap = [];
-        foreach ($agreements as $agreement) {
-            foreach ($agreement->users as $user) {
-                if (!isset($staffMap[$user->id])) {
-                    $staffMap[$user->id] = clone $user;
-                    $staffMap[$user->id]->via_agreements = collect();
-                }
-                $staffMap[$user->id]->via_agreements->push($agreement->name);
-            }
-        }
-        $users = collect($staffMap)->sortBy('name');
-
-        // Unique states from organizations + agreements
         $states = $program->organizations
             ->flatMap(fn ($o) => $o->states)
             ->merge($agreements->flatMap(fn ($a) => $a->states))
@@ -121,7 +107,16 @@ class ProgramController extends Controller
 
         $organizations = $program->organizations->sortBy('name');
 
-        return view('programs.show', compact('program', 'recentActivities', 'agreements', 'users', 'states', 'organizations'));
+        $activityCount = $program->activities()->count();
+
+        return view('programs.show', compact(
+            'program',
+            'recentActivities',
+            'agreements',
+            'states',
+            'organizations',
+            'activityCount',
+        ));
     }
 
     public function edit(Program $program)
