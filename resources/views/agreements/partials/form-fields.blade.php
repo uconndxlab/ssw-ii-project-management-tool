@@ -262,12 +262,12 @@
 
 <div class="card mb-4">
     <div class="card-body">
-        <h5 class="mb-3">Logging Fields</h5>
+        <h5 class="mb-4">Logging Fields</h5>
 
-        <div class="mb-4">
+        <div class="mb-4 pb-4 border-bottom">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <div>
-                    <h6 class="mb-1">Agreement-Specific Logging Fields</h6>
+                    <h6 class="mb-1">Custom Agreement-Specific Fields</h6>
                     <p class="text-muted small mb-0">These fields will be emphasized when activity is logged against this agreement.</p>
                 </div>
                 <a href="{{ route('logging-fields.index') }}" class="btn btn-sm btn-outline-secondary">Manage Logging Fields</a>
@@ -307,6 +307,47 @@
                     @endforeach
                 </div>
             @endif
+        </div>
+
+        <div>
+            <h6 class="mb-1">Additional Fields</h6>
+            <p class="text-muted small mb-3">When logging activity against this agreement, require payor and/or payee sources from involved organizations and users that have KFS numbers.</p>
+
+            <div class="d-grid gap-3">
+                <div>
+                    <div class="form-check form-switch">
+                        <input type="hidden" name="require_payor" value="0">
+                        <input type="checkbox"
+                               class="form-check-input @error('require_payor') is-invalid @enderror"
+                               id="require_payor"
+                               name="require_payor"
+                               value="1"
+                               @checked(filter_var(old('require_payor', $agreement?->require_payor ?? false), FILTER_VALIDATE_BOOLEAN))>
+                        <label class="form-check-label" for="require_payor">Require Payor</label>
+                    </div>
+                    <div class="form-text">Specify payor sources from involved organizations and users with KFS numbers when logging activity.</div>
+                    @error('require_payor')
+                        <div class="text-danger small mt-1">{{ $message }}</div>
+                    @enderror
+                </div>
+
+                <div>
+                    <div class="form-check form-switch">
+                        <input type="hidden" name="require_payee" value="0">
+                        <input type="checkbox"
+                               class="form-check-input @error('require_payee') is-invalid @enderror"
+                               id="require_payee"
+                               name="require_payee"
+                               value="1"
+                               @checked(filter_var(old('require_payee', $agreement?->require_payee ?? false), FILTER_VALIDATE_BOOLEAN))>
+                        <label class="form-check-label" for="require_payee">Require Payee</label>
+                    </div>
+                    <div class="form-text">Specify payee sources from involved organizations and users with KFS numbers when logging activity.</div>
+                    @error('require_payee')
+                        <div class="text-danger small mt-1">{{ $message }}</div>
+                    @enderror
+                </div>
+            </div>
         </div>
     </div>
 </div>

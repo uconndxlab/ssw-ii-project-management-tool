@@ -39,6 +39,8 @@ class AgreementDuplicationService
                 'extension_start_date' => $source->extension_start_date,
                 'extension_end_date' => $source->extension_end_date,
                 'time_tracking_mode' => $source->time_tracking_mode,
+                'require_payor' => $source->require_payor,
+                'require_payee' => $source->require_payee,
             ]);
 
             $copy->organizations()->sync(

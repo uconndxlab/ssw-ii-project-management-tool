@@ -51,6 +51,8 @@ class AgreementRequest extends FormRequest
             'extension_start_date' => ['nullable', 'date'],
             'extension_end_date' => ['nullable', 'date', 'after_or_equal:extension_start_date'],
             'time_tracking_mode' => ['required', Rule::in(array_merge(['none'], AgreementTimeTrackingRequirement::values()))],
+            'require_payor' => ['nullable', 'boolean'],
+            'require_payee' => ['nullable', 'boolean'],
             'certification_candidates' => ['nullable', 'array'],
             'certification_candidates.*.id' => ['nullable', 'integer'],
             'certification_candidates.*.value' => ['nullable', 'string', 'max:255'],

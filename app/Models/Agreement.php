@@ -21,6 +21,8 @@ class Agreement extends Model
         'extension_start_date',
         'extension_end_date',
         'time_tracking_mode',
+        'require_payor',
+        'require_payee',
     ];
 
     protected function casts(): array
@@ -32,6 +34,8 @@ class Agreement extends Model
             'extension_start_date' => 'date',
             'extension_end_date' => 'date',
             'time_tracking_mode' => AgreementTimeTrackingRequirement::class,
+            'require_payor' => 'boolean',
+            'require_payee' => 'boolean',
         ];
     }
 

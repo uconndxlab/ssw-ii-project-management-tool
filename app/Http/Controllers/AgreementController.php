@@ -183,6 +183,8 @@ class AgreementController extends Controller
                 'extension_start_date' => $validated['extension_start_date'] ?? null,
                 'extension_end_date' => $validated['extension_end_date'] ?? null,
                 'time_tracking_mode' => $validated['time_tracking_mode'] === 'none' ? null : $validated['time_tracking_mode'],
+                'require_payor' => $validated['require_payor'],
+                'require_payee' => $validated['require_payee'],
             ]);
 
             $this->syncAgreementRelations($agreement, $validated);
@@ -306,6 +308,8 @@ class AgreementController extends Controller
                 'extension_start_date' => $validated['extension_start_date'] ?? null,
                 'extension_end_date' => $validated['extension_end_date'] ?? null,
                 'time_tracking_mode' => $validated['time_tracking_mode'] === 'none' ? null : $validated['time_tracking_mode'],
+                'require_payor' => $validated['require_payor'],
+                'require_payee' => $validated['require_payee'],
             ]);
 
             $this->syncAgreementRelations($agreement, $validated);
