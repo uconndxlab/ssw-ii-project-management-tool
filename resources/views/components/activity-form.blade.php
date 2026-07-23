@@ -17,12 +17,14 @@
     'activityLoggingData' => [],
     'contactTimeData' => [],
     'participantTimeData' => [],
+    'fundingSourceData' => [],
     'engagementDateValue' => null,
     'internalOnlyChecked' => false,
     'activity' => null,
 ])
 
 @php
+    use App\Support\ActivityFundingSourceTokens;
     $availableOrganizationIds = collect($organizations)->pluck('id')->map(fn ($id) => (string) $id)->all();
 
     $agreementConfigs = $agreements->mapWithKeys(function ($agreement) use ($availableOrganizationIds) {
@@ -65,9 +67,27 @@
                     ->values()
                     ->all(),
                 'time_tracking_mode' => $agreement->time_tracking_mode?->value,
+                'require_payor' => (bool) $agreement->require_payor,
+                'require_payee' => (bool) $agreement->require_payee,
+                'kfs_organization_ids' => $agreement->organizations
+                    ->filter(fn ($organization) => filled($organization->kfs_number))
+                    ->pluck('id')
+                    ->map(fn ($id) => (string) $id)
+                    ->values()
+                    ->all(),
+                'kfs_member_user_ids' => $agreement->users
+                    ->concat($agreement->teams->flatMap(fn ($team) => $team->users))
+                    ->filter(fn ($user) => filled($user->kfs_number))
+                    ->pluck('id')
+                    ->map(fn ($id) => (string) $id)
+                    ->unique()
+                    ->values()
+                    ->all(),
             ]
         ];
     });
+
+    $fundingSourceOptionsByAgreement = ActivityFundingSourceTokens::fundingSourceOptionsByAgreement($agreements);
 
     $selectedAgreementTimeTrackingConfigs = collect($selectedAgreementIds)
         ->map(fn ($agreementId) => $agreementConfigs[(string) $agreementId] ?? null)
@@ -116,7 +136,11 @@
     $formId = $isEditMode ? 'activity-edit-form' : 'activity-create-form';
     $formAction = $isEditMode ? route('activities.update', $activity) : route('activities.store');
     $saveStatusDefault = $isEditMode ? 'Saved' : 'Ready';
-    $agreementsWithLoggingFields = $agreements->filter(fn ($agreement) => $agreement->agreementLoggingFields->isNotEmpty())->values();
+    $agreementsWithPerAgreementFields = $agreements->filter(function ($agreement) {
+        return $agreement->agreementLoggingFields->isNotEmpty()
+            || $agreement->require_payor
+            || $agreement->require_payee;
+    })->values();
     $activityTypesWithLoggingFields = $contactFamilies
         ->flatMap(fn ($family) => $family->activityTypes)
         ->filter(fn ($type) => $type->activityTypeLoggingFields->isNotEmpty())
@@ -566,33 +590,100 @@
                         </x-section-card>
                     </div>
 
-                    <div id="agreement-logging-section" class="{{ $agreementsWithLoggingFields->isEmpty() ? 'd-none' : '' }}">
+                    <div id="agreement-logging-section" class="{{ $agreementsWithPerAgreementFields->isEmpty() ? 'd-none' : '' }}">
                         <x-section-card title="Agreement Logging Fields">
                             <div id="agreement-logging-groups" class="d-grid gap-3">
-                            @foreach($agreementsWithLoggingFields as $agreement)
+                            @foreach($agreementsWithPerAgreementFields as $agreement)
+                                @php
+                                    $fundingOptions = $fundingSourceOptionsByAgreement[$agreement->id] ?? [];
+                                    $selectedPayorTokens = old(
+                                        "funding_sources.{$agreement->id}.payor",
+                                        data_get($fundingSourceData, "{$agreement->id}.payor", [])
+                                    );
+                                    $selectedPayeeTokens = old(
+                                        "funding_sources.{$agreement->id}.payee",
+                                        data_get($fundingSourceData, "{$agreement->id}.payee", [])
+                                    );
+                                @endphp
                                 <div class="border rounded p-3 d-none" data-agreement-logging-group="{{ $agreement->id }}">
                                     <div class="d-flex justify-content-between align-items-center mb-3">
                                         <div>
                                             <h5 class="mb-1">{{ $agreement->name }}</h5>
-                                            <p class="small text-muted mb-0">Agreement-level logging fields</p>
+                                            <p class="small text-muted mb-0">Agreement-level fields for this activity</p>
                                         </div>
                                     </div>
 
-                                    <div class="row g-3">
-                                        @foreach($agreement->agreementLoggingFields as $field)
-                                            <div class="{{ $field->is_full_width ? 'col-12' : 'col-md-6' }}">
-                                                @include('activities.partials.logging-field-input', [
-                                                    'field' => $field,
-                                                    'inputName' => "agreement_logging_values[{$agreement->id}][{$field->id}]",
-                                                    'oldKey' => "agreement_logging_values.{$agreement->id}.{$field->id}",
-                                                    'value' => data_get($agreementLoggingData, "{$agreement->id}.{$field->id}"),
-                                                    'inputId' => "agreement_{$agreement->id}_field_{$field->id}",
-                                                    'agreementId' => $agreement->id,
-                                                    'isRequired' => (bool) $field->pivot->is_required,
-                                                ])
+                                    @if($agreement->agreementLoggingFields->isNotEmpty())
+                                        <div class="row g-3 mb-3">
+                                            @foreach($agreement->agreementLoggingFields as $field)
+                                                <div class="{{ $field->is_full_width ? 'col-12' : 'col-md-6' }}">
+                                                    @include('activities.partials.logging-field-input', [
+                                                        'field' => $field,
+                                                        'inputName' => "agreement_logging_values[{$agreement->id}][{$field->id}]",
+                                                        'oldKey' => "agreement_logging_values.{$agreement->id}.{$field->id}",
+                                                        'value' => data_get($agreementLoggingData, "{$agreement->id}.{$field->id}"),
+                                                        'inputId' => "agreement_{$agreement->id}_field_{$field->id}",
+                                                        'agreementId' => $agreement->id,
+                                                        'isRequired' => (bool) $field->pivot->is_required,
+                                                    ])
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @endif
+
+                                    @if($agreement->require_payor)
+                                        <div class="mb-3" data-funding-source-picker data-agreement-id="{{ $agreement->id }}" data-funding-role="payor">
+                                            <label class="form-label fw-semibold">Payor Sources <span class="text-danger">*</span></label>
+                                            <p class="text-muted small mb-2">Select payor sources from involved organizations and users with KFS numbers on this activity.</p>
+                                            <x-token-picker
+                                                picker-id="activity-funding-payor-{{ $agreement->id }}"
+                                                name="funding_sources[{{ $agreement->id }}][payor][]"
+                                                :options="$fundingOptions"
+                                                label-key="label"
+                                                value-key="value"
+                                                search-key="search"
+                                                :selected-ids="$selectedPayorTokens"
+                                                placeholder="Search payor sources..."
+                                                :height="'240px'"
+                                            />
+                                            <div class="text-muted small mt-2 d-none" data-funding-empty-notice="{{ $agreement->id }}-payor">
+                                                No payor sources available — selected organizations and participants must include entities with KFS numbers.
                                             </div>
-                                        @endforeach
-                                    </div>
+                                            @error("funding_sources.{$agreement->id}.payor")
+                                                <div class="text-danger small mt-1">{{ $message }}</div>
+                                            @enderror
+                                            @error("funding_sources.{$agreement->id}.payor.*")
+                                                <div class="text-danger small mt-1">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+                                    @endif
+
+                                    @if($agreement->require_payee)
+                                        <div class="mb-0" data-funding-source-picker data-agreement-id="{{ $agreement->id }}" data-funding-role="payee">
+                                            <label class="form-label fw-semibold">Payee Sources <span class="text-danger">*</span></label>
+                                            <p class="text-muted small mb-2">Select payee sources from involved organizations and users with KFS numbers on this activity.</p>
+                                            <x-token-picker
+                                                picker-id="activity-funding-payee-{{ $agreement->id }}"
+                                                name="funding_sources[{{ $agreement->id }}][payee][]"
+                                                :options="$fundingOptions"
+                                                label-key="label"
+                                                value-key="value"
+                                                search-key="search"
+                                                :selected-ids="$selectedPayeeTokens"
+                                                placeholder="Search payee sources..."
+                                                :height="'240px'"
+                                            />
+                                            <div class="text-muted small mt-2 d-none" data-funding-empty-notice="{{ $agreement->id }}-payee">
+                                                No payee sources available — selected organizations and participants must include entities with KFS numbers.
+                                            </div>
+                                            @error("funding_sources.{$agreement->id}.payee")
+                                                <div class="text-danger small mt-1">{{ $message }}</div>
+                                            @enderror
+                                            @error("funding_sources.{$agreement->id}.payee.*")
+                                                <div class="text-danger small mt-1">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+                                    @endif
                                 </div>
                             @endforeach
                             </div>
@@ -782,6 +873,88 @@
             }
         }));
         participantPicker.dispatchEvent(new CustomEvent('token-picker:restrict', { detail: restrictedIds }));
+    }
+
+    function selectedOrganizationIds() {
+        return selectedValues('organization_ids[]').map(String);
+    }
+
+    function eligibleFundingTokens(agreementId) {
+        const config = agreementConfigs[String(agreementId)];
+
+        if (!config) {
+            return [];
+        }
+
+        const orgIds = new Set(selectedOrganizationIds());
+        const participantIds = new Set(selectedParticipantIds());
+        const tokens = [];
+
+        (config.kfs_organization_ids || []).forEach(function (id) {
+            if (orgIds.has(String(id))) {
+                tokens.push('organization:' + id);
+            }
+        });
+
+        (config.kfs_member_user_ids || []).forEach(function (id) {
+            if (participantIds.has(String(id))) {
+                tokens.push('user:' + id);
+            }
+        });
+
+        return tokens;
+    }
+
+    function restrictFundingSourcePickers() {
+        const selectedAgreements = new Set(selectedAgreementIds());
+
+        document.querySelectorAll('[data-funding-source-picker]').forEach(function (wrapper) {
+            const agreementId = wrapper.dataset.agreementId;
+            const role = wrapper.dataset.fundingRole;
+            const picker = wrapper.querySelector('[data-token-picker]');
+            const emptyNotice = document.querySelector('[data-funding-empty-notice="' + agreementId + '-' + role + '"]');
+            const config = agreementConfigs[String(agreementId)] || {};
+            const requiresRole = role === 'payor' ? config.require_payor : config.require_payee;
+
+            if (!picker) {
+                return;
+            }
+
+            if (!requiresRole || !selectedAgreements.has(String(agreementId))) {
+                picker.dispatchEvent(new CustomEvent('token-picker:set-disabled', {
+                    detail: {
+                        disabled: true,
+                        placeholder: 'Not required for this agreement.',
+                    },
+                }));
+                emptyNotice?.classList.add('d-none');
+
+                return;
+            }
+
+            const eligible = eligibleFundingTokens(agreementId);
+            const roleLabel = role === 'payor' ? 'payor' : 'payee';
+
+            if (eligible.length === 0) {
+                picker.dispatchEvent(new CustomEvent('token-picker:set-disabled', {
+                    detail: {
+                        disabled: true,
+                        placeholder: 'No ' + roleLabel + ' sources available for current selections...',
+                    },
+                }));
+                emptyNotice?.classList.remove('d-none');
+            } else {
+                picker.dispatchEvent(new CustomEvent('token-picker:set-disabled', {
+                    detail: {
+                        disabled: false,
+                        placeholder: 'Search ' + roleLabel + ' sources...',
+                    },
+                }));
+                emptyNotice?.classList.add('d-none');
+            }
+
+            picker.dispatchEvent(new CustomEvent('token-picker:restrict', { detail: eligible }));
+        });
     }
 
     function selectedParticipantIds() {
@@ -1120,6 +1293,7 @@
         });
 
         section?.classList.toggle('d-none', visibleGroups === 0);
+        restrictFundingSourcePickers();
     }
 
     function updateTimeTrackingSection() {
@@ -1275,6 +1449,7 @@
             agreementsPickerInitialized = true;
             restrictCoveragePickers();
             restrictParticipantPicker();
+            restrictFundingSourcePickers();
             restrictScopePickers();
             restrictClassificationOptions();
             refreshActivityTypes();
@@ -1287,6 +1462,7 @@
             agreementsPickerInitialized = true;
             restrictCoveragePickers();
             restrictParticipantPicker();
+            restrictFundingSourcePickers();
             restrictScopePickers();
             restrictClassificationOptions();
             refreshActivityTypes();
@@ -1302,6 +1478,10 @@
         document.getElementById(id)?.addEventListener('token-picker:change', function () {
             if (id === 'activity-participants-picker') {
                 renderParticipantTimeRows();
+            }
+
+            if (id === 'activity-organizations-picker' || id === 'activity-participants-picker') {
+                restrictFundingSourcePickers();
             }
 
             markDirty();
@@ -1364,6 +1544,7 @@
     updateActivityTypeState();
     restrictCoveragePickers();
     restrictParticipantPicker();
+    restrictFundingSourcePickers();
     restrictScopePickers();
     restrictClassificationOptions();
     updateAgreementLoggingGroups();

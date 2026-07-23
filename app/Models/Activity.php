@@ -103,6 +103,11 @@ class Activity extends Model
         return $this->hasMany(AgreementCertificationCandidate::class);
     }
 
+    public function agreementFundingSources(): HasMany
+    {
+        return $this->hasMany(ActivityAgreementFundingSource::class);
+    }
+
     /**
      * Scope: Exclude internal-only activities
      */
@@ -155,6 +160,34 @@ class Activity extends Model
 
         return $filtered
             ->mapWithKeys(fn ($answer) => [$answer->logging_field_id => $answer->value])
+            ->all();
+    }
+
+    /**
+     * @return array<int, array{payor: list<string>, payee: list<string>}>
+     */
+    public function getFundingSourceValuesAttribute(): array
+    {
+        $sources = $this->relationLoaded('agreementFundingSources')
+            ? $this->agreementFundingSources
+            : $this->agreementFundingSources()->get();
+
+        return $sources
+            ->groupBy('agreement_id')
+            ->map(function ($group) {
+                return [
+                    ActivityAgreementFundingSource::ROLE_PAYOR => $group
+                        ->where('role', ActivityAgreementFundingSource::ROLE_PAYOR)
+                        ->map(fn ($row) => $row->token())
+                        ->values()
+                        ->all(),
+                    ActivityAgreementFundingSource::ROLE_PAYEE => $group
+                        ->where('role', ActivityAgreementFundingSource::ROLE_PAYEE)
+                        ->map(fn ($row) => $row->token())
+                        ->values()
+                        ->all(),
+                ];
+            })
             ->all();
     }
 

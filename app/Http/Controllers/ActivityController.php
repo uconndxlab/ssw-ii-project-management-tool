@@ -3,13 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\Activity;
+use App\Models\ActivityAgreementFundingSource;
 use App\Models\Agreement;
 use App\Models\ActivityType;
 use App\Models\ContactFamily;
 use App\Models\LoggingField;
 use App\Models\Organization;
 use App\Models\State;
+use App\Models\User;
 use App\Services\DeliverableContributionService;
+use App\Support\ActivityFundingSourceTokens;
 use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -279,6 +282,7 @@ class ActivityController extends Controller
             'activity_type_id' => ['required', 'exists:activity_types,id'],
             'internal_only' => ['nullable', 'boolean'],
             'agreement_logging_values' => ['nullable', 'array'],
+            'funding_sources' => ['nullable', 'array'],
             'contact_family_logging_values' => ['nullable', 'array'],
             'activity_logging_values' => ['nullable', 'array'],
             'contact_time' => ['nullable', 'array'],
@@ -322,6 +326,8 @@ class ActivityController extends Controller
         $this->validateAgreementProjectProgramSelections($baseValidated, $agreements);
         $this->validateAgreementParticipantSelections($baseValidated, $agreements);
 
+        $this->validateAgreementFundingSources($baseValidated, $agreements);
+
         $baseValidated['time_tracking'] = $this->normalizeTimeTrackingPayload($baseValidated, $agreements, $contactFamily);
         $validated = array_merge(
             $baseValidated,
@@ -350,6 +356,7 @@ class ActivityController extends Controller
             $activity->programs()->sync($validated['program_ids'] ?? []);
             $activity->participants()->sync($validated['participant_user_ids'] ?? []);
 
+            $this->syncAgreementFundingSources($activity, $validated, $agreements);
             $this->syncActivityTimeTracking($activity, $validated['time_tracking']);
             $this->deliverableContributionService->syncForActivity($activity);
         });
@@ -374,7 +381,7 @@ class ActivityController extends Controller
             }
         }
 
-        $activity->load(['agreements.organizations', 'agreements.states', 'organizations', 'states', 'user', 'projects', 'programs', 'participants', 'participantTimes.user', 'contactTime', 'activityType.contactFamily', 'activityType.activityTypeLoggingFields', 'loggingFieldAnswers.loggingField']);
+        $activity->load(['agreements.organizations', 'agreements.states', 'organizations', 'states', 'user', 'projects', 'programs', 'participants', 'participantTimes.user', 'contactTime', 'activityType.contactFamily', 'activityType.activityTypeLoggingFields', 'loggingFieldAnswers.loggingField', 'agreementFundingSources']);
         $activity->load(['agreements.agreementLoggingFields', 'activityType.contactFamily.contactFamilyLoggingFields']);
 
         return view('activities.show', compact('activity'));
@@ -404,7 +411,7 @@ class ActivityController extends Controller
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
-        $activity->load(['activityType.contactFamily', 'activityType.activityTypeLoggingFields', 'agreements', 'states', 'organizations', 'projects', 'programs', 'participants', 'participantTimes.user', 'contactTime', 'loggingFieldAnswers']);
+        $activity->load(['activityType.contactFamily', 'activityType.activityTypeLoggingFields', 'agreements', 'states', 'organizations', 'projects', 'programs', 'participants', 'participantTimes.user', 'contactTime', 'loggingFieldAnswers', 'agreementFundingSources']);
         $agreements = $agreements
             ->merge($activity->agreements)
             ->unique('id')
@@ -453,6 +460,7 @@ class ActivityController extends Controller
             'activity_type_id' => ['required', 'exists:activity_types,id'],
             'internal_only' => ['nullable', 'boolean'],
             'agreement_logging_values' => ['nullable', 'array'],
+            'funding_sources' => ['nullable', 'array'],
             'contact_family_logging_values' => ['nullable', 'array'],
             'activity_logging_values' => ['nullable', 'array'],
             'contact_time' => ['nullable', 'array'],
@@ -500,6 +508,7 @@ class ActivityController extends Controller
         $this->validateAgreementClassificationSelections($baseValidated, $agreements);
         $this->validateAgreementProjectProgramSelections($baseValidated, $agreements);
         $this->validateAgreementParticipantSelections($baseValidated, $agreements, $activity);
+        $this->validateAgreementFundingSources($baseValidated, $agreements);
         $baseValidated['time_tracking'] = $this->normalizeTimeTrackingPayload($baseValidated, $agreements, $contactFamily);
         $validated = array_merge(
             $baseValidated,
@@ -526,6 +535,7 @@ class ActivityController extends Controller
             $activity->programs()->sync($validated['program_ids'] ?? []);
             $activity->participants()->sync($validated['participant_user_ids'] ?? []);
 
+            $this->syncAgreementFundingSources($activity, $validated, $agreements);
             $this->syncActivityTimeTracking($activity, $validated['time_tracking']);
             $this->deliverableContributionService->syncForActivity($activity);
         });
@@ -656,7 +666,12 @@ class ActivityController extends Controller
         }
 
         if (!empty($agreementIds)) {
-            $agreements = Agreement::with('agreementLoggingFields')
+            $agreements = Agreement::with([
+                'agreementLoggingFields',
+                'organizations',
+                'users',
+                'teams.users',
+            ])
                 ->whereIn('id', $agreementIds)
                 ->get()
                 ->sortBy(fn ($agreement) => array_search($agreement->id, $agreementIds))
@@ -1080,6 +1095,113 @@ class ActivityController extends Controller
 
         if (($timeTracking['requires_participant_time'] ?? false) && !empty($timeTracking['participant_times'])) {
             $activity->participantTimes()->createMany($timeTracking['participant_times']);
+        }
+    }
+
+    private function validateAgreementFundingSources(array $validated, $agreements): void
+    {
+        $eligibleSets = ActivityFundingSourceTokens::buildEligibleTokenSets(
+            $agreements,
+            $validated['organization_ids'] ?? [],
+            $validated['participant_user_ids'] ?? [],
+        );
+
+        $fundingInput = $validated['funding_sources'] ?? [];
+
+        foreach ($agreements as $agreement) {
+            $agreementId = (int) $agreement->id;
+            $eligible = $eligibleSets[$agreementId] ?? [
+                ActivityAgreementFundingSource::ROLE_PAYOR => [],
+                ActivityAgreementFundingSource::ROLE_PAYEE => [],
+            ];
+
+            $roleRequirements = [
+                ActivityAgreementFundingSource::ROLE_PAYOR => (bool) $agreement->require_payor,
+                ActivityAgreementFundingSource::ROLE_PAYEE => (bool) $agreement->require_payee,
+            ];
+
+            foreach ($roleRequirements as $role => $required) {
+                if (!$required) {
+                    continue;
+                }
+
+                $eligibleTokens = $eligible[$role] ?? [];
+                $selectedTokens = collect(data_get($fundingInput, "{$agreementId}.{$role}", []))
+                    ->filter(fn ($token) => is_string($token) && $token !== '')
+                    ->values();
+
+                if ($eligibleTokens === []) {
+                    throw ValidationException::withMessages([
+                        "funding_sources.{$agreementId}.{$role}" => "No {$role} sources with KFS numbers are available for {$agreement->name} based on the selected organizations and participants.",
+                    ]);
+                }
+
+                if ($selectedTokens->isEmpty()) {
+                    throw ValidationException::withMessages([
+                        "funding_sources.{$agreementId}.{$role}" => "Select at least one {$role} source for {$agreement->name}.",
+                    ]);
+                }
+
+                foreach ($selectedTokens as $index => $token) {
+                    $parsed = ActivityFundingSourceTokens::parseToken($token);
+
+                    if (!$parsed || !in_array($token, $eligibleTokens, true)) {
+                        throw ValidationException::withMessages([
+                            "funding_sources.{$agreementId}.{$role}.{$index}" => 'The selected funding source is not valid for this activity.',
+                        ]);
+                    }
+                }
+            }
+        }
+    }
+
+    private function syncAgreementFundingSources(Activity $activity, array $validated, $agreements): void
+    {
+        $activity->agreementFundingSources()->delete();
+
+        $fundingInput = $validated['funding_sources'] ?? [];
+        $rows = [];
+
+        foreach ($agreements as $agreement) {
+            $agreementId = (int) $agreement->id;
+
+            $roleRequirements = [
+                ActivityAgreementFundingSource::ROLE_PAYOR => (bool) $agreement->require_payor,
+                ActivityAgreementFundingSource::ROLE_PAYEE => (bool) $agreement->require_payee,
+            ];
+
+            foreach ($roleRequirements as $role => $required) {
+                if (!$required) {
+                    continue;
+                }
+
+                $tokens = collect(data_get($fundingInput, "{$agreementId}.{$role}", []))
+                    ->filter(fn ($token) => is_string($token) && $token !== '')
+                    ->unique()
+                    ->values();
+
+                foreach ($tokens as $token) {
+                    $parsed = ActivityFundingSourceTokens::parseToken($token);
+
+                    if (!$parsed) {
+                        continue;
+                    }
+
+                    $rows[] = [
+                        'activity_id' => $activity->id,
+                        'agreement_id' => $agreementId,
+                        'role' => $role,
+                        'source_type' => $parsed['source_type'],
+                        'source_id' => $parsed['source_id'],
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                }
+            }
+        }
+
+        if ($rows !== []) {
+            ActivityAgreementFundingSource::insert($rows);
         }
     }
 

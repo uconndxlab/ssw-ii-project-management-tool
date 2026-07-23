@@ -33,6 +33,8 @@
                 fn ($label) => $label !== null && $label !== ''
             )),
             'contextBadgeClass' => data_get($item, 'contextBadgeClass', 'bg-primary-subtle text-primary-emphasis border'),
+            'kfs_number' => filled(data_get($item, 'kfs_number')) ? (string) data_get($item, 'kfs_number') : null,
+            'selectedBadgeClass' => data_get($item, 'selectedBadgeClass'),
         ];
     })->filter(fn ($option) => $option['value'] !== '')->values()->all();
 @endphp
@@ -114,6 +116,30 @@
             return options.find(opt => String(opt.value) === String(value));
         }
 
+        function appendOptionPrimaryLabel(container, opt) {
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = opt.label;
+            if (opt.kfs_number) {
+                nameSpan.className = 'me-1';
+            }
+            container.appendChild(nameSpan);
+
+            if (opt.kfs_number) {
+                const kfsSpan = document.createElement('span');
+                kfsSpan.className = 'small text-muted opacity-75';
+                kfsSpan.textContent = '| ' + String(opt.kfs_number);
+                container.appendChild(kfsSpan);
+            }
+        }
+
+        function selectedBadgeClasses(opt) {
+            if (opt.selectedBadgeClass) {
+                return String(opt.selectedBadgeClass);
+            }
+
+            return 'text-bg-light border';
+        }
+
         function normalizedAllowedValues(values) {
             if (!Array.isArray(values)) {
                 return null;
@@ -169,9 +195,9 @@
                 }
 
                 const badge = document.createElement('span');
-                badge.className = 'badge text-bg-light border d-inline-flex align-items-center gap-1';
-                badge.innerHTML = '<span></span><button type="button" class="btn-close" style="font-size: 10px;" aria-label="Remove"></button>';
-                badge.querySelector('span').textContent = option.label;
+                badge.className = 'badge ' + selectedBadgeClasses(option) + ' d-inline-flex align-items-center gap-1';
+                badge.innerHTML = '<span class="d-inline-flex flex-wrap align-items-baseline gap-0"></span><button type="button" class="btn-close" style="font-size: 10px;" aria-label="Remove"></button>';
+                appendOptionPrimaryLabel(badge.querySelector('span'), option);
                 badge.querySelector('button').addEventListener('click', function () {
                     selected.delete(String(value));
                     renderSelected();
@@ -252,10 +278,7 @@
                     const textWrap = document.createElement('div');
                     textWrap.className = 'form-check-label d-flex flex-wrap align-items-center gap-2';
 
-                    const text = document.createElement('span');
-                    text.textContent = opt.label;
-
-                    textWrap.appendChild(text);
+                    appendOptionPrimaryLabel(textWrap, opt);
 
                     appendContextBadges(textWrap, opt);
 

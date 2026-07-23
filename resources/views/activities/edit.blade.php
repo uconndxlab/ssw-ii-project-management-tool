@@ -45,6 +45,7 @@
     );
     $engagementDateValue = old('engagement_date', $activity->engagement_date?->format('Y-m-d'));
     $internalOnlyChecked = (bool) old('internal_only', $activity->internal_only);
+    $fundingSourceData = old('funding_sources', $activity->funding_source_values ?? []);
 @endphp
 
 <x-activity-form
@@ -66,6 +67,7 @@
     :activity-logging-data="$activityLoggingData"
     :contact-time-data="$contactTimeData"
     :participant-time-data="$participantTimeData"
+    :funding-source-data="$fundingSourceData"
     :engagement-date-value="$engagementDateValue"
     :internal-only-checked="$internalOnlyChecked"
     :activity="$activity"

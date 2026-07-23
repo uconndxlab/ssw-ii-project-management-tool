@@ -21,6 +21,7 @@
         'follow_up_hours' => 0,
     ]);
     $participantTimeData = old('participant_times', []);
+    $fundingSourceData = old('funding_sources', []);
     $engagementDateValue = old('engagement_date', now()->format('Y-m-d'));
     $internalOnlyChecked = (bool) old('internal_only', false);
 @endphp
@@ -44,6 +45,7 @@
     :activity-logging-data="$activityLoggingData"
     :contact-time-data="$contactTimeData"
     :participant-time-data="$participantTimeData"
+    :funding-source-data="$fundingSourceData"
     :engagement-date-value="$engagementDateValue"
     :internal-only-checked="$internalOnlyChecked"
 />

@@ -351,6 +351,65 @@
             </div>
         </div>
         @endif
+
+        @if($activity->agreementFundingSources->isNotEmpty())
+            @php
+                $fundingSourcesByAgreement = $activity->agreementFundingSources->groupBy('agreement_id');
+            @endphp
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Payor & Payee Sources</h5>
+                </div>
+                <div class="card-body">
+                    @foreach($activity->agreements as $agreement)
+                        @php
+                            $agreementFunding = $fundingSourcesByAgreement->get($agreement->id, collect());
+                            $payorSources = $agreementFunding->where('role', 'payor');
+                            $payeeSources = $agreementFunding->where('role', 'payee');
+                        @endphp
+                        @if($payorSources->isNotEmpty() || $payeeSources->isNotEmpty())
+                            <div class="border rounded p-3 mb-3">
+                                <div class="fw-semibold mb-3">{{ $agreement->name }}</div>
+                                @if($payorSources->isNotEmpty())
+                                    <div class="mb-3">
+                                        <div class="small text-muted mb-2">Payor</div>
+                                        <ul class="list-unstyled mb-0">
+                                            @foreach($payorSources as $source)
+                                                @php $entity = $source->resolveSourceModel(); @endphp
+                                                <li class="small py-1">
+                                                    <span class="fw-semibold">{{ $entity?->name ?? 'Unknown source' }}</span>
+                                                    <span class="badge bg-secondary-subtle text-secondary-emphasis border ms-1">{{ $source->source_type === 'organization' ? 'Organization' : 'User' }}</span>
+                                                    @if($entity?->kfs_number)
+                                                        <span class="text-muted ms-1">KFS {{ $entity->kfs_number }}</span>
+                                                    @endif
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    </div>
+                                @endif
+                                @if($payeeSources->isNotEmpty())
+                                    <div>
+                                        <div class="small text-muted mb-2">Payee</div>
+                                        <ul class="list-unstyled mb-0">
+                                            @foreach($payeeSources as $source)
+                                                @php $entity = $source->resolveSourceModel(); @endphp
+                                                <li class="small py-1">
+                                                    <span class="fw-semibold">{{ $entity?->name ?? 'Unknown source' }}</span>
+                                                    <span class="badge bg-secondary-subtle text-secondary-emphasis border ms-1">{{ $source->source_type === 'organization' ? 'Organization' : 'User' }}</span>
+                                                    @if($entity?->kfs_number)
+                                                        <span class="text-muted ms-1">KFS {{ $entity->kfs_number }}</span>
+                                                    @endif
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    </div>
+                                @endif
+                            </div>
+                        @endif
+                    @endforeach
+                </div>
+            </div>
+        @endif
     </div>
 </div>
 @endsection
