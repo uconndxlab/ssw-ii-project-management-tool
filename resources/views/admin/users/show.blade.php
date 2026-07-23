@@ -45,6 +45,9 @@
                 </a>
             </dd>
 
+            <dt class="col-5 text-muted fw-normal small">KFS Number</dt>
+            <dd class="col-7 mb-2">{{ $user->kfs_number ?: '—' }}</dd>
+
             <dt class="col-5 text-muted fw-normal small">Role</dt>
             <dd class="col-7 mb-2">
                 <span class="badge {{ $user->isAdmin() ? 'bg-danger' : ($user->isStaff() ? 'bg-primary' : 'bg-secondary') }}">

@@ -17,6 +17,9 @@
                         <x-table-sort-link column="email" label="Email" :sort="$s" :direction="$d" :url="$url('email')" />
                     </th>
                     <th>
+                        <x-table-sort-link column="kfs" label="KFS" :sort="$s" :direction="$d" :url="$url('kfs')" />
+                    </th>
+                    <th>
                         <x-table-sort-link column="role" label="Role" :sort="$s" :direction="$d" :url="$url('role')" />
                     </th>
                     <th>
@@ -44,6 +47,7 @@
                         </a>
                     </td>
                     <td class="text-muted small">{{ $user->email }}</td>
+                    <td class="text-muted small">{{ $user->kfs_number ?: '—' }}</td>
                     <td>
                         <span class="badge
                             @if($user->role === 'admin') bg-danger
@@ -142,7 +146,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="8" class="text-center py-5">
+                    <td colspan="9" class="text-center py-5">
                         <p class="text-muted mb-2">No users found.</p>
                         <a href="{{ route('admin.users.create') }}" class="btn btn-sm btn-primary">Create User</a>
                     </td>

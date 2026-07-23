@@ -22,6 +22,23 @@
             </div>
 
             <div class="mb-3">
+                <label for="kfs_number" class="form-label">KFS Number</label>
+                <input type="text"
+                       class="form-control @error('kfs_number') is-invalid @enderror"
+                       id="kfs_number"
+                       name="kfs_number"
+                       value="{{ old('kfs_number', $user->kfs_number ?? '') }}"
+                       maxlength="7"
+                       pattern="[A-Za-z0-9]*"
+                       autocomplete="off"
+                       placeholder="e.g. 4232321">
+                <div class="form-text">Optional. Up to 7 alphanumeric characters (Kuali Financial System account number).</div>
+                @error('kfs_number')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+            </div>
+
+            <div class="mb-3">
                 <label for="email" class="form-label required-label">Email</label>
                 <input type="email"
                        class="form-control @error('email') is-invalid @enderror"

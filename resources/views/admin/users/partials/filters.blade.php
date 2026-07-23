@@ -7,7 +7,7 @@
     <div class="row g-2 align-items-center">
         <div class="col-md-3">
             <input type="text" name="search" class="form-control form-control-sm"
-                   placeholder="Search by name or email…" value="{{ request('search') }}"
+                   placeholder="Search by name, email, or KFS number…" value="{{ request('search') }}"
                    hx-get="{{ route('admin.users.index') }}"
                    hx-trigger="keyup changed delay:400ms, search"
                    hx-target="#users-table" hx-swap="innerHTML"

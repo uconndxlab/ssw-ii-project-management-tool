@@ -17,6 +17,15 @@ class AdminUserRequest extends FormRequest
         return $this->user()?->isAdmin() ?? false;
     }
 
+    public function messages(): array
+    {
+        return [
+            'kfs_number.regex' => 'The KFS number must be 1-7 alphanumeric characters.',
+            'kfs_number.max' => 'The KFS number must be 1-7 alphanumeric characters.',
+            'kfs_number.unique' => 'This KFS number is already assigned to another user.',
+        ];
+    }
+
     public function rules(): array
     {
         $user = $this->route('user');
@@ -24,6 +33,13 @@ class AdminUserRequest extends FormRequest
 
         return [
             'name' => ['required', 'string', 'max:255'],
+            'kfs_number' => [
+                'nullable',
+                'string',
+                'max:7',
+                'regex:/^[A-Za-z0-9]+$/',
+                Rule::unique('users', 'kfs_number')->ignore($userId),
+            ],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($userId)],
             'password' => [$userId ? 'nullable' : 'required', Password::defaults()],
             'role' => ['required', 'in:admin,staff,consultant'],
