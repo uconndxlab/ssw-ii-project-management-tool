@@ -245,46 +245,60 @@
             $agreementLoggingValues = $activity->agreement_logging_values;
             $contactFamilyLoggingValues = $activity->contact_family_logging_values;
             $activityTypeLoggingValues = $activity->activity_type_logging_values;
+            $fundingSourcesByAgreement = $activity->agreementFundingSources->groupBy('agreement_id');
+            $hasAgreementFieldContent = !empty($agreementLoggingValues) || $activity->agreementFundingSources->isNotEmpty();
         @endphp
-        @if(!empty($agreementLoggingValues) || !empty($contactFamilyLoggingValues) || !empty($activityTypeLoggingValues))
+        @if($hasAgreementFieldContent || !empty($contactFamilyLoggingValues) || !empty($activityTypeLoggingValues))
         <div class="card mt-3">
             <div class="card-header">
                 <h5 class="mb-0">Dynamic Logging Fields</h5>
             </div>
             <div class="card-body">
-                @if(!empty($agreementLoggingValues))
+                @if($hasAgreementFieldContent)
                     <div class="mb-4">
                         <h6 class="mb-3">Agreement Fields</h6>
                         @foreach($activity->agreements as $agreement)
                             @php
                                 $agreementValues = $agreementLoggingValues[$agreement->id] ?? [];
+                                $agreementFunding = $fundingSourcesByAgreement->get($agreement->id, collect());
+                                $payorSources = $agreementFunding->where('role', 'payor');
+                                $payeeSources = $agreementFunding->where('role', 'payee');
+                                $hasLoggingValues = collect($agreementValues)->filter(fn ($value) => $value !== null && $value !== '')->isNotEmpty();
+                                $hasFundingSources = $payorSources->isNotEmpty() || $payeeSources->isNotEmpty();
                             @endphp
-                            @if(!empty($agreementValues))
+                            @if($hasLoggingValues || $hasFundingSources)
                                 <div class="border rounded p-3 mb-3">
                                     <div class="fw-semibold mb-2">{{ $agreement->name }}</div>
-                                    <div class="row g-2">
-                                        @foreach($agreement->agreementLoggingFields as $field)
-                                            @php
-                                                $value = $agreementValues[$field->id] ?? null;
-                                            @endphp
-                                            @if($value !== null && $value !== '')
-                                                <div class="col-md-6">
-                                                    <div class="small text-muted">{{ $field->name }}</div>
-                                                    <div>
-                                                        @if($field->field_type === 'document')
-                                                            <a href="{{ route('activities.logging-field-document.download', ['activity' => $activity, 'context' => 'agreement', 'fieldId' => $field->id, 'agreementId' => $agreement->id]) }}" class="text-decoration-none" target="_blank">
-                                                                <i class="bi bi-file-earmark-arrow-down me-1"></i>{{ basename($value) }}
-                                                            </a>
-                                                        @elseif(is_bool($value))
-                                                            {{ $value ? 'Yes' : 'No' }}
-                                                        @else
-                                                            {{ $value }}
-                                                        @endif
+                                    @if($hasLoggingValues)
+                                        <div class="row g-2">
+                                            @foreach($agreement->agreementLoggingFields as $field)
+                                                @php
+                                                    $value = $agreementValues[$field->id] ?? null;
+                                                @endphp
+                                                @if($value !== null && $value !== '')
+                                                    <div class="col-md-6">
+                                                        <div class="small text-muted">{{ $field->name }}</div>
+                                                        <div>
+                                                            @if($field->field_type === 'document')
+                                                                <a href="{{ route('activities.logging-field-document.download', ['activity' => $activity, 'context' => 'agreement', 'fieldId' => $field->id, 'agreementId' => $agreement->id]) }}" class="text-decoration-none" target="_blank">
+                                                                    <i class="bi bi-file-earmark-arrow-down me-1"></i>{{ basename($value) }}
+                                                                </a>
+                                                            @elseif(is_bool($value))
+                                                                {{ $value ? 'Yes' : 'No' }}
+                                                            @else
+                                                                {{ $value }}
+                                                            @endif
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            @endif
-                                        @endforeach
-                                    </div>
+                                                @endif
+                                            @endforeach
+                                        </div>
+                                    @endif
+                                    @include('activities.partials.agreement-funding-sources', [
+                                        'payorSources' => $payorSources,
+                                        'payeeSources' => $payeeSources,
+                                        'hasLoggingValuesAbove' => $hasLoggingValues,
+                                    ])
                                 </div>
                             @endif
                         @endforeach
@@ -350,65 +364,6 @@
                 @endif
             </div>
         </div>
-        @endif
-
-        @if($activity->agreementFundingSources->isNotEmpty())
-            @php
-                $fundingSourcesByAgreement = $activity->agreementFundingSources->groupBy('agreement_id');
-            @endphp
-            <div class="card mt-3">
-                <div class="card-header">
-                    <h5 class="mb-0">Payor & Payee Sources</h5>
-                </div>
-                <div class="card-body">
-                    @foreach($activity->agreements as $agreement)
-                        @php
-                            $agreementFunding = $fundingSourcesByAgreement->get($agreement->id, collect());
-                            $payorSources = $agreementFunding->where('role', 'payor');
-                            $payeeSources = $agreementFunding->where('role', 'payee');
-                        @endphp
-                        @if($payorSources->isNotEmpty() || $payeeSources->isNotEmpty())
-                            <div class="border rounded p-3 mb-3">
-                                <div class="fw-semibold mb-3">{{ $agreement->name }}</div>
-                                @if($payorSources->isNotEmpty())
-                                    <div class="mb-3">
-                                        <div class="small text-muted mb-2">Payor</div>
-                                        <ul class="list-unstyled mb-0">
-                                            @foreach($payorSources as $source)
-                                                @php $entity = $source->resolveSourceModel(); @endphp
-                                                <li class="small py-1">
-                                                    <span class="fw-semibold">{{ $entity?->name ?? 'Unknown source' }}</span>
-                                                    <span class="badge bg-secondary-subtle text-secondary-emphasis border ms-1">{{ $source->source_type === 'organization' ? 'Organization' : 'User' }}</span>
-                                                    @if($entity?->kfs_number)
-                                                        <span class="text-muted ms-1">KFS {{ $entity->kfs_number }}</span>
-                                                    @endif
-                                                </li>
-                                            @endforeach
-                                        </ul>
-                                    </div>
-                                @endif
-                                @if($payeeSources->isNotEmpty())
-                                    <div>
-                                        <div class="small text-muted mb-2">Payee</div>
-                                        <ul class="list-unstyled mb-0">
-                                            @foreach($payeeSources as $source)
-                                                @php $entity = $source->resolveSourceModel(); @endphp
-                                                <li class="small py-1">
-                                                    <span class="fw-semibold">{{ $entity?->name ?? 'Unknown source' }}</span>
-                                                    <span class="badge bg-secondary-subtle text-secondary-emphasis border ms-1">{{ $source->source_type === 'organization' ? 'Organization' : 'User' }}</span>
-                                                    @if($entity?->kfs_number)
-                                                        <span class="text-muted ms-1">KFS {{ $entity->kfs_number }}</span>
-                                                    @endif
-                                                </li>
-                                            @endforeach
-                                        </ul>
-                                    </div>
-                                @endif
-                            </div>
-                        @endif
-                    @endforeach
-                </div>
-            </div>
         @endif
     </div>
 </div>
