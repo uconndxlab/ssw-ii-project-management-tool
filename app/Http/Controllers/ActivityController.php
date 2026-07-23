@@ -1100,11 +1100,7 @@ class ActivityController extends Controller
 
     private function validateAgreementFundingSources(array $validated, $agreements): void
     {
-        $eligibleSets = ActivityFundingSourceTokens::buildEligibleTokenSets(
-            $agreements,
-            $validated['organization_ids'] ?? [],
-            $validated['participant_user_ids'] ?? [],
-        );
+        $eligibleSets = ActivityFundingSourceTokens::buildEligibleTokenSets($agreements);
 
         $fundingInput = $validated['funding_sources'] ?? [];
 
@@ -1115,13 +1111,13 @@ class ActivityController extends Controller
                 ActivityAgreementFundingSource::ROLE_PAYEE => [],
             ];
 
-            $roleRequirements = [
+            $enabledRoles = [
                 ActivityAgreementFundingSource::ROLE_PAYOR => (bool) $agreement->require_payor,
                 ActivityAgreementFundingSource::ROLE_PAYEE => (bool) $agreement->require_payee,
             ];
 
-            foreach ($roleRequirements as $role => $required) {
-                if (!$required) {
+            foreach ($enabledRoles as $role => $enabled) {
+                if (!$enabled) {
                     continue;
                 }
 
@@ -1130,16 +1126,8 @@ class ActivityController extends Controller
                     ->filter(fn ($token) => is_string($token) && $token !== '')
                     ->values();
 
-                if ($eligibleTokens === []) {
-                    throw ValidationException::withMessages([
-                        "funding_sources.{$agreementId}.{$role}" => "No {$role} sources with KFS numbers are available for {$agreement->name} based on the selected organizations and participants.",
-                    ]);
-                }
-
                 if ($selectedTokens->isEmpty()) {
-                    throw ValidationException::withMessages([
-                        "funding_sources.{$agreementId}.{$role}" => "Select at least one {$role} source for {$agreement->name}.",
-                    ]);
+                    continue;
                 }
 
                 foreach ($selectedTokens as $index => $token) {
@@ -1147,7 +1135,7 @@ class ActivityController extends Controller
 
                     if (!$parsed || !in_array($token, $eligibleTokens, true)) {
                         throw ValidationException::withMessages([
-                            "funding_sources.{$agreementId}.{$role}.{$index}" => 'The selected funding source is not valid for this activity.',
+                            "funding_sources.{$agreementId}.{$role}.{$index}" => 'The selected funding source is not valid for this agreement.',
                         ]);
                     }
                 }

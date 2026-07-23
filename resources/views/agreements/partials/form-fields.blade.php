@@ -311,7 +311,7 @@
 
         <div>
             <h6 class="mb-1">Additional Fields</h6>
-            <p class="text-muted small mb-3">When logging activity against this agreement, require payor and/or payee sources from involved organizations and users that have KFS numbers.</p>
+            <p class="text-muted small mb-3">Optionally show payor and/or payee source pickers when activity is logged against this agreement. Sources come from agreement organizations and users with KFS numbers; selections are optional.</p>
 
             <div class="d-grid gap-3">
                 <div>
@@ -323,9 +323,9 @@
                                name="require_payor"
                                value="1"
                                @checked(filter_var(old('require_payor', $agreement?->require_payor ?? false), FILTER_VALIDATE_BOOLEAN))>
-                        <label class="form-check-label" for="require_payor">Require Payor</label>
+                        <label class="form-check-label" for="require_payor">Collect Payor Sources</label>
                     </div>
-                    <div class="form-text">Specify payor sources from involved organizations and users with KFS numbers when logging activity.</div>
+                    <div class="form-text">Show an optional payor source field on the activity log, listing agreement organizations and users with KFS numbers.</div>
                     @error('require_payor')
                         <div class="text-danger small mt-1">{{ $message }}</div>
                     @enderror
@@ -340,9 +340,9 @@
                                name="require_payee"
                                value="1"
                                @checked(filter_var(old('require_payee', $agreement?->require_payee ?? false), FILTER_VALIDATE_BOOLEAN))>
-                        <label class="form-check-label" for="require_payee">Require Payee</label>
+                        <label class="form-check-label" for="require_payee">Collect Payee Sources</label>
                     </div>
-                    <div class="form-text">Specify payee sources from involved organizations and users with KFS numbers when logging activity.</div>
+                    <div class="form-text">Show an optional payee source field on the activity log, listing agreement organizations and users with KFS numbers.</div>
                     @error('require_payee')
                         <div class="text-danger small mt-1">{{ $message }}</div>
                     @enderror

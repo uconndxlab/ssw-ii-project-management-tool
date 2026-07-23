@@ -35,19 +35,13 @@ class ActivityFundingSourceTokens
      * @param  Collection<int, Agreement>  $agreements
      * @return array<int, array<string, array<int, string>>>
      */
-    public static function buildEligibleTokenSets(
-        Collection $agreements,
-        array $organizationIds,
-        array $participantUserIds,
-    ): array {
-        $organizationIdSet = collect($organizationIds)->map(fn ($id) => (int) $id)->flip();
-        $participantIdSet = collect($participantUserIds)->map(fn ($id) => (int) $id)->flip();
-
+    public static function buildEligibleTokenSets(Collection $agreements): array
+    {
         $result = [];
 
         foreach ($agreements as $agreement) {
             $orgTokens = $agreement->organizations
-                ->filter(fn ($org) => filled($org->kfs_number) && $organizationIdSet->has((int) $org->id))
+                ->filter(fn ($org) => filled($org->kfs_number))
                 ->map(fn ($org) => ActivityAgreementFundingSource::tokenFor(
                     ActivityAgreementFundingSource::SOURCE_ORGANIZATION,
                     (int) $org->id
@@ -55,33 +49,22 @@ class ActivityFundingSourceTokens
                 ->values()
                 ->all();
 
-            $memberUserIds = $agreement->users->pluck('id')
-                ->concat($agreement->teams->flatMap(fn ($team) => $team->users->pluck('id')))
-                ->map(fn ($id) => (int) $id)
-                ->unique();
-
-            $userTokens = $memberUserIds
-                ->filter(fn ($userId) => $participantIdSet->has($userId))
-                ->map(function ($userId) use ($agreement) {
-                    $user = $agreement->users->firstWhere('id', $userId)
-                        ?? $agreement->teams->flatMap(fn ($team) => $team->users)->firstWhere('id', $userId);
-
-                    if (!$user || !filled($user->kfs_number)) {
-                        return null;
-                    }
-
-                    return ActivityAgreementFundingSource::tokenFor(
-                        ActivityAgreementFundingSource::SOURCE_USER,
-                        (int) $userId
-                    );
-                })
-                ->filter()
+            $userTokens = $agreement->users
+                ->concat($agreement->teams->flatMap(fn ($team) => $team->users))
+                ->unique('id')
+                ->filter(fn ($user) => filled($user->kfs_number))
+                ->map(fn ($user) => ActivityAgreementFundingSource::tokenFor(
+                    ActivityAgreementFundingSource::SOURCE_USER,
+                    (int) $user->id
+                ))
                 ->values()
                 ->all();
 
+            $tokens = array_values(array_unique(array_merge($orgTokens, $userTokens)));
+
             $result[(int) $agreement->id] = [
-                ActivityAgreementFundingSource::ROLE_PAYOR => array_values(array_unique(array_merge($orgTokens, $userTokens))),
-                ActivityAgreementFundingSource::ROLE_PAYEE => array_values(array_unique(array_merge($orgTokens, $userTokens))),
+                ActivityAgreementFundingSource::ROLE_PAYOR => $tokens,
+                ActivityAgreementFundingSource::ROLE_PAYEE => $tokens,
             ];
         }
 

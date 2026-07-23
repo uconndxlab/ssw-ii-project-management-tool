@@ -633,8 +633,8 @@
 
                                     @if($agreement->require_payor)
                                         <div class="mb-3" data-funding-source-picker data-agreement-id="{{ $agreement->id }}" data-funding-role="payor">
-                                            <label class="form-label fw-semibold">Payor Sources <span class="text-danger">*</span></label>
-                                            <p class="text-muted small mb-2">Select payor sources from involved organizations and users with KFS numbers on this activity.</p>
+                                            <label class="form-label fw-semibold">Payor Sources</label>
+                                            <p class="text-muted small mb-2">Optional. Select from agreement organizations and users with KFS numbers.</p>
                                             <x-token-picker
                                                 picker-id="activity-funding-payor-{{ $agreement->id }}"
                                                 name="funding_sources[{{ $agreement->id }}][payor][]"
@@ -647,7 +647,7 @@
                                                 :height="'240px'"
                                             />
                                             <div class="text-muted small mt-2 d-none" data-funding-empty-notice="{{ $agreement->id }}-payor">
-                                                No payor sources available — selected organizations and participants must include entities with KFS numbers.
+                                                No payor sources available — no agreement organizations or users have KFS numbers configured.
                                             </div>
                                             @error("funding_sources.{$agreement->id}.payor")
                                                 <div class="text-danger small mt-1">{{ $message }}</div>
@@ -660,8 +660,8 @@
 
                                     @if($agreement->require_payee)
                                         <div class="mb-0" data-funding-source-picker data-agreement-id="{{ $agreement->id }}" data-funding-role="payee">
-                                            <label class="form-label fw-semibold">Payee Sources <span class="text-danger">*</span></label>
-                                            <p class="text-muted small mb-2">Select payee sources from involved organizations and users with KFS numbers on this activity.</p>
+                                            <label class="form-label fw-semibold">Payee Sources</label>
+                                            <p class="text-muted small mb-2">Optional. Select from agreement organizations and users with KFS numbers.</p>
                                             <x-token-picker
                                                 picker-id="activity-funding-payee-{{ $agreement->id }}"
                                                 name="funding_sources[{{ $agreement->id }}][payee][]"
@@ -674,7 +674,7 @@
                                                 :height="'240px'"
                                             />
                                             <div class="text-muted small mt-2 d-none" data-funding-empty-notice="{{ $agreement->id }}-payee">
-                                                No payee sources available — selected organizations and participants must include entities with KFS numbers.
+                                                No payee sources available — no agreement organizations or users have KFS numbers configured.
                                             </div>
                                             @error("funding_sources.{$agreement->id}.payee")
                                                 <div class="text-danger small mt-1">{{ $message }}</div>
@@ -875,10 +875,6 @@
         participantPicker.dispatchEvent(new CustomEvent('token-picker:restrict', { detail: restrictedIds }));
     }
 
-    function selectedOrganizationIds() {
-        return selectedValues('organization_ids[]').map(String);
-    }
-
     function eligibleFundingTokens(agreementId) {
         const config = agreementConfigs[String(agreementId)];
 
@@ -886,20 +882,14 @@
             return [];
         }
 
-        const orgIds = new Set(selectedOrganizationIds());
-        const participantIds = new Set(selectedParticipantIds());
         const tokens = [];
 
         (config.kfs_organization_ids || []).forEach(function (id) {
-            if (orgIds.has(String(id))) {
-                tokens.push('organization:' + id);
-            }
+            tokens.push('organization:' + id);
         });
 
         (config.kfs_member_user_ids || []).forEach(function (id) {
-            if (participantIds.has(String(id))) {
-                tokens.push('user:' + id);
-            }
+            tokens.push('user:' + id);
         });
 
         return tokens;
@@ -924,7 +914,7 @@
                 picker.dispatchEvent(new CustomEvent('token-picker:set-disabled', {
                     detail: {
                         disabled: true,
-                        placeholder: 'Not required for this agreement.',
+                        placeholder: 'Not enabled for this agreement.',
                     },
                 }));
                 emptyNotice?.classList.add('d-none');
@@ -939,7 +929,7 @@
                 picker.dispatchEvent(new CustomEvent('token-picker:set-disabled', {
                     detail: {
                         disabled: true,
-                        placeholder: 'No ' + roleLabel + ' sources available for current selections...',
+                        placeholder: 'No ' + roleLabel + ' sources with KFS numbers on this agreement...',
                     },
                 }));
                 emptyNotice?.classList.remove('d-none');
@@ -1478,10 +1468,6 @@
         document.getElementById(id)?.addEventListener('token-picker:change', function () {
             if (id === 'activity-participants-picker') {
                 renderParticipantTimeRows();
-            }
-
-            if (id === 'activity-organizations-picker' || id === 'activity-participants-picker') {
-                restrictFundingSourcePickers();
             }
 
             markDirty();
