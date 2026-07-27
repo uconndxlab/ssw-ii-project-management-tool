@@ -722,10 +722,6 @@
                         </div>
                     </x-section-card>
 
-                    @unless($isEditMode)
-                        @include('activities.partials.recent-templates')
-                    @endunless
-
                     <x-section-card title="Save Status" subtitle="Live status for unsaved/saving states.">
                         <div id="activity-save-status" class="small text-muted">{{ $saveStatusDefault }}</div>
                     </x-section-card>
@@ -1366,73 +1362,6 @@
         setStatus('<span class="text-warning fw-semibold">● Unsaved changes</span>');
     }
 
-    function saveRecentTemplate() {
-        const firstAgreementValue = selectedAgreementIds()[0] || 'Template';
-        const firstAgreementLabel = document.querySelector('#activity-agreements-picker [data-token-selected] span')?.textContent || firstAgreementValue;
-
-        const payload = {
-            name: firstAgreementLabel + ' · ' + new Date().toLocaleDateString(),
-            agreement_ids: selectedAgreementIds(),
-            organization_ids: selectedValues('organization_ids[]'),
-            state_ids: selectedValues('state_ids[]'),
-            project_ids: selectedValues('project_ids[]'),
-            program_ids: selectedValues('program_ids[]'),
-            participant_user_ids: selectedValues('participant_user_ids[]'),
-            contact_family_id: document.getElementById('contact_family_id')?.value || '',
-            activity_type_id: document.getElementById('activity_type_id')?.value || '',
-            internal_only: document.getElementById('internal_only')?.checked ? 1 : 0,
-        };
-
-        const key = 'activity.recent.templates.v1';
-        const current = JSON.parse(localStorage.getItem(key) || '[]');
-        const next = [payload, ...current].slice(0, 5);
-        localStorage.setItem(key, JSON.stringify(next));
-    }
-
-    function renderTemplates() {
-        const key = 'activity.recent.templates.v1';
-        const container = document.getElementById('activity-recent-templates');
-        if (!container) return;
-
-        const templates = JSON.parse(localStorage.getItem(key) || '[]');
-        container.innerHTML = '';
-
-        if (!templates.length) {
-            container.innerHTML = '<span class="text-muted small">No recent templates yet.</span>';
-            return;
-        }
-
-        templates.forEach(function (template, index) {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'btn btn-sm btn-outline-secondary';
-            button.textContent = template.name || ('Template ' + (index + 1));
-            button.addEventListener('click', function () {
-                form.querySelector('#activity-agreements-picker')?.dispatchEvent(new CustomEvent('token-picker:set', { detail: template.agreement_ids || [] }));
-                form.querySelector('#activity-organizations-picker')?.dispatchEvent(new CustomEvent('token-picker:set', { detail: template.organization_ids || [] }));
-                form.querySelector('#activity-states-picker')?.dispatchEvent(new CustomEvent('token-picker:set', { detail: template.state_ids || [] }));
-                form.querySelector('#activity-coverage-scope-projects')?.dispatchEvent(new CustomEvent('token-picker:set', { detail: template.project_ids || [] }));
-                form.querySelector('#activity-coverage-scope-programs')?.dispatchEvent(new CustomEvent('token-picker:set', { detail: template.program_ids || [] }));
-                form.querySelector('#activity-participants-picker')?.dispatchEvent(new CustomEvent('token-picker:set', { detail: template.participant_user_ids || [] }));
-
-                const family = document.getElementById('contact_family_id');
-                const selectedType = document.getElementById('activity_type_selected');
-                const internalOnly = document.getElementById('internal_only');
-
-                if (family) family.value = template.contact_family_id || '';
-                if (selectedType) selectedType.value = template.activity_type_id || '';
-                if (internalOnly) internalOnly.checked = !!template.internal_only;
-
-                if (family) htmx.trigger(family, 'change');
-
-                markDirty();
-                updateAgreementLoggingGroups();
-                updateActivityLoggingGroups();
-            });
-            container.appendChild(button);
-        });
-    }
-
     const agreementsPicker = document.getElementById('activity-agreements-picker');
     if (agreementsPicker) {
         agreementsPicker.addEventListener('token-picker:change', function () {
@@ -1513,9 +1442,6 @@
 
     form.addEventListener('submit', function () {
         setStatus('<span class="text-secondary">Saving…</span>');
-        if (!isEditMode) {
-            saveRecentTemplate();
-        }
     });
 
     if (hasErrors) {
@@ -1539,9 +1465,5 @@
     updateActivityLoggingGroups();
     updateAdditionalContactTimeFields();
     renderParticipantTimeRows();
-
-    if (!isEditMode) {
-        renderTemplates();
-    }
 })();
 </script>
