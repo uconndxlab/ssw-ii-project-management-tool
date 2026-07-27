@@ -23,7 +23,7 @@ class ContactFamilyController extends Controller
     {
         $query = ContactFamily::query()
             ->withCount('activityTypes')
-            ->with(['projects', 'programs']);
+            ->with(['programs.projects']);
 
         if ($request->filled('search')) {
             $query->where('name', 'like', '%'.$request->input('search').'%');
@@ -32,8 +32,8 @@ class ContactFamilyController extends Controller
         if ($request->filled('project_id')) {
             $projectId = (int) $request->input('project_id');
             $query->where(function ($q) use ($projectId) {
-                $q->whereHas('projects', fn ($relation) => $relation->where('projects.id', $projectId))
-                    ->orWhereDoesntHave('projects');
+                $q->whereHas('programs.projects', fn ($relation) => $relation->where('projects.id', $projectId))
+                    ->orWhereDoesntHave('programs');
             });
         }
 
@@ -87,7 +87,8 @@ class ContactFamilyController extends Controller
         return "COALESCE((
             SELECT MIN(p.name)
             FROM projects p
-            INNER JOIN contact_family_project cfp ON cfp.project_id = p.id AND cfp.contact_family_id = contact_families.id
+            INNER JOIN program_project pp ON pp.project_id = p.id
+            INNER JOIN contact_family_program cfp ON cfp.program_id = pp.program_id AND cfp.contact_family_id = contact_families.id
         ), '')";
     }
 
@@ -158,8 +159,10 @@ class ContactFamilyController extends Controller
             'sort_order' => $validated['sort_order'],
         ]);
 
-        $contactFamily->projects()->sync(ProjectProgramScope::normalizeIds($validated['project_ids'] ?? []));
-        $contactFamily->programs()->sync(ProjectProgramScope::normalizeIds($validated['program_ids'] ?? []));
+        $contactFamily->programs()->sync(ProjectProgramScope::effectiveProgramIds(
+            $validated['project_ids'] ?? [],
+            $validated['program_ids'] ?? []
+        ));
 
         $syncData = [];
         foreach (($validated['contact_family_logging_field_ids'] ?? []) as $fieldId) {
@@ -182,7 +185,7 @@ class ContactFamilyController extends Controller
             ->with('programs')
             ->get();
         $projects = ProjectProgramScope::activeProjectsWithPrograms();
-        $contactFamily->load(['contactFamilyLoggingFields', 'projects', 'programs']);
+        $contactFamily->load(['contactFamilyLoggingFields', 'programs.projects']);
 
         return view('admin.contact-families.edit', compact('contactFamily', 'contactFamilyLoggingFields', 'projects'));
     }
@@ -232,8 +235,10 @@ class ContactFamilyController extends Controller
             'track_additional_time' => $validated['track_additional_time'],
             'sort_order' => $validated['sort_order'],
         ]);
-        $contactFamily->projects()->sync(ProjectProgramScope::normalizeIds($validated['project_ids'] ?? []));
-        $contactFamily->programs()->sync(ProjectProgramScope::normalizeIds($validated['program_ids'] ?? []));
+        $contactFamily->programs()->sync(ProjectProgramScope::effectiveProgramIds(
+            $validated['project_ids'] ?? [],
+            $validated['program_ids'] ?? []
+        ));
 
         $syncData = [];
         foreach (($validated['contact_family_logging_field_ids'] ?? []) as $fieldId) {

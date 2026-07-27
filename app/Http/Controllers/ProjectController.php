@@ -68,7 +68,7 @@ class ProjectController extends Controller
             'programs.activities.activityType',
             'programs.activities.programs',
             'programs.activities.agreements',
-            'organizations.states',
+            'programs.organizations.states',
         ]);
 
         $recentActivities = $project->programs

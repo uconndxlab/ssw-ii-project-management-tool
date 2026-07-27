@@ -40,8 +40,7 @@ class AgreementController extends Controller
 
         $query = Agreement::query()->with([
             'states',
-            'projects:id,name',
-            'programs:id,name',
+            'programs.projects:id,name',
             'principalInvestigators:id,name',
         ]);
 
@@ -57,7 +56,7 @@ class AgreementController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhereHas('states', fn ($stateQuery) => $stateQuery->where('name', 'like', "%{$search}%"))
-                    ->orWhereHas('projects', fn ($projectQuery) => $projectQuery->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('programs.projects', fn ($projectQuery) => $projectQuery->where('name', 'like', "%{$search}%"))
                     ->orWhereHas('programs', fn ($programQuery) => $programQuery->where('name', 'like', "%{$search}%"));
             });
         }
@@ -68,7 +67,7 @@ class AgreementController extends Controller
 
         if ($request->filled('project_id')) {
             $projectId = (int) $request->input('project_id');
-            $query->whereHas('projects', fn ($relation) => $relation->where('projects.id', $projectId));
+            $query->whereHas('programs.projects', fn ($relation) => $relation->where('projects.id', $projectId));
         }
 
         if ($request->filled('program_id')) {
@@ -128,7 +127,8 @@ class AgreementController extends Controller
         return "COALESCE((
             SELECT MIN(p.name)
             FROM projects p
-            INNER JOIN agreement_project ap ON ap.project_id = p.id AND ap.agreement_id = agreements.id
+            INNER JOIN program_project pp ON pp.project_id = p.id
+            INNER JOIN agreement_program ap ON ap.program_id = pp.program_id AND ap.agreement_id = agreements.id
         ), '')";
     }
 
@@ -170,13 +170,11 @@ class AgreementController extends Controller
     public function store(AgreementRequest $request)
     {
         $validated = $request->validated();
-        $projectIds = array_values(array_unique($validated['project_ids'] ?? []));
 
-        $agreement = DB::transaction(function () use ($validated, $projectIds) {
+        $agreement = DB::transaction(function () use ($validated) {
             $agreement = Agreement::create([
                 'name' => $validated['name'],
                 'active' => true,
-                'project_id' => $projectIds[0] ?? null,
                 'abstract' => $validated['abstract'] ?? null,
                 'start_date' => $validated['start_date'],
                 'end_date' => $validated['end_date'],
@@ -216,8 +214,7 @@ class AgreementController extends Controller
         $agreement->load([
             'organizations',
             'states',
-            'projects',
-            'programs',
+            'programs.projects',
             'users',
             'teams.users',
             'deliverables.contactFamily',
@@ -295,13 +292,11 @@ class AgreementController extends Controller
     public function update(AgreementRequest $request, Agreement $agreement)
     {
         $validated = $request->validated();
-        $projectIds = array_values(array_unique($validated['project_ids'] ?? []));
 
-        DB::transaction(function () use ($agreement, $validated, $projectIds) {
+        DB::transaction(function () use ($agreement, $validated) {
             $agreement->update([
                 'name' => $validated['name'],
                 'active' => array_key_exists('active', $validated) ? (bool) $validated['active'] : $agreement->active,
-                'project_id' => $projectIds[0] ?? null,
                 'abstract' => $validated['abstract'] ?? null,
                 'start_date' => $validated['start_date'],
                 'end_date' => $validated['end_date'],
@@ -359,7 +354,6 @@ class AgreementController extends Controller
 
     private function syncAgreementRelations(Agreement $agreement, array $validated): void
     {
-        $selectedProjectIds = array_values(array_unique($validated['project_ids'] ?? []));
         $selectedProgramIds = array_values(array_unique($validated['program_ids'] ?? []));
 
         $organizationIds = collect($validated['organization_ids'] ?? [])
@@ -384,7 +378,6 @@ class AgreementController extends Controller
 
         $agreement->organizations()->sync($organizationSync);
         $agreement->states()->sync($validated['state_ids'] ?? []);
-        $agreement->projects()->sync($selectedProjectIds);
         $agreement->programs()->sync($selectedProgramIds);
 
         $teamIds = array_values(array_unique($validated['team_ids'] ?? []));
@@ -714,27 +707,27 @@ class AgreementController extends Controller
         $states = State::query()->get()->sortBy('name')->values();
         $organizations = Organization::query()
             ->active()
-            ->with(['states', 'projects', 'programs'])
+            ->with(['states', 'programs.projects'])
             ->get();
 
         if ($agreement) {
-            $agreement->loadMissing(['organizations.states', 'organizations.projects', 'organizations.programs']);
+            $agreement->loadMissing(['organizations.states', 'organizations.programs.projects']);
             $organizations = $organizations
                 ->merge($agreement->organizations ?? collect())
                 ->unique('id');
         }
 
         $organizations = $organizations->sortBy('name')->values();
-        $users = User::query()->active()->with(['projects', 'programs'])->get()->sortBy('name')->values();
+        $users = User::query()->active()->with(['programs.projects'])->get()->sortBy('name')->values();
         $contactFamilies = ContactFamily::query()
             ->where('active', true)
-            ->with(['projects', 'programs'])
+            ->with(['programs.projects'])
             ->get()
             ->sortBy(fn ($item) => [$item->sort_order, $item->name])
             ->values();
         $activityTypes = ActivityType::query()
             ->where('active', true)
-            ->with(['contactFamily', 'projects', 'programs'])
+            ->with(['contactFamily', 'programs.projects'])
             ->get()
             ->sortBy(fn ($item) => [$item->sort_order, $item->name])
             ->values();
@@ -742,7 +735,7 @@ class AgreementController extends Controller
         $agreementLoggingFields = LoggingField::active()
             ->ordered()
             ->where('available_in_agreements', true)
-            ->with(['projects', 'programs'])
+            ->with(['programs.projects'])
             ->get();
         $candidateNameSuggestions = AgreementCertificationCandidate::query()
             ->distinct()
@@ -755,21 +748,17 @@ class AgreementController extends Controller
             $agreement->load([
                 'users.programs',
                 'teams.users',
-                'teams.projects',
-                'teams.programs',
+                'teams.programs.projects',
                 'deliverables.activityType.contactFamily',
                 'deliverables.program',
                 'deliverables.users.programs',
                 'deliverables.teams.programs',
                 'agreementActivityHistories',
-                'organizations.programs',
-                'organizations.projects',
+                'organizations.programs.projects',
                 'states',
                 'attachments',
-                'agreementLoggingFields.programs',
-                'agreementLoggingFields.projects',
-                'programs',
-                'projects',
+                'agreementLoggingFields.programs.projects',
+                'programs.projects',
                 'certificationCandidates',
                 'principalInvestigators.programs',
             ]);
@@ -779,8 +768,7 @@ class AgreementController extends Controller
             ->where('active', true)
             ->with([
                 'users' => fn ($query) => $query->select('users.id', 'users.name', 'users.role'),
-                'projects',
-                'programs',
+                'programs.projects',
             ])
             ->get();
 

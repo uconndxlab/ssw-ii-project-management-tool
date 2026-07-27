@@ -15,7 +15,6 @@ class AgreementDuplicationService
         $source->load([
             'organizations',
             'states',
-            'projects',
             'programs',
             'users',
             'teams',
@@ -32,7 +31,6 @@ class AgreementDuplicationService
             $copy = Agreement::create([
                 'name' => $this->buildCopyName($source->name),
                 'active' => $source->active,
-                'project_id' => $source->project_id,
                 'abstract' => $source->abstract,
                 'start_date' => $source->start_date,
                 'end_date' => $source->end_date,
@@ -54,7 +52,6 @@ class AgreementDuplicationService
                     ->all()
             );
             $copy->states()->sync($source->states->pluck('id')->all());
-            $copy->projects()->sync($source->projects->pluck('id')->all());
             $copy->programs()->sync($source->programs->pluck('id')->all());
             $copy->users()->sync($source->users->pluck('id')->all());
             $copy->teams()->sync($source->teams->pluck('id')->all());
@@ -86,8 +83,7 @@ class AgreementDuplicationService
             return $copy->fresh([
                 'organizations',
                 'states',
-                'projects',
-                'programs',
+                'programs.projects',
                 'users',
                 'teams',
                 'deliverables',

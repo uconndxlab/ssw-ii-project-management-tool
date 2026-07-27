@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasProgramScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Team extends Model
 {
-    use HasFactory;
+    use HasFactory, HasProgramScope;
 
     protected $fillable = [
         'name',
@@ -30,11 +31,6 @@ class Team extends Model
     public function agreements(): BelongsToMany
     {
         return $this->belongsToMany(Agreement::class, 'agreement_team')->withTimestamps();
-    }
-
-    public function projects(): BelongsToMany
-    {
-        return $this->belongsToMany(Project::class, 'team_project')->withTimestamps();
     }
 
     public function programs(): BelongsToMany

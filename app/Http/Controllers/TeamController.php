@@ -21,8 +21,7 @@ class TeamController extends Controller
         $query = Team::query()
             ->withCount('users')
             ->with([
-                'projects:id,name',
-                'programs:id,name',
+                'programs.projects:id,name',
             ]);
 
         // Filter by active status
@@ -32,7 +31,7 @@ class TeamController extends Controller
 
         if ($request->filled('project_id')) {
             $projectId = (int) $request->input('project_id');
-            $query->whereHas('projects', fn ($relation) => $relation->where('projects.id', $projectId));
+            $query->whereHas('programs.projects', fn ($relation) => $relation->where('projects.id', $projectId));
         }
 
         if ($request->filled('program_id')) {
@@ -81,7 +80,8 @@ class TeamController extends Controller
         return "COALESCE((
             SELECT MIN(p.name)
             FROM projects p
-            INNER JOIN team_project tp ON tp.project_id = p.id AND tp.team_id = teams.id
+            INNER JOIN program_project pp ON pp.project_id = p.id
+            INNER JOIN team_program tp ON tp.program_id = pp.program_id AND tp.team_id = teams.id
         ), '')";
     }
 
@@ -137,8 +137,10 @@ class TeamController extends Controller
         ]);
 
         $team->users()->sync($validated['user_ids'] ?? []);
-        $team->projects()->sync(ProjectProgramScope::normalizeIds($validated['project_ids'] ?? []));
-        $team->programs()->sync(ProjectProgramScope::normalizeIds($validated['program_ids'] ?? []));
+        $team->programs()->sync(ProjectProgramScope::effectiveProgramIds(
+            $validated['project_ids'] ?? [],
+            $validated['program_ids'] ?? []
+        ));
 
         return redirect()
             ->route('teams.index')
@@ -189,7 +191,7 @@ class TeamController extends Controller
 
         $users = User::query()->active()->orderBy('name', 'asc')->get();
         $projects = ProjectProgramScope::activeProjectsWithPrograms();
-        $team->load(['users', 'projects', 'programs']);
+        $team->load(['users', 'programs.projects']);
 
         return view('teams.edit', compact('team', 'users', 'projects'));
     }
@@ -226,8 +228,10 @@ class TeamController extends Controller
         ]);
 
         $team->users()->sync($validated['user_ids'] ?? []);
-        $team->projects()->sync(ProjectProgramScope::normalizeIds($validated['project_ids'] ?? []));
-        $team->programs()->sync(ProjectProgramScope::normalizeIds($validated['program_ids'] ?? []));
+        $team->programs()->sync(ProjectProgramScope::effectiveProgramIds(
+            $validated['project_ids'] ?? [],
+            $validated['program_ids'] ?? []
+        ));
 
         return redirect()
             ->route('teams.index')

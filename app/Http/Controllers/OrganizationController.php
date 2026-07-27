@@ -21,8 +21,7 @@ class OrganizationController extends Controller
         $query = Organization::query()
             ->with([
                 'states:id,name',
-                'projects:id,name',
-                'programs:id,name',
+                'programs.projects:id,name',
             ])
             ->withCount('agreements');
 
@@ -52,7 +51,7 @@ class OrganizationController extends Controller
 
         if ($request->filled('project_id')) {
             $projectId = (int) $request->input('project_id');
-            $query->whereHas('projects', fn ($relation) => $relation->where('projects.id', $projectId));
+            $query->whereHas('programs.projects', fn ($relation) => $relation->where('projects.id', $projectId));
         }
 
         if ($request->filled('program_id')) {
@@ -92,7 +91,7 @@ class OrganizationController extends Controller
 
     public function show(Organization $organization)
     {
-        $organization->load(['states', 'projects', 'programs', 'users']);
+        $organization->load(['states', 'programs.projects', 'users']);
 
         // Load agreements with relationships
         $agreements = $organization->agreements()->active()->with(['states', 'users'])->get();
@@ -165,8 +164,10 @@ class OrganizationController extends Controller
             'active' => $request->boolean('active'),
         ]);
         $organization->states()->sync($validated['state_ids']);
-        $organization->programs()->sync(ProjectProgramScope::normalizeIds($validated['program_ids'] ?? []));
-        $organization->projects()->sync(ProjectProgramScope::normalizeIds($validated['project_ids'] ?? []));
+        $organization->programs()->sync(ProjectProgramScope::effectiveProgramIds(
+            $validated['project_ids'] ?? [],
+            $validated['program_ids'] ?? []
+        ));
         $organization->users()->sync($validated['user_ids'] ?? []);
 
         return redirect()
@@ -176,7 +177,7 @@ class OrganizationController extends Controller
 
     public function edit(Organization $organization)
     {
-        $organization->load(['states', 'projects', 'programs', 'users']);
+        $organization->load(['states', 'programs.projects', 'users']);
         $states = State::orderBy('name', 'asc')->get();
         $projects = ProjectProgramScope::activeProjectsWithPrograms();
         $users = User::query()->active()->orderBy('name')->get();
@@ -194,8 +195,10 @@ class OrganizationController extends Controller
             'active' => $request->boolean('active'),
         ]);
         $organization->states()->sync($validated['state_ids']);
-        $organization->programs()->sync(ProjectProgramScope::normalizeIds($validated['program_ids'] ?? []));
-        $organization->projects()->sync(ProjectProgramScope::normalizeIds($validated['project_ids'] ?? []));
+        $organization->programs()->sync(ProjectProgramScope::effectiveProgramIds(
+            $validated['project_ids'] ?? [],
+            $validated['program_ids'] ?? []
+        ));
         $organization->users()->sync($validated['user_ids'] ?? []);
 
         return redirect()
@@ -279,7 +282,8 @@ class OrganizationController extends Controller
         return "COALESCE((
             SELECT MIN(p.name)
             FROM projects p
-            INNER JOIN organization_project op ON op.project_id = p.id AND op.organization_id = organizations.id
+            INNER JOIN program_project pp ON pp.project_id = p.id
+            INNER JOIN organization_program op ON op.program_id = pp.program_id AND op.organization_id = organizations.id
         ), '')";
     }
 

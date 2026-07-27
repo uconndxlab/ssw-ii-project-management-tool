@@ -7,6 +7,7 @@ use App\Models\Program;
 use App\Models\Project;
 use App\Models\User;
 use App\Services\UserDeactivationService;
+use App\Support\ProjectProgramScope;
 use App\Support\UserDeliverableReporting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -22,10 +23,8 @@ class AdminUserController extends Controller
     {
         $query = User::query()->with([
             'supervisor:id,name',
-            'projects:id,name',
-            'programs:id,name',
-            'teams.projects:id,name',
-            'teams.programs:id,name',
+            'programs.projects:id,name',
+            'teams.programs.projects:id,name',
         ]);
 
         if ($request->filled('search')) {
@@ -44,8 +43,8 @@ class AdminUserController extends Controller
         if ($request->filled('project_id')) {
             $projectId = (int) $request->input('project_id');
             $query->where(function ($q) use ($projectId) {
-                $q->whereHas('projects', fn ($relation) => $relation->where('projects.id', $projectId))
-                    ->orWhereHas('teams.projects', fn ($relation) => $relation->where('projects.id', $projectId));
+                $q->whereHas('programs.projects', fn ($relation) => $relation->where('projects.id', $projectId))
+                    ->orWhereHas('teams.programs.projects', fn ($relation) => $relation->where('projects.id', $projectId));
             });
         }
 
@@ -106,11 +105,13 @@ class AdminUserController extends Controller
             SELECT MIN(sorted.name) FROM (
                 SELECT p.name
                 FROM projects p
-                INNER JOIN user_project up ON up.project_id = p.id AND up.user_id = users.id
+                INNER JOIN program_project pp ON pp.project_id = p.id
+                INNER JOIN user_program up ON up.program_id = pp.program_id AND up.user_id = users.id
                 UNION
                 SELECT p.name
                 FROM projects p
-                INNER JOIN team_project tp ON tp.project_id = p.id
+                INNER JOIN program_project pp ON pp.project_id = p.id
+                INNER JOIN team_program tp ON tp.program_id = pp.program_id
                 INNER JOIN team_user tu ON tu.team_id = tp.team_id AND tu.user_id = users.id
             ) AS sorted
         ), '')";
@@ -206,11 +207,9 @@ class AdminUserController extends Controller
     {
         $user->load([
             'supervisor',
-            'projects',
             'programs.projects',
             'agreements.organizations',
             'agreements.states',
-            'teams.projects',
             'teams.programs.projects',
             'teams.agreements.organizations',
             'teams.agreements.states',
@@ -256,7 +255,7 @@ class AdminUserController extends Controller
 
     private function userFormData(User $user): array
     {
-        $user->loadMissing(['projects', 'programs.projects']);
+        $user->loadMissing(['programs.projects']);
 
         $selectedProjectIds = $user->projects->pluck('id');
         $selectedProgramIds = $user->programs->pluck('id');
@@ -290,7 +289,9 @@ class AdminUserController extends Controller
 
     private function syncScopeAssignments(User $user, array $validated): void
     {
-        $user->projects()->sync($validated['project_ids'] ?? []);
-        $user->programs()->sync($validated['program_ids'] ?? []);
+        $user->programs()->sync(ProjectProgramScope::effectiveProgramIds(
+            $validated['project_ids'] ?? [],
+            $validated['program_ids'] ?? []
+        ));
     }
 }

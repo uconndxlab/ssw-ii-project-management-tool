@@ -7,10 +7,7 @@
     $timeTrackingRequirements = collect(AgreementTimeTrackingRequirement::options());
     $selectedProjectIds = old(
         'project_ids',
-        $agreement?->projects?->pluck('id')->when(
-            ($agreement?->projects?->isEmpty() ?? true) && !empty($agreement?->project_id),
-            fn ($collection) => $collection->push($agreement->project_id)
-        )->values()->all() ?? []
+        $agreement?->projects?->pluck('id')->values()->all() ?? []
     );
     $selectedProgramIds = old('program_ids', $agreement?->programs?->pluck('id')->toArray() ?? []);
 
@@ -116,8 +113,9 @@
                 :selected-program-ids="$selectedProgramIds"
                 project-label="Projects *"
                 program-label="Programs *"
-                project-help-text="Select the projects this agreement belongs to."
-                program-help-text="Programs determine which teams, users, logging fields, contact families, and activity types are available below. Organizations also require at least one program and one state."
+                project-help-text="Required only to filter the program list; projects are not saved on the agreement."
+                program-help-text="Select programs explicitly. These saved programs determine teams, users, logging fields, contact families, and activity types available below. Organizations also require at least one program and one state."
+                :expand-empty-programs="false"
             />
         </div>
 

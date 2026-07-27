@@ -14,7 +14,6 @@ class UserDeactivationService
             $user->agreements()->detach();
             $user->principalInvestigatorAgreements()->detach();
             $user->organizations()->detach();
-            $user->projects()->sync([]);
             $user->programs()->sync([]);
 
             User::query()

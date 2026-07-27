@@ -19,12 +19,15 @@
     'programBadgeClass' => 'bg-primary-subtle text-primary-emphasis border',
     'projectEmptySelectionLabel' => null,
     'programEmptySelectionLabel' => null,
+    'expandEmptyPrograms' => true,
 ])
 
 @php($scopePicker = App\Support\ProjectProgramScope::scopePickerViewData(collect($projects ?? []), $selectedProjectIds, $selectedProgramIds, $scopeId, $programBadgeClass))
 
 <div data-project-program-scope
      data-scope-id="{{ $scopeId }}"
+     data-program-field-name="{{ $programFieldName }}"
+     data-expand-empty-programs="{{ $expandEmptyPrograms ? 'true' : 'false' }}"
      data-project-program-map='@json($scopePicker['projectProgramMap'])'
      data-program-project-ids-map='@json($scopePicker['programProjectIdsMap'])'
      data-project-names-map='@json($scopePicker['projectNamesMap'])'>
@@ -69,6 +72,7 @@
             @enderror
         </div>
     </div>
+    <div data-effective-program-inputs></div>
 </div>
 
 @once
@@ -105,6 +109,10 @@
         const programProjectIdsMap = parseJson(section.dataset.programProjectIdsMap, {});
         const projectNamesMap = parseJson(section.dataset.projectNamesMap, {});
         const defaultDisabledPlaceholder = programPicker.dataset.disabledPlaceholder || 'Select at least one project first...';
+        const expandEmptyPrograms = section.dataset.expandEmptyPrograms === 'true';
+        const programFieldName = section.dataset.programFieldName || 'program_ids[]';
+        const effectiveProgramInputs = section.querySelector('[data-effective-program-inputs]');
+        const programStorageNotice = section.querySelector('[data-program-storage-notice]');
         let externalAllowedProgramIds = null;
         let forceProgramDisabled = false;
         let forcedProgramDisabledPlaceholder = defaultDisabledPlaceholder;
@@ -149,16 +157,6 @@
             const effective = [];
 
             if (projectIds.length === 0) {
-                Object.keys(projectProgramMap).forEach(function (projectId) {
-                    const ids = Array.isArray(projectProgramMap[projectId]) ? projectProgramMap[projectId] : [];
-                    ids.forEach(function (programId) {
-                        const normalized = String(programId);
-                        if (!effective.includes(normalized)) {
-                            effective.push(normalized);
-                        }
-                    });
-                });
-
                 return effective;
             }
 
@@ -172,19 +170,55 @@
                 });
             });
 
-            return effective;
+            return externalAllowedProgramIds === null
+                ? effective
+                : effective.filter(function (programId) {
+                    return externalAllowedProgramIds.has(String(programId));
+                });
+        }
+
+        function updateEffectiveProgramSubmission(projectIds, programIds, effectiveIds) {
+            if (!effectiveProgramInputs) {
+                return;
+            }
+
+            effectiveProgramInputs.replaceChildren();
+
+            if (!expandEmptyPrograms || programIds.length > 0 || projectIds.length === 0) {
+                if (programStorageNotice) {
+                    programStorageNotice.textContent = '';
+                }
+                return;
+            }
+
+            effectiveIds.forEach(function (programId) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = programFieldName;
+                input.value = programId;
+                effectiveProgramInputs.appendChild(input);
+            });
+
+            if (programStorageNotice) {
+                programStorageNotice.textContent = effectiveIds.length > 0
+                    ? ' No programs are individually selected, so all ' + effectiveIds.length + ' programs currently listed by the selected projects will be saved.'
+                    : ' The selected projects currently contain no active programs, so no program scope will be saved.';
+            }
         }
 
         function notifyScopeChange() {
             const projectIds = selectedIds(projectPicker);
             const programIds = selectedIds(programPicker);
+            const effectiveIds = effectiveProgramIds(projectIds, programIds);
+
+            updateEffectiveProgramSubmission(projectIds, programIds, effectiveIds);
 
             section.dispatchEvent(new CustomEvent('project-program-scope:change', {
                 bubbles: true,
                 detail: {
                     projectIds: projectIds,
                     programIds: programIds,
-                    effectiveProgramIds: effectiveProgramIds(projectIds, programIds),
+                    effectiveProgramIds: effectiveIds,
                 },
             }));
         }

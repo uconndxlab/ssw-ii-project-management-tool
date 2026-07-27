@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasProgramScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -9,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ActivityType extends Model
 {
+    use HasProgramScope;
+
     protected $fillable = [
         'name',
         'contact_family_id',
@@ -46,11 +49,6 @@ class ActivityType extends Model
             ->withTimestamps()
             ->orderBy('sort_order', 'asc')
             ->orderBy('name', 'asc');
-    }
-
-    public function projects(): BelongsToMany
-    {
-        return $this->belongsToMany(Project::class, 'activity_type_project')->withTimestamps();
     }
 
     public function programs(): BelongsToMany

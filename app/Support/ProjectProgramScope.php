@@ -74,13 +74,30 @@ class ProjectProgramScope
             return $programIds;
         }
 
-        $query = Program::query()->where('active', true);
-
-        if ($projectIds !== []) {
-            $query->whereHas('projects', fn ($relation) => $relation->whereIn('projects.id', $projectIds));
+        if ($projectIds === []) {
+            return [];
         }
 
-        return $query->pluck('id')->all();
+        return Program::query()
+            ->where('active', true)
+            ->whereHas('projects', fn ($relation) => $relation->whereIn('projects.id', $projectIds))
+            ->pluck('id')
+            ->all();
+    }
+
+    public static function projectIdsForPrograms(array $programIds): array
+    {
+        $programIds = self::normalizeIds($programIds);
+
+        if ($programIds === []) {
+            return [];
+        }
+
+        return Project::query()
+            ->whereHas('programs', fn ($relation) => $relation->whereIn('programs.id', $programIds))
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
     }
 
     public static function matchesSelectedPrograms(Collection $scopedProgramIds, array $selectedProgramIds, bool $allowGlobal): bool
@@ -196,6 +213,16 @@ class ProjectProgramScope
 
                 $programsById[$programKey]['projectIds'][] = (string) $project->id;
             }
+        }
+
+        if ($selectedProjectIds === [] && $selectedProgramIds !== []) {
+            $selectedProgramIdSet = collect($selectedProgramIds);
+            $selectedProjectIds = collect($programsById)
+                ->filter(fn ($program, $programId) => $selectedProgramIdSet->contains((string) $programId))
+                ->flatMap(fn ($program) => $program['projectIds'])
+                ->unique()
+                ->values()
+                ->all();
         }
 
         $programOptions = collect($programsById)

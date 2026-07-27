@@ -95,8 +95,8 @@
                 :selected-program-ids="old('program_ids', $organization?->programs?->pluck('id')->toArray() ?? [])"
                 project-empty-selection-label="None"
                 program-empty-selection-label="None"
-                project-help-text="Select the projects this organization participates in."
-                program-help-text="Programs are limited to the selected projects. Leave both empty if the organization is not scoped to a project or program."
+                project-help-text="Use projects to filter the program list; project participation is inferred and not saved."
+                program-help-text="Programs are the saved organization scope. Leave both filters empty for no program scope; otherwise leaving programs empty saves all currently listed programs."
             />
         </x-section-card>
     </div>

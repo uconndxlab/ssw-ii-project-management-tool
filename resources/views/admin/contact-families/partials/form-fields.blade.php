@@ -35,8 +35,8 @@
                 :selected-program-ids="$selectedProgramIds"
                 project-empty-selection-label="All projects"
                 program-empty-selection-label="All programs"
-                project-help-text="Optional project scope for reporting and agreement-form filtering."
-                program-help-text="Leave projects and programs empty to make this contact family available everywhere."
+                project-help-text="Optional filter for finding programs; projects are inferred and not saved."
+                program-help-text="Programs are the saved scope. Leave both filters empty to make this family global; leaving programs empty after selecting projects saves all currently listed programs."
             />
         </x-section-card>
     </div>

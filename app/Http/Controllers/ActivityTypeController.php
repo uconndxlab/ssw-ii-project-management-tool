@@ -26,7 +26,7 @@ class ActivityTypeController extends Controller
             ->orderBy('name', 'asc')
             ->get(['id', 'name']);
 
-        $query = ActivityType::query()->with(['contactFamily', 'projects', 'programs']);
+        $query = ActivityType::query()->with(['contactFamily', 'programs.projects']);
 
         // Search
         $search = trim((string) $request->input('search', ''));
@@ -51,8 +51,8 @@ class ActivityTypeController extends Controller
         if ($request->filled('project_id')) {
             $projectId = (int) $request->input('project_id');
             $query->where(function ($q) use ($projectId) {
-                $q->whereHas('projects', fn ($relation) => $relation->where('projects.id', $projectId))
-                    ->orWhereDoesntHave('projects');
+                $q->whereHas('programs.projects', fn ($relation) => $relation->where('projects.id', $projectId))
+                    ->orWhereDoesntHave('programs');
             });
         }
 
@@ -149,7 +149,8 @@ class ActivityTypeController extends Controller
         return "COALESCE((
             SELECT MIN(p.name)
             FROM projects p
-            INNER JOIN activity_type_project atp ON atp.project_id = p.id AND atp.activity_type_id = activity_types.id
+            INNER JOIN program_project pp ON pp.project_id = p.id
+            INNER JOIN activity_type_program atp ON atp.program_id = pp.program_id AND atp.activity_type_id = activity_types.id
         ), '')";
     }
 
@@ -230,8 +231,10 @@ class ActivityTypeController extends Controller
         $validated['duration_hours'] = $validated['duration_hours'] ?? 0;
 
         $activityType = ActivityType::create($validated);
-        $activityType->projects()->sync(ProjectProgramScope::normalizeIds($validated['project_ids'] ?? []));
-        $activityType->programs()->sync(ProjectProgramScope::normalizeIds($validated['program_ids'] ?? []));
+        $activityType->programs()->sync(ProjectProgramScope::effectiveProgramIds(
+            $validated['project_ids'] ?? [],
+            $validated['program_ids'] ?? []
+        ));
 
         $syncData = [];
         foreach (($validated['activity_type_logging_field_ids'] ?? []) as $fieldId) {
@@ -255,7 +258,7 @@ class ActivityTypeController extends Controller
             ->with('programs')
             ->get();
         $projects = ProjectProgramScope::activeProjectsWithPrograms();
-        $activityType->load(['activityTypeLoggingFields', 'projects', 'programs']);
+        $activityType->load(['activityTypeLoggingFields', 'programs.projects']);
 
         return view('admin.activity-types.edit', compact('activityType', 'contactFamilies', 'activityTypeLoggingFields', 'projects'));
     }
@@ -316,8 +319,10 @@ class ActivityTypeController extends Controller
         $validated['duration_hours'] = $validated['duration_hours'] ?? 0;
 
         $activityType->update($validated);
-        $activityType->projects()->sync(ProjectProgramScope::normalizeIds($validated['project_ids'] ?? []));
-        $activityType->programs()->sync(ProjectProgramScope::normalizeIds($validated['program_ids'] ?? []));
+        $activityType->programs()->sync(ProjectProgramScope::effectiveProgramIds(
+            $validated['project_ids'] ?? [],
+            $validated['program_ids'] ?? []
+        ));
 
         $syncData = [];
         foreach (($validated['activity_type_logging_field_ids'] ?? []) as $fieldId) {

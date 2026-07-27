@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Collection;
 
 class Project extends Model
 {
@@ -28,18 +29,37 @@ class Project extends Model
         return $this->belongsToMany(Program::class, 'program_project')->withTimestamps();
     }
 
-    public function activities(): BelongsToMany
+    public function getActivitiesAttribute(): Collection
     {
-        return $this->belongsToMany(Activity::class, 'activity_project')->withTimestamps();
+        return $this->collectProgramRelation('activities');
     }
 
-    public function organizations(): BelongsToMany
+    public function getOrganizationsAttribute(): Collection
     {
-        return $this->belongsToMany(Organization::class, 'organization_project')->withTimestamps();
+        return $this->collectProgramRelation('organizations');
     }
 
-    public function users(): BelongsToMany
+    public function getUsersAttribute(): Collection
     {
-        return $this->belongsToMany(User::class, 'user_project')->withTimestamps();
+        return $this->collectProgramRelation('users');
+    }
+
+    private function collectProgramRelation(string $relation): Collection
+    {
+        $programs = $this->relationLoaded('programs')
+            ? $this->programs
+            : $this->programs()->with($relation)->get();
+
+        $programs->each(function ($program) use ($relation) {
+            if (! $program->relationLoaded($relation)) {
+                $program->load($relation);
+            }
+        });
+
+        return $programs
+            ->flatMap(fn ($program) => $program->{$relation})
+            ->unique('id')
+            ->sortBy('name')
+            ->values();
     }
 }

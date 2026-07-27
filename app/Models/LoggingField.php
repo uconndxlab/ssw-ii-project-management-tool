@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasProgramScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Str;
 
 class LoggingField extends Model
 {
+    use HasProgramScope;
+
     protected $fillable = [
         'name',
         'slug',
@@ -83,11 +86,6 @@ class LoggingField extends Model
         return $this->belongsToMany(ContactFamily::class, 'contact_family_logging_field_assignments', 'logging_field_id', 'contact_family_id')
             ->withPivot('is_required')
             ->withTimestamps();
-    }
-
-    public function projects(): BelongsToMany
-    {
-        return $this->belongsToMany(Project::class, 'logging_field_project')->withTimestamps();
     }
 
     public function programs(): BelongsToMany

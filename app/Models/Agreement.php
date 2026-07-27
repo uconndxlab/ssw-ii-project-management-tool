@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\AgreementTimeTrackingRequirement;
+use App\Models\Concerns\HasProgramScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -11,10 +12,11 @@ use Illuminate\Database\Eloquent\Builder;
 
 class Agreement extends Model
 {
+    use HasProgramScope;
+
     protected $fillable = [
         'name',
         'active',
-        'project_id',
         'abstract',
         'start_date',
         'end_date',
@@ -93,11 +95,6 @@ class Agreement extends Model
     public function programs(): BelongsToMany
     {
         return $this->belongsToMany(Program::class, 'agreement_program')->withTimestamps();
-    }
-
-    public function projects(): BelongsToMany
-    {
-        return $this->belongsToMany(Project::class, 'agreement_project')->withTimestamps();
     }
 
     public function deliverables(): HasMany

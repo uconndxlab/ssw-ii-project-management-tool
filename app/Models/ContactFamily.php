@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasProgramScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class ContactFamily extends Model
 {
+    use HasProgramScope;
+
     protected $fillable = [
         'name',
         'active',
@@ -41,11 +44,6 @@ class ContactFamily extends Model
     public function loggingFields(): BelongsToMany
     {
         return $this->contactFamilyLoggingFields();
-    }
-
-    public function projects(): BelongsToMany
-    {
-        return $this->belongsToMany(Project::class, 'contact_family_project')->withTimestamps();
     }
 
     public function programs(): BelongsToMany

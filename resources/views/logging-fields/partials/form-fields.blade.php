@@ -60,8 +60,8 @@
         :selected-program-ids="$selectedProgramIds"
         project-empty-selection-label="All projects"
         program-empty-selection-label="All programs"
-        project-help-text="Optional project scope for reporting and form filtering."
-        program-help-text="Leave projects and programs empty to make this logging field available everywhere."
+        project-help-text="Optional filter for finding programs; projects are inferred and not saved."
+        program-help-text="Programs are the saved scope. Leave both filters empty to make this field global; leaving programs empty after selecting projects saves all currently listed programs."
     />
 </div>
 

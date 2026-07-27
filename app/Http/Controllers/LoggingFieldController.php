@@ -19,8 +19,7 @@ class LoggingFieldController extends Controller
     public function index(Request $request)
     {
         $query = LoggingField::query()->with([
-            'projects:id,name',
-            'programs:id,name',
+            'programs.projects:id,name',
         ]);
 
         // Search filter
@@ -55,8 +54,8 @@ class LoggingFieldController extends Controller
         if ($request->filled('project_id')) {
             $projectId = (int) $request->input('project_id');
             $query->where(function ($q) use ($projectId) {
-                $q->whereHas('projects', fn ($relation) => $relation->where('projects.id', $projectId))
-                    ->orWhereDoesntHave('projects');
+                $q->whereHas('programs.projects', fn ($relation) => $relation->where('projects.id', $projectId))
+                    ->orWhereDoesntHave('programs');
             });
         }
 
@@ -121,7 +120,8 @@ class LoggingFieldController extends Controller
         return "COALESCE((
             SELECT MIN(p.name)
             FROM projects p
-            INNER JOIN logging_field_project lfp ON lfp.project_id = p.id AND lfp.logging_field_id = logging_fields.id
+            INNER JOIN program_project pp ON pp.project_id = p.id
+            INNER JOIN logging_field_program lfp ON lfp.program_id = pp.program_id AND lfp.logging_field_id = logging_fields.id
         ), '')";
     }
 
@@ -196,8 +196,10 @@ class LoggingFieldController extends Controller
         $validated['available_in_activities'] = $request->boolean('available_in_activities');
 
         $loggingField = LoggingField::create($validated);
-        $loggingField->projects()->sync(ProjectProgramScope::normalizeIds($validated['project_ids'] ?? []));
-        $loggingField->programs()->sync(ProjectProgramScope::normalizeIds($validated['program_ids'] ?? []));
+        $loggingField->programs()->sync(ProjectProgramScope::effectiveProgramIds(
+            $validated['project_ids'] ?? [],
+            $validated['program_ids'] ?? []
+        ));
 
         return redirect()->route('logging-fields.index')
             ->with('success', 'Logging field created successfully.');
@@ -225,7 +227,7 @@ class LoggingFieldController extends Controller
         $fieldTypes = LoggingField::fieldTypes();
         $availabilityOptions = LoggingField::availabilityOptions();
         $projects = ProjectProgramScope::activeProjectsWithPrograms();
-        $loggingField->load(['projects', 'programs']);
+        $loggingField->load(['programs.projects']);
 
         return view('logging-fields.edit', compact('loggingField', 'fieldTypes', 'availabilityOptions', 'projects'));
     }
@@ -285,8 +287,10 @@ class LoggingFieldController extends Controller
         }
 
         $loggingField->update($validated);
-        $loggingField->projects()->sync(ProjectProgramScope::normalizeIds($validated['project_ids'] ?? []));
-        $loggingField->programs()->sync(ProjectProgramScope::normalizeIds($validated['program_ids'] ?? []));
+        $loggingField->programs()->sync(ProjectProgramScope::effectiveProgramIds(
+            $validated['project_ids'] ?? [],
+            $validated['program_ids'] ?? []
+        ));
 
         return redirect()->route('logging-fields.index')
             ->with('success', 'Logging field updated successfully.');

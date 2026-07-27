@@ -368,8 +368,8 @@
                                 :projects="$availableProjects"
                                 :selected-project-ids="$selectedProjectIds"
                                 :selected-program-ids="$selectedProgramIds"
-                                project-help-text="Track the project coverage for this activity. Available projects come from the selected agreements."
-                                program-help-text="Track the program coverage for this activity. Available programs come from the selected agreements."
+                                project-help-text="Use projects to filter programs available from the selected agreements; projects are not saved on the activity."
+                                program-help-text="Programs are the saved activity coverage. Leaving programs empty saves every currently listed program under the selected projects."
                             />
                         </div>
                     </x-section-card>

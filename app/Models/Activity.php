@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasProgramScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -10,6 +11,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Activity extends Model
 {
+    use HasProgramScope;
+
     protected $fillable = [
         'user_id',
         'engagement_date',
@@ -86,11 +89,6 @@ class Activity extends Model
     public function programs(): BelongsToMany
     {
         return $this->belongsToMany(Program::class, 'activity_program')->withTimestamps();
-    }
-
-    public function projects(): BelongsToMany
-    {
-        return $this->belongsToMany(Project::class, 'activity_project')->withTimestamps();
     }
 
     public function participants(): BelongsToMany

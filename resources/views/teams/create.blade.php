@@ -72,8 +72,8 @@
                             :projects="$projects"
                             :selected-project-ids="$selectedProjectIds"
                             :selected-program-ids="$selectedProgramIds"
-                            project-help-text="Select the projects this team should appear under."
-                            program-help-text="Programs determine where this team can be assigned on agreement forms."
+                            project-help-text="Use projects to filter programs; team projects are inferred and not saved."
+                            program-help-text="Programs are the saved team scope. Leaving programs empty saves all currently listed programs under the selected projects."
                         />
                         <div class="alert alert-warning small mt-3 mb-0">
                             Leaving projects and programs empty will save the team, but it will not be available for agreement assignment.

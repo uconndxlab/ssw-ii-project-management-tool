@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\Concerns\HasProgramScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,7 +14,7 @@ use Illuminate\Notifications\Notifiable;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, HasProgramScope, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -121,14 +122,6 @@ class User extends Authenticatable
     }
 
     /**
-     * Projects this user is explicitly assigned to.
-     */
-    public function projects(): BelongsToMany
-    {
-        return $this->belongsToMany(Project::class, 'user_project')->withTimestamps();
-    }
-
-    /**
      * Programs this user is explicitly assigned to.
      */
     public function programs(): BelongsToMany
@@ -179,7 +172,7 @@ class User extends Authenticatable
 
     /**
      * Projects, programs, and agreements grouped by direct assignment vs team-only access.
-     * Requires teams (with nested projects, programs, agreements) and direct relations loaded.
+     * Requires teams (with nested programs.projects and agreements) and direct relations loaded.
      *
      * @return array{
      *     direct: array{projects: \Illuminate\Support\Collection, programs: \Illuminate\Support\Collection, agreements: \Illuminate\Support\Collection},

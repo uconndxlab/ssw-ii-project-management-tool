@@ -108,8 +108,8 @@
                 :projects="$projects"
                 :selected-project-ids="$selectedProjectIds"
                 :selected-program-ids="$selectedProgramIds"
-                project-help-text="Select the projects this user can work within."
-                program-help-text="Programs are limited to the selected projects."
+                project-help-text="Use projects to filter the program list; project assignments are inferred and not saved."
+                program-help-text="Programs are the saved user scope. Leaving programs empty saves all programs currently listed under the selected projects."
             />
         </x-section-card>
     </div>

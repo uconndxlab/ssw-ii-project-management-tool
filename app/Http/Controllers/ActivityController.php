@@ -244,8 +244,7 @@ class ActivityController extends Controller
             'deliverables.activityType',
             'users',
             'teams.users',
-            'projects.programs',
-            'programs',
+            'programs.projects',
         ]);
 
         // Get pre-selected agreement if provided
@@ -317,6 +316,7 @@ class ActivityController extends Controller
         $this->assertAgreementIdsAreActive($baseValidated['agreement_ids'] ?? []);
 
         $agreements = $this->resolveSelectedAgreements($baseValidated['agreement_ids'] ?? []);
+        $baseValidated['program_ids'] = $this->effectiveActivityProgramIds($baseValidated, $agreements);
         $contactFamily = ContactFamily::with('contactFamilyLoggingFields')
             ->findOrFail($baseValidated['contact_family_id']);
         $activityType = ActivityType::with('activityTypeLoggingFields')->findOrFail($baseValidated['activity_type_id']);
@@ -352,7 +352,6 @@ class ActivityController extends Controller
             $activity->agreements()->sync($validated['agreement_ids'] ?? []);
             $activity->states()->sync($validated['state_ids'] ?? []);
             $activity->organizations()->sync($validated['organization_ids'] ?? []);
-            $activity->projects()->sync($validated['project_ids'] ?? []);
             $activity->programs()->sync($validated['program_ids'] ?? []);
             $activity->participants()->sync($validated['participant_user_ids'] ?? []);
 
@@ -381,7 +380,7 @@ class ActivityController extends Controller
             }
         }
 
-        $activity->load(['agreements.organizations', 'agreements.states', 'organizations', 'states', 'user', 'projects', 'programs', 'participants', 'participantTimes.user', 'contactTime', 'activityType.contactFamily', 'activityType.activityTypeLoggingFields', 'loggingFieldAnswers.loggingField', 'agreementFundingSources']);
+        $activity->load(['agreements.organizations', 'agreements.states', 'organizations', 'states', 'user', 'programs.projects', 'participants', 'participantTimes.user', 'contactTime', 'activityType.contactFamily', 'activityType.activityTypeLoggingFields', 'loggingFieldAnswers.loggingField', 'agreementFundingSources']);
         $activity->load(['agreements.agreementLoggingFields', 'activityType.contactFamily.contactFamilyLoggingFields']);
 
         return view('activities.show', compact('activity'));
@@ -411,7 +410,7 @@ class ActivityController extends Controller
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
-        $activity->load(['activityType.contactFamily', 'activityType.activityTypeLoggingFields', 'agreements', 'states', 'organizations', 'projects', 'programs', 'participants', 'participantTimes.user', 'contactTime', 'loggingFieldAnswers', 'agreementFundingSources']);
+        $activity->load(['activityType.contactFamily', 'activityType.activityTypeLoggingFields', 'agreements', 'states', 'organizations', 'programs.projects', 'participants', 'participantTimes.user', 'contactTime', 'loggingFieldAnswers', 'agreementFundingSources']);
         $agreements = $agreements
             ->merge($activity->agreements)
             ->unique('id')
@@ -423,8 +422,7 @@ class ActivityController extends Controller
             'deliverables.activityType',
             'users',
             'teams.users',
-            'projects.programs',
-            'programs',
+            'programs.projects',
         ]);
         $currentContactFamilyId = old('contact_family_id', $activity->activityType?->contactFamily?->id);
 
@@ -500,6 +498,7 @@ class ActivityController extends Controller
         );
 
         $agreements = $this->resolveSelectedAgreements($baseValidated['agreement_ids'] ?? []);
+        $baseValidated['program_ids'] = $this->effectiveActivityProgramIds($baseValidated, $agreements);
         $contactFamily = ContactFamily::with('contactFamilyLoggingFields')
             ->findOrFail($baseValidated['contact_family_id']);
         $activityType = ActivityType::with('activityTypeLoggingFields')->findOrFail($baseValidated['activity_type_id']);
@@ -531,7 +530,6 @@ class ActivityController extends Controller
             $activity->agreements()->sync($validated['agreement_ids'] ?? []);
             $activity->states()->sync($validated['state_ids'] ?? []);
             $activity->organizations()->sync($validated['organization_ids'] ?? []);
-            $activity->projects()->sync($validated['project_ids'] ?? []);
             $activity->programs()->sync($validated['program_ids'] ?? []);
             $activity->participants()->sync($validated['participant_user_ids'] ?? []);
 
@@ -881,7 +879,7 @@ class ActivityController extends Controller
             ]);
         }
 
-        $agreements->loadMissing(['projects:id', 'programs:id']);
+        $agreements->loadMissing(['programs.projects:id']);
 
         $allowedProjectIds = $agreements
             ->flatMap(fn ($agreement) => $agreement->projects->pluck('id'))
@@ -908,6 +906,30 @@ class ActivityController extends Controller
                 'program_ids' => 'Selected programs must belong to at least one chosen agreement.',
             ]);
         }
+    }
+
+    private function effectiveActivityProgramIds(array $validated, $agreements): array
+    {
+        $effectiveProgramIds = ProjectProgramScope::effectiveProgramIds(
+            $validated['project_ids'] ?? [],
+            $validated['program_ids'] ?? []
+        );
+
+        if (empty($validated['agreement_ids'])) {
+            return $effectiveProgramIds;
+        }
+
+        $agreements->loadMissing('programs:id');
+        $allowedProgramIds = $agreements
+            ->flatMap(fn ($agreement) => $agreement->programs->pluck('id'))
+            ->map(fn ($id) => (int) $id)
+            ->unique();
+
+        return collect($effectiveProgramIds)
+            ->map(fn ($id) => (int) $id)
+            ->intersect($allowedProgramIds)
+            ->values()
+            ->all();
     }
 
     private function validateAgreementParticipantSelections(array $validated, $agreements, ?Activity $activity = null): void
