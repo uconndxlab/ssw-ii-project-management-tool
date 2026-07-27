@@ -271,7 +271,7 @@
             <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0 d-none" data-deliverable-select-all>Select All</button>
         </div>
 
-        <div class="border rounded overflow-hidden" style="min-height: 180px; max-height: 320px; overflow-y: auto; background-color: #e9ecef;">
+        <div class="border rounded overflow-auto" style="min-height: 180px; max-height: 320px; background-color: #e9ecef;">
             <div class="small text-muted px-3 py-2 border-bottom bg-body">
                 Agreement members
             </div>
