@@ -3,12 +3,6 @@
 @section('title', 'Edit Contact Family')
 
 @section('content')
-<div class="row justify-content-center mb-4">
-    <div class="col-lg-10">
-        <h1>Edit Contact Family</h1>
-    </div>
-</div>
-
 <div class="row justify-content-center">
     <div class="col-lg-10">
         @if ($errors->any())
@@ -24,6 +18,15 @@
         <form method="POST" action="{{ route('contact-families.update', $contactFamily) }}" id="contact-families-edit-form">
             @csrf
             @method('PUT')
+            <x-form-page-header
+                entity-type="Contact Family"
+                entity-type-badge-class="bg-info text-dark"
+                mode="edit"
+                :record-name="old('name', $contactFamily->name)"
+                :show-active="true"
+                :active-default="old('active', $contactFamily->active)"
+                active-help="Only active contact families appear in activity forms."
+            />
             @include('admin.contact-families.partials.form-fields', ['contactFamily' => $contactFamily])
         </form>
     </div>

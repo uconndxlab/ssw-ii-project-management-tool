@@ -3,12 +3,6 @@
 @section('title', 'Create Activity Type')
 
 @section('content')
-<div class="row justify-content-center mb-4">
-    <div class="col-lg-10">
-        <h1>Create Activity Type</h1>
-    </div>
-</div>
-
 <div class="row justify-content-center">
     <div class="col-lg-10">
         @if ($errors->any())
@@ -23,6 +17,14 @@
 
         <form method="POST" action="{{ route('activity-types.store') }}" id="activity-types-create-form">
             @csrf
+            <x-form-page-header
+                entity-type="Activity Type"
+                entity-type-badge-class="bg-primary"
+                mode="create"
+                :show-active="true"
+                :active-default="old('active', true)"
+                active-help="Only active activity types appear in activity forms."
+            />
             @include('admin.activity-types.partials.form-fields')
         </form>
     </div>

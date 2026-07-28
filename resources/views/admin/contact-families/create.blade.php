@@ -3,12 +3,6 @@
 @section('title', 'Create Contact Family')
 
 @section('content')
-<div class="row justify-content-center mb-4">
-    <div class="col-lg-10">
-        <h1>Create Contact Family</h1>
-    </div>
-</div>
-
 <div class="row justify-content-center">
     <div class="col-lg-10">
         @if ($errors->any())
@@ -23,6 +17,14 @@
 
         <form method="POST" action="{{ route('contact-families.store') }}" id="contact-families-create-form">
             @csrf
+            <x-form-page-header
+                entity-type="Contact Family"
+                entity-type-badge-class="bg-info text-dark"
+                mode="create"
+                :show-active="true"
+                :active-default="old('active', true)"
+                active-help="Only active contact families appear in activity forms."
+            />
             @include('admin.contact-families.partials.form-fields')
         </form>
     </div>

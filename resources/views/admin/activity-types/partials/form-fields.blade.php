@@ -8,7 +8,6 @@
         $isEditMode ? $activityType->activityTypeLoggingFields->filter(fn ($field) => $field->pivot->is_required)->pluck('id')->toArray() : []
     );
     $scopeId = $isEditMode ? 'activity-type-edit-scope' : 'activity-type-create-scope';
-    $isActiveDefault = old('active', $isEditMode ? $activityType->active : true);
 
     $durationUnit = old('duration_unit');
     $durationValue = old('duration_value');
@@ -29,110 +28,82 @@
     $durationUnit ??= 'none';
 @endphp
 
-<div class="row g-4 mb-4 align-items-start">
-    <div class="col-lg-8">
-        <x-section-card title="Activity Type Details" subtitle="Define the activity type, scope, and reporting duration." class="h-100">
-            <div class="mb-3">
-                <label for="contact_family_id" class="form-label">Contact Family <span class="text-danger">*</span></label>
-                <select class="form-select @error('contact_family_id') is-invalid @enderror"
-                        id="contact_family_id"
-                        name="contact_family_id"
-                        required>
-                    <option value="">Select contact family...</option>
-                    @foreach($contactFamilies as $family)
-                        <option value="{{ $family->id }}" {{ old('contact_family_id', $activityType->contact_family_id ?? null) == $family->id ? 'selected' : '' }}>
-                            {{ $family->name }}
-                        </option>
-                    @endforeach
-                </select>
-                @error('contact_family_id')
-                    <div class="invalid-feedback">{{ $message }}</div>
-                @enderror
-            </div>
-
-            <div class="mb-3">
-                <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
-                <input type="text"
-                       class="form-control @error('name') is-invalid @enderror"
-                       id="name"
-                       name="name"
-                       value="{{ old('name', $activityType->name ?? '') }}"
-                       required>
-                @error('name')
-                    <div class="invalid-feedback">{{ $message }}</div>
-                @enderror
-            </div>
-
-            <div class="mb-3">
-                <x-project-program-scope-picker
-                    :scope-id="$scopeId"
-                    :projects="$projects"
-                    :selected-project-ids="$selectedProjectIds"
-                    :selected-program-ids="$selectedProgramIds"
-                    project-empty-selection-label="All projects"
-                    program-empty-selection-label="All programs"
-                    project-help-text="Optional filter for finding programs; projects are inferred and not saved."
-                    program-help-text="Programs are the saved scope. Leave both filters empty to make this type global; leaving programs empty after selecting projects saves all currently listed programs."
-                />
-            </div>
-
-            <div>
-                <label for="duration_value" class="form-label">Duration</label>
-                <div class="input-group" style="max-width: 20rem;">
-                    <input type="number"
-                           class="form-control @error('duration_value') is-invalid @enderror"
-                           id="duration_value"
-                           name="duration_value"
-                           value="{{ $durationValue }}"
-                           min="0"
-                           step="0.5"
-                           placeholder="0"
-                           @if($durationUnit === 'none') disabled @endif>
-                    <select class="form-select @error('duration_unit') is-invalid @enderror"
-                            id="duration_unit"
-                            name="duration_unit"
-                            data-duration-unit-select
-                            style="max-width: 9rem;">
-                        <option value="none" {{ $durationUnit === 'none' ? 'selected' : '' }}>No duration</option>
-                        <option value="days" {{ $durationUnit === 'days' ? 'selected' : '' }}>Days</option>
-                        <option value="hours" {{ $durationUnit === 'hours' ? 'selected' : '' }}>Hours</option>
-                    </select>
-                </div>
-                @error('duration_unit')
-                    <div class="text-danger small mt-1">{{ $message }}</div>
-                @enderror
-                @error('duration_value')
-                    <div class="text-danger small mt-1">{{ $message }}</div>
-                @enderror
-                <div class="form-text">Optional duration for reporting. Specify either days or hours, not both.</div>
-            </div>
-        </x-section-card>
+<x-section-card title="Activity Type Details" subtitle="Define the activity type, scope, and reporting duration." class="mb-4">
+    <div class="mb-3">
+        <label for="contact_family_id" class="form-label">Contact Family <span class="text-danger">*</span></label>
+        <select class="form-select @error('contact_family_id') is-invalid @enderror"
+                id="contact_family_id"
+                name="contact_family_id"
+                required>
+            <option value="">Select contact family...</option>
+            @foreach($contactFamilies as $family)
+                <option value="{{ $family->id }}" {{ old('contact_family_id', $activityType->contact_family_id ?? null) == $family->id ? 'selected' : '' }}>
+                    {{ $family->name }}
+                </option>
+            @endforeach
+        </select>
+        @error('contact_family_id')
+            <div class="invalid-feedback">{{ $message }}</div>
+        @enderror
     </div>
 
-    <div class="col-lg-4">
-        <x-section-card title="Options" subtitle="Status and behavior settings for this activity type." class="h-100">
-            <div class="d-grid gap-4">
-                <div>
-                    <div class="form-check form-switch">
-                        <input type="checkbox"
-                               class="form-check-input @error('active') is-invalid @enderror"
-                               id="active"
-                               name="active"
-                               value="1"
-                               {{ filter_var($isActiveDefault, FILTER_VALIDATE_BOOLEAN) ? 'checked' : '' }}>
-                        <label class="form-check-label" for="active">
-                            Active
-                        </label>
-                    </div>
-                    <div class="form-text">Only active activity types appear in activity forms.</div>
-                    @error('active')
-                        <div class="text-danger small mt-1">{{ $message }}</div>
-                    @enderror
-                </div>
-            </div>
-        </x-section-card>
+    <div class="mb-3">
+        <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
+        <input type="text"
+               class="form-control @error('name') is-invalid @enderror"
+               id="name"
+               name="name"
+               value="{{ old('name', $activityType->name ?? '') }}"
+               required>
+        @error('name')
+            <div class="invalid-feedback">{{ $message }}</div>
+        @enderror
     </div>
-</div>
+
+    <div class="mb-3">
+        <x-project-program-scope-picker
+            :scope-id="$scopeId"
+            :projects="$projects"
+            :selected-project-ids="$selectedProjectIds"
+            :selected-program-ids="$selectedProgramIds"
+            project-empty-selection-label="All projects"
+            program-empty-selection-label="All programs"
+            project-help-text="Optional filter for finding programs; projects are inferred and not saved."
+            program-help-text="Programs are the saved scope. Leave both filters empty to make this type global; leaving programs empty after selecting projects saves all currently listed programs."
+        />
+    </div>
+
+    <div>
+        <label for="duration_value" class="form-label">Duration</label>
+        <div class="input-group" style="max-width: 20rem;">
+            <input type="number"
+                   class="form-control @error('duration_value') is-invalid @enderror"
+                   id="duration_value"
+                   name="duration_value"
+                   value="{{ $durationValue }}"
+                   min="0"
+                   step="0.5"
+                   placeholder="0"
+                   @if($durationUnit === 'none') disabled @endif>
+            <select class="form-select @error('duration_unit') is-invalid @enderror"
+                    id="duration_unit"
+                    name="duration_unit"
+                    data-duration-unit-select
+                    style="max-width: 9rem;">
+                <option value="none" {{ $durationUnit === 'none' ? 'selected' : '' }}>No duration</option>
+                <option value="days" {{ $durationUnit === 'days' ? 'selected' : '' }}>Days</option>
+                <option value="hours" {{ $durationUnit === 'hours' ? 'selected' : '' }}>Hours</option>
+            </select>
+        </div>
+        @error('duration_unit')
+            <div class="text-danger small mt-1">{{ $message }}</div>
+        @enderror
+        @error('duration_value')
+            <div class="text-danger small mt-1">{{ $message }}</div>
+        @enderror
+        <div class="form-text">Optional duration for reporting. Specify either days or hours, not both.</div>
+    </div>
+</x-section-card>
 
 <x-section-card title="Activity Logging Fields" subtitle="These fields appear in the activity log when this activity type is selected." class="mb-4">
     <div class="d-flex justify-content-end mb-3">
