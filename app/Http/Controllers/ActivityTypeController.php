@@ -178,38 +178,9 @@ class ActivityTypeController extends Controller
 
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'name' => ['required', 'string', 'max:255'],
-            'contact_family_id' => ['required', 'exists:contact_families,id'],
-            'active' => ['boolean'],
-            'sort_order' => ['nullable', 'integer', 'min:0'],
-            'duration_days' => ['nullable', 'numeric', 'min:0', 'multiple_of:0.5'],
-            'duration_hours' => ['nullable', 'numeric', 'min:0', 'multiple_of:0.5'],
-            'activity_type_logging_field_ids' => ['nullable', 'array'],
-            'activity_type_logging_field_ids.*' => ['exists:logging_fields,id'],
-            'required_activity_type_logging_field_ids' => ['nullable', 'array'],
-            'required_activity_type_logging_field_ids.*' => ['exists:logging_fields,id'],
-            'project_ids' => ['nullable', 'array'],
-            'project_ids.*' => ['distinct', 'exists:projects,id'],
-            'program_ids' => ['nullable', 'array'],
-            'program_ids.*' => ['distinct', 'exists:programs,id'],
-        ]);
+        $validator = Validator::make($request->all(), $this->activityTypeValidationRules());
 
-        $validator->after(function ($validator) use ($request) {
-            $projectIds = ProjectProgramScope::normalizeIds($request->input('project_ids', []));
-            $programIds = ProjectProgramScope::normalizeIds($request->input('program_ids', []));
-
-            ProjectProgramScope::validateSelection($validator, $projectIds, $programIds);
-
-            ProjectProgramScope::validateScopedAssignments(
-                $validator,
-                ProjectProgramScope::effectiveProgramIds($projectIds, $programIds),
-                ProjectProgramScope::normalizeIds($request->input('activity_type_logging_field_ids', [])),
-                LoggingField::class,
-                'activity_type_logging_field_ids',
-                'Selected logging fields must be global or match one of the selected programs.'
-            );
-        });
+        $this->addActivityTypeValidatorAfter($validator, $request);
 
         $validated = $validator->validate();
 
@@ -227,8 +198,7 @@ class ActivityTypeController extends Controller
 
         $validated['active'] = $request->has('active');
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
-        $validated['duration_days'] = round((float) ($validated['duration_days'] ?? 0), 1);
-        $validated['duration_hours'] = round((float) ($validated['duration_hours'] ?? 0), 1);
+        $validated = $this->normalizeValidatedDuration($validated);
 
         $activityType = ActivityType::create($validated);
         $activityType->programs()->sync(ProjectProgramScope::effectiveProgramIds(
@@ -265,38 +235,9 @@ class ActivityTypeController extends Controller
 
     public function update(Request $request, ActivityType $activityType)
     {
-        $validator = Validator::make($request->all(), [
-            'name' => ['required', 'string', 'max:255'],
-            'contact_family_id' => ['required', 'exists:contact_families,id'],
-            'active' => ['boolean'],
-            'sort_order' => ['nullable', 'integer', 'min:0'],
-            'duration_days' => ['nullable', 'numeric', 'min:0', 'multiple_of:0.5'],
-            'duration_hours' => ['nullable', 'numeric', 'min:0', 'multiple_of:0.5'],
-            'activity_type_logging_field_ids' => ['nullable', 'array'],
-            'activity_type_logging_field_ids.*' => ['exists:logging_fields,id'],
-            'required_activity_type_logging_field_ids' => ['nullable', 'array'],
-            'required_activity_type_logging_field_ids.*' => ['exists:logging_fields,id'],
-            'project_ids' => ['nullable', 'array'],
-            'project_ids.*' => ['distinct', 'exists:projects,id'],
-            'program_ids' => ['nullable', 'array'],
-            'program_ids.*' => ['distinct', 'exists:programs,id'],
-        ]);
+        $validator = Validator::make($request->all(), $this->activityTypeValidationRules());
 
-        $validator->after(function ($validator) use ($request) {
-            $projectIds = ProjectProgramScope::normalizeIds($request->input('project_ids', []));
-            $programIds = ProjectProgramScope::normalizeIds($request->input('program_ids', []));
-
-            ProjectProgramScope::validateSelection($validator, $projectIds, $programIds);
-
-            ProjectProgramScope::validateScopedAssignments(
-                $validator,
-                ProjectProgramScope::effectiveProgramIds($projectIds, $programIds),
-                ProjectProgramScope::normalizeIds($request->input('activity_type_logging_field_ids', [])),
-                LoggingField::class,
-                'activity_type_logging_field_ids',
-                'Selected logging fields must be global or match one of the selected programs.'
-            );
-        });
+        $this->addActivityTypeValidatorAfter($validator, $request);
 
         $validated = $validator->validate();
 
@@ -315,8 +256,7 @@ class ActivityTypeController extends Controller
 
         $validated['active'] = $request->has('active');
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
-        $validated['duration_days'] = round((float) ($validated['duration_days'] ?? 0), 1);
-        $validated['duration_hours'] = round((float) ($validated['duration_hours'] ?? 0), 1);
+        $validated = $this->normalizeValidatedDuration($validated);
 
         $activityType->update($validated);
         $activityType->programs()->sync(ProjectProgramScope::effectiveProgramIds(
@@ -409,5 +349,61 @@ class ActivityTypeController extends Controller
         }
 
         return response($html);
+    }
+
+    private function activityTypeValidationRules(): array
+    {
+        return [
+            'name' => ['required', 'string', 'max:255'],
+            'contact_family_id' => ['required', 'exists:contact_families,id'],
+            'active' => ['boolean'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
+            'duration_unit' => ['required', 'in:none,days,hours'],
+            'duration_value' => ['nullable', 'numeric', 'min:0', 'multiple_of:0.5', 'required_if:duration_unit,days,hours'],
+            'activity_type_logging_field_ids' => ['nullable', 'array'],
+            'activity_type_logging_field_ids.*' => ['exists:logging_fields,id'],
+            'required_activity_type_logging_field_ids' => ['nullable', 'array'],
+            'required_activity_type_logging_field_ids.*' => ['exists:logging_fields,id'],
+            'project_ids' => ['nullable', 'array'],
+            'project_ids.*' => ['distinct', 'exists:projects,id'],
+            'program_ids' => ['nullable', 'array'],
+            'program_ids.*' => ['distinct', 'exists:programs,id'],
+        ];
+    }
+
+    private function addActivityTypeValidatorAfter($validator, Request $request): void
+    {
+        $validator->after(function ($validator) use ($request) {
+            $projectIds = ProjectProgramScope::normalizeIds($request->input('project_ids', []));
+            $programIds = ProjectProgramScope::normalizeIds($request->input('program_ids', []));
+
+            ProjectProgramScope::validateSelection($validator, $projectIds, $programIds);
+
+            ProjectProgramScope::validateScopedAssignments(
+                $validator,
+                ProjectProgramScope::effectiveProgramIds($projectIds, $programIds),
+                ProjectProgramScope::normalizeIds($request->input('activity_type_logging_field_ids', [])),
+                LoggingField::class,
+                'activity_type_logging_field_ids',
+                'Selected logging fields must be global or match one of the selected programs.'
+            );
+
+            if ($request->input('duration_unit') === 'none' && (float) $request->input('duration_value', 0) > 0) {
+                $validator->errors()->add('duration_value', 'Clear the duration value when None is selected.');
+            }
+        });
+    }
+
+    private function normalizeValidatedDuration(array $validated): array
+    {
+        $unit = $validated['duration_unit'] ?? 'none';
+        $value = round((float) ($validated['duration_value'] ?? 0), 1);
+
+        $validated['duration_days'] = $unit === 'days' ? $value : 0;
+        $validated['duration_hours'] = $unit === 'hours' ? $value : 0;
+
+        unset($validated['duration_unit'], $validated['duration_value']);
+
+        return $validated;
     }
 }
