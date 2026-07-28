@@ -65,6 +65,7 @@
                        name="duration_days"
                        value="{{ old('duration_days', $activityType->duration_days ?? 0) }}"
                        min="0"
+                       step="0.5"
                        placeholder="0">
                 <span class="input-group-text">days</span>
                 @error('duration_days')
@@ -80,6 +81,7 @@
                        name="duration_hours"
                        value="{{ old('duration_hours', $activityType->duration_hours ?? 0) }}"
                        min="0"
+                       step="0.5"
                        placeholder="0">
                 <span class="input-group-text">hours</span>
                 @error('duration_hours')

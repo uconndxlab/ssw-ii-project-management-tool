@@ -26,8 +26,8 @@ class ActivityType extends Model
         return [
             'active' => 'boolean',
             'sort_order' => 'integer',
-            'duration_days' => 'integer',
-            'duration_hours' => 'integer',
+            'duration_days' => 'decimal:1',
+            'duration_hours' => 'decimal:1',
             'contact_family_id' => 'integer',
         ];
     }

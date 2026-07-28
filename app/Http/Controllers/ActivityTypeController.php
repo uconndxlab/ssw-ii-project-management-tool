@@ -183,8 +183,8 @@ class ActivityTypeController extends Controller
             'contact_family_id' => ['required', 'exists:contact_families,id'],
             'active' => ['boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
-            'duration_days' => ['nullable', 'integer', 'min:0'],
-            'duration_hours' => ['nullable', 'integer', 'min:0'],
+            'duration_days' => ['nullable', 'numeric', 'min:0', 'multiple_of:0.5'],
+            'duration_hours' => ['nullable', 'numeric', 'min:0', 'multiple_of:0.5'],
             'activity_type_logging_field_ids' => ['nullable', 'array'],
             'activity_type_logging_field_ids.*' => ['exists:logging_fields,id'],
             'required_activity_type_logging_field_ids' => ['nullable', 'array'],
@@ -227,8 +227,8 @@ class ActivityTypeController extends Controller
 
         $validated['active'] = $request->has('active');
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
-        $validated['duration_days'] = $validated['duration_days'] ?? 0;
-        $validated['duration_hours'] = $validated['duration_hours'] ?? 0;
+        $validated['duration_days'] = round((float) ($validated['duration_days'] ?? 0), 1);
+        $validated['duration_hours'] = round((float) ($validated['duration_hours'] ?? 0), 1);
 
         $activityType = ActivityType::create($validated);
         $activityType->programs()->sync(ProjectProgramScope::effectiveProgramIds(
@@ -270,8 +270,8 @@ class ActivityTypeController extends Controller
             'contact_family_id' => ['required', 'exists:contact_families,id'],
             'active' => ['boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
-            'duration_days' => ['nullable', 'integer', 'min:0'],
-            'duration_hours' => ['nullable', 'integer', 'min:0'],
+            'duration_days' => ['nullable', 'numeric', 'min:0', 'multiple_of:0.5'],
+            'duration_hours' => ['nullable', 'numeric', 'min:0', 'multiple_of:0.5'],
             'activity_type_logging_field_ids' => ['nullable', 'array'],
             'activity_type_logging_field_ids.*' => ['exists:logging_fields,id'],
             'required_activity_type_logging_field_ids' => ['nullable', 'array'],
@@ -315,8 +315,8 @@ class ActivityTypeController extends Controller
 
         $validated['active'] = $request->has('active');
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
-        $validated['duration_days'] = $validated['duration_days'] ?? 0;
-        $validated['duration_hours'] = $validated['duration_hours'] ?? 0;
+        $validated['duration_days'] = round((float) ($validated['duration_days'] ?? 0), 1);
+        $validated['duration_hours'] = round((float) ($validated['duration_hours'] ?? 0), 1);
 
         $activityType->update($validated);
         $activityType->programs()->sync(ProjectProgramScope::effectiveProgramIds(
