@@ -1,204 +1,150 @@
 @php
-    $currentSort = $sort ?? 'date';
-    $currentDirection = $direction ?? 'desc';
-
-    function activity_sort_direction($column, $currentSort, $currentDirection) {
-        if ($currentSort === $column) {
-            return $currentDirection === 'asc' ? 'desc' : 'asc';
+    $s = $sort ?? 'date';
+    $d = $direction ?? 'desc';
+    $flip = function ($col) use ($s, $d) {
+        if ($s === $col) {
+            return $d === 'asc' ? 'desc' : 'asc';
         }
 
-        return $column === 'date' ? 'desc' : 'asc';
-    }
-
-    function activity_sort_icon($column, $currentSort, $currentDirection) {
-        if ($currentSort !== $column) {
-            return '↕';
-        }
-
-        return $currentDirection === 'asc' ? '↑' : '↓';
-    }
+        return $col === 'date' ? 'desc' : 'asc';
+    };
+    $url = fn ($col) => route('activities.index', array_merge(request()->query(), ['sort' => $col, 'direction' => $flip($col), 'page' => 1]));
 @endphp
 
-<div class="row">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead>
-                            <tr>
-                                <th>
-                                    <button
-                                        class="btn btn-link p-0 text-decoration-none fw-semibold"
-                                        hx-get="{{ route('activities.index', array_merge(request()->query(), [
-                                            'sort' => 'date',
-                                            'direction' => activity_sort_direction('date', $currentSort, $currentDirection),
-                                            'page' => 1,
-                                        ])) }}"
-                                        hx-target="#activities-table"
-                                        hx-swap="innerHTML"
-                                        hx-push-url="true"
-                                    >
-                                        Date {{ activity_sort_icon('date', $currentSort, $currentDirection) }}
-                                    </button>
-                                </th>
-
-                                <th>
-                                    <button
-                                        class="btn btn-link p-0 text-decoration-none fw-semibold"
-                                        hx-get="{{ route('activities.index', array_merge(request()->query(), [
-                                            'sort' => 'agreement',
-                                            'direction' => activity_sort_direction('agreement', $currentSort, $currentDirection),
-                                            'page' => 1,
-                                        ])) }}"
-                                        hx-target="#activities-table"
-                                        hx-swap="innerHTML"
-                                        hx-push-url="true"
-                                    >
-                                        Agreement {{ activity_sort_icon('agreement', $currentSort, $currentDirection) }}
-                                    </button>
-                                </th>
-
-                                <th>
-                                    <button
-                                        class="btn btn-link p-0 text-decoration-none fw-semibold"
-                                        hx-get="{{ route('activities.index', array_merge(request()->query(), [
-                                            'sort' => 'activity_type',
-                                            'direction' => activity_sort_direction('activity_type', $currentSort, $currentDirection),
-                                            'page' => 1,
-                                        ])) }}"
-                                        hx-target="#activities-table"
-                                        hx-swap="innerHTML"
-                                        hx-push-url="true"
-                                    >
-                                        Activity Type {{ activity_sort_icon('activity_type', $currentSort, $currentDirection) }}
-                                    </button>
-                                </th>
-
-                                <th>
-                                    <button
-                                        class="btn btn-link p-0 text-decoration-none fw-semibold"
-                                        hx-get="{{ route('activities.index', array_merge(request()->query(), [
-                                            'sort' => 'logged_by',
-                                            'direction' => activity_sort_direction('logged_by', $currentSort, $currentDirection),
-                                            'page' => 1,
-                                        ])) }}"
-                                        hx-target="#activities-table"
-                                        hx-swap="innerHTML"
-                                        hx-push-url="true"
-                                    >
-                                        Logged By {{ activity_sort_icon('logged_by', $currentSort, $currentDirection) }}
-                                    </button>
-                                </th>
-
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($activities as $activity)
-                                <tr>
-                                    <td>{{ $activity->engagement_date->format('M d, Y') }}</td>
-                                    <td>
-                                        @forelse($activity->agreements as $agreement)
-                                            @if($agreement->isLinkable())
-                                                <a href="{{ route('agreements.show', $agreement) }}" class="badge bg-secondary text-decoration-none me-1 mb-1">{{ $agreement->name }}</a>
-                                            @else
-                                                <span class="badge bg-secondary me-1 mb-1">{{ $agreement->name }}</span>
-                                            @endif
-                                        @empty
-                                            <span class="text-muted small">None</span>
-                                        @endforelse
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-info">
-                                            {{ $activity->activityType->name }}
-                                        </span>
-                                    </td>
-                                    <td>{{ $activity->user->name }}</td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm">
-                                            <a href="{{ route('activities.show', $activity) }}" class="btn btn-outline-secondary">View</a>
-                                            @if(auth()->user()->isAdmin() || $activity->user_id === auth()->id())
-                                                <a href="{{ route('activities.edit', $activity) }}" class="btn btn-outline-primary">Edit</a>
-                                                <form method="POST" action="{{ route('activities.destroy', $activity) }}" class="d-inline"
-                                                      hx-confirm="Are you sure you want to delete this activity?">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-outline-danger">Delete</button>
-                                                </form>
-                                            @endif
-                                        </div>
-                                    </td>
-                                </tr>
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th class="text-nowrap">
+                        <x-table-sort-link column="date" label="Date" :sort="$s" :direction="$d" :url="$url('date')" target="#activities-table" />
+                    </th>
+                    <th style="min-width: 180px;">
+                        <x-table-sort-link column="agreement" label="Agreement" :sort="$s" :direction="$d" :url="$url('agreement')" target="#activities-table" />
+                    </th>
+                    <th style="min-width: 140px;">
+                        <x-table-sort-link column="activity_type" label="Activity Type" :sort="$s" :direction="$d" :url="$url('activity_type')" target="#activities-table" />
+                    </th>
+                    <th style="min-width: 120px;">
+                        <x-table-sort-link column="logged_by" label="Logged By" :sort="$s" :direction="$d" :url="$url('logged_by')" target="#activities-table" />
+                    </th>
+                    <th class="text-end fw-normal" style="width:130px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($activities as $activity)
+                <tr>
+                    <td class="small text-nowrap">{{ $activity->engagement_date->format('M d, Y') }}</td>
+                    <td>
+                        <div class="d-flex flex-wrap gap-1">
+                            @forelse($activity->agreements as $agreement)
+                                @if($agreement->isLinkable())
+                                    <x-entity-relation-badge kind="agreement" :href="route('agreements.show', $agreement)">
+                                        {{ $agreement->name }}
+                                    </x-entity-relation-badge>
+                                @else
+                                    <x-entity-relation-badge kind="agreement">
+                                        {{ $agreement->name }}
+                                    </x-entity-relation-badge>
+                                @endif
                             @empty
-                                <tr>
-                                    <td colspan="6" class="text-center text-muted">
-                                        @if(auth()->user()->isAdmin())
-                                            No activities logged yet
-                                        @else
-                                            No activities found for your assigned agreements
-                                        @endif
-                                    </td>
-                                </tr>
+                                <span class="text-muted small">—</span>
                             @endforelse
-                        </tbody>
-                    </table>
-                </div>
-
-                @if ($activities->hasPages())
-                    <div class="mt-3 d-flex justify-content-center">
-                        <nav>
-                            <ul class="pagination mb-0">
-                                @if ($activities->onFirstPage())
-                                    <li class="page-item disabled"><span class="page-link">‹</span></li>
-                                @else
-                                    <li class="page-item">
-                                        <a
-                                            class="page-link"
-                                            hx-get="{{ $activities->previousPageUrl() }}"
-                                            hx-target="#activities-table"
-                                            hx-swap="innerHTML"
-                                            hx-push-url="true"
-                                        >‹</a>
-                                    </li>
-                                @endif
-
-                                @for ($i = 1; $i <= $activities->lastPage(); $i++)
-                                    @if ($i == $activities->currentPage())
-                                        <li class="page-item active">
-                                            <span class="page-link">{{ $i }}</span>
-                                        </li>
-                                    @else
-                                        <li class="page-item">
-                                            <a
-                                                class="page-link"
-                                                hx-get="{{ $activities->url($i) }}"
-                                                hx-target="#activities-table"
-                                                hx-swap="innerHTML"
-                                                hx-push-url="true"
-                                            >{{ $i }}</a>
-                                        </li>
-                                    @endif
-                                @endfor
-
-                                @if ($activities->hasMorePages())
-                                    <li class="page-item">
-                                        <a
-                                            class="page-link"
-                                            hx-get="{{ $activities->nextPageUrl() }}"
-                                            hx-target="#activities-table"
-                                            hx-swap="innerHTML"
-                                            hx-push-url="true"
-                                        >›</a>
-                                    </li>
-                                @else
-                                    <li class="page-item disabled"><span class="page-link">›</span></li>
-                                @endif
-                            </ul>
-                        </nav>
-                    </div>
-                @endif
-            </div>
-        </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge bg-info text-dark">{{ $activity->activityType->name }}</span>
+                    </td>
+                    <td class="small">
+                        <a href="{{ route('users.show', $activity->user) }}" class="text-decoration-none">
+                            {{ $activity->user->name }}
+                        </a>
+                    </td>
+                    <td class="text-end text-nowrap">
+                        @php
+                            $actionKey = 'activity-actions-' . $activity->id;
+                            $canManage = auth()->user()->isAdmin() || $activity->user_id === auth()->id();
+                        @endphp
+                        <div class="btn-group btn-group-sm" role="group" aria-label="Activity actions for {{ $activity->engagement_date->format('M d, Y') }}">
+                            <a href="{{ route('activities.show', $activity) }}"
+                               class="btn btn-outline-primary"
+                               data-bs-toggle="tooltip"
+                               data-bs-title="View activity"
+                               aria-label="View activity">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            @if($canManage)
+                                <a href="{{ route('activities.edit', $activity) }}"
+                                   class="btn btn-outline-secondary"
+                                   data-bs-toggle="tooltip"
+                                   data-bs-title="Edit activity"
+                                   aria-label="Edit activity">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+                                <button type="submit"
+                                        form="{{ $actionKey }}-delete"
+                                        class="btn btn-outline-danger"
+                                        data-bs-toggle="tooltip"
+                                        data-bs-title="Delete activity"
+                                        aria-label="Delete activity"
+                                        onclick="return confirm('Delete this activity?')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            @endif
+                        </div>
+                        @if($canManage)
+                            <form id="{{ $actionKey }}-delete" method="POST" action="{{ route('activities.destroy', $activity) }}" class="d-none">
+                                @csrf
+                                @method('DELETE')
+                            </form>
+                        @endif
+                    </td>
+                </tr>
+                @empty
+                <tr>
+                    <td colspan="5" class="text-center py-5">
+                        <p class="text-muted mb-2">
+                            @if(auth()->user()->isAdmin())
+                                No activities logged yet.
+                            @else
+                                No activities found for your assigned agreements.
+                            @endif
+                        </p>
+                        <a href="{{ route('activities.create') }}" class="btn btn-sm btn-primary">Log Activity</a>
+                    </td>
+                </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+    <div class="card-footer bg-white">
+        <x-htmx-pagination :paginator="$activities" target="#activities-table" />
     </div>
 </div>
+
+@once
+    <script>
+    (function () {
+        document.body.addEventListener('htmx:afterSwap', function (event) {
+            if (event.target && event.target.id === 'activities-table') {
+                var params = new URLSearchParams(window.location.search);
+                var form = document.getElementById('activity-filters');
+                if (form) {
+                    if (params.has('sort')) {
+                        var sortInput = form.querySelector('[name=sort]');
+                        if (sortInput) {
+                            sortInput.value = params.get('sort');
+                        }
+                    }
+                    if (params.has('direction')) {
+                        var directionInput = form.querySelector('[name=direction]');
+                        if (directionInput) {
+                            directionInput.value = params.get('direction');
+                        }
+                    }
+                }
+            }
+        });
+    })();
+    </script>
+@endonce

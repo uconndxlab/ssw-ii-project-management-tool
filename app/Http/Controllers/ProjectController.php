@@ -13,7 +13,7 @@ class ProjectController extends Controller
     {
         abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can manage projects.');
 
-        $query = Project::withCount('programs');
+        $query = Project::with('programs')->withCount('programs');
 
         if ($request->filled('active')) {
             $query->where('active', $request->input('active') === '1');
@@ -27,15 +27,31 @@ class ProjectController extends Controller
             });
         }
 
-        $query->orderBy('name');
+        $sort = $request->input('sort', 'name');
+        $direction = $request->input('direction', 'asc') === 'desc' ? 'desc' : 'asc';
+
+        switch ($sort) {
+            case 'status':
+                $query->orderBy('active', $direction)->orderBy('name', 'asc');
+                break;
+
+            case 'programs':
+                $query->orderBy('programs_count', $direction)->orderBy('name', 'asc');
+                break;
+
+            case 'name':
+            default:
+                $query->orderBy('name', $direction);
+                break;
+        }
 
         $projects = $query->paginate(20)->withQueryString();
 
         if ($request->header('HX-Request')) {
-            return view('projects.partials.table', compact('projects'));
+            return view('projects.partials.table', compact('projects', 'sort', 'direction'));
         }
 
-        return view('projects.index', compact('projects'));
+        return view('projects.index', compact('projects', 'sort', 'direction'));
     }
 
     public function create()

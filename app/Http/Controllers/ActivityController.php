@@ -190,9 +190,10 @@ class ActivityController extends Controller
 
         $activities = $query->paginate(50)->withQueryString();
 
-        // HTMX: filters only
+        // HTMX: refresh cascading filters and table together
         if ($request->header('HX-Request') === 'true' && $request->input('partial') === 'filters') {
-            return view('activities.partials.filters', compact(
+            return view('activities.partials.filters-response', compact(
+                'activities',
                 'states',
                 'organizations',
                 'agreements',

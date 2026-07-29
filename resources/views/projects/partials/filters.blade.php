@@ -28,4 +28,7 @@
             :filter-keys="['search', 'active']"
         />
     </div>
+
+    <input type="hidden" name="sort" value="{{ $sort ?? 'name' }}">
+    <input type="hidden" name="direction" value="{{ $direction ?? 'asc' }}">
 </form>

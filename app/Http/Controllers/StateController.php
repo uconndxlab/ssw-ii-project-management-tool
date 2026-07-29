@@ -17,16 +17,36 @@ class StateController extends Controller
             $query->where('name', 'like', "%{$search}%");
         }
 
-        $query->orderBy('name');
+        $sort = $request->input('sort', 'name');
+        $direction = $request->input('direction', 'asc') === 'desc' ? 'desc' : 'asc';
+
+        switch ($sort) {
+            case 'organizations':
+                $query->orderBy('organizations_count', $direction)->orderBy('name', 'asc');
+                break;
+
+            case 'agreements':
+                $query->orderBy('agreements_count', $direction)->orderBy('name', 'asc');
+                break;
+
+            case 'created':
+                $query->orderBy('created_at', $direction);
+                break;
+
+            case 'name':
+            default:
+                $query->orderBy('name', $direction);
+                break;
+        }
 
         $states = $query->paginate(20)->withQueryString();
 
         // HTMX: table only
         if ($request->header('HX-Request') === 'true') {
-            return view('states.partials.table', compact('states'));
+            return view('states.partials.table', compact('states', 'sort', 'direction'));
         }
 
-        return view('states.index', compact('states'));
+        return view('states.index', compact('states', 'sort', 'direction'));
     }
 
     public function create()

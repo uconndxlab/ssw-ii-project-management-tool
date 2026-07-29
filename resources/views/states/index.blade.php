@@ -14,12 +14,12 @@
 
 <div class="card shadow-sm mb-3">
     <div class="card-body py-2">
-        @include('states.partials.filters')
+        @include('states.partials.filters', ['sort' => $sort, 'direction' => $direction])
     </div>
 </div>
 
 <div id="states-table">
-    @include('states.partials.table', ['states' => $states])
+    @include('states.partials.table', ['states' => $states, 'sort' => $sort, 'direction' => $direction])
 </div>
 
 @endsection
