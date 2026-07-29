@@ -21,14 +21,17 @@
     $selectedPrincipalInvestigatorIds = array_values(array_map('strval', $selectedPrincipalInvestigatorIds));
 
     $agreementUserOptions = $users->map(function ($user) {
-        $role = !empty($user->role) ? ' (' . ucfirst($user->role) . ')' : '';
-
         return [
             'value' => $user->id,
-            'label' => $user->name . $role,
+            'label' => $user->name,
             'search' => trim($user->name . ' ' . ($user->email ?? '') . ' ' . ($user->role ?? '')),
         ];
     });
+
+    $membershipEntityBadgeClasses = [
+        'team' => \App\Support\EntityBadge::relationClasses('team'),
+        'role' => \App\Support\EntityBadge::categoryClasses('role'),
+    ];
 @endphp
 
 <div class="card mb-4">
@@ -62,6 +65,7 @@
                                 :open-on-focus="false"
                                 :show-selected="false"
                                 :height="'220px'"
+                                entity-kind="team"
                             />
 
                             <small class="text-muted d-block mt-2">
@@ -86,6 +90,7 @@
                                 :open-on-focus="false"
                                 :show-selected="false"
                                 :height="'220px'"
+                                entity-kind="user"
                             />
 
                             <small class="text-muted d-block mt-2">
@@ -138,7 +143,9 @@
                              data-all-user-ids='@json($agreementUserOptions->pluck("value")->values())'
                              data-program-allowed-user-ids='@json($agreementUserOptions->pluck("value")->values())'
                              data-selected-principal-investigator-ids='@json($selectedPrincipalInvestigatorIds)'
-                             data-user-labels='@json($agreementUserOptions->pluck("label", "value"))'
+                             data-user-names='@json($users->mapWithKeys(fn ($user) => [(string) $user->id => $user->name]))'
+                             data-user-roles='@json($users->mapWithKeys(fn ($user) => [(string) $user->id => $user->role ?? '']))'
+                             data-entity-badge-classes='@json($membershipEntityBadgeClasses)'
                              data-team-labels='@json($teams->pluck("name", "id"))'
                              data-team-members='@json($teams->mapWithKeys(function ($team) {
                                  return [(string) $team->id => $team->users->pluck("id")->map(fn ($id) => (string) $id)->values()];
@@ -303,7 +310,9 @@
         }
 
         const teamLabels = parseJson(section.dataset.teamLabels, {});
-        const userLabels = parseJson(section.dataset.userLabels, {});
+        const userNames = parseJson(section.dataset.userNames, {});
+        const userRoles = parseJson(section.dataset.userRoles, {});
+        const entityBadgeClasses = parseJson(section.dataset.entityBadgeClasses, {});
         const teamMembers = parseJson(section.dataset.teamMembers, {});
         const selectedPrincipalInvestigatorIds = new Set(getSelectedPrincipalInvestigatorIds(section));
 
@@ -325,6 +334,34 @@
         });
 
         body.innerHTML = '';
+
+        function createTeamBadge(teamName) {
+            const badge = document.createElement('span');
+            badge.className = 'badge ' + (entityBadgeClasses.team || 'bg-secondary-subtle text-secondary-emphasis border');
+            badge.textContent = teamName;
+
+            return badge;
+        }
+
+        function createMemberLabel(userId) {
+            const wrap = document.createElement('span');
+            wrap.className = 'd-inline-flex align-items-center gap-1 small';
+
+            const name = document.createElement('span');
+            name.className = 'fw-semibold text-dark';
+            name.textContent = userNames[String(userId)] || ('User ' + userId);
+            wrap.appendChild(name);
+
+            const role = userRoles[String(userId)];
+            if (role) {
+                const roleBadge = document.createElement('span');
+                roleBadge.className = 'badge ' + (entityBadgeClasses.role || 'bg-light text-muted border');
+                roleBadge.textContent = role.charAt(0).toUpperCase() + role.slice(1);
+                wrap.appendChild(roleBadge);
+            }
+
+            return wrap;
+        }
 
         function createRemoveButton(label, onClick) {
             const button = document.createElement('button');
@@ -380,15 +417,11 @@
             const row = document.createElement('div');
             row.className = 'd-flex justify-content-between align-items-center gap-2 py-1 ps-3 pe-2 border-top';
 
-            const textWrap = document.createElement('div');
-            textWrap.className = 'small text-muted';
-            textWrap.textContent = userLabels[String(userId)] || ('User ' + userId);
-
             const actions = document.createElement('div');
             actions.className = 'd-flex align-items-center gap-3';
             actions.appendChild(createPrincipalInvestigatorToggle(userId));
 
-            row.appendChild(textWrap);
+            row.appendChild(createMemberLabel(userId));
             row.appendChild(actions);
             container.appendChild(row);
         }
@@ -403,15 +436,12 @@
             header.className = 'd-flex justify-content-between align-items-start gap-2 px-3 py-2 bg-light';
 
             const titleWrap = document.createElement('div');
-            const title = document.createElement('div');
-            title.className = 'fw-semibold small';
-            title.textContent = teamLabels[String(teamId)] || ('Team ' + teamId);
+            titleWrap.className = 'd-flex flex-wrap align-items-center gap-2';
+            titleWrap.appendChild(createTeamBadge(teamLabels[String(teamId)] || ('Team ' + teamId)));
 
-            const meta = document.createElement('div');
-            meta.className = 'small text-muted';
+            const meta = document.createElement('span');
+            meta.className = 'badge bg-light text-muted border rounded-pill';
             meta.textContent = memberIds.length + ' member' + (memberIds.length === 1 ? '' : 's');
-
-            titleWrap.appendChild(title);
             titleWrap.appendChild(meta);
 
             const removeButton = createRemoveButton('Remove team', function () {
@@ -456,10 +486,6 @@
                 const row = document.createElement('div');
                 row.className = 'd-flex justify-content-between align-items-center gap-2 py-1 px-3 border-top';
 
-                const textWrap = document.createElement('div');
-                textWrap.className = 'small';
-                textWrap.textContent = userLabels[String(userId)] || ('User ' + userId);
-
                 const actions = document.createElement('div');
                 actions.className = 'd-flex align-items-center gap-3';
                 actions.appendChild(createPrincipalInvestigatorToggle(userId));
@@ -473,7 +499,7 @@
                 });
 
                 actions.appendChild(removeButton);
-                row.appendChild(textWrap);
+                row.appendChild(createMemberLabel(userId));
                 row.appendChild(actions);
                 card.appendChild(row);
             });

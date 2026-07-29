@@ -328,7 +328,10 @@
             return;
         }
 
-        const userLookup = @json($users->pluck('name', 'id'));
+        const userLookup = @json($users->mapWithKeys(fn ($user) => [(string) $user->id => $user->name]));
+        const entityBadgeClasses = @json([
+            'team' => \App\Support\EntityBadge::relationClasses('team'),
+        ]);
         const teamLookup = @json($teams->pluck('name', 'id'));
         const contactFamilyLookup = @json($contactFamilies->pluck('name', 'id'));
         const activityTypeLookup = @json($activityTypes->pluck('name', 'id'));
@@ -457,6 +460,18 @@
             return '';
         }
 
+        function userName(userId) {
+            return userLookup[String(userId)] || ('User ' + userId);
+        }
+
+        function memberLabelMarkup(name) {
+            return '<span class="small fw-semibold text-dark">' + escapeHtml(name) + '</span>';
+        }
+
+        function teamBadgeMarkup(teamName) {
+            return '<span class="badge ' + entityBadgeClasses.team + '">' + escapeHtml(teamName) + '</span>';
+        }
+
         function buildAssignmentGroups(rowData) {
             const groups = [];
             const groupedUserIds = new Set();
@@ -472,14 +487,16 @@
                 if (isJoint) {
                     teamUserNames = memberIds.map(function (memberId) {
                         groupedUserIds.add(String(memberId));
-                        return userLookup[memberId];
+
+                        return userName(memberId);
                     }).filter(Boolean).sort();
                 } else {
                     teamUserNames = assignedUserIds
                         .filter(function (userId) { return memberIds.map(String).includes(String(userId)); })
                         .map(function (userId) {
                             groupedUserIds.add(String(userId));
-                            return userLookup[userId];
+
+                            return userName(userId);
                         })
                         .filter(Boolean)
                         .sort();
@@ -490,7 +507,7 @@
 
             const standaloneUsers = assignedUserIds
                 .filter(function (userId) { return !groupedUserIds.has(String(userId)); })
-                .map(function (userId) { return userLookup[userId]; })
+                .map(function (userId) { return userName(userId); })
                 .filter(Boolean)
                 .sort();
 
@@ -509,18 +526,18 @@
             return groups.map(function (group) {
                 let html = '<div class="mb-2 w-100">';
                 if (group.team_name) {
-                    html += '<div class="d-block mb-1"><span class="badge bg-secondary-subtle text-secondary-emphasis border">' + escapeHtml(group.team_name) + '</span></div>';
+                    html += '<div class="d-block mb-1">' + teamBadgeMarkup(group.team_name) + '</div>';
                     if (group.users.length > 0) {
                         html += '<div class="ps-2 d-flex flex-column align-items-start gap-1">';
                         html += group.users.map(function (name) {
-                            return '<span class="badge bg-primary-subtle text-primary-emphasis border">' + escapeHtml(name) + '</span>';
+                            return memberLabelMarkup(name);
                         }).join('');
                         html += '</div>';
                     }
                 } else if (group.users.length > 0) {
                     html += '<div class="d-flex flex-column align-items-start gap-1">';
                     html += group.users.map(function (name) {
-                        return '<span class="badge bg-primary-subtle text-primary-emphasis border">' + escapeHtml(name) + '</span>';
+                        return memberLabelMarkup(name);
                     }).join('');
                     html += '</div>';
                 }
@@ -631,22 +648,31 @@
                 });
             }
 
+            function createMemberLabelElement(userId) {
+                const name = document.createElement('span');
+                name.className = 'small fw-semibold text-dark';
+                name.textContent = userName(userId);
+
+                return name;
+            }
+
             function renderTeamCard(teamId, memberIds) {
                 const card = document.createElement('div');
                 card.className = 'border rounded overflow-hidden bg-body mb-2';
 
                 const header = document.createElement('div');
                 header.className = 'd-flex align-items-center gap-2 px-2 py-1 bg-light';
-                const teamLabel = document.createElement('span');
-                teamLabel.className = 'fw-semibold small';
-                teamLabel.textContent = teamLookup[teamId] || ('Team ' + teamId);
+
+                const teamBadge = document.createElement('span');
+                teamBadge.className = 'badge ' + entityBadgeClasses.team;
+                teamBadge.textContent = teamLookup[teamId] || ('Team ' + teamId);
 
                 let teamCheckbox = null;
                 if (!isIndividual) {
                     teamCheckbox = createCheckbox('team', teamId, selectedTeams.has(String(teamId)));
                     header.appendChild(teamCheckbox);
                 }
-                header.appendChild(teamLabel);
+                header.appendChild(teamBadge);
                 card.appendChild(header);
 
                 const memberCheckboxes = [];
@@ -654,11 +680,8 @@
                     const row = document.createElement('div');
                     row.className = 'd-flex align-items-center gap-2 py-1 px-2 border-top ps-3';
                     const userCheckbox = createCheckbox('user', memberId, selectedUsers.has(String(memberId)));
-                    const userLabel = document.createElement('span');
-                    userLabel.className = 'small text-muted';
-                    userLabel.textContent = userLookup[memberId] || ('User ' + memberId);
                     row.appendChild(userCheckbox);
-                    row.appendChild(userLabel);
+                    row.appendChild(createMemberLabelElement(memberId));
                     card.appendChild(row);
                     memberCheckboxes.push(userCheckbox);
                     bindMemberCheckbox(teamCheckbox, userCheckbox);
@@ -695,11 +718,8 @@
                     const row = document.createElement('div');
                     row.className = 'd-flex align-items-center gap-2 py-1 px-2 border-top';
                     const userCheckbox = createCheckbox('user', userId, selectedUsers.has(String(userId)));
-                    const userLabel = document.createElement('span');
-                    userLabel.className = 'small';
-                    userLabel.textContent = userLookup[userId] || ('User ' + userId);
                     row.appendChild(userCheckbox);
-                    row.appendChild(userLabel);
+                    row.appendChild(createMemberLabelElement(userId));
                     card.appendChild(row);
                 });
                 ledger.appendChild(card);

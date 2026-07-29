@@ -28,6 +28,7 @@
                             <th>Contact Family</th>
                             <th>Activity Type</th>
                             <th>Logged By</th>
+                            <th class="text-end fw-normal" style="width:52px;">Actions</th>
                             @break
                         @case('organization')
                             <th>Date</th>
@@ -59,20 +60,25 @@
                     <tr>
                         @switch($variant)
                             @case('agreement')
-                                <td>
-                                    <a href="{{ route('activities.show', $activity) }}" class="text-decoration-none text-dark">
-                                        {{ $activity->engagement_date->format('M d, Y') }}
-                                    </a>
-                                </td>
-                                <td>
-                                    @if($activity->activityType?->contactFamily)
-                                        <span class="badge bg-primary">{{ $activity->activityType->contactFamily->name }}</span>
+                                <td class="small text-nowrap">{{ $activity->engagement_date->format('M d, Y') }}</td>
+                                <td class="small">{{ $activity->activityType?->contactFamily?->name ?? '—' }}</td>
+                                <td class="small">{{ $activity->activityType->name ?? '—' }}</td>
+                                <td class="small">
+                                    @if($activity->user)
+                                        <a href="{{ route('users.show', $activity->user) }}" class="text-decoration-underline">{{ $activity->user->name }}</a>
                                     @else
                                         —
                                     @endif
                                 </td>
-                                <td class="small">{{ $activity->activityType->name ?? '—' }}</td>
-                                <td class="small text-muted">{{ $activity->user->name ?? '—' }}</td>
+                                <td class="text-end text-nowrap">
+                                    <a href="{{ route('activities.show', $activity) }}"
+                                       class="btn btn-outline-primary btn-sm"
+                                       data-bs-toggle="tooltip"
+                                       data-bs-title="View activity"
+                                       aria-label="View activity">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
                                 @break
                             @case('organization')
                                 <td>

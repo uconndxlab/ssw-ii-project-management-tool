@@ -3,14 +3,8 @@
 @section('title', 'Create Agreement')
 
 @section('content')
-<div class="row justify-content-center mb-4">
-    <div class="col-md-10">
-        <h1>Create Agreement</h1>
-    </div>
-</div>
-
 <div class="row justify-content-center">
-    <div class="col-md-10">
+    <div class="col-lg-10">
         @if ($errors->any())
             <div class="alert alert-danger">
                 <ul class="mb-0">
@@ -23,8 +17,14 @@
 
         <form method="POST" action="{{ route('agreements.store') }}" id="agreements-create-form" enctype="multipart/form-data">
             @csrf
+            <x-form-page-header
+                entity-type="Agreement"
+                :entity-type-badge-class="\App\Support\EntityBadge::typeClasses('agreement')"
+                mode="create"
+                :back-route="route('agreements.index')"
+                back-label="All Agreements"
+            />
             @include('agreements.partials.form-fields', ['agreement' => null])
-
         </form>
     </div>
 </div>

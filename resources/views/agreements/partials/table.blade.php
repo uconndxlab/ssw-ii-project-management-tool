@@ -79,7 +79,9 @@
                     <td>
                         <div class="d-flex flex-wrap gap-1">
                             @forelse($agreement->states as $state)
-                                <span class="badge bg-info text-dark">{{ $state->name }}</span>
+                                <x-entity-relation-badge kind="state" :href="route('states.show', $state)">
+                                    {{ $state->name }}
+                                </x-entity-relation-badge>
                             @empty
                                 <span class="text-muted small">—</span>
                             @endforelse
@@ -88,11 +90,7 @@
                     <td class="small text-nowrap">{{ $agreement->start_date?->format('M d, Y') ?? '—' }}</td>
                     <td class="small text-nowrap">{{ $agreement->end_date?->format('M d, Y') ?? '—' }}</td>
                     <td>
-                        @if($agreement->active)
-                            <span class="badge bg-success">Active</span>
-                        @else
-                            <span class="badge bg-secondary">Inactive</span>
-                        @endif
+                        <x-status-badge :active="$agreement->active" />
                     </td>
                     <td class="small">
                         @if($agreement->principalInvestigators->isEmpty())

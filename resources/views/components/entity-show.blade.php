@@ -23,25 +23,31 @@
     'backLabel'      => 'Back',
     'mainCardTitle'  => 'Relationships',
     'activityFirst'  => false,
+    'active'         => null,
 ])
 
 {{-- ── Page Header ──────────────────────────────────────────────────────── --}}
-<div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-3">
-    <div>
-        <span class="badge {{ $typeBadgeClass }} text-uppercase mb-2" style="font-size:.7rem;letter-spacing:.05em;">
-            {{ $type }}
-        </span>
-        <h1 class="h2 mb-0 fw-bold">{{ $title }}</h1>
-    </div>
-    <div class="d-flex gap-2 flex-wrap">
+<div class="mb-4">
+    <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+        <div class="min-w-0 flex-grow-1">
+            <a href="{{ $backRoute }}" class="btn btn-link btn-sm text-muted text-decoration-none px-0 mb-1">
+                <i class="bi bi-arrow-left me-1"></i>{{ $backLabel }}
+            </a>
+
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                <x-entity-type-badge :label="$type" :badge-class="$typeBadgeClass" />
+                @if(! is_null($active))
+                    <x-status-badge :active="$active" />
+                @endif
+            </div>
+            <h1 class="h2 mb-0 fw-bold">{{ $title }}</h1>
+        </div>
+
         @if($editRoute)
-            <a href="{{ $editRoute }}" class="btn btn-outline-primary">
-                ✏️ Edit
+            <a href="{{ $editRoute }}" class="btn btn-outline-primary flex-shrink-0">
+                <i class="bi bi-pencil-square me-1"></i>Edit
             </a>
         @endif
-        <a href="{{ $backRoute }}" class="btn btn-outline-secondary">
-            ← {{ $backLabel }}
-        </a>
     </div>
 </div>
 
@@ -51,8 +57,8 @@
     {{-- Summary column (narrow) --}}
     <div class="col-lg-4">
         <div class="card shadow-sm entity-show-card h-100">
-            <div class="card-header bg-light py-2">
-                <span class="text-muted fw-semibold small text-uppercase" style="letter-spacing:.05em;">
+            <div class="card-header bg-light py-2 px-3">
+                <span class="text-muted fw-semibold small text-uppercase mb-0" style="letter-spacing:.05em;">
                     Summary
                 </span>
             </div>
@@ -68,8 +74,8 @@
         @if($activityFirst)
             {{-- Recent Activity card --}}
             <div class="card shadow-sm entity-show-card">
-                <div class="card-header bg-light py-2">
-                    <span class="text-muted fw-semibold small text-uppercase" style="letter-spacing:.05em;">
+                <div class="card-header bg-light py-2 px-3">
+                    <span class="text-muted fw-semibold small text-uppercase mb-0" style="letter-spacing:.05em;">
                         Recent Activity
                     </span>
                 </div>
@@ -80,8 +86,8 @@
 
             {{-- Main content card --}}
             <div class="card shadow-sm entity-show-card">
-                <div class="card-header bg-light py-2">
-                    <span class="text-muted fw-semibold small text-uppercase" style="letter-spacing:.05em;">
+                <div class="card-header bg-light py-2 px-3">
+                    <span class="text-muted fw-semibold small text-uppercase mb-0" style="letter-spacing:.05em;">
                         {{ $mainCardTitle }}
                     </span>
                 </div>
@@ -92,8 +98,8 @@
         @else
             {{-- Relationships card --}}
             <div class="card shadow-sm entity-show-card">
-                <div class="card-header bg-light py-2">
-                    <span class="text-muted fw-semibold small text-uppercase" style="letter-spacing:.05em;">
+                <div class="card-header bg-light py-2 px-3">
+                    <span class="text-muted fw-semibold small text-uppercase mb-0" style="letter-spacing:.05em;">
                         {{ $mainCardTitle }}
                     </span>
                 </div>
@@ -104,8 +110,8 @@
 
             {{-- Recent Activity card --}}
             <div class="card shadow-sm entity-show-card">
-                <div class="card-header bg-light py-2">
-                    <span class="text-muted fw-semibold small text-uppercase" style="letter-spacing:.05em;">
+                <div class="card-header bg-light py-2 px-3">
+                    <span class="text-muted fw-semibold small text-uppercase mb-0" style="letter-spacing:.05em;">
                         Recent Activity
                     </span>
                 </div>

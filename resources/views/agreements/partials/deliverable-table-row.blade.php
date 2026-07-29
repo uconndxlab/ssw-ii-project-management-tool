@@ -21,19 +21,19 @@
                 <div class="mb-2 w-100">
                     @if(!empty($group['team_name']))
                         <div class="d-block mb-1">
-                            <span class="badge bg-secondary-subtle text-secondary-emphasis border">{{ $group['team_name'] }}</span>
+                            <x-entity-relation-badge kind="team">{{ $group['team_name'] }}</x-entity-relation-badge>
                         </div>
                         @if(!empty($group['users']))
                             <div class="ps-2 d-flex flex-column align-items-start gap-1">
                                 @foreach($group['users'] as $name)
-                                    <span class="badge bg-primary-subtle text-primary-emphasis border">{{ $name }}</span>
+                                    <span class="small fw-semibold text-dark">{{ $name }}</span>
                                 @endforeach
                             </div>
                         @endif
                     @elseif(!empty($group['users']))
                         <div class="d-flex flex-column align-items-start gap-1">
                             @foreach($group['users'] as $name)
-                                <span class="badge bg-primary-subtle text-primary-emphasis border">{{ $name }}</span>
+                                <span class="small fw-semibold text-dark">{{ $name }}</span>
                             @endforeach
                         </div>
                     @endif

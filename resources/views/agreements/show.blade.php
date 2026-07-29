@@ -11,13 +11,12 @@
     $hasAnyUsers = $directUsers->isNotEmpty() || $agreement->teams->isNotEmpty();
     $agreementProgramIds = $agreement->programs->pluck('id')->map(fn ($id) => (int) $id);
     $activityOnlyPrograms = $programs->filter(fn ($program) => !$agreementProgramIds->contains((int) $program->id));
-    $badgeLinkClass = 'text-decoration-underline';
 @endphp
 
 <x-entity-show
     title="{{ $agreement->name }}"
     type="Agreement"
-    typeBadgeClass="bg-success"
+    :typeBadgeClass="\App\Support\EntityBadge::typeClasses('agreement')"
     editRoute="{{ auth()->user()->isAdmin() ? route('agreements.edit', $agreement) : null }}"
     backRoute="{{ route('agreements.index') }}"
     backLabel="All Agreements"
@@ -29,11 +28,7 @@
         <dl class="row mb-0" style="min-width: 0;">
             <dt class="col-5 text-muted fw-normal small">Status</dt>
             <dd class="col-7 mb-2">
-                @if($agreement->active)
-                    <span class="badge bg-success">Active</span>
-                @else
-                    <span class="badge bg-secondary">Inactive</span>
-                @endif
+                <x-status-badge :active="$agreement->active" />
             </dd>
 
             <dt class="col-5 text-muted fw-normal small">Start Date</dt>
@@ -54,7 +49,9 @@
             <dd class="col-7 mb-2">
                 <div class="d-flex flex-wrap gap-1">
                     @forelse($agreement->projects->sortBy('name') as $project)
-                        <a href="{{ route('projects.show', $project) }}" class="badge bg-primary-subtle text-primary-emphasis border {{ $badgeLinkClass }}">{{ $project->name }}</a>
+                        <x-entity-relation-badge kind="project" :href="route('projects.show', $project)">
+                            {{ $project->name }}
+                        </x-entity-relation-badge>
                     @empty
                         <span class="text-muted small">None</span>
                     @endforelse
@@ -65,7 +62,9 @@
             <dd class="col-7 mb-2">
                 <div class="d-flex flex-wrap gap-1">
                     @forelse($agreement->programs->sortBy('name') as $program)
-                        <a href="{{ route('programs.show', $program) }}" class="badge bg-warning-subtle text-warning-emphasis border {{ $badgeLinkClass }}">{{ $program->name }}</a>
+                        <x-entity-relation-badge kind="program" :href="route('programs.show', $program)">
+                            {{ $program->name }}
+                        </x-entity-relation-badge>
                     @empty
                         <span class="text-muted small">None</span>
                     @endforelse
@@ -75,20 +74,7 @@
             <dt class="col-5 text-muted fw-normal small">Organizations</dt>
             <dd class="col-7 mb-2" style="min-width: 0;">
                 @forelse($agreement->organizations->sortBy('name') as $org)
-                    <div class="small py-1 {{ $loop->last ? '' : 'border-bottom' }}">
-                        <div class="d-flex flex-wrap align-items-center gap-1">
-                            <a href="{{ route('organizations.show', $org) }}" class="fw-semibold text-decoration-underline">{{ $org->name }}</a>
-                            @if($org->pivot->payor_source)
-                                <span class="badge bg-secondary-subtle text-secondary-emphasis border">Payor source</span>
-                            @endif
-                            @if($org->pivot->recipient)
-                                <span class="badge bg-secondary-subtle text-secondary-emphasis border">Recipient</span>
-                            @endif
-                        </div>
-                        @if($org->pivot->payor_source && $org->kfs_number)
-                            <div class="text-muted">{{ $org->kfs_number }}</div>
-                        @endif
-                    </div>
+                    <x-organization-relation-row :organization="$org" :class="$loop->last ? '' : 'border-bottom'" />
                 @empty
                     <span class="text-muted small">None</span>
                 @endforelse
@@ -98,7 +84,9 @@
             <dd class="col-7 mb-2">
                 <div class="d-flex flex-wrap gap-1">
                     @forelse($agreement->states as $state)
-                        <a href="{{ route('states.show', $state) }}" class="badge bg-info text-dark {{ $badgeLinkClass }}">{{ $state->name }}</a>
+                        <x-entity-relation-badge kind="state" :href="route('states.show', $state)">
+                            {{ $state->name }}
+                        </x-entity-relation-badge>
                     @empty
                         <span class="text-muted small">None</span>
                     @endforelse
@@ -107,9 +95,9 @@
 
             <dt class="col-5 text-muted fw-normal small">Activities</dt>
             <dd class="col-7 mb-2">
-                <span class="badge bg-primary rounded-pill">{{ $lifetimeTotals['activities'] }}</span>
+                <x-entity-count-badge kind="activity" :count="$lifetimeTotals['activities']" />
                 <span class="text-muted small ms-1">lifetime</span>
-                <span class="badge bg-light text-dark border rounded-pill ms-2">{{ $ytdTotals['activities'] }}</span>
+                <x-entity-count-badge kind="activity" :count="$ytdTotals['activities']" class="ms-2" />
                 <span class="text-muted small ms-1">YTD</span>
             </dd>
 
@@ -118,7 +106,9 @@
                 <dd class="col-7 mb-2">
                     <div class="d-flex flex-wrap gap-1">
                         @foreach($activityOnlyPrograms as $program)
-                            <a href="{{ route('programs.show', $program) }}" class="badge bg-warning-subtle text-warning-emphasis border {{ $badgeLinkClass }}">{{ $program->name }}</a>
+                            <x-entity-relation-badge kind="program" :href="route('programs.show', $program)">
+                                {{ $program->name }}
+                            </x-entity-relation-badge>
                         @endforeach
                     </div>
                 </dd>
@@ -127,55 +117,77 @@
 
         @if($agreement->abstract)
             <hr>
-            <h6 class="text-muted fw-normal small mb-1">Abstract</h6>
+            <h6 class="text-muted fw-semibold small text-uppercase mb-2" style="letter-spacing:.05em;">Abstract</h6>
             <p class="small mb-0">{{ $agreement->abstract }}</p>
         @endif
 
         <hr>
-        <h6 class="text-muted fw-normal small mb-2">Assigned Staff</h6>
+        <h6 class="text-muted fw-semibold small text-uppercase mb-3" style="letter-spacing:.05em;">Assigned Staff</h6>
         @if($hasAnyUsers)
-            @if($directUsers->isNotEmpty())
-                <div class="small fw-semibold text-muted mb-1">Additional users</div>
-                @foreach($directUsers as $user)
-                    <div class="small py-1 border-bottom">
-                        <a href="{{ route('users.show', $user) }}" class="fw-semibold text-decoration-underline">{{ $user->name }}</a>
-                        <span class="text-muted">· {{ ucfirst($user->role) }}</span>
-                        @if(!empty($user->is_principal_investigator))
-                            <span class="badge bg-warning-subtle text-dark ms-1">PI</span>
-                        @endif
-                        @if(!empty($user->also_in_teams))
-                            @foreach($agreement->teams->filter(fn ($team) => $team->users->contains('id', $user->id)) as $team)
-                                <a href="{{ route('teams.show', $team) }}" class="badge bg-secondary-subtle text-secondary-emphasis border ms-1 {{ $badgeLinkClass }}">{{ $team->name }}</a>
-                            @endforeach
-                        @endif
-                    </div>
-                @endforeach
-            @endif
-
-            @foreach($agreement->teams as $team)
-                @php
-                    $teamOnlyUsers = $team->users->whereNotIn('id', $directUserIds);
-                @endphp
-                @if($teamOnlyUsers->isNotEmpty())
-                    <a href="{{ route('teams.show', $team) }}" class="small fw-semibold text-decoration-underline d-block mt-2 mb-1">{{ $team->name }}</a>
-                    @foreach($teamOnlyUsers as $user)
-                        <div class="small py-1 border-bottom ps-2">
-                            <a href="{{ route('users.show', $user) }}" class="text-decoration-underline">{{ $user->name }}</a>
-                            <span class="text-muted">· {{ ucfirst($user->role) }}</span>
-                            @if($agreement->principalInvestigators->contains('id', $user->id))
-                                <span class="badge bg-warning-subtle text-dark ms-1">PI</span>
-                            @endif
+            <div class="d-grid gap-2">
+                @foreach($agreement->teams as $team)
+                    @php
+                        $teamOnlyUsers = $team->users->whereNotIn('id', $directUserIds);
+                    @endphp
+                    @if($teamOnlyUsers->isNotEmpty())
+                        <div class="border rounded overflow-hidden bg-body">
+                            <div class="px-3 py-2 border-bottom bg-light d-flex align-items-center gap-2">
+                                <x-entity-relation-badge kind="team" :href="route('teams.show', $team)">
+                                    {{ $team->name }}
+                                </x-entity-relation-badge>
+                                <x-entity-count-badge kind="team" :count="$teamOnlyUsers->count()" class="ms-auto" />
+                            </div>
+                            <div class="px-3 py-1">
+                                @foreach($teamOnlyUsers as $user)
+                                    <x-staff-member-row
+                                        :name="$user->name"
+                                        :href="route('users.show', $user)"
+                                        :role="$user->role"
+                                        :is-principal-investigator="$agreement->principalInvestigators->contains('id', $user->id)"
+                                        :class="$loop->last ? '' : 'border-bottom'"
+                                    />
+                                @endforeach
+                            </div>
                         </div>
-                    @endforeach
+                    @endif
+                @endforeach
+
+                @if($directUsers->isNotEmpty())
+                    <div class="border rounded overflow-hidden bg-body">
+                        <div class="px-3 py-2 border-bottom bg-light">
+                            <span class="small fw-semibold text-muted text-uppercase" style="letter-spacing:.05em;">Additional users</span>
+                        </div>
+                        <div class="px-3 py-1">
+                            @foreach($directUsers as $user)
+                                <x-staff-member-row
+                                    :name="$user->name"
+                                    :href="route('users.show', $user)"
+                                    :role="$user->role"
+                                    :is-principal-investigator="!empty($user->is_principal_investigator)"
+                                    :class="$loop->last ? '' : 'border-bottom'"
+                                >
+                                    <x-slot:after>
+                                        @if(!empty($user->also_in_teams))
+                                            @foreach($agreement->teams->filter(fn ($team) => $team->users->contains('id', $user->id)) as $team)
+                                                <x-entity-relation-badge kind="team" :href="route('teams.show', $team)">
+                                                    {{ $team->name }}
+                                                </x-entity-relation-badge>
+                                            @endforeach
+                                        @endif
+                                    </x-slot:after>
+                                </x-staff-member-row>
+                            @endforeach
+                        </div>
+                    </div>
                 @endif
-            @endforeach
+            </div>
         @else
             <p class="text-muted small mb-0">No staff assigned.</p>
         @endif
 
         @if($agreement->certificationCandidates->isNotEmpty())
             <hr>
-            <h6 class="text-muted fw-normal small mb-2">Certification Candidates</h6>
+            <h6 class="text-muted fw-semibold small text-uppercase mb-2" style="letter-spacing:.05em;">Certification Candidates</h6>
             <div class="small d-grid gap-1 mb-0">
                 @foreach($agreement->certificationCandidates as $candidate)
                     <div>{{ $candidate->name }}</div>
@@ -185,7 +197,7 @@
 
         @if($agreement->attachments->isNotEmpty())
             <hr>
-            <h6 class="text-muted fw-normal small mb-2">Attachments</h6>
+            <h6 class="text-muted fw-semibold small text-uppercase mb-2" style="letter-spacing:.05em;">Attachments</h6>
             @foreach($agreement->attachments as $attachment)
                 <div class="d-flex align-items-center justify-content-between mb-2">
                     <div class="small text-truncate me-2" title="{{ $attachment->filename }}">

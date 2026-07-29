@@ -15,14 +15,21 @@
     'disabled' => false,
     'disabledPlaceholder' => null,
     'emptySelectionLabel' => null,
+    'entityKind' => null,
 ])
 
 @php
+    use App\Support\EntityBadge;
+
     $selectedIds = collect($selectedIds)->map(fn ($id) => (string) $id)->values()->all();
 
     $searchKey = $searchKey ?: $labelKey;
 
-    $normalizedOptions = collect($options ?? $items)->map(function ($item) use ($labelKey, $valueKey, $searchKey) {
+    $entityBadgeClass = filled($entityKind)
+        ? EntityBadge::relationClasses($entityKind)
+        : null;
+
+    $normalizedOptions = collect($options ?? $items)->map(function ($item) use ($labelKey, $valueKey, $searchKey, $entityBadgeClass) {
         return [
             'value' => (string) data_get($item, $valueKey),
             'label' => (string) data_get($item, $labelKey),
@@ -32,9 +39,9 @@
                 data_get($item, 'contextLabels') ?? (data_get($item, 'context') ? [data_get($item, 'context')] : []),
                 fn ($label) => $label !== null && $label !== ''
             )),
-            'contextBadgeClass' => data_get($item, 'contextBadgeClass', 'bg-primary-subtle text-primary-emphasis border'),
+            'contextBadgeClass' => data_get($item, 'contextBadgeClass', $entityBadgeClass ?? 'bg-primary-subtle text-primary-emphasis border'),
             'kfs_number' => filled(data_get($item, 'kfs_number')) ? (string) data_get($item, 'kfs_number') : null,
-            'selectedBadgeClass' => data_get($item, 'selectedBadgeClass'),
+            'selectedBadgeClass' => data_get($item, 'selectedBadgeClass', $entityBadgeClass),
         ];
     })->filter(fn ($option) => $option['value'] !== '')->values()->all();
 @endphp
@@ -50,6 +57,7 @@
      data-disabled="{{ $disabled ? 'true' : 'false' }}"
      data-show-selected="{{ $showSelected ? 'true' : 'false' }}"
      data-empty-selection-label="{{ $emptySelectionLabel ?? '' }}"
+     data-selected-badge-class="{{ $entityBadgeClass ?? '' }}"
      data-selected='@json($selectedIds)'>
     <div class="d-flex flex-wrap gap-1 mb-2 {{ $showSelected ? '' : 'd-none' }}" data-token-selected></div>
 
@@ -102,6 +110,7 @@
         let disabledPlaceholder = picker.dataset.disabledPlaceholder || defaultPlaceholder;
         const showSelected = picker.dataset.showSelected === 'true';
         const emptySelectionLabel = (picker.dataset.emptySelectionLabel || '').trim();
+        const defaultSelectedBadgeClass = (picker.dataset.selectedBadgeClass || '').trim();
         const options = parseJson(optionsNode, []);
         const initialSelected = new Set(parseJson({ textContent: picker.dataset.selected || '[]' }, []));
         const selected = new Set(Array.from(initialSelected));
@@ -135,6 +144,10 @@
         function selectedBadgeClasses(opt) {
             if (opt.selectedBadgeClass) {
                 return String(opt.selectedBadgeClass);
+            }
+
+            if (defaultSelectedBadgeClass !== '') {
+                return defaultSelectedBadgeClass;
             }
 
             return 'text-bg-light border';
@@ -183,7 +196,7 @@
 
             if (selected.size === 0 && emptySelectionLabel !== '') {
                 const allBadge = document.createElement('span');
-                allBadge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle d-inline-flex align-items-center';
+                allBadge.className = 'badge ' + (defaultSelectedBadgeClass !== '' ? defaultSelectedBadgeClass : 'bg-primary-subtle text-primary-emphasis border') + ' d-inline-flex align-items-center';
                 allBadge.textContent = emptySelectionLabel;
                 selectedWrap.appendChild(allBadge);
             }

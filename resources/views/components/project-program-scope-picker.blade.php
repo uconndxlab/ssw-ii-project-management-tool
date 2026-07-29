@@ -16,13 +16,18 @@
     'programHelpText' => null,
     'projectHeight' => '260px',
     'programHeight' => '260px',
-    'programBadgeClass' => 'bg-primary-subtle text-primary-emphasis border',
     'projectEmptySelectionLabel' => null,
     'programEmptySelectionLabel' => null,
     'expandEmptyPrograms' => true,
 ])
 
-@php($scopePicker = App\Support\ProjectProgramScope::scopePickerViewData(collect($projects ?? []), $selectedProjectIds, $selectedProgramIds, $scopeId, $programBadgeClass))
+@php
+    use App\Support\EntityBadge;
+
+    $projectContextBadgeClass = EntityBadge::relationClasses('project');
+@endphp
+
+@php($scopePicker = App\Support\ProjectProgramScope::scopePickerViewData(collect($projects ?? []), $selectedProjectIds, $selectedProgramIds, $scopeId, $projectContextBadgeClass))
 
 <div data-project-program-scope
      data-scope-id="{{ $scopeId }}"
@@ -42,6 +47,7 @@
                 :placeholder="$projectPlaceholder"
                 :height="$projectHeight"
                 :empty-selection-label="$projectEmptySelectionLabel ?? ''"
+                entity-kind="project"
             />
             @if($projectHelpText)
                 <div class="form-text">{{ $projectHelpText }}</div>
@@ -63,6 +69,7 @@
                 :disabled="empty($scopePicker['selectedProjectIds'])"
                 :height="$programHeight"
                 :empty-selection-label="$programEmptySelectionLabel ?? ''"
+                entity-kind="program"
             />
             @if($programHelpText)
                 <div class="form-text">{{ $programHelpText }}</div>

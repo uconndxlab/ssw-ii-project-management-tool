@@ -1,6 +1,9 @@
 :root {
     --app-page-bg: #dde1e6;
     --app-surface-inset: #e8eaed;
+    --entity-org-bg: #eef1f6;
+    --entity-org-text: #4a5568;
+    --entity-org-border: #d8dee9;
 }
 
 body {
@@ -14,6 +17,12 @@ main {
 .entity-show-card {
     border: 1px solid rgba(0, 0, 0, 0.07);
     box-shadow: 0 0.2rem 0.75rem rgba(0, 0, 0, 0.07);
+}
+
+.entity-badge--organization {
+    background-color: var(--entity-org-bg);
+    color: var(--entity-org-text);
+    border-color: var(--entity-org-border) !important;
 }
 
 .required-label::after {
