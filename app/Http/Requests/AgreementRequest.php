@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Enums\AgreementTimeTrackingRequirement;
 use App\Models\Agreement;
 use App\Models\AgreementDeliverable;
+use App\Support\ActivityTypeDuration;
 use App\Support\DeliverableHistoryScope;
 use App\Models\ActivityType;
 use App\Models\ContactFamily;
@@ -78,6 +79,7 @@ class AgreementRequest extends FormRequest
             'deliverables.*.contact_family_id' => ['nullable', 'exists:contact_families,id'],
             'deliverables.*.program_id' => ['nullable', 'exists:programs,id'],
             'deliverables.*.metric_type' => ['nullable', Rule::in(['time', 'completion'])],
+            'deliverables.*.time_basis' => ['nullable', Rule::in(['observed', 'allotted'])],
             'deliverables.*.contribution_basis' => ['nullable', Rule::in(['contact', 'user'])],
             'deliverables.*.user_grouping_mode' => ['nullable', Rule::in(['joint', 'individual'])],
             'deliverables.*.include_additional_time' => ['nullable', 'boolean'],
@@ -482,6 +484,7 @@ class AgreementRequest extends FormRequest
                     && $this->deliverableScopeHasHistory($existingAgreement?->agreementActivityHistories ?? collect(), $existingDeliverable);
 
                 $metricType = $row['metric_type'] ?? null;
+                $timeBasis = $row['time_basis'] ?? null;
                 $contributionBasis = $row['contribution_basis'] ?? null;
                 $groupingMode = $row['user_grouping_mode'] ?? null;
                 $deliverableUserIds = collect($row['user_ids'] ?? [])
@@ -497,6 +500,26 @@ class AgreementRequest extends FormRequest
 
                 if (!$metricType) {
                     $validator->errors()->add("deliverables.{$deliverableIndex}.metric_type", 'Deliverable metric type is required.');
+                }
+
+                if ($metricType === 'time') {
+                    $timeBasis = $timeBasis ?: 'observed';
+
+                    if (!in_array($timeBasis, ['observed', 'allotted'], true)) {
+                        $validator->errors()->add("deliverables.{$deliverableIndex}.time_basis", 'Deliverable time basis must be observed or allotted.');
+                    }
+
+                    if ($timeBasis === 'allotted') {
+                        if (empty($row['activity_type_id'])) {
+                            $validator->errors()->add("deliverables.{$deliverableIndex}.activity_type_id", 'Allotted time deliverables must select an activity type with duration.');
+                        } else {
+                            $allottedActivityType = ActivityType::query()->find((int) $row['activity_type_id']);
+
+                            if (!$allottedActivityType || !ActivityTypeDuration::fromActivityType($allottedActivityType)->hasDuration()) {
+                                $validator->errors()->add("deliverables.{$deliverableIndex}.time_basis", 'Allotted time deliverables require an activity type with duration.');
+                            }
+                        }
+                    }
                 }
 
                 if (!$contributionBasis) {
@@ -533,6 +556,10 @@ class AgreementRequest extends FormRequest
 
                 if (($row['include_additional_time'] ?? false) && $metricType !== 'time') {
                     $validator->errors()->add("deliverables.{$deliverableIndex}.include_additional_time", 'Only time deliverables can include prep and follow up time.');
+                }
+
+                if (($row['include_additional_time'] ?? false) && ($timeBasis ?? 'observed') === 'allotted') {
+                    $validator->errors()->add("deliverables.{$deliverableIndex}.include_additional_time", 'Allotted time deliverables cannot include prep and follow up time.');
                 }
 
                 if (($row['include_additional_time'] ?? false) && $contactFamily && !$contactFamily->track_additional_time) {
@@ -615,6 +642,7 @@ class AgreementRequest extends FormRequest
     private function deliverableSemanticFieldsChanged(AgreementDeliverable $deliverable, array $row): bool
     {
         return ($deliverable->metric_type ?? null) !== ($row['metric_type'] ?? null)
+            || ($deliverable->time_basis ?? 'observed') !== ($row['time_basis'] ?? 'observed')
             || ($deliverable->contribution_basis ?? null) !== ($row['contribution_basis'] ?? null)
             || ($deliverable->user_grouping_mode ?? null) !== ($row['user_grouping_mode'] ?? null)
             || (bool) $deliverable->include_additional_time !== filter_var($row['include_additional_time'] ?? false, FILTER_VALIDATE_BOOLEAN);

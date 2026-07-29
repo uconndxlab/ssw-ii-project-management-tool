@@ -20,6 +20,8 @@ class AgreementActivityHistory extends Model
         'activity_hours',
         'prep_hours',
         'follow_up_hours',
+        'allotted_hours',
+        'allotted_days',
         'program_ids_snapshot',
         'team_ids_snapshot',
     ];
@@ -32,6 +34,8 @@ class AgreementActivityHistory extends Model
             'activity_hours' => 'decimal:2',
             'prep_hours' => 'decimal:2',
             'follow_up_hours' => 'decimal:2',
+            'allotted_hours' => 'decimal:2',
+            'allotted_days' => 'decimal:2',
             'program_ids_snapshot' => 'array',
             'team_ids_snapshot' => 'array',
         ];

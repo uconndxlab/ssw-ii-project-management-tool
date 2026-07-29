@@ -13,6 +13,7 @@ use App\Models\State;
 use App\Models\User;
 use App\Services\DeliverableContributionService;
 use App\Support\ActivityFundingSourceTokens;
+use App\Support\ActivityTypeDuration;
 use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -294,6 +295,7 @@ class ActivityController extends Controller
             'participant_times.*.hours' => ['nullable', 'numeric', 'min:0'],
             'participant_times.*.prep_hours' => ['nullable', 'numeric', 'min:0'],
             'participant_times.*.follow_up_hours' => ['nullable', 'numeric', 'min:0'],
+            'completion_count' => ['required', 'integer', 'min:1', 'max:999'],
         ]);
 
         $validator->after(function ($validator) use ($request) {
@@ -344,8 +346,11 @@ class ActivityController extends Controller
                 'user_id' => Auth::id(),
                 'engagement_date' => $validated['engagement_date'],
                 'activity_type_id' => $validated['activity_type_id'],
+                'completion_count' => (int) $validated['completion_count'],
                 'internal_only' => $validated['internal_only'] ?? false,
             ]);
+
+            $this->syncActivityDurationSnapshot($activity, $activityType, true);
 
             $this->syncLoggingFieldAnswers($activity, $validated, $agreements, $contactFamily, $activityType);
 
@@ -471,6 +476,7 @@ class ActivityController extends Controller
             'participant_times.*.hours' => ['nullable', 'numeric', 'min:0'],
             'participant_times.*.prep_hours' => ['nullable', 'numeric', 'min:0'],
             'participant_times.*.follow_up_hours' => ['nullable', 'numeric', 'min:0'],
+            'completion_count' => ['required', 'integer', 'min:1', 'max:999'],
         ]);
 
         $validator->after(function ($validator) use ($request) {
@@ -519,11 +525,16 @@ class ActivityController extends Controller
         );
 
         DB::transaction(function () use ($activity, $validated, $agreements, $contactFamily, $activityType) {
+            $activityTypeChanged = (int) $activity->activity_type_id !== (int) $validated['activity_type_id'];
+
             $activity->update([
                 'engagement_date' => $validated['engagement_date'],
                 'activity_type_id' => $validated['activity_type_id'],
+                'completion_count' => (int) $validated['completion_count'],
                 'internal_only' => $validated['internal_only'] ?? false,
             ]);
+
+            $this->syncActivityDurationSnapshot($activity, $activityType, $activityTypeChanged);
 
             $this->syncLoggingFieldAnswers($activity, $validated, $agreements, $contactFamily, $activityType);
 
@@ -1118,6 +1129,17 @@ class ActivityController extends Controller
         if (($timeTracking['requires_participant_time'] ?? false) && !empty($timeTracking['participant_times'])) {
             $activity->participantTimes()->createMany($timeTracking['participant_times']);
         }
+    }
+
+    private function syncActivityDurationSnapshot(Activity $activity, ActivityType $activityType, bool $activityTypeChanged): void
+    {
+        // only updates if activty changed
+        if (!$activityTypeChanged) {
+            return;
+        }
+
+        // updates the allotted times -> overcomplicated ActivityTypeDuration support class...
+        $activity->update(ActivityTypeDuration::snapshotFromActivityType($activityType));
     }
 
     private function validateAgreementFundingSources(array $validated, $agreements): void

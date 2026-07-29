@@ -132,7 +132,13 @@
                                         <tr>
                                             <td>{{ $deliverable->activityType?->name ?? '—' }}</td>
                                             <td>{{ $deliverable->contactFamily?->name ?? '—' }}</td>
-                                            <td class="text-center">{{ $deliverable->metric_type ? ucfirst($deliverable->metric_type) : '—' }}</td>
+                                            <td class="text-center">
+                                                @if($deliverable->metric_type === 'time')
+                                                    {{ ($deliverable->time_basis ?? 'observed') === 'allotted' ? 'Allotted time' : 'Time' }}
+                                                @else
+                                                    {{ $deliverable->metric_type ? ucfirst($deliverable->metric_type) : '—' }}
+                                                @endif
+                                            </td>
                                             <td class="text-center">{{ $deliverable->target_quantity !== null ? number_format((float) $deliverable->target_quantity, 1) : '—' }}</td>
                                             <td>{{ $deliverable->notes ?? '' }}</td>
                                             <td>
@@ -198,7 +204,13 @@
                                                     @endif
                                                 </td>
                                                 <td>{{ $entry['deliverable']->activityType?->name ?? '—' }}</td>
-                                                <td class="text-center">{{ $entry['deliverable']->metric_type ? ucfirst($entry['deliverable']->metric_type) : '—' }}</td>
+                                                <td class="text-center">
+                                                    @if($entry['deliverable']->metric_type === 'time')
+                                                        {{ ($entry['deliverable']->time_basis ?? 'observed') === 'allotted' ? 'Allotted time' : 'Time' }}
+                                                    @else
+                                                        {{ $entry['deliverable']->metric_type ? ucfirst($entry['deliverable']->metric_type) : '—' }}
+                                                    @endif
+                                                </td>
                                                 <td class="text-center">{{ $entry['deliverable']->target_quantity !== null ? number_format((float) $entry['deliverable']->target_quantity, 1) : '—' }}</td>
                                             </tr>
                                             @endforeach

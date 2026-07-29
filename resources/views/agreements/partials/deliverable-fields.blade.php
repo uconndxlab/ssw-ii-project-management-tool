@@ -33,7 +33,17 @@
     ];
 
     $selectedContactFamily = $contactFamilies->firstWhere('id', $row['contact_family_id'] ?? null);
+    $timeBasisOptions = [
+        'observed' => 'Observed',
+        'allotted' => 'Allotted',
+    ];
+
+    $selectedActivityType = $activityTypes->firstWhere('id', $row['activity_type_id'] ?? null);
+    $currentTimeBasis = ($row['metric_type'] ?? '') === 'time'
+        ? ($row['time_basis'] ?? 'observed')
+        : 'observed';
     $showAdditionalTime = ($row['metric_type'] ?? '') === 'time'
+        && $currentTimeBasis === 'observed'
         && !empty($row['contact_family_id'])
         && $selectedContactFamily?->track_additional_time;
 @endphp
@@ -85,6 +95,8 @@
                                     data-contact-family-id="{{ $type->contact_family_id }}"
                                     data-program-ids='@json($activityTypeProgramIds)'
                                     data-global="{{ empty($activityTypeProgramIds) ? 'true' : 'false' }}"
+                                    data-duration-hours="{{ (float) $type->duration_hours > 0 ? $type->duration_hours : '' }}"
+                                    data-duration-days="{{ (float) $type->duration_days > 0 ? $type->duration_days : '' }}"
                                     @selected((string) ($row['activity_type_id'] ?? '') === (string) $type->id)>
                                 {{ $type->name }}
                             </option>
@@ -135,21 +147,41 @@
         <p class="text-muted small mb-3">How progress is measured and attributed.</p>
 
         <div class="{{ $semanticLocked ? 'd-none' : '' }}" data-deliverable-requirement-editor>
-            <div class="mb-3">
-                <label class="form-label fw-semibold d-block mb-1">Metric <span class="text-danger">*</span></label>
-                <p class="text-muted small mb-2">Choose whether this deliverable tracks logged hours or activity completions.</p>
-                <div class="d-grid gap-2">
-                    @foreach($metricOptions as $value => $label)
-                        <label class="form-check border rounded px-3 py-2 mb-0 {{ ($row['metric_type'] ?? '') === $value ? 'border-primary bg-light' : '' }}">
-                            <input class="form-check-input me-2"
-                                   type="radio"
-                                   name="{{ $fieldPrefix }}[metric_type]"
-                                   value="{{ $value }}"
-                                   data-deliverable-metric
-                                   {{ ($row['metric_type'] ?? '') === $value ? 'checked' : '' }}>
-                            <span class="form-check-label fw-semibold">{{ $label }}</span>
-                        </label>
-                    @endforeach
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold d-block mb-1">Metric <span class="text-danger">*</span></label>
+                    <p class="text-muted small mb-2">Choose whether this deliverable tracks logged time or activity completions.</p>
+                    <div class="d-grid gap-2">
+                        @foreach($metricOptions as $value => $label)
+                            <label class="form-check border rounded px-3 py-2 mb-0 {{ ($row['metric_type'] ?? '') === $value ? 'border-primary bg-light' : '' }}">
+                                <input class="form-check-input me-2"
+                                       type="radio"
+                                       name="{{ $fieldPrefix }}[metric_type]"
+                                       value="{{ $value }}"
+                                       data-deliverable-metric
+                                       {{ ($row['metric_type'] ?? '') === $value ? 'checked' : '' }}>
+                                <span class="form-check-label fw-semibold">{{ $label }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+                </div>
+
+                <div class="col-md-6" data-time-basis-wrapper>
+                    <label class="form-label fw-semibold d-block mb-1">Time Measurement</label>
+                    <p class="text-muted small mb-2">Choose observed logged hours or allotted duration from the activity type.</p>
+                    <div class="d-grid gap-2">
+                        @foreach($timeBasisOptions as $value => $label)
+                            <label class="form-check border rounded px-3 py-2 mb-0 {{ $currentTimeBasis === $value ? 'border-primary bg-light' : '' }}">
+                                <input class="form-check-input me-2"
+                                       type="radio"
+                                       name="{{ $fieldPrefix }}[time_basis]"
+                                       value="{{ $value }}"
+                                       data-deliverable-time-basis
+                                       {{ $currentTimeBasis === $value ? 'checked' : '' }}>
+                                <span class="form-check-label fw-semibold">{{ $label }}</span>
+                            </label>
+                        @endforeach
+                    </div>
                 </div>
             </div>
 
@@ -158,6 +190,8 @@
                     <label class="form-label fw-semibold d-block mb-1" data-deliverable-target-label>
                         @if(($row['metric_type'] ?? '') === 'completion')
                             Target Completions <span class="text-danger">*</span>
+                        @elseif($currentTimeBasis === 'allotted' && (float) ($selectedActivityType?->duration_days ?? 0) > 0)
+                            Target Days <span class="text-danger">*</span>
                         @else
                             Target Hours <span class="text-danger">*</span>
                         @endif
@@ -169,6 +203,13 @@
                            min="0"
                            step="0.1"
                            data-deliverable-target>
+                    <div class="form-text {{ $currentTimeBasis === 'allotted' && $selectedActivityType && ((float) $selectedActivityType->duration_days > 0 || (float) $selectedActivityType->duration_hours > 0) ? '' : 'd-none' }}" data-deliverable-duration-reminder>
+                        @if((float) ($selectedActivityType?->duration_days ?? 0) > 0)
+                            Each completion: {{ rtrim(rtrim(number_format((float) $selectedActivityType->duration_days, 1, '.', ''), '0'), '.') }} {{ (float) $selectedActivityType->duration_days == 1 ? 'day' : 'days' }}
+                        @elseif((float) ($selectedActivityType?->duration_hours ?? 0) > 0)
+                            Each completion: {{ rtrim(rtrim(number_format((float) $selectedActivityType->duration_hours, 1, '.', ''), '0'), '.') }} {{ (float) $selectedActivityType->duration_hours == 1 ? 'hour' : 'hours' }}
+                        @endif
+                    </div>
                 </div>
 
                 <div class="col-md-8 {{ $showAdditionalTime ? '' : 'd-none' }}" data-additional-time-wrapper>
@@ -235,7 +276,13 @@
         <div class="{{ $semanticLocked ? '' : 'd-none' }}" data-deliverable-requirement-readonly>
             <dl class="row mb-3 small">
                 <dt class="col-sm-4 text-muted fw-normal">Metric</dt>
-                <dd class="col-sm-8 mb-2" data-readonly-metric>{{ $metricOptions[$row['metric_type'] ?? ''] ?? '—' }}</dd>
+                <dd class="col-sm-8 mb-2" data-readonly-metric>
+                    @if(($row['metric_type'] ?? '') === 'time')
+                        {{ $currentTimeBasis === 'allotted' ? 'Allotted time' : 'Time' }}
+                    @else
+                        {{ $metricOptions[$row['metric_type'] ?? ''] ?? '—' }}
+                    @endif
+                </dd>
                 <dt class="col-sm-4 text-muted fw-normal">Contribution Basis</dt>
                 <dd class="col-sm-8 mb-2" data-readonly-basis>{{ $basisOptions[$row['contribution_basis'] ?? '']['label'] ?? '—' }}</dd>
                 <dt class="col-sm-4 text-muted fw-normal">Grouping</dt>
@@ -246,7 +293,13 @@
             <div class="row g-3">
                 <div class="col-lg-4">
                     <label class="form-label fw-semibold d-block mb-1" data-deliverable-target-label-locked>
-                        {{ ($row['metric_type'] ?? '') === 'completion' ? 'Target Completions' : 'Target Hours' }}
+                        @if(($row['metric_type'] ?? '') === 'completion')
+                            Target Completions
+                        @elseif($currentTimeBasis === 'allotted' && (float) ($selectedActivityType?->duration_days ?? 0) > 0)
+                            Target Days
+                        @else
+                            Target Hours
+                        @endif
                         <span class="text-danger">*</span>
                     </label>
                     <input type="number"

@@ -478,6 +478,9 @@ class AgreementController extends Controller
                 'contact_family_id' => $row['contact_family_id'] ?? null,
                 'program_id' => $row['program_id'] ?? null,
                 'metric_type' => $row['metric_type'] ?? null,
+                'time_basis' => ($row['metric_type'] ?? null) === 'time'
+                    ? ($row['time_basis'] ?? 'observed')
+                    : 'observed',
                 'contribution_basis' => $row['contribution_basis'] ?? null,
                 'user_grouping_mode' => $row['user_grouping_mode'] ?? null,
                 'include_additional_time' => filter_var($row['include_additional_time'] ?? false, FILTER_VALIDATE_BOOLEAN),
@@ -499,6 +502,7 @@ class AgreementController extends Controller
                         'activity_type_id' => $deliverable->activity_type_id,
                         'program_id' => $deliverable->program_id,
                         'metric_type' => $deliverable->metric_type,
+                        'time_basis' => $deliverable->time_basis,
                         'contribution_basis' => $deliverable->contribution_basis,
                         'user_grouping_mode' => $deliverable->user_grouping_mode,
                         'include_additional_time' => (bool) $deliverable->include_additional_time,

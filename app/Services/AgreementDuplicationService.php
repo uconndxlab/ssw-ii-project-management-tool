@@ -134,6 +134,7 @@ class AgreementDuplicationService
             'contact_family_id' => $deliverable->contact_family_id,
             'program_id' => $deliverable->program_id,
             'metric_type' => $deliverable->metric_type,
+            'time_basis' => $deliverable->time_basis,
             'contribution_basis' => $deliverable->contribution_basis,
             'user_grouping_mode' => $deliverable->user_grouping_mode,
             'include_additional_time' => (bool) $deliverable->include_additional_time,

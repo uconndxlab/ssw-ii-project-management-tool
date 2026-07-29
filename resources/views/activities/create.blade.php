@@ -24,6 +24,9 @@
     $fundingSourceData = old('funding_sources', []);
     $engagementDateValue = old('engagement_date', now()->format('Y-m-d'));
     $internalOnlyChecked = (bool) old('internal_only', false);
+    $completionCountValue = (int) old('completion_count', 1);
+    $allottedDurationHours = old('allotted_duration_hours');
+    $allottedDurationDays = old('allotted_duration_days');
 @endphp
 
 <x-activity-form
@@ -48,6 +51,9 @@
     :funding-source-data="$fundingSourceData"
     :engagement-date-value="$engagementDateValue"
     :internal-only-checked="$internalOnlyChecked"
+    :completion-count-value="$completionCountValue"
+    :allotted-duration-hours="$allottedDurationHours"
+    :allotted-duration-days="$allottedDurationDays"
 />
 
 @endsection

@@ -7,6 +7,7 @@ use App\Models\Agreement;
 use App\Models\AgreementActivityHistory;
 use App\Models\DeliverableContribution;
 use App\Models\AgreementDeliverable;
+use App\Support\ActivityTypeDuration;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
@@ -17,6 +18,7 @@ class DeliverableContributionService
         $agreement->loadMissing([
             'agreementActivityHistories',
             'deliverables.program',
+            'deliverables.activityType',
             'deliverables.users',
             'deliverables.teams',
         ]);
@@ -60,6 +62,7 @@ class DeliverableContributionService
             'programs',
             'agreements.teams.users',
             'agreements.deliverables.program',
+            'agreements.deliverables.activityType',
             'agreements.deliverables.users',
             'agreements.deliverables.teams',
         ]);
@@ -133,6 +136,11 @@ class DeliverableContributionService
             ->filter(fn ($time) => $time->user_id)
             ->keyBy(fn ($time) => (int) $time->user_id);
 
+        $completionCount = max(1, (int) ($activity->completion_count ?? 1));
+        $duration = ActivityTypeDuration::fromActivity($activity);
+        $allottedTotals = $duration->totalForCompletionCount($completionCount);
+        $hasAllottedTime = $duration->hasDuration();
+
         $rows = [];
 
         foreach ($activity->agreements as $agreement) {
@@ -146,42 +154,57 @@ class DeliverableContributionService
                 ->groupBy('user_id')
                 ->map(fn ($entries) => $entries->pluck('team_id')->unique()->values()->all());
 
-            $rows[] = [
-                'agreement_id' => $agreement->id,
-                'activity_id' => $activity->id,
-                'contact_family_id' => $contactFamilyId,
-                'activity_type_id' => $activity->activity_type_id,
-                'contributor_user_id' => null,
-                'activity_date' => $activity->engagement_date,
-                'contribution_kind' => 'completion',
-                'completion_units' => 1,
-                'activity_hours' => null,
-                'prep_hours' => 0,
-                'follow_up_hours' => 0,
-                'program_ids_snapshot' => $programIds,
-                'team_ids_snapshot' => null,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
+            // these rows can be flattened if refactor to remove contribution_kind on activity history
+            // not sure why this would need to be on table, it can be removed and place all vals into one row
+            // row for contact completion
+            $rows[] = $this->buildHistoryRow(
+                $agreement->id,
+                $activity,
+                $contactFamilyId,
+                $programIds,
+                null,
+                null,
+                'completion',
+                $completionCount,
+                null,
+                null,
+                null
+            );
 
+            // row for contactallotted time
+            if ($hasAllottedTime) {
+                $rows[] = $this->buildHistoryRow(
+                    $agreement->id,
+                    $activity,
+                    $contactFamilyId,
+                    $programIds,
+                    null,
+                    null,
+                    'allotted_time',
+                    null,
+                    null,
+                    $allottedTotals['allotted_hours'],
+                    $allottedTotals['allotted_days']
+                );
+            }
+
+            // row for contact time
             if ($activity->contactTime && (float) $activity->contactTime->activity_hours > 0) {
-                $rows[] = [
-                    'agreement_id' => $agreement->id,
-                    'activity_id' => $activity->id,
-                    'contact_family_id' => $contactFamilyId,
-                    'activity_type_id' => $activity->activity_type_id,
-                    'contributor_user_id' => null,
-                    'activity_date' => $activity->engagement_date,
-                    'contribution_kind' => 'time',
-                    'completion_units' => null,
-                    'activity_hours' => (float) $activity->contactTime->activity_hours,
-                    'prep_hours' => (float) $activity->contactTime->prep_hours,
-                    'follow_up_hours' => (float) $activity->contactTime->follow_up_hours,
-                    'program_ids_snapshot' => $programIds,
-                    'team_ids_snapshot' => null,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
+                $rows[] = $this->buildHistoryRow(
+                    $agreement->id,
+                    $activity,
+                    $contactFamilyId,
+                    $programIds,
+                    null,
+                    null,
+                    'time',
+                    null,
+                    (float) $activity->contactTime->activity_hours,
+                    null,
+                    null,
+                    (float) $activity->contactTime->prep_hours,
+                    (float) $activity->contactTime->follow_up_hours
+                );
             }
 
             foreach ($activity->participants as $participant) {
@@ -191,46 +214,59 @@ class DeliverableContributionService
                     ? $existingTeamSnapshotsByAgreementUser->get($snapshotKey)
                     : $agreementTeamIdsByUser->get($userId, []);
 
-                $rows[] = [
-                    'agreement_id' => $agreement->id,
-                    'activity_id' => $activity->id,
-                    'contact_family_id' => $contactFamilyId,
-                    'activity_type_id' => $activity->activity_type_id,
-                    'contributor_user_id' => $userId,
-                    'activity_date' => $activity->engagement_date,
-                    'contribution_kind' => 'completion',
-                    'completion_units' => 1,
-                    'activity_hours' => null,
-                    'prep_hours' => 0,
-                    'follow_up_hours' => 0,
-                    'program_ids_snapshot' => $programIds,
-                    'team_ids_snapshot' => $teamIdsSnapshot,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
+                // row for participant completion
+                $rows[] = $this->buildHistoryRow(
+                    $agreement->id,
+                    $activity,
+                    $contactFamilyId,
+                    $programIds,
+                    $userId,
+                    $teamIdsSnapshot,
+                    'completion',
+                    $completionCount,
+                    null,
+                    null,
+                    null
+                );
+
+                // row for participant allotted time
+                if ($hasAllottedTime) {
+                    $rows[] = $this->buildHistoryRow(
+                        $agreement->id,
+                        $activity,
+                        $contactFamilyId,
+                        $programIds,
+                        $userId,
+                        $teamIdsSnapshot,
+                        'allotted_time',
+                        null,
+                        null,
+                        $allottedTotals['allotted_hours'],
+                        $allottedTotals['allotted_days']
+                    );
+                }
 
                 $participantTime = $participantTimesByUser->get($userId);
                 if (!$participantTime || (float) $participantTime->hours <= 0) {
                     continue;
                 }
 
-                $rows[] = [
-                    'agreement_id' => $agreement->id,
-                    'activity_id' => $activity->id,
-                    'contact_family_id' => $contactFamilyId,
-                    'activity_type_id' => $activity->activity_type_id,
-                    'contributor_user_id' => $userId,
-                    'activity_date' => $activity->engagement_date,
-                    'contribution_kind' => 'time',
-                    'completion_units' => null,
-                    'activity_hours' => (float) $participantTime->hours,
-                    'prep_hours' => (float) $participantTime->prep_hours,
-                    'follow_up_hours' => (float) $participantTime->follow_up_hours,
-                    'program_ids_snapshot' => $programIds,
-                    'team_ids_snapshot' => $teamIdsSnapshot,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
+                // row for participant observed time
+                $rows[] = $this->buildHistoryRow(
+                    $agreement->id,
+                    $activity,
+                    $contactFamilyId,
+                    $programIds,
+                    $userId,
+                    $teamIdsSnapshot,
+                    'time',
+                    null,
+                    (float) $participantTime->hours,
+                    null,
+                    null,
+                    (float) $participantTime->prep_hours,
+                    (float) $participantTime->follow_up_hours
+                );
             }
         }
 
@@ -253,6 +289,45 @@ class DeliverableContributionService
     }
 
     /**
+     * @param array<int, int>|null $teamIdsSnapshot
+     */
+    private function buildHistoryRow(
+        int $agreementId,
+        Activity $activity,
+        int $contactFamilyId,
+        array $programIds,
+        ?int $contributorUserId,
+        ?array $teamIdsSnapshot,
+        string $contributionKind,
+        ?int $completionUnits,
+        ?float $activityHours,
+        ?float $allottedHours,
+        ?float $allottedDays,
+        float $prepHours = 0,
+        float $followUpHours = 0
+    ): array {
+        return [
+            'agreement_id' => $agreementId,
+            'activity_id' => $activity->id,
+            'contact_family_id' => $contactFamilyId,
+            'activity_type_id' => $activity->activity_type_id,
+            'contributor_user_id' => $contributorUserId,
+            'activity_date' => $activity->engagement_date,
+            'contribution_kind' => $contributionKind,
+            'completion_units' => $completionUnits,
+            'activity_hours' => $activityHours,
+            'prep_hours' => $prepHours,
+            'follow_up_hours' => $followUpHours,
+            'allotted_hours' => $allottedHours,
+            'allotted_days' => $allottedDays,
+            'program_ids_snapshot' => $programIds,
+            'team_ids_snapshot' => $teamIdsSnapshot,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
+    }
+
+    /**
      * @param \Illuminate\Support\Collection<int, AgreementActivityHistory> $agreementHistory
      * @return array<int, array<string, mixed>>
      */
@@ -263,10 +338,12 @@ class DeliverableContributionService
     ): array {
         $basis = $deliverable->contribution_basis;
         $metric = $deliverable->metric_type;
+        $timeBasis = $metric === 'time' ? ($deliverable->time_basis ?? 'observed') : null;
         $includeAdditional = (bool) $deliverable->include_additional_time;
         $fingerprint = sha1(implode('|', [
             $deliverable->id,
             $metric,
+            $timeBasis ?? '',
             $basis,
             $deliverable->user_grouping_mode,
             $includeAdditional ? '1' : '0',
@@ -290,10 +367,26 @@ class DeliverableContributionService
         })->values();
 
         if ($basis === 'contact') {
-            return $this->buildContactContributionRows($matchingHistory, $agreementId, $deliverable->id, $metric, $includeAdditional, $fingerprint);
+            return $this->buildContactContributionRows(
+                $matchingHistory,
+                $agreementId,
+                $deliverable->id,
+                $metric,
+                $timeBasis,
+                $includeAdditional,
+                $fingerprint
+            );
         }
 
-        return $this->buildUserContributionRows($matchingHistory, $agreementId, $deliverable, $metric, $includeAdditional, $fingerprint);
+        return $this->buildUserContributionRows(
+            $matchingHistory,
+            $agreementId,
+            $deliverable,
+            $metric,
+            $timeBasis,
+            $includeAdditional,
+            $fingerprint
+        );
     }
 
     private function buildContactContributionRows(
@@ -301,15 +394,20 @@ class DeliverableContributionService
         int $agreementId,
         int $deliverableId,
         string $metric,
+        ?string $timeBasis,
         bool $includeAdditional,
         string $fingerprint
     ): array {
-        $historyRows = $matchingHistory
-            ->whereNull('contributor_user_id')
-            ->where('contribution_kind', $metric === 'completion' ? 'completion' : 'time')
-            ->values();
-
+        // build contributions based on deliverable metric and basis requirements - not exact copies of history rows
+        // history rows have everything, contributions are more specific
+        // I LIED - history rows and contributions are pretty similar...
+        // REFACTOR - activity history has a contribution_kind, so it is creeping on contributions in scope...
         if ($metric === 'completion') {
+            $historyRows = $matchingHistory
+                ->whereNull('contributor_user_id')
+                ->where('contribution_kind', 'completion')
+                ->values();
+
             return $historyRows->map(function (AgreementActivityHistory $history) use ($agreementId, $deliverableId, $fingerprint) {
                 return [
                     'agreement_activity_history_id' => $history->id,
@@ -322,6 +420,8 @@ class DeliverableContributionService
                     'counted_attribution_basis' => 'contact',
                     'credited_units' => (float) ($history->completion_units ?? 0),
                     'credited_hours' => null,
+                    'credited_allotted_hours' => null,
+                    'credited_allotted_days' => null,
                     'prep_hours' => 0,
                     'follow_up_hours' => 0,
                     'rules_fingerprint' => $fingerprint,
@@ -330,6 +430,40 @@ class DeliverableContributionService
                 ];
             })->all();
         }
+
+        if ($timeBasis === 'allotted') {
+            $historyRows = $matchingHistory
+                ->whereNull('contributor_user_id')
+                ->where('contribution_kind', 'allotted_time')
+                ->values();
+
+            return $historyRows->map(function (AgreementActivityHistory $history) use ($agreementId, $deliverableId, $fingerprint) {
+                return [
+                    'agreement_activity_history_id' => $history->id,
+                    'agreement_deliverable_id' => $deliverableId,
+                    'agreement_id' => $agreementId,
+                    'activity_id' => $history->activity_id,
+                    'contributor_user_id' => null,
+                    'contribution_kind' => 'allotted_time',
+                    'source_assignment_type' => 'contact',
+                    'counted_attribution_basis' => 'contact',
+                    'credited_units' => null,
+                    'credited_hours' => null,
+                    'credited_allotted_hours' => $history->allotted_hours !== null ? (float) $history->allotted_hours : null,
+                    'credited_allotted_days' => $history->allotted_days !== null ? (float) $history->allotted_days : null,
+                    'prep_hours' => 0,
+                    'follow_up_hours' => 0,
+                    'rules_fingerprint' => $fingerprint,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            })->all();
+        }
+
+        $historyRows = $matchingHistory
+            ->whereNull('contributor_user_id')
+            ->where('contribution_kind', 'time')
+            ->values();
 
         return $historyRows->map(function (AgreementActivityHistory $history) use ($agreementId, $deliverableId, $includeAdditional, $fingerprint) {
             return [
@@ -344,6 +478,8 @@ class DeliverableContributionService
                 'credited_units' => null,
                 'credited_hours' => (float) ($history->activity_hours ?? 0)
                     + ($includeAdditional ? (float) $history->prep_hours + (float) $history->follow_up_hours : 0),
+                'credited_allotted_hours' => null,
+                'credited_allotted_days' => null,
                 'prep_hours' => $includeAdditional ? (float) $history->prep_hours : 0,
                 'follow_up_hours' => $includeAdditional ? (float) $history->follow_up_hours : 0,
                 'rules_fingerprint' => $fingerprint,
@@ -358,6 +494,7 @@ class DeliverableContributionService
         int $agreementId,
         AgreementDeliverable $deliverable,
         string $metric,
+        ?string $timeBasis,
         bool $includeAdditional,
         string $fingerprint
     ): array {
@@ -365,9 +502,15 @@ class DeliverableContributionService
             ->keyBy(fn ($user) => (int) $user->id);
         $deliverableTeams = $deliverable->teams->keyBy(fn ($team) => (int) $team->id);
 
+        $contributionKind = match (true) {
+            $metric === 'completion' => 'completion',
+            $timeBasis === 'allotted' => 'allotted_time',
+            default => 'time',
+        };
+
         $matchedHistoryRows = $matchingHistory
             ->whereNotNull('contributor_user_id')
-            ->where('contribution_kind', $metric === 'completion' ? 'completion' : 'time')
+            ->where('contribution_kind', $contributionKind)
             ->map(function (AgreementActivityHistory $history) use ($eligibleUsersById, $deliverableTeams) {
                 $sourceAssignmentType = $this->resolveUserHistoryMatch(
                     $history,
@@ -387,7 +530,15 @@ class DeliverableContributionService
             ->filter()
             ->values();
 
-        return $matchedHistoryRows->map(function (array $matchedRow) use ($agreementId, $deliverable, $metric, $includeAdditional, $fingerprint) {
+        return $matchedHistoryRows->map(function (array $matchedRow) use (
+            $agreementId,
+            $deliverable,
+            $metric,
+            $timeBasis,
+            $includeAdditional,
+            $fingerprint,
+            $contributionKind
+        ) {
             /** @var AgreementActivityHistory $history */
             $history = $matchedRow['history'];
             $sourceAssignmentType = $matchedRow['source_assignment_type'];
@@ -404,6 +555,30 @@ class DeliverableContributionService
                     'counted_attribution_basis' => 'user',
                     'credited_units' => (float) ($history->completion_units ?? 0),
                     'credited_hours' => null,
+                    'credited_allotted_hours' => null,
+                    'credited_allotted_days' => null,
+                    'prep_hours' => 0,
+                    'follow_up_hours' => 0,
+                    'rules_fingerprint' => $fingerprint,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            }
+
+            if ($timeBasis === 'allotted') {
+                return [
+                    'agreement_activity_history_id' => $history->id,
+                    'agreement_deliverable_id' => $deliverable->id,
+                    'agreement_id' => $agreementId,
+                    'activity_id' => $history->activity_id,
+                    'contributor_user_id' => $history->contributor_user_id,
+                    'contribution_kind' => 'allotted_time',
+                    'source_assignment_type' => $sourceAssignmentType,
+                    'counted_attribution_basis' => 'user',
+                    'credited_units' => null,
+                    'credited_hours' => null,
+                    'credited_allotted_hours' => $history->allotted_hours !== null ? (float) $history->allotted_hours : null,
+                    'credited_allotted_days' => $history->allotted_days !== null ? (float) $history->allotted_days : null,
                     'prep_hours' => 0,
                     'follow_up_hours' => 0,
                     'rules_fingerprint' => $fingerprint,
@@ -424,6 +599,8 @@ class DeliverableContributionService
                 'credited_units' => null,
                 'credited_hours' => (float) ($history->activity_hours ?? 0)
                     + ($includeAdditional ? (float) $history->prep_hours + (float) $history->follow_up_hours : 0),
+                'credited_allotted_hours' => null,
+                'credited_allotted_days' => null,
                 'prep_hours' => $includeAdditional ? (float) $history->prep_hours : 0,
                 'follow_up_hours' => $includeAdditional ? (float) $history->follow_up_hours : 0,
                 'rules_fingerprint' => $fingerprint,

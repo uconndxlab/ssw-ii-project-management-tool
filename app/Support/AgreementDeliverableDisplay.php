@@ -7,6 +7,7 @@ use App\Models\AgreementDeliverable;
 use App\Models\DeliverableContribution;
 use App\Models\Team;
 use App\Models\User;
+use App\Support\ActivityTypeDuration;
 use Illuminate\Support\Collection;
 
 class AgreementDeliverableDisplay
@@ -181,13 +182,19 @@ class AgreementDeliverableDisplay
         $contributions = $deliverable->contributions;
         $target = (float) ($deliverable->target_quantity ?? 0);
         $isTime = $deliverable->metric_type === 'time';
+        $isAllottedTime = $isTime && ($deliverable->time_basis ?? 'observed') === 'allotted';
+        $allottedDuration = ActivityTypeDuration::fromActivityType($deliverable->activityType);
         $isIndividual = $deliverable->contribution_basis === 'user'
             && $deliverable->user_grouping_mode === 'individual';
         $isJoint = $deliverable->contribution_basis === 'user'
             && $deliverable->user_grouping_mode === 'joint';
 
         $completedValue = $isTime
-            ? (float) $contributions->sum('credited_hours')
+            ? ($isAllottedTime
+                ? ($allottedDuration->unit() === ActivityTypeDuration::UNIT_DAYS
+                    ? (float) $contributions->sum('credited_allotted_days')
+                    : (float) $contributions->sum('credited_allotted_hours'))
+                : (float) $contributions->sum('credited_hours'))
             : (float) $contributions->sum('credited_units');
 
         $currentlyAssignedUserIds = self::currentlyAssignedUserIds(
@@ -200,7 +207,9 @@ class AgreementDeliverableDisplay
             $deliverable,
             $teamLookup,
             $agreementTeamIds,
-            $isTime
+            $isTime,
+            $isAllottedTime,
+            $allottedDuration
         );
         $contributorByUserId = $contributorSummaries->keyBy('user_id');
 
@@ -252,7 +261,12 @@ class AgreementDeliverableDisplay
             );
         }
 
-        $metricParts = [ucfirst($deliverable->metric_type ?? 'deliverable')];
+        $metricParts = [];
+        if ($deliverable->metric_type === 'time') {
+            $metricParts[] = $isAllottedTime ? 'Allotted time' : 'Time';
+        } elseif ($deliverable->metric_type) {
+            $metricParts[] = ucfirst($deliverable->metric_type);
+        }
         if ($deliverable->contribution_basis) {
             $metricParts[] = $deliverable->contribution_basis === 'contact' ? 'By contact' : 'By user';
         }
@@ -263,12 +277,21 @@ class AgreementDeliverableDisplay
             $metricParts[] = 'Includes prep/follow up';
         }
 
+        $unitLabel = 'Completions';
+        if ($isTime) {
+            if ($isAllottedTime && $allottedDuration->unit() === ActivityTypeDuration::UNIT_DAYS) {
+                $unitLabel = 'Days';
+            } else {
+                $unitLabel = 'Hours';
+            }
+        }
+
         return [
             'deliverable' => $deliverable,
             'target' => $target,
             'completed_value' => $completedValue,
             'percent' => $target > 0 ? min(100, ($completedValue / $target) * 100) : 0,
-            'unit_label' => $isTime ? 'Hours' : 'Completions',
+            'unit_label' => $unitLabel,
             'metric_summary' => implode(' · ', $metricParts),
             'is_individual' => $isIndividual,
             'is_joint' => $isJoint,
@@ -634,12 +657,14 @@ class AgreementDeliverableDisplay
         AgreementDeliverable $deliverable,
         Collection $teamLookup,
         Collection $agreementTeamIds,
-        bool $isTime
+        bool $isTime,
+        bool $isAllottedTime = false,
+        ?ActivityTypeDuration $allottedDuration = null
     ): Collection {
         return $contributions
             ->whereNotNull('contributor_user_id')
             ->groupBy('contributor_user_id')
-            ->map(function (Collection $userContributions) use ($deliverable, $teamLookup, $agreementTeamIds, $isTime) {
+            ->map(function (Collection $userContributions) use ($deliverable, $teamLookup, $agreementTeamIds, $isTime, $isAllottedTime, $allottedDuration) {
                 /** @var DeliverableContribution $first */
                 $first = $userContributions->first();
                 $user = $first->contributor;
@@ -647,6 +672,14 @@ class AgreementDeliverableDisplay
                 if (!$user) {
                     return null;
                 }
+
+                $completedValue = $isTime
+                    ? ($isAllottedTime
+                        ? ($allottedDuration?->unit() === ActivityTypeDuration::UNIT_DAYS
+                            ? (float) $userContributions->sum('credited_allotted_days')
+                            : (float) $userContributions->sum('credited_allotted_hours'))
+                        : (float) $userContributions->sum('credited_hours'))
+                    : (float) $userContributions->sum('credited_units');
 
                 return [
                     'user_id' => (int) $user->id,
@@ -657,9 +690,7 @@ class AgreementDeliverableDisplay
                         $teamLookup,
                         $agreementTeamIds
                     ),
-                    'completed_value' => $isTime
-                        ? (float) $userContributions->sum('credited_hours')
-                        : (float) $userContributions->sum('credited_units'),
+                    'completed_value' => $completedValue,
                     'source_assignment_type' => $first->source_assignment_type,
                 ];
             })

@@ -20,6 +20,9 @@
     'fundingSourceData' => [],
     'engagementDateValue' => null,
     'internalOnlyChecked' => false,
+    'completionCountValue' => 1,
+    'allottedDurationHours' => null,
+    'allottedDurationDays' => null,
     'activity' => null,
 ])
 
@@ -443,6 +446,42 @@
                             </div>
                         </div>
 
+                        <div class="activity-logging-subsection mt-4" id="activity-duration-section">
+                            <div class="d-flex flex-column flex-md-row align-items-md-baseline gap-1 gap-md-3 mb-3">
+                                <div class="activity-logging-subsection-title">Activity Duration/Allotted Time</div>
+                                <div class="text-muted activity-logging-subsection-meta">Allotted duration comes from the activity type. Completions multiply allotted totals.</div>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="allotted_duration_display" class="form-label fw-semibold">Allotted Duration (per completion)</label>
+                                    <input type="text"
+                                           class="form-control"
+                                           id="allotted_duration_display"
+                                           value=""
+                                           readonly
+                                           disabled
+                                           placeholder="No duration configured for this activity type">
+                                    <div class="form-text">This value is set by the activity type and cannot be edited here.</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="completion_count" class="form-label fw-semibold">Completions <span class="text-danger">*</span></label>
+                                    <input type="number"
+                                           class="form-control @error('completion_count') is-invalid @enderror"
+                                           id="completion_count"
+                                           name="completion_count"
+                                           value="{{ old('completion_count', $completionCountValue) }}"
+                                           min="1"
+                                           max="999"
+                                           step="1"
+                                           required>
+                                    @error('completion_count')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                    <div class="form-text">How many completions this log represents. Observed time is not multiplied.</div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="mt-4">
                             @foreach($contactFamilies as $family)
                                 <div class="activity-logging-subsection d-none" data-contact-family-logging-group="{{ $family->id }}">
@@ -751,6 +790,9 @@
     const initialAgreementIds = @json(array_map('strval', $selectedAgreementIds));
     const originalAgreementIds = @json($originalAgreementIds);
     const initialParticipantTimes = @json($normalizedParticipantTimeData);
+    const initialCompletionCount = @json((int) old('completion_count', $completionCountValue));
+    let initialAllottedDurationHours = @json($allottedDurationHours !== null ? (float) $allottedDurationHours : null);
+    let initialAllottedDurationDays = @json($allottedDurationDays !== null ? (float) $allottedDurationDays : null);
     const form = document.getElementById(@json($formId));
     const statusTop = document.getElementById('activity-save-status');
     const statusBar = document.getElementById('activity-save-bar-status');
@@ -1349,6 +1391,60 @@
         });
 
         section?.classList.toggle('d-none', !activityTypeId || visibleGroups === 0);
+        updateAllottedDurationDisplay();
+    }
+
+    function formatDurationValue(hours, days) {
+        if (days && parseFloat(days) > 0) {
+            const value = parseFloat(days);
+            return value + ' ' + (value === 1 ? 'day' : 'days');
+        }
+
+        if (hours && parseFloat(hours) > 0) {
+            const value = parseFloat(hours);
+            return value + ' ' + (value === 1 ? 'hour' : 'hours');
+        }
+
+        return '';
+    }
+
+    function durationFromActivityTypeOption(option) {
+        if (!option || !option.value) {
+            return { hours: null, days: null };
+        }
+
+        const hours = parseFloat(option.dataset.durationHours || '');
+        const days = parseFloat(option.dataset.durationDays || '');
+
+        return {
+            hours: Number.isFinite(hours) && hours > 0 ? hours : null,
+            days: Number.isFinite(days) && days > 0 ? days : null,
+        };
+    }
+
+    function updateAllottedDurationDisplay(forceSnapshot) {
+        const displayInput = document.getElementById('allotted_duration_display');
+        const typeSelect = document.getElementById('activity_type_id');
+
+        if (!displayInput) {
+            return;
+        }
+
+        let hours = null;
+        let days = null;
+
+        if (forceSnapshot || (isEditMode && (initialAllottedDurationHours !== null || initialAllottedDurationDays !== null))) {
+            hours = initialAllottedDurationHours;
+            days = initialAllottedDurationDays;
+        } else if (typeSelect && typeSelect.value) {
+            const duration = durationFromActivityTypeOption(typeSelect.options[typeSelect.selectedIndex]);
+            hours = duration.hours;
+            days = duration.days;
+        }
+
+        const formatted = formatDurationValue(hours, days);
+        displayInput.value = formatted;
+        displayInput.placeholder = formatted ? '' : 'No duration configured for this activity type';
     }
 
     function updateActivityTypeState() {
@@ -1417,6 +1513,10 @@
             renderParticipantTimeRows();
         }
         if (event.target && event.target.id === 'activity_type_id') {
+            if (event.isTrusted) {
+                initialAllottedDurationHours = null;
+                initialAllottedDurationDays = null;
+            }
             updateActivityLoggingGroups();
         }
         markDirty();
@@ -1438,6 +1538,7 @@
             }
         }
         if (type) type.dispatchEvent(new Event('change', { bubbles: true }));
+        updateAllottedDurationDisplay(false);
     });
 
     form.addEventListener('submit', function () {
@@ -1464,6 +1565,7 @@
     updateContactFamilyLoggingGroups();
     updateActivityLoggingGroups();
     updateAdditionalContactTimeFields();
+    updateAllottedDurationDisplay(isEditMode);
     renderParticipantTimeRows();
 })();
 </script>

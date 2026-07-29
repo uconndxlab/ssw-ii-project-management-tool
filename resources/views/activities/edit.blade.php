@@ -45,6 +45,9 @@
     );
     $engagementDateValue = old('engagement_date', $activity->engagement_date?->format('Y-m-d'));
     $internalOnlyChecked = (bool) old('internal_only', $activity->internal_only);
+    $completionCountValue = (int) old('completion_count', $activity->completion_count ?? 1);
+    $allottedDurationHours = old('allotted_duration_hours', $activity->allotted_duration_hours);
+    $allottedDurationDays = old('allotted_duration_days', $activity->allotted_duration_days);
     $fundingSourceData = old('funding_sources', $activity->funding_source_values ?? []);
 @endphp
 
@@ -70,6 +73,9 @@
     :funding-source-data="$fundingSourceData"
     :engagement-date-value="$engagementDateValue"
     :internal-only-checked="$internalOnlyChecked"
+    :completion-count-value="$completionCountValue"
+    :allotted-duration-hours="$allottedDurationHours"
+    :allotted-duration-days="$allottedDurationDays"
     :activity="$activity"
 />
 

@@ -20,6 +20,8 @@ class DeliverableContribution extends Model
         'counted_attribution_basis',
         'credited_units',
         'credited_hours',
+        'credited_allotted_hours',
+        'credited_allotted_days',
         'prep_hours',
         'follow_up_hours',
         'rules_fingerprint',
@@ -30,6 +32,8 @@ class DeliverableContribution extends Model
         return [
             'credited_units' => 'decimal:2',
             'credited_hours' => 'decimal:2',
+            'credited_allotted_hours' => 'decimal:2',
+            'credited_allotted_days' => 'decimal:2',
             'prep_hours' => 'decimal:2',
             'follow_up_hours' => 'decimal:2',
         ];

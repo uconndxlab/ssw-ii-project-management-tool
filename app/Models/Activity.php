@@ -17,6 +17,9 @@ class Activity extends Model
         'user_id',
         'engagement_date',
         'activity_type_id',
+        'completion_count',
+        'allotted_duration_hours',
+        'allotted_duration_days',
         'internal_only',
     ];
 
@@ -24,6 +27,9 @@ class Activity extends Model
     {
         return [
             'engagement_date' => 'date',
+            'completion_count' => 'integer',
+            'allotted_duration_hours' => 'decimal:1',
+            'allotted_duration_days' => 'decimal:1',
             'internal_only' => 'boolean',
         ];
     }

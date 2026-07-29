@@ -103,6 +103,37 @@
                     </div>
                 </div>
 
+                @php
+                    $activityDuration = \App\Support\ActivityTypeDuration::fromActivity($activity);
+                    $completionCount = (int) ($activity->completion_count ?? 1);
+                @endphp
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>Completions:</strong>
+                    </div>
+                    <div class="col-md-8">
+                        {{ $completionCount }}
+                    </div>
+                </div>
+                @if($activityDuration->hasDuration())
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>Allotted Duration (per completion):</strong>
+                    </div>
+                    <div class="col-md-8">
+                        {{ $activityDuration->formatLabel() }}
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>Total Allotted:</strong>
+                    </div>
+                    <div class="col-md-8">
+                        {{ $activityDuration->formatTotalLabel($completionCount) }}
+                    </div>
+                </div>
+                @endif
+
                 @if($activity->projects->isNotEmpty())
                 <div class="row mb-3">
                     <div class="col-md-4">

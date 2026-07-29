@@ -12,7 +12,11 @@
     $buildRulesSummary = function (array $row): string {
         $parts = [];
         if (!empty($row['metric_type'])) {
-            $parts[] = ucfirst($row['metric_type']);
+            if ($row['metric_type'] === 'time') {
+                $parts[] = ($row['time_basis'] ?? 'observed') === 'allotted' ? 'Allotted time' : 'Time';
+            } else {
+                $parts[] = ucfirst($row['metric_type']);
+            }
         }
         if (!empty($row['contribution_basis'])) {
             $parts[] = ucfirst($row['contribution_basis']);
@@ -21,7 +25,15 @@
             $parts[] = ucfirst($row['user_grouping_mode']);
         }
         if (!empty($row['target_quantity'])) {
-            $suffix = ($row['metric_type'] ?? '') === 'time' ? ' hrs' : '';
+            $suffix = '';
+            if (($row['metric_type'] ?? '') === 'time') {
+                $activityType = collect($activityTypes ?? [])->firstWhere('id', $row['activity_type_id'] ?? null);
+                if (($row['time_basis'] ?? 'observed') === 'allotted' && (float) ($activityType?->duration_days ?? 0) > 0) {
+                    $suffix = ' days';
+                } else {
+                    $suffix = ' hrs';
+                }
+            }
             $parts[] = number_format((float) $row['target_quantity'], 1) . $suffix;
         }
         if (!empty($row['include_additional_time'])) {
@@ -123,6 +135,7 @@
             'activity_type_id' => $row['activity_type_id'] ?? '',
             'program_id' => $row['program_id'] ?? '',
             'metric_type' => $row['metric_type'] ?? '',
+            'time_basis' => $row['time_basis'] ?? 'observed',
             'contribution_basis' => $row['contribution_basis'] ?? '',
             'user_grouping_mode' => $row['user_grouping_mode'] ?? '',
             'include_additional_time' => !empty($row['include_additional_time']),
@@ -157,6 +170,7 @@
                 'activity_type_id' => $deliverable->activity_type_id,
                 'program_id' => $deliverable->program_id,
                 'metric_type' => $deliverable->metric_type,
+                'time_basis' => $deliverable->time_basis ?? 'observed',
                 'contribution_basis' => $deliverable->contribution_basis,
                 'user_grouping_mode' => $deliverable->user_grouping_mode,
                 'include_additional_time' => (bool) $deliverable->include_additional_time,
@@ -179,6 +193,7 @@
         'activity_type_id' => '',
         'program_id' => '',
         'metric_type' => '',
+        'time_basis' => 'observed',
         'contribution_basis' => '',
         'user_grouping_mode' => '',
         'include_additional_time' => false,
@@ -248,6 +263,7 @@
                     <input type="hidden" name="deliverables[{{ $rowKey }}][activity_type_id]" value="{{ $row['activity_type_id'] ?? '' }}">
                     <input type="hidden" name="deliverables[{{ $rowKey }}][program_id]" value="{{ $row['program_id'] ?? '' }}">
                     <input type="hidden" name="deliverables[{{ $rowKey }}][metric_type]" value="{{ $row['metric_type'] ?? '' }}">
+                    <input type="hidden" name="deliverables[{{ $rowKey }}][time_basis]" value="{{ $row['time_basis'] ?? 'observed' }}">
                     <input type="hidden" name="deliverables[{{ $rowKey }}][contribution_basis]" value="{{ $row['contribution_basis'] ?? '' }}">
                     <input type="hidden" name="deliverables[{{ $rowKey }}][user_grouping_mode]" value="{{ $row['user_grouping_mode'] ?? '' }}">
                     <input type="hidden" name="deliverables[{{ $rowKey }}][include_additional_time]" value="{{ !empty($row['include_additional_time']) ? 1 : 0 }}">
@@ -316,6 +332,10 @@
         const teamLookup = @json($teams->pluck('name', 'id'));
         const contactFamilyLookup = @json($contactFamilies->pluck('name', 'id'));
         const activityTypeLookup = @json($activityTypes->pluck('name', 'id'));
+        const activityTypeDurationMap = @json($activityTypes->mapWithKeys(fn ($type) => [(string) $type->id => [
+            'hours' => (float) $type->duration_hours > 0 ? (float) $type->duration_hours : null,
+            'days' => (float) $type->duration_days > 0 ? (float) $type->duration_days : null,
+        ]]));
         const programLookup = @json($programLookup->map(fn ($p) => $p->name));
         const contactFamilyProgramMap = @json($contactFamilies->mapWithKeys(fn ($family) => [(string) $family->id => $family->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all()]));
         const activityTypeProgramMap = @json($activityTypes->mapWithKeys(fn ($type) => [(string) $type->id => $type->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all()]));
@@ -369,15 +389,72 @@
 
         function buildRulesSummary(rowData) {
             const parts = [];
-            if (rowData.metric_type) parts.push(rowData.metric_type.charAt(0).toUpperCase() + rowData.metric_type.slice(1));
+            if (rowData.metric_type) {
+                if (rowData.metric_type === 'time') {
+                    parts.push((rowData.time_basis || 'observed') === 'allotted' ? 'Allotted time' : 'Time');
+                } else {
+                    parts.push(rowData.metric_type.charAt(0).toUpperCase() + rowData.metric_type.slice(1));
+                }
+            }
             if (rowData.contribution_basis) parts.push(rowData.contribution_basis.charAt(0).toUpperCase() + rowData.contribution_basis.slice(1));
             if (rowData.user_grouping_mode) parts.push(rowData.user_grouping_mode.charAt(0).toUpperCase() + rowData.user_grouping_mode.slice(1));
             if (rowData.target_quantity) {
-                const suffix = rowData.metric_type === 'time' ? ' hrs' : '';
+                let suffix = '';
+                if (rowData.metric_type === 'time') {
+                    const duration = activityTypeDurationMap[String(rowData.activity_type_id || '')] || {};
+                    suffix = (rowData.time_basis || 'observed') === 'allotted' && duration.days ? ' days' : ' hrs';
+                }
                 parts.push(parseFloat(rowData.target_quantity).toFixed(1) + suffix);
             }
             if (rowData.include_additional_time) parts.push('Incl. prep/follow up');
             return parts.join(' · ');
+        }
+
+        function selectedActivityTypeDuration() {
+            const typeSelect = editorFieldset.querySelector('[data-deliverable-activity-type]');
+            const selectedOption = typeSelect?.options[typeSelect.selectedIndex];
+            const typeId = typeSelect?.value || '';
+
+            if (selectedOption && selectedOption.value) {
+                const hours = parseFloat(selectedOption.dataset.durationHours || '');
+                const days = parseFloat(selectedOption.dataset.durationDays || '');
+
+                return {
+                    hours: Number.isFinite(hours) && hours > 0 ? hours : null,
+                    days: Number.isFinite(days) && days > 0 ? days : null,
+                };
+            }
+
+            const mapped = activityTypeDurationMap[String(typeId)] || {};
+
+            return {
+                hours: mapped.hours || null,
+                days: mapped.days || null,
+            };
+        }
+
+        function activityTypeHasDuration() {
+            const duration = selectedActivityTypeDuration();
+
+            return !!(duration.hours || duration.days);
+        }
+
+        function formatDurationReminder(duration) {
+            if (duration.days) {
+                const value = parseFloat(duration.days);
+                const label = value === 1 ? 'day' : 'days';
+
+                return 'Each completion: ' + value + ' ' + label;
+            }
+
+            if (duration.hours) {
+                const value = parseFloat(duration.hours);
+                const label = value === 1 ? 'hour' : 'hours';
+
+                return 'Each completion: ' + value + ' ' + label;
+            }
+
+            return '';
         }
 
         function buildAssignmentGroups(rowData) {
@@ -689,12 +766,59 @@
 
         function syncTargetLabels() {
             const metric = editorFieldset.querySelector('[data-deliverable-metric]:checked')?.value || '';
-            const isCompletion = metric === 'completion';
-            const labelText = isCompletion ? 'Target Completions' : 'Target Hours';
+            const timeBasis = editorFieldset.querySelector('[data-deliverable-time-basis]:checked')?.value || 'observed';
+            const duration = selectedActivityTypeDuration();
+            let labelText = 'Target Hours';
+
+            if (metric === 'completion') {
+                labelText = 'Target Completions';
+            } else if (timeBasis === 'allotted' && duration.days) {
+                labelText = 'Target Days';
+            }
 
             editorFieldset.querySelectorAll('[data-deliverable-target-label], [data-deliverable-target-label-locked]').forEach(function (el) {
                 el.innerHTML = labelText + ' <span class="text-danger">*</span>';
             });
+
+            const reminder = editorFieldset.querySelector('[data-deliverable-duration-reminder]');
+            if (reminder) {
+                const reminderText = metric === 'time' && timeBasis === 'allotted' ? formatDurationReminder(duration) : '';
+                reminder.textContent = reminderText;
+                reminder.classList.toggle('d-none', !reminderText);
+            }
+        }
+
+        function syncTimeBasisState() {
+            const metric = editorFieldset.querySelector('[data-deliverable-metric]:checked')?.value || '';
+            const timeBasisWrapper = editorFieldset.querySelector('[data-time-basis-wrapper]');
+            const timeBasisInputs = editorFieldset.querySelectorAll('[data-deliverable-time-basis]');
+            const isTimeMetric = metric === 'time';
+            const hasDuration = activityTypeHasDuration();
+
+            if (timeBasisWrapper) {
+                timeBasisWrapper.classList.toggle('opacity-50', !isTimeMetric);
+            }
+
+            timeBasisInputs.forEach(function (input) {
+                const isAllotted = input.value === 'allotted';
+                input.disabled = !isTimeMetric || (isAllotted && !hasDuration);
+                input.closest('label')?.classList.toggle('text-muted', input.disabled);
+            });
+
+            const checkedBasis = editorFieldset.querySelector('[data-deliverable-time-basis]:checked');
+            if (isTimeMetric && checkedBasis?.value === 'allotted' && !hasDuration) {
+                const observedInput = editorFieldset.querySelector('[data-deliverable-time-basis][value="observed"]');
+                if (observedInput) {
+                    observedInput.checked = true;
+                }
+            }
+
+            if (!isTimeMetric) {
+                const observedInput = editorFieldset.querySelector('[data-deliverable-time-basis][value="observed"]');
+                if (observedInput) {
+                    observedInput.checked = true;
+                }
+            }
         }
 
         function getTargetInput() {
@@ -708,6 +832,7 @@
         function syncEditorVisibility() {
             const basis = editorFieldset.querySelector('[data-deliverable-basis]:checked')?.value || '';
             const metric = editorFieldset.querySelector('[data-deliverable-metric]:checked')?.value || '';
+            const timeBasis = editorFieldset.querySelector('[data-deliverable-time-basis]:checked')?.value || 'observed';
             const familySelect = editorFieldset.querySelector('[data-deliverable-contact-family]');
             const selectedOption = familySelect?.options[familySelect.selectedIndex];
             const tracksAdditionalTime = selectedOption?.dataset.trackAdditionalTime === '1';
@@ -723,11 +848,13 @@
                 ? (selectedOption?.textContent?.trim() || contactFamilyLookup[familySelect.value] || 'selected')
                 : '';
 
+            syncTimeBasisState();
+
             if (groupingWrapper) groupingWrapper.classList.toggle('d-none', basis !== 'user');
             if (assignmentWrapper) assignmentWrapper.classList.toggle('d-none', basis !== 'user');
             if (metricDetailsWrapper) metricDetailsWrapper.classList.toggle('d-none', metric !== 'time' && metric !== 'completion');
 
-            const showAdditionalTime = metric === 'time' && tracksAdditionalTime && hasContactFamily;
+            const showAdditionalTime = metric === 'time' && timeBasis === 'observed' && tracksAdditionalTime && hasContactFamily;
             if (additionalTimeWrapper) additionalTimeWrapper.classList.toggle('d-none', !showAdditionalTime);
 
             if (additionalTimeMessage && showAdditionalTime) {
@@ -762,10 +889,15 @@
             }
 
             if (semanticLocked) {
-                const metricLabels = { time: 'Time', completion: 'Completion' };
                 const basisLabels = { contact: 'By Contact', user: 'By User' };
                 const groupingLabels = { joint: 'Joint', individual: 'Individual' };
-                editorFieldset.querySelector('[data-readonly-metric]').textContent = metricLabels[rowData.metric_type] || '—';
+                let metricLabel = '—';
+                if (rowData.metric_type === 'time') {
+                    metricLabel = (rowData.time_basis || 'observed') === 'allotted' ? 'Allotted time' : 'Time';
+                } else if (rowData.metric_type) {
+                    metricLabel = rowData.metric_type.charAt(0).toUpperCase() + rowData.metric_type.slice(1);
+                }
+                editorFieldset.querySelector('[data-readonly-metric]').textContent = metricLabel;
                 editorFieldset.querySelector('[data-readonly-basis]').textContent = basisLabels[rowData.contribution_basis] || '—';
                 editorFieldset.querySelector('[data-readonly-grouping]').textContent = groupingLabels[rowData.user_grouping_mode] || '—';
                 editorFieldset.querySelector('[data-readonly-additional-time]').textContent = rowData.include_additional_time ? 'Yes' : 'No';
@@ -796,6 +928,7 @@
                 activity_type_id: fieldValue('[data-deliverable-activity-type]', ''),
                 program_id: fieldValue('[data-deliverable-program]', ''),
                 metric_type: editorFieldset.querySelector('[data-deliverable-metric]:checked')?.value || '',
+                time_basis: editorFieldset.querySelector('[data-deliverable-time-basis]:checked')?.value || 'observed',
                 contribution_basis: basis,
                 user_grouping_mode: editorFieldset.querySelector('[data-deliverable-grouping]:checked')?.value || '',
                 include_additional_time: !!editorFieldset.querySelector('[data-deliverable-additional-time]')?.checked,
@@ -816,6 +949,7 @@
             }
             if (rowData.semantic_locked && rowStore[currentKey]) {
                 rowData.metric_type = rowStore[currentKey].metric_type;
+                rowData.time_basis = rowStore[currentKey].time_basis;
                 rowData.contribution_basis = rowStore[currentKey].contribution_basis;
                 rowData.user_grouping_mode = rowStore[currentKey].user_grouping_mode;
                 rowData.include_additional_time = rowStore[currentKey].include_additional_time;
@@ -847,6 +981,9 @@
 
             editorFieldset.querySelectorAll('[data-deliverable-metric]').forEach(function (radio) {
                 radio.checked = radio.value === (rowData.metric_type || '');
+            });
+            editorFieldset.querySelectorAll('[data-deliverable-time-basis]').forEach(function (radio) {
+                radio.checked = radio.value === (rowData.time_basis || 'observed');
             });
             editorFieldset.querySelectorAll('[data-deliverable-basis]').forEach(function (radio) {
                 radio.checked = radio.value === (rowData.contribution_basis || '');
@@ -886,7 +1023,7 @@
             const programSelect = editorFieldset.querySelector('[data-deliverable-program]');
             if (programSelect) programSelect.value = '';
 
-            editorFieldset.querySelectorAll('[data-deliverable-metric], [data-deliverable-basis], [data-deliverable-grouping]').forEach(function (radio) {
+            editorFieldset.querySelectorAll('[data-deliverable-metric], [data-deliverable-time-basis], [data-deliverable-basis], [data-deliverable-grouping]').forEach(function (radio) {
                 radio.checked = false;
             });
             editorFieldset.querySelectorAll('[data-deliverable-target], [data-deliverable-target-locked], [data-deliverable-due-date], [data-deliverable-notes]').forEach(function (input) {
@@ -922,6 +1059,7 @@
                 activity_type_id: findValue('activity_type_id'),
                 program_id: findValue('program_id'),
                 metric_type: findValue('metric_type'),
+                time_basis: findValue('time_basis') || 'observed',
                 contribution_basis: findValue('contribution_basis'),
                 user_grouping_mode: findValue('user_grouping_mode'),
                 include_additional_time: findValue('include_additional_time') === '1',
@@ -1022,6 +1160,7 @@
                 '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][activity_type_id]" value="' + escapeHtml(rowData.activity_type_id || '') + '">' +
                 '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][program_id]" value="' + escapeHtml(rowData.program_id || '') + '">' +
                 '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][metric_type]" value="' + escapeHtml(rowData.metric_type || '') + '">' +
+                '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][time_basis]" value="' + escapeHtml(rowData.time_basis || 'observed') + '">' +
                 '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][contribution_basis]" value="' + escapeHtml(rowData.contribution_basis || '') + '">' +
                 '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][user_grouping_mode]" value="' + escapeHtml(rowData.user_grouping_mode || '') + '">' +
                 '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][include_additional_time]" value="' + (rowData.include_additional_time ? '1' : '0') + '">' +
@@ -1153,7 +1292,8 @@
             syncActivityTypeOptions();
             syncEditorVisibility();
         });
-        editorFieldset.querySelectorAll('[data-deliverable-metric], [data-deliverable-basis], [data-deliverable-grouping]').forEach(function (input) {
+        editorFieldset.querySelector('[data-deliverable-activity-type]')?.addEventListener('change', syncEditorVisibility);
+        editorFieldset.querySelectorAll('[data-deliverable-metric], [data-deliverable-time-basis], [data-deliverable-basis], [data-deliverable-grouping]').forEach(function (input) {
             input.addEventListener('change', syncEditorVisibility);
         });
 

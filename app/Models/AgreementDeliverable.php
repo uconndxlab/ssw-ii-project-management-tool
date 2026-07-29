@@ -15,6 +15,7 @@ class AgreementDeliverable extends Model
         'contact_family_id',
         'program_id',
         'metric_type',
+        'time_basis',
         'contribution_basis',
         'user_grouping_mode',
         'include_additional_time',

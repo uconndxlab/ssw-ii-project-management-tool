@@ -109,7 +109,11 @@
                             @endif
                         </td>
                         <td class="text-center">
-                            {{ $deliverable->metric_type ? ucfirst($deliverable->metric_type) : '—' }}
+                            @if($deliverable->metric_type === 'time')
+                                {{ ($deliverable->time_basis ?? 'observed') === 'allotted' ? 'Allotted time' : 'Time' }}
+                            @else
+                                {{ $deliverable->metric_type ? ucfirst($deliverable->metric_type) : '—' }}
+                            @endif
                         </td>
                         <td class="text-center">
                             {{ $deliverable->target_quantity !== null ? number_format((float) $deliverable->target_quantity, 1) : '—' }}

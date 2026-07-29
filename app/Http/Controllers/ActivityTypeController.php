@@ -345,7 +345,12 @@ class ActivityTypeController extends Controller
         $html = '<option value="">Select activity type...</option>';
         foreach ($activityTypes as $type) {
             $selected = $selectedActivityTypeId === (int) $type->id ? ' selected' : '';
-            $html .= '<option value="' . $type->id . '"' . $selected . '>' . e($type->name) . '</option>';
+            $durationHours = (float) $type->duration_hours > 0 ? $type->duration_hours : '';
+            $durationDays = (float) $type->duration_days > 0 ? $type->duration_days : '';
+            $html .= '<option value="' . $type->id . '"'
+                . ' data-duration-hours="' . e((string) $durationHours) . '"'
+                . ' data-duration-days="' . e((string) $durationDays) . '"'
+                . $selected . '>' . e($type->name) . '</option>';
         }
 
         return response($html);
