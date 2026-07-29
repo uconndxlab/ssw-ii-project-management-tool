@@ -82,6 +82,15 @@
                                     <i class="bi bi-pencil-square"></i>
                                 </a>
                                 <button type="submit"
+                                        form="{{ $actionKey }}-duplicate"
+                                        class="btn btn-outline-secondary"
+                                        data-bs-toggle="tooltip"
+                                        data-bs-title="Duplicate activity"
+                                        aria-label="Duplicate activity"
+                                        onclick="return confirm('Duplicate this activity? A new activity will be created with the same details.')">
+                                    <i class="bi bi-files"></i>
+                                </button>
+                                <button type="submit"
                                         form="{{ $actionKey }}-delete"
                                         class="btn btn-outline-danger"
                                         data-bs-toggle="tooltip"
@@ -93,6 +102,9 @@
                             @endif
                         </div>
                         @if($canManage)
+                            <form id="{{ $actionKey }}-duplicate" method="POST" action="{{ route('activities.duplicate', $activity) }}" class="d-none">
+                                @csrf
+                            </form>
                             <form id="{{ $actionKey }}-delete" method="POST" action="{{ route('activities.destroy', $activity) }}" class="d-none">
                                 @csrf
                                 @method('DELETE')

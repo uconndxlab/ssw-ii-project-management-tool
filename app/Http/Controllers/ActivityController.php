@@ -11,6 +11,7 @@ use App\Models\LoggingField;
 use App\Models\Organization;
 use App\Models\State;
 use App\Models\User;
+use App\Services\ActivityDuplicationService;
 use App\Services\DeliverableContributionService;
 use App\Support\ActivityFundingSourceTokens;
 use App\Support\ActivityTypeDuration;
@@ -25,8 +26,10 @@ use Illuminate\Validation\ValidationException;
 
 class ActivityController extends Controller
 {
-    public function __construct(private DeliverableContributionService $deliverableContributionService)
-    {
+    public function __construct(
+        private DeliverableContributionService $deliverableContributionService,
+        private ActivityDuplicationService $activityDuplicationService,
+    ) {
     }
 
     public function index(Request $request)
@@ -553,6 +556,17 @@ class ActivityController extends Controller
         return redirect()
             ->route('activities.index')
             ->with('success', 'Activity updated successfully.');
+    }
+
+    public function duplicate(Activity $activity)
+    {
+        $this->verifyActivityEditAccess($activity);
+
+        $copy = $this->activityDuplicationService->duplicate($activity, (int) Auth::id());
+
+        return redirect()
+            ->route('activities.edit', $copy)
+            ->with('success', 'Activity duplicated. Review the copy and save any changes.');
     }
 
     public function destroy(Activity $activity)

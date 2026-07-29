@@ -44,6 +44,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/activities/{activity}', [ActivityController::class, 'show'])->name('activities.show');
     Route::get('/activities/{activity}/edit', [ActivityController::class, 'edit'])->name('activities.edit');
     Route::put('/activities/{activity}', [ActivityController::class, 'update'])->name('activities.update');
+    Route::post('/activities/{activity}/duplicate', [ActivityController::class, 'duplicate'])->name('activities.duplicate');
     Route::delete('/activities/{activity}', [ActivityController::class, 'destroy'])->name('activities.destroy');
     
     // Document download for activity logging field uploads
