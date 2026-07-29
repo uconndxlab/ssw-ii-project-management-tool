@@ -19,66 +19,7 @@
 </head>
 <body>
     @auth
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="{{ route('dashboard') }}">{{ config('app.name') }}</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ route('dashboard') }}">Home</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ route('agreements.index') }}">Agreements</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ route('organizations.index') }}">Organizations</a>
-                    </li>
-                    @if(auth()->user()->isAdmin())
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown">
-                            Admin
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><h6 class="dropdown-header">Reference Data</h6></li>
-                            <li><a class="dropdown-item" href="{{ route('states.index') }}">States</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><h6 class="dropdown-header">Agreement Setup</h6></li>
-                            <li><a class="dropdown-item" href="{{ route('projects.index') }}">Projects</a></li>
-                            <li><a class="dropdown-item" href="{{ route('programs.index') }}">Programs</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><h6 class="dropdown-header">Activity Setup</h6></li>
-                            <li><a class="dropdown-item" href="{{ route('contact-families.index') }}">Contact Families</a></li>
-                            <li><a class="dropdown-item" href="{{ route('activity-types.index') }}">Activity Types</a></li>
-                            <li><a class="dropdown-item" href="{{ route('logging-fields.index') }}">Logging Fields</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><h6 class="dropdown-header">People</h6></li>
-                            <li><a class="dropdown-item" href="{{ route('teams.index') }}">Teams</a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.users.index') }}">Users</a></li>
-                        </ul>
-                    </li>
-                    @endif
-                </ul>
-                <ul class="navbar-nav">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
-                            {{ auth()->user()->name }} ({{ ucfirst(auth()->user()->role) }})
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li>
-                                <form method="POST" action="{{ route('logout') }}">
-                                    @csrf
-                                    <button type="submit" class="dropdown-item">Logout</button>
-                                </form>
-                            </li>
-                        </ul>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+        <x-app-navbar />
     @endauth
 
     <main class="py-4">
