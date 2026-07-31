@@ -80,6 +80,7 @@ class AgreementRequest extends FormRequest
             'deliverables.*.program_id' => ['nullable', 'exists:programs,id'],
             'deliverables.*.metric_type' => ['nullable', Rule::in(['time', 'completion'])],
             'deliverables.*.time_basis' => ['nullable', Rule::in(['observed', 'allotted'])],
+            'deliverables.*.allotted_time_unit' => ['nullable', Rule::in(['days', 'hours'])],
             'deliverables.*.contribution_basis' => ['nullable', Rule::in(['contact', 'user'])],
             'deliverables.*.user_grouping_mode' => ['nullable', Rule::in(['joint', 'individual'])],
             'deliverables.*.include_additional_time' => ['nullable', 'boolean'],
@@ -451,6 +452,10 @@ class AgreementRequest extends FormRequest
                     ->values();
             }
 
+            $scopedActivityTypes = ActivityType::query()
+                ->with('programs:id')
+                ->get();
+
             foreach ($deliverables as $deliverableIndex => $row) {
                 if (!is_array($row)) {
                     continue;
@@ -509,14 +514,52 @@ class AgreementRequest extends FormRequest
                         $validator->errors()->add("deliverables.{$deliverableIndex}.time_basis", 'Deliverable time basis must be observed or allotted.');
                     }
 
-                    if ($timeBasis === 'allotted') {
-                        if (empty($row['activity_type_id'])) {
-                            $validator->errors()->add("deliverables.{$deliverableIndex}.activity_type_id", 'Allotted time deliverables must select an activity type with duration.');
-                        } else {
-                            $allottedActivityType = ActivityType::query()->find((int) $row['activity_type_id']);
+                    $contactFamilyId = !empty($row['contact_family_id']) ? (int) $row['contact_family_id'] : null;
+                    $activityTypeId = !empty($row['activity_type_id']) ? (int) $row['activity_type_id'] : null;
+                    $activityTypesInScope = ActivityTypeDuration::filterActivityTypesInScope(
+                        $scopedActivityTypes,
+                        $contactFamilyId,
+                        $activityTypeId,
+                        $selectedProgramIdSet->all()
+                    );
 
-                            if (!$allottedActivityType || !ActivityTypeDuration::fromActivityType($allottedActivityType)->hasDuration()) {
-                                $validator->errors()->add("deliverables.{$deliverableIndex}.time_basis", 'Allotted time deliverables require an activity type with duration.');
+                    if ($timeBasis === 'allotted') {
+                        if (!ActivityTypeDuration::selectionSupportsAllottedTime(
+                            $contactFamilyId,
+                            $activityTypeId,
+                            $activityTypesInScope
+                        )) {
+                            $validator->errors()->add(
+                                "deliverables.{$deliverableIndex}.time_basis",
+                                'The selected classification has no allotted time.'
+                            );
+                        } else {
+                            $requestedUnit = $row['allotted_time_unit'] ?? null;
+                            $normalizedUnit = ActivityTypeDuration::normalizeAllottedTimeUnit(
+                                $contactFamilyId,
+                                $activityTypeId,
+                                $activityTypesInScope,
+                                $requestedUnit
+                            );
+
+                            if (!$normalizedUnit) {
+                                $units = ActivityTypeDuration::resolveAllottedUnitsForSelection(
+                                    $contactFamilyId,
+                                    $activityTypeId,
+                                    $activityTypesInScope
+                                );
+
+                                if ($units['is_mixed'] && !$requestedUnit) {
+                                    $validator->errors()->add(
+                                        "deliverables.{$deliverableIndex}.allotted_time_unit",
+                                        'Select days or hours for this deliverable target.'
+                                    );
+                                } else {
+                                    $validator->errors()->add(
+                                        "deliverables.{$deliverableIndex}.allotted_time_unit",
+                                        'Target unit must match the selected activity type duration.'
+                                    );
+                                }
                             }
                         }
                     }
@@ -643,6 +686,7 @@ class AgreementRequest extends FormRequest
     {
         return ($deliverable->metric_type ?? null) !== ($row['metric_type'] ?? null)
             || ($deliverable->time_basis ?? 'observed') !== ($row['time_basis'] ?? 'observed')
+            || ($deliverable->allotted_time_unit ?? null) !== ($row['allotted_time_unit'] ?? null)
             || ($deliverable->contribution_basis ?? null) !== ($row['contribution_basis'] ?? null)
             || ($deliverable->user_grouping_mode ?? null) !== ($row['user_grouping_mode'] ?? null)
             || (bool) $deliverable->include_additional_time !== filter_var($row['include_additional_time'] ?? false, FILTER_VALIDATE_BOOLEAN);

@@ -34,14 +34,50 @@
 
     $selectedContactFamily = $contactFamilies->firstWhere('id', $row['contact_family_id'] ?? null);
     $timeBasisOptions = [
-        'observed' => 'Observed',
-        'allotted' => 'Allotted',
+        'observed' => [
+            'label' => 'Observed',
+            'description' => 'Count hours logged on the activity record, including participant or contact time.',
+        ],
+        'allotted' => [
+            'label' => 'Allotted',
+            'description' => 'Count the duration configured on the activity type, such as training days.',
+        ],
     ];
 
     $selectedActivityType = $activityTypes->firstWhere('id', $row['activity_type_id'] ?? null);
     $currentTimeBasis = ($row['metric_type'] ?? '') === 'time'
         ? ($row['time_basis'] ?? 'observed')
         : 'observed';
+
+    $agreementProgramIds = collect($agreement?->programs ?? [])->pluck('id')->map(fn ($id) => (int) $id)->all();
+    $activityTypesInScope = \App\Support\ActivityTypeDuration::filterActivityTypesInScope(
+        collect($activityTypes ?? []),
+        !empty($row['contact_family_id']) ? (int) $row['contact_family_id'] : null,
+        !empty($row['activity_type_id']) ? (int) $row['activity_type_id'] : null,
+        $agreementProgramIds
+    );
+    $selectionSupportsAllotted = \App\Support\ActivityTypeDuration::selectionSupportsAllottedTime(
+        !empty($row['contact_family_id']) ? (int) $row['contact_family_id'] : null,
+        !empty($row['activity_type_id']) ? (int) $row['activity_type_id'] : null,
+        $activityTypesInScope
+    );
+    $allottedUnits = \App\Support\ActivityTypeDuration::resolveAllottedUnitsForSelection(
+        !empty($row['contact_family_id']) ? (int) $row['contact_family_id'] : null,
+        !empty($row['activity_type_id']) ? (int) $row['activity_type_id'] : null,
+        $activityTypesInScope
+    );
+    $currentAllottedTimeUnit = $row['allotted_time_unit'] ?? null;
+    if (($row['metric_type'] ?? '') === 'time' && $currentTimeBasis === 'allotted' && !$currentAllottedTimeUnit && count($allottedUnits['allowed_units']) === 1) {
+        $currentAllottedTimeUnit = $allottedUnits['allowed_units'][0];
+    }
+    if (($row['metric_type'] ?? '') === 'time' && $currentTimeBasis === 'observed') {
+        $currentAllottedTimeUnit = \App\Support\ActivityTypeDuration::UNIT_HOURS;
+    }
+    $targetUnitLabel = ($row['metric_type'] ?? '') === 'completion'
+        ? 'Target Completions'
+        : 'Target';
+    $showTargetUnitPicker = ($row['metric_type'] ?? '') === 'time';
+    $showAllottedWarning = ($row['metric_type'] ?? '') === 'time' && !$selectionSupportsAllotted;
     $showAdditionalTime = ($row['metric_type'] ?? '') === 'time'
         && $currentTimeBasis === 'observed'
         && !empty($row['contact_family_id'])
@@ -168,19 +204,24 @@
 
                 <div class="col-md-6" data-time-basis-wrapper>
                     <label class="form-label fw-semibold d-block mb-1">Time Measurement</label>
-                    <p class="text-muted small mb-2">Choose observed logged hours or allotted duration from the activity type.</p>
+                    <p class="text-muted small mb-2">Choose observed logged hours or allotted duration from logged activity.</p>
                     <div class="d-grid gap-2">
-                        @foreach($timeBasisOptions as $value => $label)
-                            <label class="form-check border rounded px-3 py-2 mb-0 {{ $currentTimeBasis === $value ? 'border-primary bg-light' : '' }}">
+                        @foreach($timeBasisOptions as $value => $option)
+                            <label class="form-check border rounded px-3 py-2 mb-0">
                                 <input class="form-check-input me-2"
                                        type="radio"
                                        name="{{ $fieldPrefix }}[time_basis]"
                                        value="{{ $value }}"
                                        data-deliverable-time-basis
                                        {{ $currentTimeBasis === $value ? 'checked' : '' }}>
-                                <span class="form-check-label fw-semibold">{{ $label }}</span>
+                                <span class="form-check-label fw-semibold">{{ $option['label'] }}</span>
+                                <span class="text-muted small d-block">{{ $option['description'] }}</span>
                             </label>
                         @endforeach
+                    </div>
+                    <div class="d-flex align-items-start gap-2 text-muted small mt-2 {{ $showAllottedWarning ? '' : 'd-none' }}" data-deliverable-allotted-warning>
+                        <i class="bi bi-exclamation-triangle-fill text-warning flex-shrink-0" aria-hidden="true"></i>
+                        <span>The selection above has no allotted time.</span>
                     </div>
                 </div>
             </div>
@@ -190,10 +231,8 @@
                     <label class="form-label fw-semibold d-block mb-1" data-deliverable-target-label>
                         @if(($row['metric_type'] ?? '') === 'completion')
                             Target Completions <span class="text-danger">*</span>
-                        @elseif($currentTimeBasis === 'allotted' && (float) ($selectedActivityType?->duration_days ?? 0) > 0)
-                            Target Days <span class="text-danger">*</span>
                         @else
-                            Target Hours <span class="text-danger">*</span>
+                            {{ $targetUnitLabel }} <span class="text-danger">*</span>
                         @endif
                     </label>
                     <input type="number"
@@ -203,12 +242,29 @@
                            min="0"
                            step="0.1"
                            data-deliverable-target>
-                    <div class="form-text {{ $currentTimeBasis === 'allotted' && $selectedActivityType && ((float) $selectedActivityType->duration_days > 0 || (float) $selectedActivityType->duration_hours > 0) ? '' : 'd-none' }}" data-deliverable-duration-reminder>
-                        @if((float) ($selectedActivityType?->duration_days ?? 0) > 0)
-                            Each completion: {{ rtrim(rtrim(number_format((float) $selectedActivityType->duration_days, 1, '.', ''), '0'), '.') }} {{ (float) $selectedActivityType->duration_days == 1 ? 'day' : 'days' }}
-                        @elseif((float) ($selectedActivityType?->duration_hours ?? 0) > 0)
-                            Each completion: {{ rtrim(rtrim(number_format((float) $selectedActivityType->duration_hours, 1, '.', ''), '0'), '.') }} {{ (float) $selectedActivityType->duration_hours == 1 ? 'hour' : 'hours' }}
-                        @endif
+                    <div class="mt-2 {{ $showTargetUnitPicker ? '' : 'd-none' }}" data-target-unit-wrapper>
+                        <div class="d-flex gap-3">
+                            <label class="form-check mb-0">
+                                <input class="form-check-input"
+                                       type="radio"
+                                       name="{{ $fieldPrefix }}[allotted_time_unit]"
+                                       value="days"
+                                       data-deliverable-target-unit
+                                       data-target-unit="days"
+                                       @checked($currentAllottedTimeUnit === 'days')>
+                                <span class="form-check-label">Days</span>
+                            </label>
+                            <label class="form-check mb-0">
+                                <input class="form-check-input"
+                                       type="radio"
+                                       name="{{ $fieldPrefix }}[allotted_time_unit]"
+                                       value="hours"
+                                       data-deliverable-target-unit
+                                       data-target-unit="hours"
+                                       @checked($currentAllottedTimeUnit === 'hours')>
+                                <span class="form-check-label">Hours</span>
+                            </label>
+                        </div>
                     </div>
                 </div>
 
@@ -295,10 +351,8 @@
                     <label class="form-label fw-semibold d-block mb-1" data-deliverable-target-label-locked>
                         @if(($row['metric_type'] ?? '') === 'completion')
                             Target Completions
-                        @elseif($currentTimeBasis === 'allotted' && (float) ($selectedActivityType?->duration_days ?? 0) > 0)
-                            Target Days
                         @else
-                            Target Hours
+                            {{ $targetUnitLabel }}
                         @endif
                         <span class="text-danger">*</span>
                     </label>

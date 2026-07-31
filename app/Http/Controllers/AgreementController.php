@@ -18,6 +18,7 @@ use App\Models\Team;
 use App\Models\User;
 use App\Services\DeliverableContributionService;
 use App\Services\AgreementDuplicationService;
+use App\Support\ActivityTypeDuration;
 use App\Support\DeliverableHistoryScope;
 use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
@@ -442,7 +443,9 @@ class AgreementController extends Controller
 
     private function syncAgreementDeliverables(Agreement $agreement, array $deliverables): void
     {
-        $agreement->loadMissing('agreementActivityHistories');
+        $agreement->loadMissing(['agreementActivityHistories', 'programs:id']);
+        $selectedProgramIds = $agreement->programs->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $scopedActivityTypes = ActivityType::query()->with('programs:id')->get();
 
         $existingDeliverables = $agreement->deliverables()
             ->with(['users', 'teams', 'contributions'])
@@ -473,16 +476,41 @@ class AgreementController extends Controller
                 continue;
             }
 
+            $timeBasis = ($row['metric_type'] ?? null) === 'time'
+                ? ($row['time_basis'] ?? 'observed')
+                : 'observed';
+            $allottedTimeUnit = null;
+
+            //determine which ats are in scope then determine the allotted time unit
+            if ($timeBasis === 'allotted') {
+                $contactFamilyId = !empty($row['contact_family_id']) ? (int) $row['contact_family_id'] : null;
+                $activityTypeId = !empty($row['activity_type_id']) ? (int) $row['activity_type_id'] : null;
+                $activityTypesInScope = ActivityTypeDuration::filterActivityTypesInScope(
+                    $scopedActivityTypes,
+                    $contactFamilyId,
+                    $activityTypeId,
+                    $selectedProgramIds
+                );
+
+                $allottedTimeUnit = ActivityTypeDuration::normalizeAllottedTimeUnit(
+                    $contactFamilyId,
+                    $activityTypeId,
+                    $activityTypesInScope,
+                    $row['allotted_time_unit'] ?? null
+                );
+            }
+
             $data = [
                 'activity_type_id' => $row['activity_type_id'] ?? null,
                 'contact_family_id' => $row['contact_family_id'] ?? null,
                 'program_id' => $row['program_id'] ?? null,
                 'metric_type' => $row['metric_type'] ?? null,
-                'time_basis' => ($row['metric_type'] ?? null) === 'time'
-                    ? ($row['time_basis'] ?? 'observed')
-                    : 'observed',
+                'time_basis' => $timeBasis,
+                'allotted_time_unit' => $allottedTimeUnit,
                 'contribution_basis' => $row['contribution_basis'] ?? null,
-                'user_grouping_mode' => $row['user_grouping_mode'] ?? null,
+                'user_grouping_mode' => ($row['contribution_basis'] ?? null) === 'user'
+                    ? ($row['user_grouping_mode'] ?? null)
+                    : null,
                 'include_additional_time' => filter_var($row['include_additional_time'] ?? false, FILTER_VALIDATE_BOOLEAN),
                 'target_quantity' => $row['target_quantity'] ?? null,
                 'suggested_due_date' => $row['suggested_due_date'] ?? null,
@@ -503,6 +531,7 @@ class AgreementController extends Controller
                         'program_id' => $deliverable->program_id,
                         'metric_type' => $deliverable->metric_type,
                         'time_basis' => $deliverable->time_basis,
+                        'allotted_time_unit' => $deliverable->allotted_time_unit,
                         'contribution_basis' => $deliverable->contribution_basis,
                         'user_grouping_mode' => $deliverable->user_grouping_mode,
                         'include_additional_time' => (bool) $deliverable->include_additional_time,

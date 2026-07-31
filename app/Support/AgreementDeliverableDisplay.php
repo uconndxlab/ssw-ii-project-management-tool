@@ -183,7 +183,7 @@ class AgreementDeliverableDisplay
         $target = (float) ($deliverable->target_quantity ?? 0);
         $isTime = $deliverable->metric_type === 'time';
         $isAllottedTime = $isTime && ($deliverable->time_basis ?? 'observed') === 'allotted';
-        $allottedDuration = ActivityTypeDuration::fromActivityType($deliverable->activityType);
+        $allottedTimeUnit = ActivityTypeDuration::resolveAllottedTimeUnitForDeliverable($deliverable);
         $isIndividual = $deliverable->contribution_basis === 'user'
             && $deliverable->user_grouping_mode === 'individual';
         $isJoint = $deliverable->contribution_basis === 'user'
@@ -191,7 +191,7 @@ class AgreementDeliverableDisplay
 
         $completedValue = $isTime
             ? ($isAllottedTime
-                ? ($allottedDuration->unit() === ActivityTypeDuration::UNIT_DAYS
+                ? ($allottedTimeUnit === ActivityTypeDuration::UNIT_DAYS
                     ? (float) $contributions->sum('credited_allotted_days')
                     : (float) $contributions->sum('credited_allotted_hours'))
                 : (float) $contributions->sum('credited_hours'))
@@ -209,7 +209,7 @@ class AgreementDeliverableDisplay
             $agreementTeamIds,
             $isTime,
             $isAllottedTime,
-            $allottedDuration
+            $allottedTimeUnit
         );
         $contributorByUserId = $contributorSummaries->keyBy('user_id');
 
@@ -279,7 +279,7 @@ class AgreementDeliverableDisplay
 
         $unitLabel = 'Completions';
         if ($isTime) {
-            if ($isAllottedTime && $allottedDuration->unit() === ActivityTypeDuration::UNIT_DAYS) {
+            if ($isAllottedTime && $allottedTimeUnit === ActivityTypeDuration::UNIT_DAYS) {
                 $unitLabel = 'Days';
             } else {
                 $unitLabel = 'Hours';
@@ -659,12 +659,12 @@ class AgreementDeliverableDisplay
         Collection $agreementTeamIds,
         bool $isTime,
         bool $isAllottedTime = false,
-        ?ActivityTypeDuration $allottedDuration = null
+        ?string $allottedTimeUnit = null
     ): Collection {
         return $contributions
             ->whereNotNull('contributor_user_id')
             ->groupBy('contributor_user_id')
-            ->map(function (Collection $userContributions) use ($deliverable, $teamLookup, $agreementTeamIds, $isTime, $isAllottedTime, $allottedDuration) {
+            ->map(function (Collection $userContributions) use ($deliverable, $teamLookup, $agreementTeamIds, $isTime, $isAllottedTime, $allottedTimeUnit) {
                 /** @var DeliverableContribution $first */
                 $first = $userContributions->first();
                 $user = $first->contributor;
@@ -675,7 +675,7 @@ class AgreementDeliverableDisplay
 
                 $completedValue = $isTime
                     ? ($isAllottedTime
-                        ? ($allottedDuration?->unit() === ActivityTypeDuration::UNIT_DAYS
+                        ? ($allottedTimeUnit === ActivityTypeDuration::UNIT_DAYS
                             ? (float) $userContributions->sum('credited_allotted_days')
                             : (float) $userContributions->sum('credited_allotted_hours'))
                         : (float) $userContributions->sum('credited_hours'))

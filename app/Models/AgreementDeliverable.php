@@ -16,6 +16,7 @@ class AgreementDeliverable extends Model
         'program_id',
         'metric_type',
         'time_basis',
+        'allotted_time_unit',
         'contribution_basis',
         'user_grouping_mode',
         'include_additional_time',

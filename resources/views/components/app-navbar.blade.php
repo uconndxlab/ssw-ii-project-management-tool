@@ -33,7 +33,7 @@
 
                 @if (auth()->user()->isAdmin())
                     @php($adminIsActive = App\Support\AppNav::adminIsActive())
-                    <li class="nav-item dropdown app-navbar-admin">
+                    <li class="nav-item dropdown">
                         <a @class(['nav-link dropdown-toggle', 'active' => $adminIsActive])
                            href="#"
                            id="adminDropdown"
