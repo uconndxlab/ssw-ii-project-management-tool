@@ -63,11 +63,25 @@
                     </li>
                 @endif
 
+                @php($userMenuIsActive = request()->routeIs('profile', 'profile.*'))
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <a @class(['nav-link dropdown-toggle', 'active' => $userMenuIsActive])
+                       href="#"
+                       id="userDropdown"
+                       role="button"
+                       data-bs-toggle="dropdown"
+                       aria-expanded="false">
                         {{ auth()->user()->name }} ({{ ucfirst(auth()->user()->role) }})
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <a class="dropdown-item {{ request()->routeIs('profile', 'profile.*') ? 'is-current' : '' }}"
+                               href="{{ route('profile') }}"
+                               @if(request()->routeIs('profile', 'profile.*')) aria-current="page" @endif>
+                                Profile
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
                         <li>
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf

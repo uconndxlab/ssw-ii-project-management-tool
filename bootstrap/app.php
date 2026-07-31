@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'auth' => \App\Http\Middleware\Authenticate::class,
             'active' => \App\Http\Middleware\EnsureUserIsActive::class,
             'role' => \App\Http\Middleware\CheckRole::class,
+            'password-reset-enabled' => \App\Http\Middleware\EnsurePasswordResetEnabled::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

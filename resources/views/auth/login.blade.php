@@ -13,6 +13,10 @@
                     <div class="alert alert-danger">{{ session('error') }}</div>
                 @endif
 
+                @if(session('status'))
+                    <div class="alert alert-success">{{ session('status') }}</div>
+                @endif
+
                 @if ($errors->any())
                     <div class="alert alert-danger">
                         <ul class="mb-0">
@@ -52,9 +56,16 @@
                         @enderror
                     </div>
 
-                    <div class="mb-3 form-check">
-                        <input type="checkbox" class="form-check-input" id="remember" name="remember">
-                        <label class="form-check-label" for="remember">Remember me</label>
+                    <div class="mb-3 @if(filled(config('mail.from.address'))) d-flex justify-content-between align-items-center @endif">
+                        <div class="form-check mb-0">
+                            <input type="checkbox" class="form-check-input" id="remember" name="remember">
+                            <label class="form-check-label" for="remember">Remember me</label>
+                        </div>
+                        @if(filled(config('mail.from.address')))
+                            <a href="{{ route('password.request') }}" class="btn btn-link btn-sm px-0 text-decoration-none">
+                                Forgot password?
+                            </a>
+                        @endif
                     </div>
 
                     <button type="submit" class="btn btn-primary w-100">Login</button>

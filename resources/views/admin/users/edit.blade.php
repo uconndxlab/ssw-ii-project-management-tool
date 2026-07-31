@@ -3,12 +3,6 @@
 @section('title', 'Edit User')
 
 @section('content')
-<div class="row justify-content-center mb-4">
-    <div class="col-lg-10">
-        <h1>Edit User</h1>
-    </div>
-</div>
-
 <div class="row justify-content-center">
     <div class="col-lg-10">
         @if ($errors->any())
@@ -24,6 +18,17 @@
         <form method="POST" action="{{ route('admin.users.update', $user) }}" id="users-edit-form">
             @csrf
             @method('PUT')
+            <x-form-page-header
+                entity-type="User"
+                :entity-type-badge-class="\App\Support\EntityBadge::typeClasses('user')"
+                mode="edit"
+                :record-name="$user->name"
+                :back-route="route('users.show', $user)"
+                back-label="Back to user"
+                :show-active="true"
+                :active-default="old('active', $user->active)"
+                active-help="Inactive users cannot log in and are removed from teams, agreements, and assignment pickers. Activity history and contributions are kept."
+            />
             @include('admin.users.partials.form-fields')
         </form>
     </div>

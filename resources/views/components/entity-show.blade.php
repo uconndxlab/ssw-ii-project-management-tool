@@ -16,9 +16,11 @@
 --}}
 @props([
     'title',
-    'type',
+    'type'           => null,
     'typeBadgeClass' => 'bg-secondary',
+    'badgeKind'      => null,
     'editRoute'      => null,
+    'editLabel'      => 'Edit',
     'backRoute',
     'backLabel'      => 'Back',
     'mainCardTitle'  => 'Relationships',
@@ -34,18 +36,26 @@
                 <i class="bi bi-arrow-left me-1"></i>{{ $backLabel }}
             </a>
 
-            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-                <x-entity-type-badge :label="$type" :badge-class="$typeBadgeClass" />
-                @if(! is_null($active))
-                    <x-status-badge :active="$active" />
-                @endif
-            </div>
+            @if(filled($type) || ! is_null($active))
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                    @if(filled($type))
+                        @if($badgeKind)
+                            <x-category-badge :kind="$badgeKind">{{ $type }}</x-category-badge>
+                        @else
+                            <x-entity-type-badge :label="$type" :badge-class="$typeBadgeClass" />
+                        @endif
+                    @endif
+                    @if(! is_null($active))
+                        <x-status-badge :active="$active" />
+                    @endif
+                </div>
+            @endif
             <h1 class="h2 mb-0 fw-bold">{{ $title }}</h1>
         </div>
 
         @if($editRoute)
             <a href="{{ $editRoute }}" class="btn btn-outline-primary flex-shrink-0">
-                <i class="bi bi-pencil-square me-1"></i>Edit
+                <i class="bi bi-pencil-square me-1"></i>{{ $editLabel }}
             </a>
         @endif
     </div>

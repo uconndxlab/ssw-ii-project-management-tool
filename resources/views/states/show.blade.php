@@ -35,7 +35,7 @@
         <h6 class="text-muted fw-normal small mb-2">Assigned Staff</h6>
         @forelse($staffMembers as $member)
             <div class="small py-1 {{ $loop->last ? '' : 'border-bottom' }}">
-                <a href="{{ route('users.show', $member) }}" class="fw-semibold text-decoration-underline">{{ $member->name }}</a>
+                <x-user-link :user="$member" class="fw-semibold text-decoration-underline" />
                 @if($member->role)
                     <span class="text-muted">· {{ ucfirst($member->role) }}</span>
                 @endif

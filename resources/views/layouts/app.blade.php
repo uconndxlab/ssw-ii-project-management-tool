@@ -24,9 +24,9 @@
 
     <main class="py-4">
         <div class="container">
-            @if(session('success'))
+            @if(session('success') || session('status'))
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    {{ session('success') }}
+                    {{ session('success') ?? session('status') }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
             @endif

@@ -56,9 +56,7 @@
                         <span class="badge bg-info text-dark">{{ $activity->activityType->name }}</span>
                     </td>
                     <td class="small">
-                        <a href="{{ route('users.show', $activity->user) }}" class="text-decoration-none">
-                            {{ $activity->user->name }}
-                        </a>
+                        <x-user-link :user="$activity->user" class="text-decoration-none" />
                     </td>
                     <td class="text-end text-nowrap">
                         @php

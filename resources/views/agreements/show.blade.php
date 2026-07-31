@@ -141,7 +141,7 @@
                                 @foreach($teamOnlyUsers as $user)
                                     <x-staff-member-row
                                         :name="$user->name"
-                                        :href="route('users.show', $user)"
+                                        :href="\App\Support\UserProfileLink::route($user)"
                                         :role="$user->role"
                                         :is-principal-investigator="$agreement->principalInvestigators->contains('id', $user->id)"
                                         :class="$loop->last ? '' : 'border-bottom'"
@@ -161,7 +161,7 @@
                             @foreach($directUsers as $user)
                                 <x-staff-member-row
                                     :name="$user->name"
-                                    :href="route('users.show', $user)"
+                                    :href="\App\Support\UserProfileLink::route($user)"
                                     :role="$user->role"
                                     :is-principal-investigator="!empty($user->is_principal_investigator)"
                                     :class="$loop->last ? '' : 'border-bottom'"

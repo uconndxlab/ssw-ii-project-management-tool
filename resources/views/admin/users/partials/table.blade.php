@@ -10,31 +10,31 @@
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>
-                        <x-table-sort-link column="name" label="Name" :sort="$s" :direction="$d" :url="$url('name')" />
+                    <th style="min-width: 160px;">
+                        <x-table-sort-link column="name" label="Name" :sort="$s" :direction="$d" :url="$url('name')" target="#users-table" />
+                    </th>
+                    <th style="min-width: 180px;">
+                        <x-table-sort-link column="email" label="Email" :sort="$s" :direction="$d" :url="$url('email')" target="#users-table" />
                     </th>
                     <th>
-                        <x-table-sort-link column="email" label="Email" :sort="$s" :direction="$d" :url="$url('email')" />
+                        <x-table-sort-link column="kfs" label="KFS" :sort="$s" :direction="$d" :url="$url('kfs')" target="#users-table" />
                     </th>
                     <th>
-                        <x-table-sort-link column="kfs" label="KFS" :sort="$s" :direction="$d" :url="$url('kfs')" />
+                        <x-table-sort-link column="role" label="Role" :sort="$s" :direction="$d" :url="$url('role')" target="#users-table" />
+                    </th>
+                    <th style="min-width: 140px;">
+                        <x-table-sort-link column="supervisor" label="Supervisor" :sort="$s" :direction="$d" :url="$url('supervisor')" target="#users-table" />
                     </th>
                     <th>
-                        <x-table-sort-link column="role" label="Role" :sort="$s" :direction="$d" :url="$url('role')" />
+                        <x-table-sort-link column="active" label="Status" :sort="$s" :direction="$d" :url="$url('active')" target="#users-table" />
                     </th>
-                    <th>
-                        <x-table-sort-link column="supervisor" label="Supervisor" :sort="$s" :direction="$d" :url="$url('supervisor')" />
+                    <th style="min-width: 140px;">
+                        <x-table-sort-link column="projects" label="Projects" :sort="$s" :direction="$d" :url="$url('projects')" target="#users-table" />
                     </th>
-                    <th>
-                        <x-table-sort-link column="active" label="Active" :sort="$s" :direction="$d" :url="$url('active')" />
+                    <th style="min-width: 140px;">
+                        <x-table-sort-link column="programs" label="Programs" :sort="$s" :direction="$d" :url="$url('programs')" target="#users-table" />
                     </th>
-                    <th>
-                        <x-table-sort-link column="projects" label="Projects" :sort="$s" :direction="$d" :url="$url('projects')" />
-                    </th>
-                    <th>
-                        <x-table-sort-link column="programs" label="Programs" :sort="$s" :direction="$d" :url="$url('programs')" />
-                    </th>
-                    <th class="text-end fw-normal" style="width:220px;">Actions</th>
+                    <th class="text-end text-nowrap" style="width:220px;">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -42,36 +42,31 @@
                 @php $scope = $user->getScopeBySource(); @endphp
                 <tr>
                     <td>
-                        <a href="{{ route('users.show', $user) }}" class="fw-semibold text-decoration-none text-dark">
+                        <a href="{{ route('users.show', $user) }}" class="fw-semibold text-decoration-none text-dark d-block">
                             {{ $user->name }}
                         </a>
                     </td>
                     <td class="text-muted small">{{ $user->email }}</td>
                     <td class="text-muted small">{{ $user->kfs_number ?: '—' }}</td>
                     <td>
-                        <span class="badge
-                            @if($user->role === 'admin') bg-danger
-                            @elseif($user->role === 'consultant') bg-info text-dark
-                            @else bg-secondary
-                            @endif">
-                            {{ ucfirst($user->role) }}
-                        </span>
+                        <x-category-badge kind="role">{{ ucfirst($user->role) }}</x-category-badge>
                     </td>
                     <td class="small">
                         @if($user->supervisor)
-                            <a href="{{ route('users.show', $user->supervisor) }}" class="text-decoration-none">
-                                {{ $user->supervisor->name }}
-                            </a>
+                            @php $supervisorHref = \App\Support\UserProfileLink::route($user->supervisor); @endphp
+                            @if($supervisorHref)
+                                <a href="{{ $supervisorHref }}" class="text-decoration-none">
+                                    {{ $user->supervisor->name }}
+                                </a>
+                            @else
+                                <span>{{ $user->supervisor->name }}</span>
+                            @endif
                         @else
                             <span class="text-muted">—</span>
                         @endif
                     </td>
                     <td>
-                        @if($user->active)
-                            <span class="badge bg-success">Active</span>
-                        @else
-                            <span class="badge bg-secondary">Inactive</span>
-                        @endif
+                        <x-status-badge :active="$user->active" />
                     </td>
                     <td>
                         <div class="d-flex flex-wrap gap-1">

@@ -9,7 +9,7 @@
                 <div class="list-group-item px-3 py-2 d-flex justify-content-between align-items-start">
                     <div class="flex-grow-1">
                         <div class="mb-1">
-                            <a href="{{ route('users.show', $activity->user) }}" class="text-decoration-none fw-semibold">{{ $activity->user->name }}</a>
+                            <x-user-link :user="$activity->user" class="text-decoration-none fw-semibold" />
                             <span class="text-muted">logged</span>
                             <a href="{{ route('activities.show', $activity) }}" class="text-decoration-none fw-semibold">{{ $activity->activityType?->name ?? 'Activity' }}</a>
                         </div>

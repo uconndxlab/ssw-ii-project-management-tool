@@ -4,6 +4,7 @@
 
 @section('content')
 @php
+    $isProfile = $isProfile ?? false;
     $direct = $scopeBySource['direct'];
     $viaTeams = $scopeBySource['viaTeams'];
 @endphp
@@ -11,10 +12,11 @@
 <x-entity-show
     title="{{ $user->name }}"
     type="{{ ucfirst($user->role) }}"
-    typeBadgeClass="{{ $user->isAdmin() ? 'bg-danger' : ($user->isStaff() ? 'bg-primary' : 'bg-secondary') }}"
-    backRoute="{{ route('admin.users.index') }}"
-    editRoute="{{ route('admin.users.edit', $user) }}"
-    backLabel="All Users"
+    badgeKind="role"
+    backRoute="{{ $isProfile ? route('dashboard') : route('admin.users.index') }}"
+    editRoute="{{ $isProfile ? route('profile.edit') : route('admin.users.edit', $user) }}"
+    editLabel="{{ $isProfile ? 'Edit profile' : 'Edit' }}"
+    backLabel="{{ $isProfile ? 'Home' : 'All Users' }}"
     mainCardTitle="Agreements"
     :activityFirst="true"
 >
@@ -28,11 +30,7 @@
         <dl class="row mb-0" style="min-width: 0;">
             <dt class="col-5 text-muted fw-normal small">Status</dt>
             <dd class="col-7 mb-2">
-                @if($user->active)
-                    <span class="badge bg-success">Active</span>
-                @else
-                    <span class="badge bg-secondary">Inactive</span>
-                @endif
+                <x-status-badge :active="$user->active" />
             </dd>
 
             <dt class="col-5 text-muted fw-normal small">Name</dt>
@@ -48,19 +46,17 @@
             <dt class="col-5 text-muted fw-normal small">KFS Number</dt>
             <dd class="col-7 mb-2">{{ $user->kfs_number ?: '—' }}</dd>
 
-            <dt class="col-5 text-muted fw-normal small">Role</dt>
-            <dd class="col-7 mb-2">
-                <span class="badge {{ $user->isAdmin() ? 'bg-danger' : ($user->isStaff() ? 'bg-primary' : 'bg-secondary') }}">
-                    {{ ucfirst($user->role) }}
-                </span>
-            </dd>
-
             <dt class="col-5 text-muted fw-normal small">Supervisor</dt>
             <dd class="col-7 mb-2">
                 @if($user->supervisor)
-                    <a href="{{ route('users.show', $user->supervisor) }}" class="text-decoration-underline">
-                        {{ $user->supervisor->name }}
-                    </a>
+                    @php $supervisorHref = \App\Support\UserProfileLink::route($user->supervisor); @endphp
+                    @if($supervisorHref)
+                        <a href="{{ $supervisorHref }}" class="text-decoration-underline">
+                            {{ $user->supervisor->name }}
+                        </a>
+                    @else
+                        <span>{{ $user->supervisor->name }}</span>
+                    @endif
                 @else
                     <span class="text-muted">—</span>
                 @endif

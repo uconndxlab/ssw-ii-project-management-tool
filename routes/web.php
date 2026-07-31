@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminUserController;
+use App\Http\Controllers\PasswordResetController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\StateController;
 use App\Http\Controllers\OrganizationController;
@@ -21,6 +23,13 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login']);
+
+    Route::middleware('password-reset-enabled')->group(function () {
+        Route::get('/forgot-password', [PasswordResetController::class, 'create'])->name('password.request');
+        Route::post('/forgot-password', [PasswordResetController::class, 'store'])->name('password.email');
+        Route::get('/reset-password/{token}', [PasswordResetController::class, 'edit'])->name('password.reset');
+        Route::post('/reset-password', [PasswordResetController::class, 'update'])->name('password.update');
+    });
 });
 
 // Authenticated routes
@@ -29,6 +38,10 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/search', [SearchController::class, 'index'])->name('search');
 
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+    Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
+    Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
     
     // Agreements - visible to all authenticated users (with visibility filtering in controller)
     Route::post('/agreements/{agreement}/duplicate', [AgreementController::class, 'duplicate'])->name('agreements.duplicate');

@@ -115,11 +115,9 @@
                 @forelse($teamMembers as $member)
                     <div class="py-2 border-bottom">
                         <div class="d-flex justify-content-between align-items-start">
-                            <a href="{{ route('users.show', $member) }}" class="text-decoration-none fw-semibold small">
-                                {{ $member->name }}
-                            </a>
+                            <x-user-link :user="$member" class="text-decoration-none fw-semibold small" />
                             @if($member->role)
-                                <span class="badge bg-light text-dark border ms-2">{{ ucfirst($member->role) }}</span>
+                                <x-category-badge kind="role" class="ms-2">{{ ucfirst($member->role) }}</x-category-badge>
                             @endif
                         </div>
                         @if($member->email)

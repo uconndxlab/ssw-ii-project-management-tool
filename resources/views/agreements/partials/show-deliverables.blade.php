@@ -76,7 +76,7 @@
                                                         @foreach($group['users'] as $row)
                                                             <div class="d-flex justify-content-between small py-1">
                                                                 <span>
-                                                                    <a href="{{ route('users.show', $row['user']) }}" class="text-decoration-underline">{{ $renderContributorLabel($row) }}</a>
+                                                                    <x-user-link :user="$row['user']" :label="$renderContributorLabel($row)" class="text-decoration-underline" />
                                                                 </span>
                                                                 <span class="text-muted text-nowrap">{{ number_format($row['completed_value'], 1) }} {{ strtolower($unitLabel) }}</span>
                                                             </div>
@@ -96,7 +96,7 @@
                                                 <div class="mb-3">
                                                     <div class="d-flex justify-content-between align-items-center gap-2 small mb-1">
                                                         <span>
-                                                            <a href="{{ route('users.show', $individual['user']) }}" class="text-decoration-underline fw-semibold">{{ $renderContributorLabel($individual) }}</a>
+                                                            <x-user-link :user="$individual['user']" :label="$renderContributorLabel($individual)" class="text-decoration-underline fw-semibold" />
                                                         </span>
                                                         <span class="text-muted text-nowrap">
                                                             {{ number_format($userCompleted, 1) }}@if($userTarget > 0) / {{ number_format($userTarget, 1) }}@endif {{ strtolower($unitLabel) }}

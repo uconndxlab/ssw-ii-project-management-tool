@@ -7,8 +7,8 @@ use App\Models\Program;
 use App\Models\Project;
 use App\Models\User;
 use App\Services\UserDeactivationService;
+use App\Services\UserShowPageData;
 use App\Support\ProjectProgramScope;
-use App\Support\UserDeliverableReporting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -205,26 +205,10 @@ class AdminUserController extends Controller
 
     public function show(User $user)
     {
-        $user->load([
-            'supervisor',
-            'programs.projects',
-            'agreements.organizations',
-            'agreements.states',
-            'teams.programs.projects',
-            'teams.agreements.organizations',
-            'teams.agreements.states',
+        return view('admin.users.show', [
+            ...UserShowPageData::for($user),
+            'isProfile' => false,
         ]);
-
-        $scopeBySource = $user->getScopeBySource();
-        $agreementReports = UserDeliverableReporting::buildAgreementReports($user);
-
-        $recentActivities = $user->activities()
-            ->with(['activityType', 'agreements'])
-            ->orderByDesc('engagement_date')
-            ->take(10)
-            ->get();
-
-        return view('admin.users.show', compact('user', 'recentActivities', 'scopeBySource', 'agreementReports'));
     }
 
     public function destroy(User $user)

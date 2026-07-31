@@ -65,7 +65,7 @@
                                 <td class="small">{{ $activity->activityType->name ?? '—' }}</td>
                                 <td class="small">
                                     @if($activity->user)
-                                        <a href="{{ route('users.show', $activity->user) }}" class="text-decoration-underline">{{ $activity->user->name }}</a>
+                                        <x-user-link :user="$activity->user" class="text-decoration-underline" />
                                     @else
                                         —
                                     @endif

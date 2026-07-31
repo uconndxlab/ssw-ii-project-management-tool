@@ -41,6 +41,7 @@ class EntityBadge
             'activity-type' => 'bg-secondary-subtle text-secondary-emphasis border',
             'contact-family' => 'bg-secondary-subtle text-secondary-emphasis border',
             'logging-field' => 'bg-secondary-subtle text-secondary-emphasis border',
+            'user' => 'bg-light text-dark border',
             default => 'bg-secondary-subtle text-secondary-emphasis border',
         };
     }

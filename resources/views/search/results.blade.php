@@ -108,14 +108,14 @@
                 <div class="list-group list-group-flush">
                     @foreach($users as $person)
                         <a href="{{ route('users.show', $person) }}"
-                           class="list-group-item list-group-item-action">
+                           class="list-group-item list-group-item-action">>
                             <div class="d-flex justify-content-between align-items-start gap-2">
                                 <div class="fw-semibold">{{ $person->name }}</div>
                                 <div class="d-flex flex-wrap gap-1 justify-content-end">
                                     @if(!$person->active)
                                         <span class="badge bg-secondary" style="font-size:.7rem;">Inactive</span>
                                     @endif
-                                    <span class="badge bg-light text-dark border" style="font-size:.7rem;">{{ ucfirst($person->role) }}</span>
+                                    <x-category-badge kind="role" style="font-size:.7rem;">{{ ucfirst($person->role) }}</x-category-badge>
                                 </div>
                             </div>
                             <div class="small text-muted">{{ $person->email }}</div>
