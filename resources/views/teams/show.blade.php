@@ -60,7 +60,7 @@
                         <div class="list-group-item px-0 py-2">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
-                                    <strong class="d-block">{{ $user->name }}</strong>
+                                    <x-user-link :user="$user" class="d-block fw-semibold" />
                                     <small class="text-muted">{{ $user->email }}</small>
                                 </div>
                                 <span class="badge 
@@ -171,7 +171,7 @@
                     @foreach($team->users as $member)
                         <div class="mb-4">
                             <div class="d-flex align-items-center mb-2">
-                                <strong>{{ $member->name }}</strong>
+                                <x-user-link :user="$member" class="fw-semibold" />
                                 <span class="badge ms-2
                                     @if($member->role === 'admin') bg-danger
                                     @elseif($member->role === 'consultant') bg-info

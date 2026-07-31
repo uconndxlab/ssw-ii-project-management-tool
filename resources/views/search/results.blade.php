@@ -107,8 +107,13 @@
                 </div>
                 <div class="list-group list-group-flush">
                     @foreach($users as $person)
-                        <a href="{{ route('users.show', $person) }}"
-                           class="list-group-item list-group-item-action">>
+                        @php $personHref = \App\Support\UserProfileLink::route($person); @endphp
+                        @if($personHref)
+                        <a href="{{ $personHref }}"
+                           class="list-group-item list-group-item-action">
+                        @else
+                        <div class="list-group-item">
+                        @endif
                             <div class="d-flex justify-content-between align-items-start gap-2">
                                 <div class="fw-semibold">{{ $person->name }}</div>
                                 <div class="d-flex flex-wrap gap-1 justify-content-end">
@@ -119,7 +124,11 @@
                                 </div>
                             </div>
                             <div class="small text-muted">{{ $person->email }}</div>
+                        @if($personHref)
                         </a>
+                        @else
+                        </div>
+                        @endif
                     @endforeach
                 </div>
             </div>

@@ -49,14 +49,7 @@
             <dt class="col-5 text-muted fw-normal small">Supervisor</dt>
             <dd class="col-7 mb-2">
                 @if($user->supervisor)
-                    @php $supervisorHref = \App\Support\UserProfileLink::route($user->supervisor); @endphp
-                    @if($supervisorHref)
-                        <a href="{{ $supervisorHref }}" class="text-decoration-underline">
-                            {{ $user->supervisor->name }}
-                        </a>
-                    @else
-                        <span>{{ $user->supervisor->name }}</span>
-                    @endif
+                    <x-user-link :user="$user->supervisor" />
                 @else
                     <span class="text-muted">—</span>
                 @endif

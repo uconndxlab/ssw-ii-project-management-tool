@@ -22,10 +22,6 @@ class UserProfileLink
             return route('users.show', $user);
         }
 
-        if ((int) $auth->id === (int) $user->id) {
-            return route('profile');
-        }
-
         return null;
     }
 }

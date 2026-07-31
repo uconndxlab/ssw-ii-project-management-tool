@@ -43,7 +43,7 @@
             <dt class="col-5 text-muted fw-normal small">Associated Users</dt>
             <dd class="col-7 mb-2">
                 @forelse($organization->users as $user)
-                    <span class="badge bg-primary-subtle text-primary-emphasis border me-1 mb-1">{{ $user->name }}</span>
+                    <x-user-link :user="$user" class="badge bg-primary-subtle text-primary-emphasis border me-1 mb-1" />
                 @empty
                     <span class="text-muted">—</span>
                 @endforelse

@@ -139,7 +139,9 @@
                                 <td>
                                     <div class="small text-muted">
                                         @if($activity->participants->isNotEmpty())
-                                            {{ $activity->participants->pluck('name')->implode(', ') }}
+                                            @foreach($activity->participants as $participant)
+                                                <x-user-link :user="$participant" />@if(!$loop->last), @endif
+                                            @endforeach
                                         @else
                                             —
                                         @endif

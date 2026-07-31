@@ -23,7 +23,7 @@
                 :entity-type-badge-class="\App\Support\EntityBadge::typeClasses('user')"
                 mode="edit"
                 :record-name="$user->name"
-                :back-route="route('users.show', $user)"
+                :back-route="\App\Support\UserProfileLink::route($user) ?? route('admin.users.index')"
                 back-label="Back to user"
                 :show-active="true"
                 :active-default="old('active', $user->active)"

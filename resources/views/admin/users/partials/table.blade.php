@@ -42,9 +42,7 @@
                 @php $scope = $user->getScopeBySource(); @endphp
                 <tr>
                     <td>
-                        <a href="{{ route('users.show', $user) }}" class="fw-semibold text-decoration-none text-dark d-block">
-                            {{ $user->name }}
-                        </a>
+                        <x-user-link :user="$user" class="fw-semibold text-decoration-none text-dark d-block" />
                     </td>
                     <td class="text-muted small">{{ $user->email }}</td>
                     <td class="text-muted small">{{ $user->kfs_number ?: '—' }}</td>
@@ -53,14 +51,7 @@
                     </td>
                     <td class="small">
                         @if($user->supervisor)
-                            @php $supervisorHref = \App\Support\UserProfileLink::route($user->supervisor); @endphp
-                            @if($supervisorHref)
-                                <a href="{{ $supervisorHref }}" class="text-decoration-none">
-                                    {{ $user->supervisor->name }}
-                                </a>
-                            @else
-                                <span>{{ $user->supervisor->name }}</span>
-                            @endif
+                            <x-user-link :user="$user->supervisor" class="text-decoration-none" />
                         @else
                             <span class="text-muted">—</span>
                         @endif
@@ -109,13 +100,16 @@
                     <td class="text-end text-nowrap">
                         @php $actionKey = 'user-actions-' . $user->id; @endphp
                         <div class="btn-group btn-group-sm" role="group" aria-label="User actions for {{ $user->name }}">
-                            <a href="{{ route('users.show', $user) }}"
+                            @php $userHref = \App\Support\UserProfileLink::route($user); @endphp
+                            @if($userHref)
+                            <a href="{{ $userHref }}"
                                class="btn btn-outline-primary"
                                data-bs-toggle="tooltip"
                                data-bs-title="View user"
                                aria-label="View user">
                                 <i class="bi bi-eye"></i>
                             </a>
+                            @endif
                             <a href="{{ route('admin.users.edit', $user) }}"
                                class="btn btn-outline-secondary"
                                data-bs-toggle="tooltip"

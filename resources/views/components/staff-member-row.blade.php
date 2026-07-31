@@ -1,14 +1,17 @@
 @props([
-    'name',
+    'name' => null,
     'href' => null,
+    'user' => null,
     'role' => null,
     'isPrincipalInvestigator' => false,
 ])
 
 <div {{ $attributes->merge(['class' => 'py-2']) }}>
     <div class="d-flex flex-wrap align-items-center gap-1 small">
-        @if($href)
-            <a href="{{ $href }}" class="fw-semibold text-decoration-underline">{{ $name }}</a>
+        @if($user)
+            <x-user-link :user="$user" :label="$name" class="fw-semibold" />
+        @elseif($href)
+            <a href="{{ $href }}" class="fw-semibold text-decoration-none">{{ $name }}</a>
         @else
             <span class="fw-semibold text-dark">{{ $name }}</span>
         @endif

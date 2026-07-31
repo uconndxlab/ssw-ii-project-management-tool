@@ -143,7 +143,7 @@
                                         <td><span class="badge bg-primary">{{ $activity->activityType->contactFamily->name }}</span></td>
                                         <td>{{ $activity->activityType->name }}</td>
                                         <td>{{ 0 }}</td>
-                                        <td>{{ $activity->user->name }}</td>
+                                        <td><x-user-link :user="$activity->user" /></td>
                                     </tr>
                                 @endforeach
                             </tbody>

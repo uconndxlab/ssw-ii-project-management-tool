@@ -140,8 +140,7 @@
                             <div class="px-3 py-1">
                                 @foreach($teamOnlyUsers as $user)
                                     <x-staff-member-row
-                                        :name="$user->name"
-                                        :href="\App\Support\UserProfileLink::route($user)"
+                                        :user="$user"
                                         :role="$user->role"
                                         :is-principal-investigator="$agreement->principalInvestigators->contains('id', $user->id)"
                                         :class="$loop->last ? '' : 'border-bottom'"
@@ -160,8 +159,7 @@
                         <div class="px-3 py-1">
                             @foreach($directUsers as $user)
                                 <x-staff-member-row
-                                    :name="$user->name"
-                                    :href="\App\Support\UserProfileLink::route($user)"
+                                    :user="$user"
                                     :role="$user->role"
                                     :is-principal-investigator="!empty($user->is_principal_investigator)"
                                     :class="$loop->last ? '' : 'border-bottom'"

@@ -65,7 +65,7 @@
                                 <td class="small">{{ $activity->activityType->name ?? '—' }}</td>
                                 <td class="small">
                                     @if($activity->user)
-                                        <x-user-link :user="$activity->user" class="text-decoration-underline" />
+                                        <x-user-link :user="$activity->user" />
                                     @else
                                         —
                                     @endif
@@ -97,7 +97,13 @@
                                 </td>
                                 <td class="small">{{ $activity->activityType->name ?? '—' }}</td>
                                 <td class="text-end">{{ 0 }}</td>
-                                <td class="small text-muted">{{ $activity->user->name ?? '—' }}</td>
+                                <td class="small text-muted">
+                                    @if($activity->user)
+                                        <x-user-link :user="$activity->user" />
+                                    @else
+                                        —
+                                    @endif
+                                </td>
                                 @break
                             @case('project')
                                 <td>

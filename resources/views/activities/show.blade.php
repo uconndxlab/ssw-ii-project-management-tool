@@ -81,7 +81,7 @@
                         <strong>Logged By:</strong>
                     </div>
                     <div class="col-md-8">
-                        {{ $activity->user->name }}
+                        <x-user-link :user="$activity->user" />
                     </div>
                 </div>
 
@@ -172,7 +172,7 @@
                         <strong>Logged By:</strong>
                     </div>
                     <div class="col-md-8">
-                        {{ $activity->user->name }}
+                        <x-user-link :user="$activity->user" />
                     </div>
                 </div>
                 @if($activity->participants->count() > 0)
@@ -182,7 +182,7 @@
                     </div>
                     <div class="col-md-8">
                         @foreach($activity->participants as $participant)
-                            <span class="badge bg-primary me-1">{{ $participant->name }}</span>
+                            <x-user-link :user="$participant" class="badge bg-primary me-1" />
                         @endforeach
                     </div>
                 </div>
@@ -232,7 +232,15 @@
                             <tbody>
                                 @foreach($activity->participantTimes as $participantTime)
                                     <tr>
-                                        <td>{{ $participantTime->user_id ? ($participantTime->user?->name ?? $participantTime->participant_name ?? 'Historical User') : 'DELETED USER' }}</td>
+                                        <td>
+                                            @if($participantTime->user)
+                                                <x-user-link :user="$participantTime->user" :label="$participantTime->participant_name" />
+                                            @elseif($participantTime->user_id)
+                                                {{ $participantTime->participant_name ?? 'Historical User' }}
+                                            @else
+                                                DELETED USER
+                                            @endif
+                                        </td>
                                         <td>{{ number_format((float) $participantTime->prep_hours, 2) }}</td>
                                         <td>{{ number_format((float) $participantTime->hours, 2) }}</td>
                                         <td>{{ number_format((float) $participantTime->follow_up_hours, 2) }}</td>
