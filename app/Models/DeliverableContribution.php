@@ -25,6 +25,7 @@ class DeliverableContribution extends Model
         'prep_hours',
         'follow_up_hours',
         'rules_fingerprint',
+        'cancelled',
     ];
 
     protected function casts(): array
@@ -36,6 +37,7 @@ class DeliverableContribution extends Model
             'credited_allotted_days' => 'decimal:2',
             'prep_hours' => 'decimal:2',
             'follow_up_hours' => 'decimal:2',
+            'cancelled' => 'boolean',
         ];
     }
 

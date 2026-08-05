@@ -179,7 +179,9 @@ class AgreementDeliverableDisplay
         Collection $agreementTeamIds,
         Collection $agreementMemberUserIds
     ): array {
-        $contributions = $deliverable->contributions;
+        $contributions = $deliverable->contributions
+            ->where('cancelled', false)
+            ->values();
         $target = (float) ($deliverable->target_quantity ?? 0);
         $isTime = $deliverable->metric_type === 'time';
         $isAllottedTime = $isTime && ($deliverable->time_basis ?? 'observed') === 'allotted';

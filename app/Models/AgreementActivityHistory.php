@@ -24,6 +24,7 @@ class AgreementActivityHistory extends Model
         'allotted_days',
         'program_ids_snapshot',
         'team_ids_snapshot',
+        'cancelled',
     ];
 
     protected function casts(): array
@@ -38,6 +39,7 @@ class AgreementActivityHistory extends Model
             'allotted_days' => 'decimal:2',
             'program_ids_snapshot' => 'array',
             'team_ids_snapshot' => 'array',
+            'cancelled' => 'boolean',
         ];
     }
 

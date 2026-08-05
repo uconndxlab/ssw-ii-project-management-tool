@@ -322,6 +322,7 @@ class DeliverableContributionService
             'allotted_days' => $allottedDays,
             'program_ids_snapshot' => $programIds,
             'team_ids_snapshot' => $teamIdsSnapshot,
+            'cancelled' => (bool) $activity->cancelled,
             'created_at' => now(),
             'updated_at' => now(),
         ];
@@ -425,6 +426,7 @@ class DeliverableContributionService
                     'prep_hours' => 0,
                     'follow_up_hours' => 0,
                     'rules_fingerprint' => $fingerprint,
+                    'cancelled' => (bool) $history->cancelled,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ];
@@ -454,6 +456,7 @@ class DeliverableContributionService
                     'prep_hours' => 0,
                     'follow_up_hours' => 0,
                     'rules_fingerprint' => $fingerprint,
+                    'cancelled' => (bool) $history->cancelled,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ];
@@ -483,6 +486,7 @@ class DeliverableContributionService
                 'prep_hours' => $includeAdditional ? (float) $history->prep_hours : 0,
                 'follow_up_hours' => $includeAdditional ? (float) $history->follow_up_hours : 0,
                 'rules_fingerprint' => $fingerprint,
+                'cancelled' => (bool) $history->cancelled,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
@@ -560,6 +564,7 @@ class DeliverableContributionService
                     'prep_hours' => 0,
                     'follow_up_hours' => 0,
                     'rules_fingerprint' => $fingerprint,
+                    'cancelled' => (bool) $history->cancelled,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ];
@@ -582,6 +587,7 @@ class DeliverableContributionService
                     'prep_hours' => 0,
                     'follow_up_hours' => 0,
                     'rules_fingerprint' => $fingerprint,
+                    'cancelled' => (bool) $history->cancelled,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ];
@@ -604,6 +610,7 @@ class DeliverableContributionService
                 'prep_hours' => $includeAdditional ? (float) $history->prep_hours : 0,
                 'follow_up_hours' => $includeAdditional ? (float) $history->follow_up_hours : 0,
                 'rules_fingerprint' => $fingerprint,
+                'cancelled' => (bool) $history->cancelled,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];

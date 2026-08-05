@@ -20,6 +20,7 @@
     'fundingSourceData' => [],
     'engagementDateValue' => null,
     'internalOnlyChecked' => false,
+    'cancelledChecked' => false,
     'completionCountValue' => 1,
     'allottedDurationHours' => null,
     'allottedDurationDays' => null,
@@ -132,13 +133,13 @@
     $hasTimeTracking = $timeTrackingContactConfigs->isNotEmpty();
 
     $isEditMode = $formMode === 'edit';
-    $pageTitle = $isEditMode ? 'Edit Activity' : 'Log Activity';
-    $pageSubtitle = $isEditMode
-        ? 'Fast update mode for existing records.'
-        : 'Fast entry mode for daily operational logging.';
     $formId = $isEditMode ? 'activity-edit-form' : 'activity-create-form';
     $formAction = $isEditMode ? route('activities.update', $activity) : route('activities.store');
-    $saveStatusDefault = $isEditMode ? 'Saved' : 'Ready';
+    $backRoute = $isEditMode && $activity
+        ? route('activities.show', $activity)
+        : route('activities.index');
+    $backLabel = $isEditMode ? 'Back to activity' : 'Back to activities';
+    $saveLabel = $isEditMode ? 'Save Activity' : 'Create Activity';
     $agreementsWithPerAgreementFields = $agreements->filter(function ($agreement) {
         return $agreement->agreementLoggingFields->isNotEmpty()
             || $agreement->require_payor
@@ -260,6 +261,23 @@
             ->values()
             ->all()
         : [];
+
+    $selectedActivityTypeLabel = $contactFamilies
+        ->flatMap(fn ($family) => $family->activityTypes)
+        ->first(fn ($type) => (string) $type->id === (string) $selectedActivityTypeId)?->name
+        ?? $activity?->activityType?->name
+        ?? 'Activity';
+    $recordDateLabel = 'No date';
+
+    if (filled($engagementDateValue)) {
+        try {
+            $recordDateLabel = \Illuminate\Support\Carbon::parse($engagementDateValue)->format('M j, Y');
+        } catch (\Throwable $exception) {
+            $recordDateLabel = (string) $engagementDateValue;
+        }
+    }
+
+    $recordName = $isEditMode ? $selectedActivityTypeLabel . ' · ' . $recordDateLabel : null;
 @endphp
 
 <style>
@@ -294,29 +312,30 @@
     }
 </style>
 
-<div class="container-fluid py-4">
-    <div class="row g-4 mb-2">
-        <div class="col-12">
-            <h1 class="h3 mb-1">{{ $pageTitle }}</h1>
-            <p class="text-muted mb-0">{{ $pageSubtitle }}</p>
-        </div>
-    </div>
-
-    @if ($errors->any())
-        <div class="alert alert-danger py-2">
-            <strong>Please fix the highlighted fields.</strong>
-        </div>
-    @endif
-
-    <form method="POST" action="{{ $formAction }}" id="{{ $formId }}" enctype="multipart/form-data">
-        @csrf
-        @if ($isEditMode)
-            @method('PUT')
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        @if ($errors->any())
+            <div class="alert alert-danger py-2">
+                <strong>Please fix the highlighted fields.</strong>
+            </div>
         @endif
 
-        <div class="row g-4">
-            <div class="col-lg-8">
-                <div class="d-grid gap-4">
+        <form method="POST" action="{{ $formAction }}" id="{{ $formId }}" enctype="multipart/form-data">
+            @csrf
+            @if ($isEditMode)
+                @method('PUT')
+            @endif
+
+            <x-form-page-header
+                entity-type="Activity"
+                :entity-type-badge-class="\App\Support\EntityBadge::typeClasses('activity')"
+                :mode="$isEditMode ? 'edit' : 'create'"
+                :record-name="$recordName"
+                :back-route="$backRoute"
+                :back-label="$backLabel"
+            />
+
+            <div class="d-grid gap-4">
                     <x-section-card title="Agreements & Coverage">
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Agreements</label>
@@ -374,6 +393,56 @@
                                 project-help-text="Use projects to filter programs available from the selected agreements; projects are not saved on the activity."
                                 program-help-text="Programs are the saved activity coverage. Leaving programs empty saves every currently listed program under the selected projects."
                             />
+                        </div>
+
+                        <div class="row g-3 mt-1">
+                            <div class="col-md-4">
+                                <label for="engagement_date" class="form-label fw-semibold">Date <span class="text-danger">*</span></label>
+                                <input type="date"
+                                       class="form-control @error('engagement_date') is-invalid @enderror"
+                                       id="engagement_date"
+                                       name="engagement_date"
+                                       value="{{ $engagementDateValue }}"
+                                       required>
+                                @error('engagement_date')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="col-md-4">
+                                <input type="hidden" name="internal_only" value="0">
+                                <div class="border rounded h-100 p-3">
+                                    <div class="form-check form-switch mb-0">
+                                        <input class="form-check-input"
+                                               type="checkbox"
+                                               id="internal_only"
+                                               name="internal_only"
+                                               value="1"
+                                               {{ $internalOnlyChecked ? 'checked' : '' }}>
+                                        <label class="form-check-label fw-semibold" for="internal_only">Internal only</label>
+                                    </div>
+                                    <div class="form-text mb-0">Exclude this activity from external reports.</div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <input type="hidden" name="cancelled" value="0">
+                                <div class="border rounded h-100 p-3">
+                                    <div class="form-check form-switch mb-0">
+                                        <input class="form-check-input @error('cancelled') is-invalid @enderror"
+                                               type="checkbox"
+                                               id="cancelled"
+                                               name="cancelled"
+                                               value="1"
+                                               {{ $cancelledChecked ? 'checked' : '' }}>
+                                        <label class="form-check-label fw-semibold" for="cancelled">Cancelled</label>
+                                    </div>
+                                    <div class="form-text mb-0">Keep the activity visible in history, but exclude it from deliverable progress.</div>
+                                    @error('cancelled')
+                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
                         </div>
                     </x-section-card>
 
@@ -728,58 +797,17 @@
                             </div>
                         </x-section-card>
                     </div>
-                </div>
             </div>
-
-            <div class="col-lg-4">
-                <div class="d-grid gap-4">
-                    <x-section-card title="Details">
-                        <div class="mb-3">
-                            <label for="engagement_date" class="form-label fw-semibold">Date <span class="text-danger">*</span></label>
-                            <input type="date"
-                                   class="form-control @error('engagement_date') is-invalid @enderror"
-                                   id="engagement_date"
-                                   name="engagement_date"
-                                   value="{{ $engagementDateValue }}"
-                                   required>
-                            @error('engagement_date')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="form-check form-switch mt-3 mb-3">
-                            <input class="form-check-input"
-                                   type="checkbox"
-                                   id="internal_only"
-                                   name="internal_only"
-                                   value="1"
-                                   {{ $internalOnlyChecked ? 'checked' : '' }}>
-                            <label class="form-check-label" for="internal_only">
-                                Internal only
-                                <small class="text-muted d-block mt-1">Exclude this activity from external reports.</small>
-                            </label>
-                        </div>
-                    </x-section-card>
-
-                    <x-section-card title="Save Status" subtitle="Live status for unsaved/saving states.">
-                        <div id="activity-save-status" class="small text-muted">{{ $saveStatusDefault }}</div>
-                    </x-section-card>
-                </div>
-            </div>
-        </div>
-    </form>
-</div>
-
-<div id="activity-save-bar" class="position-fixed bottom-0 start-0 end-0 bg-white border-top shadow-lg" style="z-index: 1050;">
-    <div class="container-fluid py-2 d-flex align-items-center justify-content-between gap-2">
-        <div id="activity-save-bar-status" class="small text-muted">{{ $saveStatusDefault }}</div>
-        <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
-            <a href="{{ route('activities.index') }}" class="btn btn-sm btn-outline-secondary">Cancel</a>
-            <button type="submit" class="btn btn-sm btn-primary" form="{{ $formId }}" name="save_mode" value="save">Save Activity</button>
-        </div>
+        </form>
     </div>
 </div>
-<div style="height: 72px;"></div>
+
+<x-save-bar
+    :form-id="$formId"
+    :cancel-url="$backRoute"
+    :save-label="$saveLabel"
+    :last-saved-at="$activity?->updated_at"
+/>
 
 <script>
 (function () {
@@ -794,18 +822,10 @@
     let initialAllottedDurationHours = @json($allottedDurationHours !== null ? (float) $allottedDurationHours : null);
     let initialAllottedDurationDays = @json($allottedDurationDays !== null ? (float) $allottedDurationDays : null);
     const form = document.getElementById(@json($formId));
-    const statusTop = document.getElementById('activity-save-status');
-    const statusBar = document.getElementById('activity-save-bar-status');
-    const hasErrors = @json($errors->any());
     const isEditMode = @json($isEditMode);
     let agreementsPickerInitialized = false;
 
     if (!form) return;
-
-    function setStatus(html) {
-        statusTop.innerHTML = html;
-        statusBar.innerHTML = html;
-    }
 
     function selectedValues(name) {
         return Array.from(form.querySelectorAll('input[type="hidden"][name="' + name + '"]')).map(i => i.value);
@@ -1454,9 +1474,7 @@
         type.disabled = !family.value;
     }
 
-    function markDirty() {
-        setStatus('<span class="text-warning fw-semibold">● Unsaved changes</span>');
-    }
+    function markDirty() {}
 
     const agreementsPicker = document.getElementById('activity-agreements-picker');
     if (agreementsPicker) {
@@ -1540,16 +1558,6 @@
         if (type) type.dispatchEvent(new Event('change', { bubbles: true }));
         updateAllottedDurationDisplay(false);
     });
-
-    form.addEventListener('submit', function () {
-        setStatus('<span class="text-secondary">Saving…</span>');
-    });
-
-    if (hasErrors) {
-        setStatus('<span class="text-danger">⚠ Fix errors above to save</span>');
-    } else {
-        setStatus(isEditMode ? '<span class="text-muted">Saved</span>' : '<span class="text-muted">Ready</span>');
-    }
 
     const family = document.getElementById('contact_family_id');
     if (family && family.value) htmx.trigger(family, 'change');
