@@ -46,10 +46,15 @@
                 <h6 class="mb-3">Recent Activity</h6>
                 <div class="list-group list-group-sm">
                     @foreach($myActivities->take(5) as $activity)
-                        <a href="{{ route('activities.show', $activity) }}" class="list-group-item list-group-item-action">
+                        <div class="list-group-item">
                             <div class="d-flex justify-content-between align-items-start">
                                 <div class="flex-grow-1">
-                                    <div class="fw-bold">{{ $activity->activityType?->name ?? 'Activity' }}</div>
+                                    <div class="fw-bold">
+                                        <a href="{{ route('activities.show', $activity) }}" class="text-decoration-none text-body">{{ $activity->activityType?->name ?? 'Activity' }}</a>
+                                        @if($activity->cancelled)
+                                            <x-status-badge :active="false" inactive-label="Cancelled" class="ms-1" />
+                                        @endif
+                                    </div>
                                     <small class="text-muted">
                                         {{ $activity->engagement_date->format('M d, Y') }}
                                         @if($activity->agreements?->isNotEmpty())
@@ -57,9 +62,21 @@
                                         @endif
                                     </small>
                                 </div>
-                                <span class="badge bg-info">—</span>
+                                <div class="d-flex align-items-start gap-2 ms-2">
+                                    <span class="badge bg-info">—</span>
+                                    <div class="btn-group btn-group-sm" role="group" aria-label="My recent activity actions">
+                                        <a href="{{ route('activities.show', $activity) }}" class="btn btn-outline-primary" aria-label="View activity">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        @if(auth()->user()->isAdmin() || $activity->user_id === auth()->id())
+                                            <a href="{{ route('activities.edit', $activity) }}" class="btn btn-outline-secondary" aria-label="Edit activity">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </a>
+                                        @endif
+                                    </div>
+                                </div>
                             </div>
-                        </a>
+                        </div>
                     @endforeach
                 </div>
                 <div class="mt-2">

@@ -12,6 +12,9 @@
                             <x-user-link :user="$activity->user" class="text-decoration-none fw-semibold" />
                             <span class="text-muted">logged</span>
                             <a href="{{ route('activities.show', $activity) }}" class="text-decoration-none fw-semibold">{{ $activity->activityType?->name ?? 'Activity' }}</a>
+                            @if($activity->cancelled)
+                                <x-status-badge :active="false" inactive-label="Cancelled" class="ms-1" />
+                            @endif
                         </div>
                         <small class="text-muted">
                             {{ $activity->engagement_date->format('M d, Y') }}
@@ -23,8 +26,15 @@
                             @endif
                         </small>
                     </div>
-                    <div class="text-end ms-2">
-                        <span class="badge bg-secondary">—</span>
+                    <div class="text-end ms-2 d-flex align-items-start gap-2">
+                        <a href="{{ route('activities.show', $activity) }}" class="btn btn-outline-primary btn-sm" aria-label="View activity">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                        @if(auth()->user()->isAdmin() || $activity->user_id === auth()->id())
+                            <a href="{{ route('activities.edit', $activity) }}" class="btn btn-outline-secondary btn-sm" aria-label="Edit activity">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                        @endif
                     </div>
                 </div>
             @endforeach

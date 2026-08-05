@@ -34,7 +34,12 @@
             <tbody>
                 @forelse($activities as $activity)
                 <tr>
-                    <td class="small text-nowrap">{{ $activity->engagement_date->format('M d, Y') }}</td>
+                    <td class="small text-nowrap">
+                        {{ $activity->engagement_date->format('M d, Y') }}
+                        @if($activity->cancelled)
+                            <x-status-badge :active="false" inactive-label="Cancelled" class="ms-1" />
+                        @endif
+                    </td>
                     <td>
                         <div class="d-flex flex-wrap gap-1">
                             @forelse($activity->agreements as $agreement)

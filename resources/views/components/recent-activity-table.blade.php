@@ -60,7 +60,12 @@
                     <tr>
                         @switch($variant)
                             @case('agreement')
-                                <td class="small text-nowrap">{{ $activity->engagement_date->format('M d, Y') }}</td>
+                                <td class="small text-nowrap">
+                                    {{ $activity->engagement_date->format('M d, Y') }}
+                                    @if($activity->cancelled)
+                                        <x-status-badge :active="false" inactive-label="Cancelled" class="ms-1" />
+                                    @endif
+                                </td>
                                 <td class="small">{{ $activity->activityType?->contactFamily?->name ?? '—' }}</td>
                                 <td class="small">{{ $activity->activityType->name ?? '—' }}</td>
                                 <td class="small">
@@ -85,6 +90,9 @@
                                     <a href="{{ route('activities.show', $activity) }}" class="text-decoration-none text-dark">
                                         {{ $activity->engagement_date->format('M d, Y') }}
                                     </a>
+                                    @if($activity->cancelled)
+                                        <x-status-badge :active="false" inactive-label="Cancelled" class="ms-1" />
+                                    @endif
                                 </td>
                                 <td>
                                     @foreach($activity->agreements->take(1) as $agr)
@@ -110,6 +118,9 @@
                                     <a href="{{ route('activities.show', $activity) }}" class="text-decoration-none text-dark">
                                         {{ $activity->engagement_date->format('M d, Y') }}
                                     </a>
+                                    @if($activity->cancelled)
+                                        <x-status-badge :active="false" inactive-label="Cancelled" class="ms-1" />
+                                    @endif
                                 </td>
                                 <td>
                                     @foreach($activity->programs->take(2) as $prog)
@@ -124,6 +135,9 @@
                                     <a href="{{ route('activities.show', $activity) }}" class="text-decoration-none text-dark">
                                         {{ $activity->engagement_date->format('M d, Y') }}
                                     </a>
+                                    @if($activity->cancelled)
+                                        <x-status-badge :active="false" inactive-label="Cancelled" class="ms-1" />
+                                    @endif
                                 </td>
                                 <td>{{ $activity->activityType->name ?? '—' }}</td>
                                 <td>
@@ -138,6 +152,9 @@
                                     <a href="{{ route('activities.show', $activity) }}" class="text-decoration-none text-dark">
                                         {{ $activity->engagement_date->format('M d, Y') }}
                                     </a>
+                                    @if($activity->cancelled)
+                                        <x-status-badge :active="false" inactive-label="Cancelled" class="ms-1" />
+                                    @endif
                                 </td>
                                 <td>{{ $activity->activityType->name ?? '—' }}</td>
                                 <td>
@@ -153,6 +170,9 @@
                                     <a href="{{ route('activities.show', $activity) }}" class="text-decoration-none text-dark">
                                         {{ $activity->engagement_date->format('M d, Y') }}
                                     </a>
+                                    @if($activity->cancelled)
+                                        <x-status-badge :active="false" inactive-label="Cancelled" class="ms-1" />
+                                    @endif
                                 </td>
                                 <td>{{ $activity->activityType->name ?? '—' }}</td>
                                 <td>
