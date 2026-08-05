@@ -223,28 +223,14 @@
                 Activity logging is disabled for inactive agreements. Historical activities are shown below.
             </div>
         @endif
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-            @if($agreement->active)
-                <a href="{{ route('activities.create') }}?agreement_id={{ $agreement->id }}" class="btn btn-sm btn-success">
-                    Log Activity
-                </a>
-            @else
-                <span class="btn btn-sm btn-success disabled" aria-disabled="true">Log Activity</span>
-            @endif
-            @if($recentActivities->isNotEmpty())
-                <a href="{{ route('activities.index') }}?agreement_id={{ $agreement->id }}" class="btn btn-sm btn-outline-secondary">
-                    View All Activities
-                </a>
-            @endif
-        </div>
-
-        @if($recentActivities->isNotEmpty())
-            <x-recent-activity-table :activities="$recentActivities" variant="agreement" />
-        @else
-            <div class="text-center py-3">
-                <p class="text-muted mb-0">No activities logged for this agreement yet.</p>
-            </div>
-        @endif
+        <x-recent-activity-table
+            :activities="$recentActivities"
+            :view-all-url="route('activities.index', ['agreement_id' => $agreement->id])"
+            view-all-label="View Activities"
+            :log-activity-url="route('activities.create') . '?agreement_id=' . $agreement->id"
+            :log-activity-enabled="$agreement->active"
+            empty-message="No activities logged for this agreement yet."
+        />
     </x-slot:activity>
 </x-entity-show>
 @endsection

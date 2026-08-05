@@ -119,8 +119,8 @@
     <x-slot:activity>
         <x-recent-activity-table
             :activities="$recentActivities"
-            variant="program"
-            :total-count="$activityCount"
+            :view-all-url="route('activities.index')"
+            empty-message="No activities logged for this program yet."
         />
     </x-slot:activity>
 </x-entity-show>

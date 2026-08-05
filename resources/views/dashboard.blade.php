@@ -105,55 +105,9 @@
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Recent Activity</h5>
-                <a href="{{ route('activities.index') }}" class="btn btn-sm btn-outline-secondary">View All</a>
             </div>
             <div class="card-body">
-                @if($recentActivities->isNotEmpty())
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Agreement</th>
-                                    <th>Contact Family</th>
-                                    <th>Activity Type</th>
-                                    <th>Hours</th>
-                                    <th>Logged By</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($recentActivities as $activity)
-                                    <tr>
-                                        <td>
-                                            <a href="{{ route('activities.show', $activity) }}" class="text-decoration-none text-dark d-block">
-                                                {{ $activity->engagement_date->format('M d, Y') }}
-                                            </a>
-                                        </td>
-                                        <td>
-                                            @forelse($activity->agreements as $agreement)
-                                                @if($agreement->isLinkable())
-                                                    <a href="{{ route('agreements.show', $agreement) }}" class="badge bg-secondary text-decoration-none me-1 mb-1">{{ $agreement->name }}</a>
-                                                @else
-                                                    <span class="badge bg-secondary me-1 mb-1">{{ $agreement->name }}</span>
-                                                @endif
-                                            @empty
-                                                <span class="text-muted small">None</span>
-                                            @endforelse
-                                        </td>
-                                        <td><span class="badge bg-primary">{{ $activity->activityType->contactFamily->name }}</span></td>
-                                        <td>{{ $activity->activityType->name }}</td>
-                                        <td>{{ 0 }}</td>
-                                        <td><x-user-link :user="$activity->user" /></td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                @else
-                    <div class="text-center py-4 text-muted">
-                        <p class="mb-0">No activities logged yet.</p>
-                    </div>
-                @endif
+                <x-recent-activity-table :activities="$recentActivities" :view-all-url="route('activities.index')" />
             </div>
         </div>
     </div>

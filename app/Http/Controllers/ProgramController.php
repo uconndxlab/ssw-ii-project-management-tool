@@ -86,14 +86,18 @@ class ProgramController extends Controller
     {
         $program->load([
             'projects',
-            'activities.activityType',
+            'activities.activityType.contactFamily',
             'activities.user',
             'activities.agreements',
             'organizations.states',
         ]);
 
         $recentActivities = $program->activities
-            ->sortByDesc('engagement_date')
+            ->sortBy([
+                ['engagement_date', 'desc'],
+                [fn ($activity) => mb_strtolower($activity->activityType?->name ?? ''), 'asc'],
+                ['id', 'desc'],
+            ])
             ->take(10)
             ->values();
 

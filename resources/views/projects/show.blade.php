@@ -155,7 +155,7 @@
 
     {{-- ── Recent Activity ─────────────────────────────────────────────── --}}
     <x-slot:activity>
-        <x-recent-activity-table :activities="$recentActivities" variant="project" />
+        <x-recent-activity-table :activities="$recentActivities" :view-all-url="route('activities.index')" empty-message="No activities logged for this project yet." />
     </x-slot:activity>
 </x-entity-show>
 @endsection

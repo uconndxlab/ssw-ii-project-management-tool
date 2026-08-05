@@ -164,17 +164,10 @@
 
     {{-- ── Recent Activity ─────────────────────────────────────────────── --}}
     <x-slot:activity>
-        @if($recentActivities->isNotEmpty())
-            <div class="d-flex justify-content-end mb-2">
-                <a href="{{ route('activities.create') }}" class="btn btn-sm btn-outline-success">Log Activity</a>
-            </div>
-            <x-recent-activity-table :activities="$recentActivities" variant="organization" />
-        @else
-            <div class="text-center py-3">
-                <p class="text-muted mb-2">No activities logged yet.</p>
-                <a href="{{ route('activities.create') }}" class="btn btn-sm btn-outline-success">Log First Activity</a>
-            </div>
-        @endif
+        <x-recent-activity-table
+            :activities="$recentActivities"
+            :view-all-url="route('activities.index', ['organization_id' => $organization->id])"
+        />
     </x-slot:activity>
 </x-entity-show>
 @endsection

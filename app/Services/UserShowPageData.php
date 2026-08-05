@@ -26,8 +26,8 @@ class UserShowPageData
         $agreementReports = UserDeliverableReporting::buildAgreementReports($user);
 
         $recentActivities = $user->activities()
-            ->with(['activityType', 'agreements'])
-            ->orderByDesc('engagement_date')
+            ->with(['activityType.contactFamily', 'user', 'agreements'])
+            ->orderByRecentDisplay()
             ->take(10)
             ->get();
 

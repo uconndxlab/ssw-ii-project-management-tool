@@ -97,64 +97,15 @@
             </div>
         </div>
     </div>
-    
+
     <!-- My Recent Activity -->
     <div class="col-md-6 mb-4">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Recent Activity</h5>
-                <a href="{{ route('activities.index') }}" class="btn btn-sm btn-outline-secondary">View All</a>
             </div>
             <div class="card-body">
-                @if($myActivities->isNotEmpty())
-                <div class="table-responsive">
-                    <table class="table table-sm table-hover mb-0">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Activity</th>
-                                <th>Hours</th>
-                                <th>Users</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($myActivities as $activity)
-                            <tr>
-                                <td><a href="{{ route('activities.show', $activity) }}" class="text-decoration-none text-dark d-block">{{ $activity->engagement_date->format('M d') }}</a></td>
-                                <td>
-                                    <div class="small">
-                                        @forelse($activity->agreements as $agreement)
-                                            @if($agreement->isLinkable())
-                                                <a href="{{ route('agreements.show', $agreement) }}" class="badge bg-secondary text-decoration-none me-1 mb-1">{{ $agreement->name }}</a>
-                                            @else
-                                                <span class="badge bg-secondary me-1 mb-1">{{ $agreement->name }}</span>
-                                            @endif
-                                        @empty
-                                            <span class="text-muted small">None</span>
-                                        @endforelse
-                                    </div>
-                                    <div class="small text-muted">{{ $activity->activityType->name }}</div>
-                                </td>
-                                <td>{{ 0 }}</td>
-                                <td>
-                                    <div class="small text-muted">
-                                        @if($activity->participants->isNotEmpty())
-                                            @foreach($activity->participants as $participant)
-                                                <x-user-link :user="$participant" />@if(!$loop->last), @endif
-                                            @endforeach
-                                        @else
-                                            —
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-                @else
-                <p class="text-muted mb-0">No recent activity on your agreements.</p>
-                @endif
+                <x-recent-activity-table :activities="$myActivities" :view-all-url="route('activities.index')" empty-message="No recent activity on your agreements." />
             </div>
         </div>
     </div>

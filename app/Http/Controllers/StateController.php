@@ -90,8 +90,8 @@ class StateController extends Controller
         $staffMembers = collect($staffMembersMap)->sortBy('name');
 
         $recentActivities = $state->activities()
-            ->with(['activityType', 'user', 'agreements'])
-            ->orderByDesc('engagement_date')
+            ->with(['activityType.contactFamily', 'user', 'agreements'])
+            ->orderByRecentDisplay()
             ->limit(10)
             ->get();
 

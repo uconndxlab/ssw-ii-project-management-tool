@@ -101,7 +101,7 @@ class OrganizationController extends Controller
             $query->whereIn('agreements.id', $agreements->pluck('id'));
         })
             ->with(['activityType.contactFamily', 'user', 'agreements'])
-            ->orderByDesc('engagement_date')
+            ->orderByRecentDisplay()
             ->get();
 
         // Recent activities (last 5)

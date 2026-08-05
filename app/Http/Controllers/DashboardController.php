@@ -53,7 +53,7 @@ class DashboardController extends Controller
 
         // Recent 10 activities (system-wide)
         $recentActivities = Activity::with(['activityType.contactFamily', 'user', 'agreements'])
-            ->orderByDesc('engagement_date')
+            ->orderByRecentDisplay()
             ->limit(10)
             ->get();
 
@@ -93,7 +93,7 @@ class DashboardController extends Controller
                 $query->whereIn('agreements.id', $agreementIds);
             })
             ->with(['activityType.contactFamily', 'user', 'agreements', 'participants'])
-            ->orderByDesc('engagement_date')
+            ->orderByRecentDisplay()
             ->limit(10)
             ->get();
         

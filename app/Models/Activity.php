@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasProgramScope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -128,6 +129,16 @@ class Activity extends Model
     public function scopeInternalOnly($query)
     {
         return $query->where('internal_only', true);
+    }
+
+    public function scopeOrderByRecentDisplay(Builder $query): Builder
+    {
+        return $query
+            ->leftJoin('activity_types', 'activities.activity_type_id', '=', 'activity_types.id')
+            ->select('activities.*')
+            ->orderByDesc('activities.engagement_date')
+            ->orderBy('activity_types.name')
+            ->orderByDesc('activities.id');
     }
 
     public function getAgreementLoggingValuesAttribute(): array

@@ -1,196 +1,154 @@
 @props([
     'activities',
-    'variant' => 'user',
-    'totalCount' => null,
+    'viewAllUrl' => null,
+    'viewAllLabel' => 'View Activities',
+    'logActivityUrl' => null,
+    'logActivityEnabled' => true,
     'emptyMessage' => null,
 ])
 
 @php
     $activities = $activities ?? collect();
-    $emptyMessage = $emptyMessage ?? match ($variant) {
-        'agreement' => 'No activities logged for this agreement yet.',
-        'organization' => 'No activities logged yet.',
-        'project' => 'No activities logged for this project yet.',
-        'program' => 'No activities logged for this program yet.',
-        'state' => 'No activities logged for this state yet.',
-        default => 'No activities logged yet.',
-    };
+    $emptyMessage = $emptyMessage ?? 'No activities logged yet.';
+    $viewAllUrl = $viewAllUrl ?? route('activities.index');
 @endphp
 
+@once
+    <style>
+        .recent-activity-scroll-wrap {
+            border: 1px solid var(--bs-border-color);
+            border-radius: var(--bs-card-border-radius);
+            overflow: hidden;
+        }
+
+        .recent-activity-scroll-area {
+            overflow-x: auto;
+        }
+
+        .recent-activity-scroll-area::-webkit-scrollbar {
+            height: 13px;
+        }
+
+        .recent-activity-scroll-area::-webkit-scrollbar-track {
+            background: #e9edf2;
+            border-radius: 999px;
+        }
+
+        .recent-activity-scroll-area::-webkit-scrollbar-thumb {
+            background: #8d98a5;
+            border-radius: 999px;
+            border: 2px solid #e9edf2;
+        }
+
+        .recent-activity-scroll-area .table {
+            margin-bottom: 0;
+        }
+
+        .recent-activity-scroll-area .table th:first-child,
+        .recent-activity-scroll-area .table td:first-child {
+            padding-left: 0.75rem;
+        }
+
+        .recent-activity-scroll-area .table th:last-child,
+        .recent-activity-scroll-area .table td:last-child {
+            padding-right: 0.75rem;
+        }
+    </style>
+@endonce
+
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+    @if($logActivityUrl)
+        @if($logActivityEnabled)
+            <a href="{{ $logActivityUrl }}" class="btn btn-sm btn-success">Log Activity</a>
+        @else
+            <span class="btn btn-sm btn-success disabled" aria-disabled="true">Log Activity</span>
+        @endif
+    @endif
+
+    <a href="{{ $viewAllUrl }}" class="btn btn-sm btn-outline-secondary {{ $logActivityUrl ? '' : 'ms-auto' }}">{{ $viewAllLabel }}</a>
+</div>
+
 @if($activities->isNotEmpty())
-    <div class="table-responsive">
-        <table class="table table-sm table-hover mb-0">
+    <div class="recent-activity-scroll-wrap">
+    <div class="table-responsive recent-activity-scroll-area">
+        <table class="table table-sm table-hover" style="min-width: 860px;">
             <thead class="table-light">
                 <tr>
-                    @switch($variant)
-                        @case('agreement')
-                            <th>Date</th>
-                            <th>Contact Family</th>
-                            <th>Activity Type</th>
-                            <th>Logged By</th>
-                            <th class="text-end fw-normal" style="width:52px;">Actions</th>
-                            @break
-                        @case('organization')
-                            <th>Date</th>
-                            <th>Agreement</th>
-                            <th>Type</th>
-                            <th class="text-end">Hours</th>
-                            <th>By</th>
-                            @break
-                        @case('project')
-                            <th>Date</th>
-                            <th>Program</th>
-                            <th>Type</th>
-                            <th class="text-end">Hours</th>
-                            @break
-                        @case('program')
-                        @case('state')
-                        @case('user')
-                        @default
-                            <th>Date</th>
-                            <th>Type</th>
-                            <th>Agreement</th>
-                            <th class="text-end">Hours</th>
-                            @break
-                    @endswitch
+                    <th class="text-nowrap">Date</th>
+                    <th class="text-nowrap" style="min-width: 280px;">Activity</th>
+                    <th style="min-width: 220px;">Agreements</th>
+                    <th style="min-width: 140px;">Logged By</th>
+                    <th class="text-end text-nowrap" style="width:96px;">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($activities as $activity)
+                    @php($canManage = auth()->user()->isAdmin() || $activity->user_id === auth()->id())
                     <tr>
-                        @switch($variant)
-                            @case('agreement')
-                                <td class="small text-nowrap">
-                                    {{ $activity->engagement_date->format('M d, Y') }}
-                                    @if($activity->cancelled)
-                                        <x-status-badge :active="false" inactive-label="Cancelled" class="ms-1" />
-                                    @endif
-                                </td>
-                                <td class="small">{{ $activity->activityType?->contactFamily?->name ?? '—' }}</td>
-                                <td class="small">{{ $activity->activityType->name ?? '—' }}</td>
-                                <td class="small">
-                                    @if($activity->user)
-                                        <x-user-link :user="$activity->user" />
-                                    @else
-                                        —
-                                    @endif
-                                </td>
-                                <td class="text-end text-nowrap">
-                                    <a href="{{ route('activities.show', $activity) }}"
-                                       class="btn btn-outline-primary btn-sm"
+                        <td class="small">
+                            <a href="{{ route('activities.show', $activity) }}" class="text-decoration-none text-dark d-block text-nowrap">
+                                {{ $activity->engagement_date->format('M d, Y') }}
+                            </a>
+                            @if($activity->cancelled)
+                                <div class="mt-1">
+                                    <x-status-badge :active="false" inactive-label="Cancelled" />
+                                </div>
+                            @endif
+                        </td>
+                        <td>
+                            <div class="text-nowrap">
+                                <a href="{{ route('activities.show', $activity) }}" class="fw-semibold text-decoration-none text-dark">
+                                    {{ $activity->activityType?->name ?? 'Activity' }}
+                                </a>
+                            </div>
+                            <div class="text-muted small">
+                                {{ $activity->activityType?->contactFamily?->name ?? '—' }}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex flex-wrap gap-1">
+                                @forelse($activity->agreements as $agreement)
+                                    <x-entity-relation-badge kind="agreement" :href="$agreement->isLinkable() ? route('agreements.show', $agreement) : null">
+                                        {{ $agreement->name }}
+                                    </x-entity-relation-badge>
+                                @empty
+                                    <span class="text-muted small">—</span>
+                                @endforelse
+                            </div>
+                        </td>
+                        <td class="small">
+                            @if($activity->user)
+                                <x-user-link :user="$activity->user" />
+                            @else
+                                —
+                            @endif
+                        </td>
+                        <td class="text-end text-nowrap">
+                            <div class="btn-group btn-group-sm" role="group" aria-label="Recent activity actions">
+                                <a href="{{ route('activities.show', $activity) }}"
+                                   class="btn btn-outline-primary"
+                                   data-bs-toggle="tooltip"
+                                   data-bs-title="View activity"
+                                   aria-label="View activity">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                @if($canManage)
+                                    <a href="{{ route('activities.edit', $activity) }}"
+                                       class="btn btn-outline-secondary"
                                        data-bs-toggle="tooltip"
-                                       data-bs-title="View activity"
-                                       aria-label="View activity">
-                                        <i class="bi bi-eye"></i>
+                                       data-bs-title="Edit activity"
+                                       aria-label="Edit activity">
+                                        <i class="bi bi-pencil-square"></i>
                                     </a>
-                                </td>
-                                @break
-                            @case('organization')
-                                <td>
-                                    <a href="{{ route('activities.show', $activity) }}" class="text-decoration-none text-dark">
-                                        {{ $activity->engagement_date->format('M d, Y') }}
-                                    </a>
-                                    @if($activity->cancelled)
-                                        <x-status-badge :active="false" inactive-label="Cancelled" class="ms-1" />
-                                    @endif
-                                </td>
-                                <td>
-                                    @foreach($activity->agreements->take(1) as $agr)
-                                        @if($agr->isLinkable())
-                                            <a href="{{ route('agreements.show', $agr) }}" class="text-decoration-none badge bg-secondary">{{ $agr->name }}</a>
-                                        @else
-                                            <span class="badge bg-secondary">{{ $agr->name }}</span>
-                                        @endif
-                                    @endforeach
-                                </td>
-                                <td class="small">{{ $activity->activityType->name ?? '—' }}</td>
-                                <td class="text-end">{{ 0 }}</td>
-                                <td class="small text-muted">
-                                    @if($activity->user)
-                                        <x-user-link :user="$activity->user" />
-                                    @else
-                                        —
-                                    @endif
-                                </td>
-                                @break
-                            @case('project')
-                                <td>
-                                    <a href="{{ route('activities.show', $activity) }}" class="text-decoration-none text-dark">
-                                        {{ $activity->engagement_date->format('M d, Y') }}
-                                    </a>
-                                    @if($activity->cancelled)
-                                        <x-status-badge :active="false" inactive-label="Cancelled" class="ms-1" />
-                                    @endif
-                                </td>
-                                <td>
-                                    @foreach($activity->programs->take(2) as $prog)
-                                        <x-entity-relation-badge kind="program" :href="route('programs.show', $prog)" class="me-1">{{ $prog->name }}</x-entity-relation-badge>
-                                    @endforeach
-                                </td>
-                                <td>{{ $activity->activityType->name ?? '—' }}</td>
-                                <td class="text-end">—</td>
-                                @break
-                            @case('state')
-                                <td>
-                                    <a href="{{ route('activities.show', $activity) }}" class="text-decoration-none text-dark">
-                                        {{ $activity->engagement_date->format('M d, Y') }}
-                                    </a>
-                                    @if($activity->cancelled)
-                                        <x-status-badge :active="false" inactive-label="Cancelled" class="ms-1" />
-                                    @endif
-                                </td>
-                                <td>{{ $activity->activityType->name ?? '—' }}</td>
-                                <td>
-                                    @foreach($activity->agreements->take(2) as $agr)
-                                        <x-entity-relation-badge kind="agreement" :href="$agr->isLinkable() ? route('agreements.show', $agr) : null" class="me-1">{{ $agr->name }}</x-entity-relation-badge>
-                                    @endforeach
-                                </td>
-                                <td class="text-end">—</td>
-                                @break
-                            @case('program')
-                                <td>
-                                    <a href="{{ route('activities.show', $activity) }}" class="text-decoration-none text-dark">
-                                        {{ $activity->engagement_date->format('M d, Y') }}
-                                    </a>
-                                    @if($activity->cancelled)
-                                        <x-status-badge :active="false" inactive-label="Cancelled" class="ms-1" />
-                                    @endif
-                                </td>
-                                <td>{{ $activity->activityType->name ?? '—' }}</td>
-                                <td>
-                                    @foreach($activity->agreements->take(2) as $agr)
-                                        <x-entity-relation-badge kind="agreement" :href="$agr->isLinkable() ? route('agreements.show', $agr) : null" class="me-1">{{ $agr->name }}</x-entity-relation-badge>
-                                    @endforeach
-                                </td>
-                                <td class="text-end">—</td>
-                                @break
-                            @case('user')
-                            @default
-                                <td>
-                                    <a href="{{ route('activities.show', $activity) }}" class="text-decoration-none text-dark">
-                                        {{ $activity->engagement_date->format('M d, Y') }}
-                                    </a>
-                                    @if($activity->cancelled)
-                                        <x-status-badge :active="false" inactive-label="Cancelled" class="ms-1" />
-                                    @endif
-                                </td>
-                                <td>{{ $activity->activityType->name ?? '—' }}</td>
-                                <td>
-                                    @foreach($activity->agreements->take(2) as $agr)
-                                        <x-entity-relation-badge kind="agreement" :href="$agr->isLinkable() ? route('agreements.show', $agr) : null" class="me-1">{{ $agr->name }}</x-entity-relation-badge>
-                                    @endforeach
-                                </td>
-                                <td class="text-end">—</td>
-                                @break
-                        @endswitch
+                                @endif
+                            </div>
+                        </td>
                     </tr>
                 @endforeach
             </tbody>
         </table>
     </div>
-    @if(! is_null($totalCount) && $totalCount > $activities->count())
-        <p class="text-muted small mt-2 mb-0">Showing {{ $activities->count() }} of {{ $totalCount }} activities.</p>
-    @endif
+    </div>
 @else
     <p class="text-muted mb-0">{{ $emptyMessage }}</p>
 @endif

@@ -233,7 +233,7 @@ class AgreementController extends Controller
         // Get activities for this agreement
         $activities = $agreement->activities()
             ->with(['activityType.contactFamily', 'user', 'participants'])
-            ->orderBy('engagement_date', 'desc')
+            ->orderByRecentDisplay()
             ->get();
 
         // Recent activities (last 10)

@@ -6,31 +6,36 @@
     <div class="card-body p-0">
         <div class="list-group list-group-flush">
             @foreach($recentActivities as $activity)
-                <div class="list-group-item px-3 py-2 d-flex justify-content-between align-items-start">
-                    <div class="flex-grow-1">
-                        <div class="mb-1">
+                @php($canManage = auth()->user()->isAdmin() || $activity->user_id === auth()->id())
+                <div class="list-group-item px-3 py-2 d-flex justify-content-between align-items-start gap-3">
+                    <div class="flex-grow-1 min-w-0">
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
                             <x-user-link :user="$activity->user" class="text-decoration-none fw-semibold" />
                             <span class="text-muted">logged</span>
-                            <a href="{{ route('activities.show', $activity) }}" class="text-decoration-none fw-semibold">{{ $activity->activityType?->name ?? 'Activity' }}</a>
+                            <a href="{{ route('activities.show', $activity) }}" class="text-decoration-none fw-semibold text-body">{{ $activity->activityType?->name ?? 'Activity' }}</a>
                             @if($activity->cancelled)
-                                <x-status-badge :active="false" inactive-label="Cancelled" class="ms-1" />
+                                <x-status-badge :active="false" inactive-label="Cancelled" />
                             @endif
                         </div>
-                        <small class="text-muted">
-                            {{ $activity->engagement_date->format('M d, Y') }}
-                            @if($activity->agreements?->isNotEmpty())
-                                • 
-                                @foreach($activity->agreements as $agreement)
-                                    <x-agreement-link :agreement="$agreement" class="text-decoration-none" />@if(!$loop->last), @endif
-                                @endforeach
-                            @endif
-                        </small>
+                        <div class="small text-muted mb-2">{{ $activity->activityType?->contactFamily?->name ?? '—' }}</div>
+                        <div class="d-flex flex-wrap align-items-center gap-2 small">
+                            <span class="text-muted">{{ $activity->engagement_date->format('M d, Y') }}</span>
+                            <div class="d-flex flex-wrap gap-1">
+                                @forelse($activity->agreements as $agreement)
+                                    <x-entity-relation-badge kind="agreement" :href="$agreement->isLinkable() ? route('agreements.show', $agreement) : null">
+                                        {{ $agreement->name }}
+                                    </x-entity-relation-badge>
+                                @empty
+                                    <span class="text-muted">—</span>
+                                @endforelse
+                            </div>
+                        </div>
                     </div>
-                    <div class="text-end ms-2 d-flex align-items-start gap-2">
+                    <div class="text-end d-flex align-items-start gap-2">
                         <a href="{{ route('activities.show', $activity) }}" class="btn btn-outline-primary btn-sm" aria-label="View activity">
                             <i class="bi bi-eye"></i>
                         </a>
-                        @if(auth()->user()->isAdmin() || $activity->user_id === auth()->id())
+                        @if($canManage)
                             <a href="{{ route('activities.edit', $activity) }}" class="btn btn-outline-secondary btn-sm" aria-label="Edit activity">
                                 <i class="bi bi-pencil-square"></i>
                             </a>

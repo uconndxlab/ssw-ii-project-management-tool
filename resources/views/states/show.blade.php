@@ -92,7 +92,7 @@
 
     {{-- ── Recent Activity ─────────────────────────────────────────────── --}}
     <x-slot:activity>
-        <x-recent-activity-table :activities="$recentActivities" variant="state" />
+        <x-recent-activity-table :activities="$recentActivities" :view-all-url="route('activities.index', ['state_id' => $state->id])" empty-message="No activities logged for this state yet." />
     </x-slot:activity>
 </x-entity-show>
 @endsection

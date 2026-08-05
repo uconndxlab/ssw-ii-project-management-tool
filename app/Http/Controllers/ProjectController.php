@@ -81,7 +81,8 @@ class ProjectController extends Controller
     {
         abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can view projects.');
         $project->load([
-            'programs.activities.activityType',
+            'programs.activities.activityType.contactFamily',
+            'programs.activities.user',
             'programs.activities.programs',
             'programs.activities.agreements',
             'programs.organizations.states',
@@ -89,7 +90,11 @@ class ProjectController extends Controller
 
         $recentActivities = $project->programs
             ->flatMap(fn ($p) => $p->activities)
-            ->sortByDesc('engagement_date')
+            ->sortBy([
+                ['engagement_date', 'desc'],
+                [fn ($activity) => mb_strtolower($activity->activityType?->name ?? ''), 'asc'],
+                ['id', 'desc'],
+            ])
             ->take(10)
             ->values();
 
