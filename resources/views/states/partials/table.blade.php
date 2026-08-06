@@ -5,7 +5,7 @@
     $url = fn ($col) => route('states.index', array_merge(request()->query(), ['sort' => $col, 'direction' => $flip($col), 'page' => 1]));
 @endphp
 
-<div class="card shadow-sm">
+<div class="card shadow-sm app-index-table-card">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
@@ -22,7 +22,7 @@
                     <th class="text-nowrap">
                         <x-table-sort-link column="created" label="Created" :sort="$s" :direction="$d" :url="$url('created')" target="#states-table" />
                     </th>
-                    <th class="text-end fw-normal" style="width:130px;">Actions</th>
+                    <th class="text-end" style="width:130px;">Actions</th>
                 </tr>
             </thead>
             <tbody>

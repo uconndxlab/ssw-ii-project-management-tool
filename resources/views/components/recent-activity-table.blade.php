@@ -106,15 +106,14 @@
                             </div>
                         </td>
                         <td>
-                            <div class="d-flex flex-wrap gap-1">
-                                @forelse($activity->agreements as $agreement)
-                                    <x-entity-relation-badge kind="agreement" :href="$agreement->isLinkable() ? route('agreements.show', $agreement) : null">
-                                        {{ $agreement->name }}
-                                    </x-entity-relation-badge>
-                                @empty
-                                    <span class="text-muted small">—</span>
-                                @endforelse
-                            </div>
+                            <x-table-badge-list
+                                kind="agreement"
+                                :items="$activity->agreements->map(fn ($agreement) => [
+                                    'name' => $agreement->name,
+                                    'href' => $agreement->isLinkable() ? route('agreements.show', $agreement) : null,
+                                ])"
+                                href-key="href"
+                            />
                         </td>
                         <td class="small">
                             @if($activity->user)

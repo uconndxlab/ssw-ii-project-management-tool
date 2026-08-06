@@ -5,7 +5,7 @@
     $url  = fn($col) => route('admin.users.index', array_merge(request()->query(), ['sort' => $col, 'direction' => $flip($col), 'page' => 1]));
 @endphp
 
-<div class="card shadow-sm">
+<div class="card shadow-sm app-index-table-card">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
@@ -60,42 +60,28 @@
                         <x-status-badge :active="$user->active" />
                     </td>
                     <td>
-                        <div class="d-flex flex-wrap gap-1">
-                            @forelse($scope['index']['projects'] as $entry)
-                                @php
-                                    $project = $entry['model'];
-                                    $viaTeamTitle = $entry['viaTeam'] && $entry['teamNames']
-                                        ? 'Via team: ' . $entry['teamNames']
-                                        : null;
-                                @endphp
-                                <x-entity-relation-badge
-                                    kind="project"
-                                    :href="route('projects.show', $project)"
-                                    :title="$viaTeamTitle"
-                                >{{ $project->name }}</x-entity-relation-badge>
-                            @empty
-                                <span class="text-muted small">—</span>
-                            @endforelse
-                        </div>
+                        <x-table-badge-list
+                            kind="project"
+                            :items="collect($scope['index']['projects'])->map(fn ($entry) => [
+                                'name' => $entry['model']->name,
+                                'href' => route('projects.show', $entry['model']),
+                                'title' => $entry['viaTeam'] && $entry['teamNames'] ? 'Via team: ' . $entry['teamNames'] : null,
+                            ])"
+                            href-key="href"
+                            title-key="title"
+                        />
                     </td>
                     <td>
-                        <div class="d-flex flex-wrap gap-1">
-                            @forelse($scope['index']['programs'] as $entry)
-                                @php
-                                    $program = $entry['model'];
-                                    $viaTeamTitle = $entry['viaTeam'] && $entry['teamNames']
-                                        ? 'Via team: ' . $entry['teamNames']
-                                        : null;
-                                @endphp
-                                <x-entity-relation-badge
-                                    kind="program"
-                                    :href="route('programs.show', $program)"
-                                    :title="$viaTeamTitle"
-                                >{{ $program->name }}</x-entity-relation-badge>
-                            @empty
-                                <span class="text-muted small">—</span>
-                            @endforelse
-                        </div>
+                        <x-table-badge-list
+                            kind="program"
+                            :items="collect($scope['index']['programs'])->map(fn ($entry) => [
+                                'name' => $entry['model']->name,
+                                'href' => route('programs.show', $entry['model']),
+                                'title' => $entry['viaTeam'] && $entry['teamNames'] ? 'Via team: ' . $entry['teamNames'] : null,
+                            ])"
+                            href-key="href"
+                            title-key="title"
+                        />
                     </td>
                     <td class="text-end text-nowrap">
                         @php $actionKey = 'user-actions-' . $user->id; @endphp

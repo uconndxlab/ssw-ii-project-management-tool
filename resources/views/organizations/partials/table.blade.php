@@ -5,7 +5,7 @@
     $url  = fn($col) => route('organizations.index', array_merge(request()->query(), ['sort' => $col, 'direction' => $flip($col), 'page' => 1]));
 @endphp
 
-<div class="card shadow-sm">
+<div class="card shadow-sm app-index-table-card">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
@@ -34,7 +34,7 @@
                     <th>
                         <x-table-sort-link column="created" label="Created" :sort="$s" :direction="$d" :url="$url('created')" target="#organizations-table" />
                     </th>
-                    <th class="text-end fw-normal" style="width:{{ auth()->user()->isAdmin() ? '130px' : '60px' }};">Actions</th>
+                    <th class="text-end" style="width:{{ auth()->user()->isAdmin() ? '130px' : '60px' }};">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -47,32 +47,25 @@
                     </td>
                     <td class="text-muted small">{{ $organization->kfs_number ?: '—' }}</td>
                     <td>
-                        @foreach($organization->states->sortBy('name') as $state)
-                            <span class="badge bg-info text-dark me-1">{{ $state->name }}</span>
-                        @endforeach
-                        @if($organization->states->isEmpty())<span class="text-muted">—</span>@endif
+                        <x-table-badge-list
+                            kind="state"
+                            :items="$organization->states"
+                            route-name="states.show"
+                        />
                     </td>
                     <td>
-                        <div class="d-flex flex-wrap gap-1">
-                            @forelse($organization->projects->sortBy('name') as $project)
-                                <x-entity-relation-badge kind="project" :href="route('projects.show', $project)">
-                                    {{ $project->name }}
-                                </x-entity-relation-badge>
-                            @empty
-                                <span class="text-muted small">—</span>
-                            @endforelse
-                        </div>
+                        <x-table-badge-list
+                            kind="project"
+                            :items="$organization->projects"
+                            route-name="projects.show"
+                        />
                     </td>
                     <td>
-                        <div class="d-flex flex-wrap gap-1">
-                            @forelse($organization->programs->sortBy('name') as $program)
-                                <x-entity-relation-badge kind="program" :href="route('programs.show', $program)">
-                                    {{ $program->name }}
-                                </x-entity-relation-badge>
-                            @empty
-                                <span class="text-muted small">—</span>
-                            @endforelse
-                        </div>
+                        <x-table-badge-list
+                            kind="program"
+                            :items="$organization->programs"
+                            route-name="programs.show"
+                        />
                     </td>
                     <td>
                         @if($organization->active)

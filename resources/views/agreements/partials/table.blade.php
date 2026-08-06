@@ -5,12 +5,12 @@
     $url  = fn ($col) => route('agreements.index', array_merge(request()->query(), ['sort' => $col, 'direction' => $flip($col), 'page' => 1]));
 @endphp
 
-<div class="card shadow-sm">
+<div class="card shadow-sm app-index-table-card">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
                 <tr>
-                    <th style="min-width: 200px;">
+                    <th style="min-width: 160px; width: 1%;">
                         <x-table-sort-link column="name" label="Agreement" :sort="$s" :direction="$d" :url="$url('name')" target="#agreements-table" />
                     </th>
                     <th style="min-width: 140px;">
@@ -49,43 +49,31 @@
                             <span class="fw-semibold text-dark d-block">{{ $agreement->name }}</span>
                         @endif
                         @if($agreement->abstract)
-                            <div class="text-muted small text-truncate" style="max-width: 320px;" title="{{ $agreement->abstract }}">
+                            <div class="text-muted small text-truncate" style="max-width: 220px;" title="{{ $agreement->abstract }}">
                                 {{ $agreement->abstract }}
                             </div>
                         @endif
                     </td>
                     <td>
-                        <div class="d-flex flex-wrap gap-1">
-                            @forelse($agreement->projects->sortBy('name') as $project)
-                                <x-entity-relation-badge kind="project" :href="route('projects.show', $project)">
-                                    {{ $project->name }}
-                                </x-entity-relation-badge>
-                            @empty
-                                <span class="text-muted small">—</span>
-                            @endforelse
-                        </div>
+                        <x-table-badge-list
+                            kind="project"
+                            :items="$agreement->projects"
+                            route-name="projects.show"
+                        />
                     </td>
                     <td>
-                        <div class="d-flex flex-wrap gap-1">
-                            @forelse($agreement->programs->sortBy('name') as $program)
-                                <x-entity-relation-badge kind="program" :href="route('programs.show', $program)">
-                                    {{ $program->name }}
-                                </x-entity-relation-badge>
-                            @empty
-                                <span class="text-muted small">—</span>
-                            @endforelse
-                        </div>
+                        <x-table-badge-list
+                            kind="program"
+                            :items="$agreement->programs"
+                            route-name="programs.show"
+                        />
                     </td>
                     <td>
-                        <div class="d-flex flex-wrap gap-1">
-                            @forelse($agreement->states as $state)
-                                <x-entity-relation-badge kind="state" :href="route('states.show', $state)">
-                                    {{ $state->name }}
-                                </x-entity-relation-badge>
-                            @empty
-                                <span class="text-muted small">—</span>
-                            @endforelse
-                        </div>
+                        <x-table-badge-list
+                            kind="state"
+                            :items="$agreement->states"
+                            route-name="states.show"
+                        />
                     </td>
                     <td class="small text-nowrap">{{ $agreement->start_date?->format('M d, Y') ?? '—' }}</td>
                     <td class="small text-nowrap">{{ $agreement->end_date?->format('M d, Y') ?? '—' }}</td>

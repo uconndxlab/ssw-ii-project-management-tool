@@ -11,7 +11,7 @@
     $url = fn ($col) => route('activities.index', array_merge(request()->query(), ['sort' => $col, 'direction' => $flip($col), 'page' => 1]));
 @endphp
 
-<div class="card shadow-sm">
+<div class="card shadow-sm app-index-table-card">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
@@ -28,7 +28,7 @@
                     <th style="min-width: 120px;">
                         <x-table-sort-link column="logged_by" label="Logged By" :sort="$s" :direction="$d" :url="$url('logged_by')" target="#activities-table" />
                     </th>
-                    <th class="text-end fw-normal" style="width:130px;">Actions</th>
+                    <th class="text-end" style="width:130px;">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -41,21 +41,14 @@
                         @endif
                     </td>
                     <td>
-                        <div class="d-flex flex-wrap gap-1">
-                            @forelse($activity->agreements as $agreement)
-                                @if($agreement->isLinkable())
-                                    <x-entity-relation-badge kind="agreement" :href="route('agreements.show', $agreement)">
-                                        {{ $agreement->name }}
-                                    </x-entity-relation-badge>
-                                @else
-                                    <x-entity-relation-badge kind="agreement">
-                                        {{ $agreement->name }}
-                                    </x-entity-relation-badge>
-                                @endif
-                            @empty
-                                <span class="text-muted small">—</span>
-                            @endforelse
-                        </div>
+                        <x-table-badge-list
+                            kind="agreement"
+                            :items="$activity->agreements->map(fn ($agreement) => [
+                                'name' => $agreement->name,
+                                'href' => $agreement->isLinkable() ? route('agreements.show', $agreement) : null,
+                            ])"
+                            href-key="href"
+                        />
                     </td>
                     <td>
                         <span class="badge bg-info text-dark">{{ $activity->activityType->name }}</span>

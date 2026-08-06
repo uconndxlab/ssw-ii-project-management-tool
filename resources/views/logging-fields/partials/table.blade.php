@@ -5,7 +5,7 @@
     $url  = fn($col) => route('logging-fields.index', array_merge(request()->query(), ['sort' => $col, 'direction' => $flip($col), 'page' => 1]));
 @endphp
 
-<div class="card shadow-sm">
+<div class="card shadow-sm app-index-table-card">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
@@ -28,7 +28,7 @@
                     <th>
                         <x-table-sort-link column="is_active" label="Status" :sort="$s" :direction="$d" :url="$url('is_active')" target="#logging-fields-table" />
                     </th>
-                    <th class="text-end fw-normal" style="width:200px;">Actions</th>
+                    <th class="text-end" style="width:200px;">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -44,26 +44,20 @@
                     </td>
                     <td><span class="badge bg-secondary">{{ ucfirst($field->field_type) }}</span></td>
                     <td>
-                        <div class="d-flex flex-wrap gap-1">
-                            @forelse($field->projects->sortBy('name') as $project)
-                                <x-entity-relation-badge kind="project" :href="route('projects.show', $project)">
-                                    {{ $project->name }}
-                                </x-entity-relation-badge>
-                            @empty
-                                <span class="text-muted small">All projects</span>
-                            @endforelse
-                        </div>
+                        <x-table-badge-list
+                            kind="project"
+                            :items="$field->projects"
+                            route-name="projects.show"
+                            empty-label="All projects"
+                        />
                     </td>
                     <td>
-                        <div class="d-flex flex-wrap gap-1">
-                            @forelse($field->programs->sortBy('name') as $program)
-                                <x-entity-relation-badge kind="program" :href="route('programs.show', $program)">
-                                    {{ $program->name }}
-                                </x-entity-relation-badge>
-                            @empty
-                                <span class="text-muted small">All programs</span>
-                            @endforelse
-                        </div>
+                        <x-table-badge-list
+                            kind="program"
+                            :items="$field->programs"
+                            route-name="programs.show"
+                            empty-label="All programs"
+                        />
                     </td>
                     <td>
                         <div class="d-flex flex-wrap gap-1">

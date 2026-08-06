@@ -19,6 +19,15 @@ main {
     box-shadow: 0 0.2rem 0.75rem rgba(0, 0, 0, 0.07);
 }
 
+.app-index-table-card {
+    overflow: hidden;
+}
+
+.app-index-table-card > .table-responsive,
+.app-index-table-card > .card-footer {
+    position: relative;
+}
+
 .entity-badge--organization {
     background-color: var(--entity-org-bg);
     color: var(--entity-org-text);

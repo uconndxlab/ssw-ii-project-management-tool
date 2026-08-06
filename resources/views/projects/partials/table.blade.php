@@ -5,7 +5,7 @@
     $url = fn ($col) => route('projects.index', array_merge(request()->query(), ['sort' => $col, 'direction' => $flip($col), 'page' => 1]));
 @endphp
 
-<div class="card shadow-sm">
+<div class="card shadow-sm app-index-table-card">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
@@ -20,7 +20,7 @@
                     <th>
                         <x-table-sort-link column="status" label="Status" :sort="$s" :direction="$d" :url="$url('status')" target="#projects-table" />
                     </th>
-                    <th class="text-end fw-normal" style="width:130px;">Actions</th>
+                    <th class="text-end" style="width:130px;">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -33,15 +33,11 @@
                     </td>
                     <td class="text-muted small">{{ Str::limit($project->description, 60) ?: '—' }}</td>
                     <td>
-                        <div class="d-flex flex-wrap gap-1">
-                            @forelse($project->programs->sortBy('name') as $program)
-                                <x-entity-relation-badge kind="program" :href="route('programs.show', $program)">
-                                    {{ $program->name }}
-                                </x-entity-relation-badge>
-                            @empty
-                                <span class="text-muted small">—</span>
-                            @endforelse
-                        </div>
+                        <x-table-badge-list
+                            kind="program"
+                            :items="$project->programs"
+                            route-name="programs.show"
+                        />
                     </td>
                     <td>
                         @if($project->active)

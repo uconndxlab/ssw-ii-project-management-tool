@@ -5,7 +5,7 @@
     $url  = fn($col) => route('activity-types.index', array_merge(request()->query(), ['sort' => $col, 'direction' => $flip($col), 'page' => 1]));
 @endphp
 
-<div class="card shadow-sm">
+<div class="card shadow-sm app-index-table-card">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
@@ -31,7 +31,7 @@
                     <th>
                         <x-table-sort-link column="active" label="Status" :sort="$s" :direction="$d" :url="$url('active')" target="#activity-types-table" />
                     </th>
-                    <th class="text-end fw-normal" style="width:140px;">Actions</th>
+                    <th class="text-end" style="width:140px;">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -40,18 +40,20 @@
                     <td class="fw-semibold">{{ $type->name }}</td>
                     <td class="text-muted small">{{ $type->contactFamily->name }}</td>
                     <td>
-                        @forelse($type->projects->sortBy('name') as $project)
-                            <x-entity-relation-badge kind="project" :href="route('projects.show', $project)" class="me-1 mb-1">{{ $project->name }}</x-entity-relation-badge>
-                        @empty
-                            <span class="text-muted small">All projects</span>
-                        @endforelse
+                        <x-table-badge-list
+                            kind="project"
+                            :items="$type->projects"
+                            route-name="projects.show"
+                            empty-label="All projects"
+                        />
                     </td>
                     <td>
-                        @forelse($type->programs->sortBy('name') as $program)
-                            <x-entity-relation-badge kind="program" :href="route('programs.show', $program)" class="me-1 mb-1">{{ $program->name }}</x-entity-relation-badge>
-                        @empty
-                            <span class="text-muted small">All programs</span>
-                        @endforelse
+                        <x-table-badge-list
+                            kind="program"
+                            :items="$type->programs"
+                            route-name="programs.show"
+                            empty-label="All programs"
+                        />
                     </td>
                     <td>{{ $type->duration_days }}</td>
                     <td>{{ $type->duration_hours }}</td>
