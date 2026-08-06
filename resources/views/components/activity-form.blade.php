@@ -431,6 +431,8 @@
                                 :selected-program-ids="$selectedProgramIds"
                                 project-label="Projects *"
                                 program-label="Programs *"
+                                :project-disabled="empty($selectedOrganizationIds)"
+                                project-disabled-placeholder="Select at least one organization first..."
                                 project-help-text="Projects are limited by the selected organizations. Projects guide the available programs and are not saved on the activity."
                                 program-help-text="Programs are limited by the selected projects and determine which agreements can be logged."
                                 :expand-empty-programs="false"
@@ -1341,7 +1343,9 @@
         scopeSection.dispatchEvent(new CustomEvent('project-program-scope:restrict', {
             detail: {
                 programIds: visibleProgramIds,
+                forceProjectDisabled: disableProjects,
                 forceProgramDisabled: forceProgramDisabled,
+                projectDisabledPlaceholder: projectPlaceholder,
                 programDisabledPlaceholder: programDisabledPlaceholder,
             }
         }));

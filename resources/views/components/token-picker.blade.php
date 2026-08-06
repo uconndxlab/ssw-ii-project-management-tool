@@ -93,6 +93,18 @@
 </div>
 
 @once
+<style>
+    .token-picker-control-disabled {
+        background-color: var(--bs-secondary-bg);
+        opacity: 1;
+        cursor: not-allowed;
+    }
+
+    .token-picker-control-disabled [data-token-search] {
+        background-color: transparent;
+        cursor: not-allowed;
+    }
+</style>
 <script>
 (function () {
     function parseJson(node, fallback) {
@@ -324,7 +336,7 @@
         function applyDisabledState() {
             searchInput.disabled = isDisabled;
             searchInput.placeholder = isDisabled ? disabledPlaceholder : defaultPlaceholder;
-            controlWrap.classList.toggle('bg-light', isDisabled);
+            controlWrap.classList.toggle('token-picker-control-disabled', isDisabled);
             controlWrap.classList.toggle('text-muted', isDisabled);
 
             if (isDisabled) {

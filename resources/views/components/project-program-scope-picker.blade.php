@@ -11,6 +11,8 @@
     'programLabel' => 'Programs',
     'projectPlaceholder' => 'Search projects...',
     'programPlaceholder' => 'Search programs...',
+    'projectDisabled' => false,
+    'projectDisabledPlaceholder' => 'Select the required upstream filters first...',
     'disabledPlaceholder' => 'Select at least one project first...',
     'projectHelpText' => null,
     'programHelpText' => null,
@@ -23,8 +25,13 @@
 
 @php
     use App\Support\EntityBadge;
+    use Illuminate\Support\Str;
 
     $projectContextBadgeClass = EntityBadge::relationClasses('project');
+    $projectLabelIsRequired = Str::endsWith($projectLabel, ' *');
+    $programLabelIsRequired = Str::endsWith($programLabel, ' *');
+    $projectLabelText = $projectLabelIsRequired ? Str::beforeLast($projectLabel, ' *') : $projectLabel;
+    $programLabelText = $programLabelIsRequired ? Str::beforeLast($programLabel, ' *') : $programLabel;
 @endphp
 
 @php($scopePicker = App\Support\ProjectProgramScope::scopePickerViewData(collect($projects ?? []), $selectedProjectIds, $selectedProgramIds, $scopeId, $projectContextBadgeClass))
@@ -35,16 +42,19 @@
      data-expand-empty-programs="{{ $expandEmptyPrograms ? 'true' : 'false' }}"
      data-project-program-map='@json($scopePicker['projectProgramMap'])'
      data-program-project-ids-map='@json($scopePicker['programProjectIdsMap'])'
-     data-project-names-map='@json($scopePicker['projectNamesMap'])'>
+        data-project-names-map='@json($scopePicker['projectNamesMap'])'
+        data-project-disabled-placeholder="{{ $projectDisabledPlaceholder }}">
     <div class="row g-3">
         <div class="col-md-6">
-            <label class="form-label">{{ $projectLabel }}</label>
+            <label class="form-label fw-semibold">{{ $projectLabelText }}@if($projectLabelIsRequired) <span class="text-danger">*</span>@endif</label>
             <x-token-picker
                 :picker-id="$scopePicker['projectPickerId']"
                 :name="$projectFieldName"
                 :items="$scopePicker['scopeProjects']"
                 :selected-ids="$scopePicker['selectedProjectIds']"
                 :placeholder="$projectPlaceholder"
+                :disabled-placeholder="$projectDisabledPlaceholder"
+                :disabled="$projectDisabled"
                 :height="$projectHeight"
                 :empty-selection-label="$projectEmptySelectionLabel ?? ''"
                 entity="project"
@@ -58,7 +68,7 @@
         </div>
 
         <div class="col-md-6">
-            <label class="form-label">{{ $programLabel }}</label>
+            <label class="form-label fw-semibold">{{ $programLabelText }}@if($programLabelIsRequired) <span class="text-danger">*</span>@endif</label>
             <x-token-picker
                 :picker-id="$scopePicker['programPickerId']"
                 :name="$programFieldName"
@@ -115,12 +125,15 @@
         const projectProgramMap = parseJson(section.dataset.projectProgramMap, {});
         const programProjectIdsMap = parseJson(section.dataset.programProjectIdsMap, {});
         const projectNamesMap = parseJson(section.dataset.projectNamesMap, {});
+        const defaultProjectDisabledPlaceholder = section.dataset.projectDisabledPlaceholder || 'Select the required upstream filters first...';
         const defaultDisabledPlaceholder = programPicker.dataset.disabledPlaceholder || 'Select at least one project first...';
         const expandEmptyPrograms = section.dataset.expandEmptyPrograms === 'true';
         const programFieldName = section.dataset.programFieldName || 'program_ids[]';
         const effectiveProgramInputs = section.querySelector('[data-effective-program-inputs]');
         const programStorageNotice = section.querySelector('[data-program-storage-notice]');
         let externalAllowedProgramIds = null;
+        let forceProjectDisabled = projectPicker.dataset.disabled === 'true';
+        let forcedProjectDisabledPlaceholder = defaultProjectDisabledPlaceholder;
         let forceProgramDisabled = false;
         let forcedProgramDisabledPlaceholder = defaultDisabledPlaceholder;
 
@@ -266,6 +279,16 @@
             notifyScopeChange();
         }
 
+        function refreshProjectPicker() {
+            projectPicker.dispatchEvent(new CustomEvent('token-picker:set-disabled', {
+                detail: {
+                    disabled: forceProjectDisabled,
+                    placeholder: forcedProjectDisabledPlaceholder,
+                },
+                bubbles: true,
+            }));
+        }
+
         section.addEventListener('project-program-scope:restrict', function (event) {
             const detail = typeof event.detail === 'object' && event.detail !== null ? event.detail : {};
             externalAllowedProgramIds = Array.isArray(detail.programIds)
@@ -273,15 +296,20 @@
                     return String(programId);
                 }))
                 : null;
+            forceProjectDisabled = !!detail.forceProjectDisabled;
+            forcedProjectDisabledPlaceholder = typeof detail.projectDisabledPlaceholder === 'string' && detail.projectDisabledPlaceholder.trim() !== ''
+                ? detail.projectDisabledPlaceholder
+                : defaultProjectDisabledPlaceholder;
             forceProgramDisabled = !!detail.forceProgramDisabled;
             forcedProgramDisabledPlaceholder = typeof detail.programDisabledPlaceholder === 'string' && detail.programDisabledPlaceholder.trim() !== ''
                 ? detail.programDisabledPlaceholder
                 : defaultDisabledPlaceholder;
+            refreshProjectPicker();
             refreshProgramPicker();
         });
 
-        projectPicker.addEventListener('token-picker:change', refreshProgramPicker);
         programPicker.addEventListener('token-picker:change', notifyScopeChange);
+        refreshProjectPicker();
         refreshProgramPicker();
         section.dataset.projectProgramScopeInitialized = 'true';
     }
