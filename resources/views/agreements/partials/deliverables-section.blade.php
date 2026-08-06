@@ -1445,7 +1445,18 @@
             syncActivityTypeOptions();
             syncEditorVisibility();
         });
-        editorFieldset.querySelector('[data-deliverable-activity-type]')?.addEventListener('change', syncEditorVisibility);
+        editorFieldset.querySelector('[data-deliverable-activity-type]')?.addEventListener('change', function () {
+            const activityTypeSelect = editorFieldset.querySelector('[data-deliverable-activity-type]');
+            const contactFamilySelect = editorFieldset.querySelector('[data-deliverable-contact-family]');
+            const activityTypeId = activityTypeSelect?.value || '';
+
+            if (activityTypeId && contactFamilySelect && !contactFamilySelect.value) {
+                contactFamilySelect.value = activityTypeContactFamilyMap[String(activityTypeId)] || '';
+            }
+
+            syncActivityTypeOptions();
+            syncEditorVisibility();
+        });
         editorFieldset.querySelectorAll('[data-deliverable-metric], [data-deliverable-time-basis], [data-deliverable-basis], [data-deliverable-grouping], [data-deliverable-target-unit]').forEach(function (input) {
             input.addEventListener('change', syncEditorVisibility);
         });
