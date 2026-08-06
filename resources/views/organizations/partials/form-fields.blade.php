@@ -63,6 +63,7 @@
                     :selected-ids="old('state_ids', $organization?->states?->pluck('id')->toArray() ?? [])"
                     placeholder="Search states..."
                     :height="'300px'"
+                    entity="state"
                 />
                 @error('state_ids')
                     <div class="text-danger small mt-1">{{ $message }}</div>
@@ -81,6 +82,7 @@
                     search-key="search"
                     placeholder="Search to add users..."
                     :height="'300px'"
+                    entity="user"
                 />
                 <div class="form-text">Select users associated with this organization.</div>
                 @error('user_ids')

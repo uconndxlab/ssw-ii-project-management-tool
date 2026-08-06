@@ -47,7 +47,7 @@
                 :placeholder="$projectPlaceholder"
                 :height="$projectHeight"
                 :empty-selection-label="$projectEmptySelectionLabel ?? ''"
-                entity-kind="project"
+                entity="project"
             />
             @if($projectHelpText)
                 <div class="form-text">{{ $projectHelpText }}</div>
@@ -69,7 +69,7 @@
                 :disabled="empty($scopePicker['selectedProjectIds'])"
                 :height="$programHeight"
                 :empty-selection-label="$programEmptySelectionLabel ?? ''"
-                entity-kind="program"
+                entity="program"
             />
             @if($programHelpText)
                 <div class="form-text">{{ $programHelpText }}</div>

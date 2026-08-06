@@ -54,6 +54,7 @@
                         :open-on-focus="false"
                         :show-selected="false"
                         :height="'300px'"
+                        entity="organization"
                     />
 
                     <small class="text-muted d-block mt-2">

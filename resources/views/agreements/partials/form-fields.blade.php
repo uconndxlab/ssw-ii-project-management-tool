@@ -107,7 +107,7 @@
                 :selected-ids="$selectedStateIds"
                 placeholder="Search states..."
                 :height="'220px'"
-                entity-kind="state"
+                entity="state"
             />
             <small class="text-muted d-block mt-2">
                 Select the states this agreement applies to. Organizations are limited to those linked to the selected states and programs.

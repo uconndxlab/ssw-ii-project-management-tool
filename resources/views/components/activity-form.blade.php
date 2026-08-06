@@ -341,6 +341,7 @@
                                 placeholder="Search agreements..."
                                 empty-message="No agreements match your search."
                                 :open-on-focus="false"
+                                entity="agreement"
                             />
                             @error('agreement_ids')
                                 <div class="text-danger small mt-1">{{ $message }}</div>
@@ -357,6 +358,7 @@
                                     :selected-ids="$selectedOrganizationIds"
                                     placeholder="Search organizations..."
                                     :open-on-focus="false"
+                                    entity="organization"
                                 />
                                 @error('organization_ids')
                                     <div class="text-danger small mt-1">{{ $message }}</div>
@@ -371,6 +373,7 @@
                                     :selected-ids="$selectedStateIds"
                                     placeholder="Search states..."
                                     :open-on-focus="false"
+                                    entity="state"
                                 />
                                 @error('state_ids')
                                     <div class="text-danger small mt-1">{{ $message }}</div>
@@ -455,6 +458,7 @@
                                 disabled-placeholder="Select at least one agreement first..."
                                 :disabled="empty($selectedAgreementIds)"
                                 :open-on-focus="false"
+                                entity="user"
                             />
                             <div class="form-text">Choose the covered users who helped deliver this activity.</div>
                             @error('participant_user_ids')

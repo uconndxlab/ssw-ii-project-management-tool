@@ -15,6 +15,7 @@
     'disabled' => false,
     'disabledPlaceholder' => null,
     'emptySelectionLabel' => null,
+    'entity' => null,
     'entityKind' => null,
 ])
 
@@ -25,23 +26,33 @@
 
     $searchKey = $searchKey ?: $labelKey;
 
-    $entityBadgeClass = filled($entityKind)
-        ? EntityBadge::relationClasses($entityKind)
+    $resolvedEntity = filled($entity) ? $entity : $entityKind;
+
+    $entityBadgeClass = filled($resolvedEntity)
+        ? EntityBadge::relationClasses($resolvedEntity)
         : null;
 
-    $normalizedOptions = collect($options ?? $items)->map(function ($item) use ($labelKey, $valueKey, $searchKey, $entityBadgeClass) {
+    $normalizedOptions = collect($options ?? $items)->map(function ($item) use ($labelKey, $valueKey, $searchKey, $entityBadgeClass, $resolvedEntity) {
+        $optionEntity = data_get($item, 'entity', $resolvedEntity);
+        $optionBadgeClass = filled($optionEntity)
+            ? EntityBadge::relationClasses($optionEntity)
+            : null;
+
         return [
             'value' => (string) data_get($item, $valueKey),
             'label' => (string) data_get($item, $labelKey),
             'search' => strtolower((string) data_get($item, $searchKey, data_get($item, $labelKey))),
+            'entity' => $optionEntity,
             'context' => data_get($item, 'context'),
             'contextLabels' => array_values(array_filter(
                 data_get($item, 'contextLabels') ?? (data_get($item, 'context') ? [data_get($item, 'context')] : []),
                 fn ($label) => $label !== null && $label !== ''
             )),
-            'contextBadgeClass' => data_get($item, 'contextBadgeClass', $entityBadgeClass ?? 'bg-primary-subtle text-primary-emphasis border'),
-            'kfs_number' => filled(data_get($item, 'kfs_number')) ? (string) data_get($item, 'kfs_number') : null,
-            'selectedBadgeClass' => data_get($item, 'selectedBadgeClass', $entityBadgeClass),
+            'contextBadgeClass' => data_get($item, 'contextBadgeClass', $optionBadgeClass ?? $entityBadgeClass ?? 'bg-primary-subtle text-primary-emphasis border'),
+            'meta' => filled(data_get($item, 'meta'))
+                ? (string) data_get($item, 'meta')
+                : (filled(data_get($item, 'kfs_number')) ? (string) data_get($item, 'kfs_number') : null),
+            'selectedBadgeClass' => data_get($item, 'selectedBadgeClass', $optionBadgeClass ?? $entityBadgeClass),
         ];
     })->filter(fn ($option) => $option['value'] !== '')->values()->all();
 @endphp
@@ -128,16 +139,16 @@
         function appendOptionPrimaryLabel(container, opt) {
             const nameSpan = document.createElement('span');
             nameSpan.textContent = opt.label;
-            if (opt.kfs_number) {
+            if (opt.meta) {
                 nameSpan.className = 'me-1';
             }
             container.appendChild(nameSpan);
 
-            if (opt.kfs_number) {
-                const kfsSpan = document.createElement('span');
-                kfsSpan.className = 'small text-muted opacity-75';
-                kfsSpan.textContent = '| ' + String(opt.kfs_number);
-                container.appendChild(kfsSpan);
+            if (opt.meta) {
+                const metaSpan = document.createElement('span');
+                metaSpan.className = 'small text-muted opacity-75';
+                metaSpan.textContent = '| ' + String(opt.meta);
+                container.appendChild(metaSpan);
             }
         }
 

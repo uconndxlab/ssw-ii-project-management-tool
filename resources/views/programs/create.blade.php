@@ -61,6 +61,7 @@
                             :selected-ids="$selectedProjectIds"
                             placeholder="Search projects..."
                             height="220px"
+                            entity="project"
                         />
                         @error('project_ids')
                             <div class="text-danger small mt-1">{{ $message }}</div>

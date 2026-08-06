@@ -96,10 +96,9 @@ class ActivityFundingSourceTokens
                     'value' => $token,
                     'label' => $organization->name,
                     'search' => strtolower(trim($organization->name.' '.$organization->kfs_number)),
+                    'entity' => 'organization',
                     'contextLabels' => ['Organization'],
-                    'contextBadgeClass' => 'bg-success-subtle text-success-emphasis border border-success-subtle',
-                    'selectedBadgeClass' => 'bg-success-subtle text-success-emphasis border border-success-subtle',
-                    'kfs_number' => $organization->kfs_number,
+                    'meta' => $organization->kfs_number,
                 ];
             }
 
@@ -121,10 +120,9 @@ class ActivityFundingSourceTokens
                     'value' => $token,
                     'label' => $user->name,
                     'search' => strtolower(trim($user->name.' '.$user->kfs_number.' '.($user->email ?? ''))),
+                    'entity' => 'user',
                     'contextLabels' => ['User'],
-                    'contextBadgeClass' => 'bg-primary-subtle text-primary-emphasis border border-primary-subtle',
-                    'selectedBadgeClass' => 'bg-primary-subtle text-primary-emphasis border border-primary-subtle',
-                    'kfs_number' => $user->kfs_number,
+                    'meta' => $user->kfs_number,
                 ];
             }
 

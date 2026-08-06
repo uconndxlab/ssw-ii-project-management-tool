@@ -90,6 +90,7 @@
                             search-key="search"
                             placeholder="Search to add members..."
                             :height="'300px'"
+                            entity="user"
                         />
 
                         <small class="text-muted">

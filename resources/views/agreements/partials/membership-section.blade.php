@@ -65,7 +65,7 @@
                                 :open-on-focus="false"
                                 :show-selected="false"
                                 :height="'220px'"
-                                entity-kind="team"
+                                entity="team"
                             />
 
                             <small class="text-muted d-block mt-2">
@@ -90,7 +90,7 @@
                                 :open-on-focus="false"
                                 :show-selected="false"
                                 :height="'220px'"
-                                entity-kind="user"
+                                entity="user"
                             />
 
                             <small class="text-muted d-block mt-2">
