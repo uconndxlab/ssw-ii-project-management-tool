@@ -92,6 +92,61 @@
     });
 
     $fundingSourceOptionsByAgreement = ActivityFundingSourceTokens::fundingSourceOptionsByAgreement($agreements);
+    $visibleStateIds = $agreements
+        ->flatMap(fn ($agreement) => $agreement->states->pluck('id'))
+        ->map(fn ($id) => (string) $id)
+        ->unique()
+        ->values()
+        ->all();
+    $visibleOrganizationIds = $agreements
+        ->flatMap(fn ($agreement) => $agreement->organizations->pluck('id'))
+        ->map(fn ($id) => (string) $id)
+        ->filter(fn ($id) => in_array($id, $availableOrganizationIds, true))
+        ->unique()
+        ->values()
+        ->all();
+    $visibleProjectIds = $agreements
+        ->flatMap(fn ($agreement) => $agreement->projects->pluck('id'))
+        ->map(fn ($id) => (string) $id)
+        ->unique()
+        ->values()
+        ->all();
+    $visibleProgramIds = $agreements
+        ->flatMap(fn ($agreement) => $agreement->programs->pluck('id'))
+        ->map(fn ($id) => (string) $id)
+        ->unique()
+        ->values()
+        ->all();
+    $organizationConfigs = collect($organizations)
+        ->mapWithKeys(function ($organization) use ($visibleProjectIds, $visibleProgramIds) {
+            $programs = $organization->programs ?? collect();
+
+            return [
+                $organization->id => [
+                    'state_ids' => $organization->states
+                        ->pluck('id')
+                        ->map(fn ($id) => (string) $id)
+                        ->unique()
+                        ->values()
+                        ->all(),
+                    'program_ids' => $programs
+                        ->pluck('id')
+                        ->map(fn ($id) => (string) $id)
+                        ->filter(fn ($id) => in_array($id, $visibleProgramIds, true))
+                        ->unique()
+                        ->values()
+                        ->all(),
+                    'project_ids' => $programs
+                        ->flatMap(fn ($program) => $program->projects->pluck('id'))
+                        ->map(fn ($id) => (string) $id)
+                        ->filter(fn ($id) => in_array($id, $visibleProjectIds, true))
+                        ->unique()
+                        ->values()
+                        ->all(),
+                ],
+            ];
+        })
+        ->all();
 
     $selectedAgreementTimeTrackingConfigs = collect($selectedAgreementIds)
         ->map(fn ($agreementId) => $agreementConfigs[(string) $agreementId] ?? null)
@@ -331,41 +386,9 @@
 
             <div class="d-grid gap-4">
                     <x-section-card title="Agreements & Coverage">
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Agreements</label>
-                            <x-token-picker
-                                picker-id="activity-agreements-picker"
-                                name="agreement_ids[]"
-                                :items="$agreements"
-                                :selected-ids="$selectedAgreementIds"
-                                placeholder="Search agreements..."
-                                empty-message="No agreements match your search."
-                                :open-on-focus="false"
-                                entity="agreement"
-                            />
-                            @error('agreement_ids')
-                                <div class="text-danger small mt-1">{{ $message }}</div>
-                            @enderror
-                        </div>
-
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label">Organizations</label>
-                                <x-token-picker
-                                    picker-id="activity-organizations-picker"
-                                    name="organization_ids[]"
-                                    :items="$organizations"
-                                    :selected-ids="$selectedOrganizationIds"
-                                    placeholder="Search organizations..."
-                                    :open-on-focus="false"
-                                    entity="organization"
-                                />
-                                @error('organization_ids')
-                                    <div class="text-danger small mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">States</label>
+                                <label class="form-label fw-semibold">States <span class="text-danger">*</span></label>
                                 <x-token-picker
                                     picker-id="activity-states-picker"
                                     name="state_ids[]"
@@ -375,7 +398,26 @@
                                     :open-on-focus="false"
                                     entity="state"
                                 />
+                                <div class="form-text">Select one or more states to narrow organizations.</div>
                                 @error('state_ids')
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Organizations <span class="text-danger">*</span></label>
+                                <x-token-picker
+                                    picker-id="activity-organizations-picker"
+                                    name="organization_ids[]"
+                                    :items="$organizations"
+                                    :selected-ids="$selectedOrganizationIds"
+                                    placeholder="Search organizations..."
+                                    disabled-placeholder="Select at least one state first..."
+                                    :disabled="empty($selectedStateIds)"
+                                    :open-on-focus="false"
+                                    entity="organization"
+                                />
+                                <div class="form-text">Organizations are limited to the selected states and your available agreements.</div>
+                                @error('organization_ids')
                                     <div class="text-danger small mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
@@ -387,9 +429,32 @@
                                 :projects="$availableProjects"
                                 :selected-project-ids="$selectedProjectIds"
                                 :selected-program-ids="$selectedProgramIds"
-                                project-help-text="Use projects to filter programs available from the selected agreements; projects are not saved on the activity."
-                                program-help-text="Programs are the saved activity coverage. Leaving programs empty saves every currently listed program under the selected projects."
+                                project-label="Projects *"
+                                program-label="Programs *"
+                                project-help-text="Projects are limited by the selected organizations. Projects guide the available programs and are not saved on the activity."
+                                program-help-text="Programs are limited by the selected projects and determine which agreements can be logged."
+                                :expand-empty-programs="false"
                             />
+                        </div>
+
+                        <div class="mt-4">
+                            <label class="form-label fw-semibold">Agreements <span class="text-danger">*</span></label>
+                            <x-token-picker
+                                picker-id="activity-agreements-picker"
+                                name="agreement_ids[]"
+                                :items="$agreements"
+                                :selected-ids="$selectedAgreementIds"
+                                placeholder="Search agreements..."
+                                disabled-placeholder="Select at least one program first..."
+                                :disabled="empty($selectedProgramIds)"
+                                empty-message="No agreements match your selected programs."
+                                :open-on-focus="false"
+                                entity="agreement"
+                            />
+                            <div class="form-text">Select the agreements that apply after choosing the activity program coverage.</div>
+                            @error('agreement_ids')
+                                <div class="text-danger small mt-1">{{ $message }}</div>
+                            @enderror
                         </div>
 
                         <div class="row g-3 mt-1">
@@ -809,10 +874,15 @@
 <script>
 (function () {
     const agreementConfigs = @json($agreementConfigs);
+    const organizationConfigs = @json($organizationConfigs);
     const contactFamilyAdditionalTimeMap = @json($contactFamilies->mapWithKeys(fn ($family) => [(string) $family->id => (bool) $family->track_additional_time]));
     const participantDirectory = @json($participantOptionMap);
     const historicalParticipantIds = @json($historicalParticipantIds);
     const initialAgreementIds = @json(array_map('strval', $selectedAgreementIds));
+    const visibleStateIds = @json($visibleStateIds);
+    const visibleOrganizationIds = @json($visibleOrganizationIds);
+    const visibleProjectIds = @json($visibleProjectIds);
+    const visibleProgramIds = @json($visibleProgramIds);
     const originalAgreementIds = @json($originalAgreementIds);
     const initialParticipantTimes = @json($normalizedParticipantTimeData);
     const initialCompletionCount = @json((int) old('completion_count', $completionCountValue));
@@ -872,6 +942,26 @@
         return Array.from(merged);
     }
 
+    function selectedStateIds() {
+        return selectedValues('state_ids[]').map(String);
+    }
+
+    function selectedOrganizationIds() {
+        return selectedValues('organization_ids[]').map(String);
+    }
+
+    function selectedProgramIds() {
+        return selectedValues('program_ids[]').map(String);
+    }
+
+    function intersectionValues(values, allowedValues) {
+        const allowedSet = new Set((allowedValues || []).map(String));
+
+        return Array.from(new Set((values || []).map(String))).filter(function (value) {
+            return allowedSet.has(String(value));
+        });
+    }
+
     function joinNames(items) {
         const names = items.map(function (item) {
             return item.name;
@@ -892,19 +982,49 @@
         return names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1];
     }
 
-    function restrictCoveragePickers() {
-        const agreements = selectedAgreementIds();
-        const orgPicker = document.getElementById('activity-organizations-picker');
+    function restrictStatePicker() {
         const statePicker = document.getElementById('activity-states-picker');
 
-        if (!agreements.length) {
-            orgPicker?.dispatchEvent(new CustomEvent('token-picker:restrict', { detail: null }));
-            statePicker?.dispatchEvent(new CustomEvent('token-picker:restrict', { detail: null }));
+        if (!statePicker) {
             return;
         }
 
-        orgPicker?.dispatchEvent(new CustomEvent('token-picker:restrict', { detail: uniqueMergedIds('organization_ids') }));
-        statePicker?.dispatchEvent(new CustomEvent('token-picker:restrict', { detail: uniqueMergedIds('state_ids') }));
+        statePicker.dispatchEvent(new CustomEvent('token-picker:set-disabled', {
+            detail: {
+                disabled: visibleStateIds.length === 0,
+                placeholder: visibleStateIds.length === 0
+                    ? 'No states are available from your agreements...'
+                    : 'Search states...',
+            }
+        }));
+        statePicker.dispatchEvent(new CustomEvent('token-picker:restrict', { detail: visibleStateIds }));
+    }
+
+    function restrictOrganizationPicker() {
+        const orgPicker = document.getElementById('activity-organizations-picker');
+        const states = selectedStateIds();
+
+        if (!orgPicker) {
+            return;
+        }
+
+        const allowedOrganizationIds = states.length === 0
+            ? []
+            : visibleOrganizationIds.filter(function (organizationId) {
+                const config = organizationConfigs[String(organizationId)] || {};
+
+                return intersectionValues(config.state_ids || [], states).length > 0;
+            });
+
+        orgPicker.dispatchEvent(new CustomEvent('token-picker:set-disabled', {
+            detail: {
+                disabled: states.length === 0 || allowedOrganizationIds.length === 0,
+                placeholder: states.length === 0
+                    ? 'Select at least one state first...'
+                    : 'No organizations match the selected states...',
+            }
+        }));
+        orgPicker.dispatchEvent(new CustomEvent('token-picker:restrict', { detail: allowedOrganizationIds }));
     }
 
     function restrictParticipantPicker() {
@@ -1189,22 +1309,27 @@
     }
 
     function restrictScopePickers() {
-        const agreements = selectedAgreementIds();
+        const organizationIds = selectedOrganizationIds();
         const scopeSection = form.querySelector('[data-scope-id="activity-coverage-scope"]');
         const projectPicker = document.getElementById('activity-coverage-scope-projects');
 
         if (!scopeSection || !projectPicker) return;
 
-        const allowedProjectIds = agreements.length ? uniqueMergedIds('project_ids') : [];
-        const allowedProgramIds = agreements.length ? uniqueMergedIds('program_ids') : [];
-        const disableProjects = !agreements.length || allowedProjectIds.length === 0;
-        const projectPlaceholder = !agreements.length
-            ? 'Select at least one agreement first...'
-            : 'No covered projects for selected agreements...';
-        const forceProgramDisabled = !agreements.length || allowedProgramIds.length === 0;
-        const programDisabledPlaceholder = !agreements.length
-            ? 'Select at least one agreement first...'
-            : 'No covered programs for selected agreements...';
+        const allowedProjectIds = organizationIds.length
+            ? Array.from(new Set(organizationIds.flatMap(function (organizationId) {
+                return (organizationConfigs[String(organizationId)] || {}).project_ids || [];
+            }))).filter(function (projectId) {
+                return visibleProjectIds.includes(String(projectId));
+            })
+            : [];
+        const disableProjects = organizationIds.length === 0 || allowedProjectIds.length === 0;
+        const projectPlaceholder = organizationIds.length === 0
+            ? 'Select at least one organization first...'
+            : 'No projects match the selected organizations...';
+        const forceProgramDisabled = organizationIds.length === 0 || allowedProjectIds.length === 0;
+        const programDisabledPlaceholder = organizationIds.length === 0
+            ? 'Select at least one project first...'
+            : 'No programs match the selected projects...';
 
         projectPicker.dispatchEvent(new CustomEvent('token-picker:set-disabled', {
             detail: {
@@ -1215,11 +1340,38 @@
         projectPicker.dispatchEvent(new CustomEvent('token-picker:restrict', { detail: allowedProjectIds }));
         scopeSection.dispatchEvent(new CustomEvent('project-program-scope:restrict', {
             detail: {
-                programIds: allowedProgramIds,
+                programIds: visibleProgramIds,
                 forceProgramDisabled: forceProgramDisabled,
                 programDisabledPlaceholder: programDisabledPlaceholder,
             }
         }));
+    }
+
+    function restrictAgreementPicker() {
+        const agreementPicker = document.getElementById('activity-agreements-picker');
+        const programIds = selectedProgramIds();
+
+        if (!agreementPicker) {
+            return;
+        }
+
+        const allowedAgreementIds = programIds.length === 0
+            ? []
+            : Object.keys(agreementConfigs).filter(function (agreementId) {
+                const config = agreementConfigs[String(agreementId)] || {};
+
+                return intersectionValues(config.program_ids || [], programIds).length > 0;
+            });
+
+        agreementPicker.dispatchEvent(new CustomEvent('token-picker:set-disabled', {
+            detail: {
+                disabled: programIds.length === 0 || allowedAgreementIds.length === 0,
+                placeholder: programIds.length === 0
+                    ? 'Select at least one program first...'
+                    : 'No agreements match the selected programs...',
+            }
+        }));
+        agreementPicker.dispatchEvent(new CustomEvent('token-picker:restrict', { detail: allowedAgreementIds }));
     }
 
     function restrictClassificationOptions() {
@@ -1459,10 +1611,8 @@
     if (agreementsPicker) {
         agreementsPicker.addEventListener('token-picker:change', function () {
             agreementsPickerInitialized = true;
-            restrictCoveragePickers();
             restrictParticipantPicker();
             restrictFundingSourcePickers();
-            restrictScopePickers();
             restrictClassificationOptions();
             refreshActivityTypes();
             updateAgreementLoggingGroups();
@@ -1471,10 +1621,8 @@
         });
         agreementsPicker.addEventListener('token-picker:initialized', function () {
             agreementsPickerInitialized = true;
-            restrictCoveragePickers();
             restrictParticipantPicker();
             restrictFundingSourcePickers();
-            restrictScopePickers();
             restrictClassificationOptions();
             refreshActivityTypes();
             updateAgreementLoggingGroups();
@@ -1482,14 +1630,27 @@
         });
     }
 
-    ['activity-organizations-picker', 'activity-states-picker', 'activity-coverage-scope-projects', 'activity-coverage-scope-programs', 'activity-participants-picker'].forEach(function (id) {
-        document.getElementById(id)?.addEventListener('token-picker:change', function () {
-            if (id === 'activity-participants-picker') {
-                renderParticipantTimeRows();
-            }
+    document.getElementById('activity-states-picker')?.addEventListener('token-picker:change', function () {
+        restrictOrganizationPicker();
+        restrictScopePickers();
+        restrictAgreementPicker();
+        markDirty();
+    });
 
-            markDirty();
-        });
+    document.getElementById('activity-organizations-picker')?.addEventListener('token-picker:change', function () {
+        restrictScopePickers();
+        restrictAgreementPicker();
+        markDirty();
+    });
+
+    form.querySelector('[data-scope-id="activity-coverage-scope"]')?.addEventListener('project-program-scope:change', function () {
+        restrictAgreementPicker();
+        markDirty();
+    });
+
+    document.getElementById('activity-participants-picker')?.addEventListener('token-picker:change', function () {
+        renderParticipantTimeRows();
+        markDirty();
     });
 
     document.getElementById('copy-contact-time-to-users')?.addEventListener('click', copyContactTimeToParticipants);
@@ -1538,10 +1699,12 @@
     if (family && family.value) htmx.trigger(family, 'change');
 
     updateActivityTypeState();
-    restrictCoveragePickers();
+    restrictStatePicker();
+    restrictOrganizationPicker();
+    restrictScopePickers();
+    restrictAgreementPicker();
     restrictParticipantPicker();
     restrictFundingSourcePickers();
-    restrictScopePickers();
     restrictClassificationOptions();
     updateAgreementLoggingGroups();
     updateTimeTrackingSection();

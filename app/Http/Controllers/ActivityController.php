@@ -9,6 +9,7 @@ use App\Models\ActivityType;
 use App\Models\ContactFamily;
 use App\Models\LoggingField;
 use App\Models\Organization;
+use App\Models\Program;
 use App\Models\State;
 use App\Models\User;
 use App\Services\ActivityDuplicationService;
@@ -231,6 +232,7 @@ class ActivityController extends Controller
         $agreements = $this->getVisibleAgreements()->load('agreementLoggingFields');
         $states = State::orderBy('name')->get();
         $organizations = Organization::active()->orderBy('name')->get();
+        $organizations->load(['states:id', 'programs.projects:id']);
         $contactFamilies = ContactFamily::where('active', true)
             ->with(['contactFamilyLoggingFields', 'activityTypes' => function ($query) {
                 $query->where('active', true)
@@ -269,15 +271,15 @@ class ActivityController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'agreement_ids' => ['nullable', 'array'],
+            'agreement_ids' => ['required', 'array', 'min:1'],
             'agreement_ids.*' => ['exists:agreements,id'],
-            'state_ids' => ['nullable', 'array'],
+            'state_ids' => ['required', 'array', 'min:1'],
             'state_ids.*' => ['exists:states,id'],
-            'organization_ids' => ['nullable', 'array'],
+            'organization_ids' => ['required', 'array', 'min:1'],
             'organization_ids.*' => ['exists:organizations,id'],
-            'project_ids' => ['nullable', 'array'],
+            'project_ids' => ['required', 'array', 'min:1'],
             'project_ids.*' => ['distinct', 'exists:projects,id'],
-            'program_ids' => ['nullable', 'array'],
+            'program_ids' => ['required', 'array', 'min:1'],
             'program_ids.*' => ['distinct', 'exists:programs,id'],
             'participant_user_ids' => ['nullable', 'array'],
             'participant_user_ids.*' => ['distinct', 'exists:users,id'],
@@ -411,6 +413,7 @@ class ActivityController extends Controller
             ->unique('id')
             ->sortBy('name')
             ->values();
+        $organizations->load(['states:id', 'programs.projects:id']);
         $contactFamilies = ContactFamily::where('active', true)
             ->with(['contactFamilyLoggingFields', 'activityTypes' => function ($query) {
                 $query->where('active', true)
@@ -452,15 +455,15 @@ class ActivityController extends Controller
         $this->verifyActivityEditAccess($activity);
 
         $validator = Validator::make($request->all(), [
-            'agreement_ids' => ['nullable', 'array'],
+            'agreement_ids' => ['required', 'array', 'min:1'],
             'agreement_ids.*' => ['exists:agreements,id'],
-            'state_ids' => ['nullable', 'array'],
+            'state_ids' => ['required', 'array', 'min:1'],
             'state_ids.*' => ['exists:states,id'],
-            'organization_ids' => ['nullable', 'array'],
+            'organization_ids' => ['required', 'array', 'min:1'],
             'organization_ids.*' => ['exists:organizations,id'],
-            'project_ids' => ['nullable', 'array'],
+            'project_ids' => ['required', 'array', 'min:1'],
             'project_ids.*' => ['distinct', 'exists:projects,id'],
-            'program_ids' => ['nullable', 'array'],
+            'program_ids' => ['required', 'array', 'min:1'],
             'program_ids.*' => ['distinct', 'exists:programs,id'],
             'participant_user_ids' => ['nullable', 'array'],
             'participant_user_ids.*' => ['distinct', 'exists:users,id'],
@@ -753,8 +756,54 @@ class ActivityController extends Controller
 
     private function validateAgreementCoverageSelections(array $validated, $agreements, ?Activity $activity = null): void
     {
-        if (empty($validated['agreement_ids'])) {
-            return;
+        $selectedAgreementIds = collect($validated['agreement_ids'] ?? [])->map(fn ($id) => (int) $id)->unique()->values();
+        $selectedStateIds = collect($validated['state_ids'] ?? [])->map(fn ($id) => (int) $id)->unique()->values();
+        $selectedOrganizationIds = collect($validated['organization_ids'] ?? [])->map(fn ($id) => (int) $id)->unique()->values();
+        $selectedProjectIds = collect($validated['project_ids'] ?? [])->map(fn ($id) => (int) $id)->unique()->values();
+        $selectedProgramIds = collect($validated['program_ids'] ?? [])->map(fn ($id) => (int) $id)->unique()->values();
+
+        $selectedOrganizations = Organization::query()
+            ->whereKey($selectedOrganizationIds)
+            ->with(['states:id', 'programs.projects:id'])
+            ->get();
+
+        $stateAllowedOrganizationIds = $selectedOrganizations
+            ->filter(fn ($organization) => $organization->states->pluck('id')->intersect($selectedStateIds)->isNotEmpty())
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->values();
+
+        if ($selectedOrganizationIds->diff($stateAllowedOrganizationIds)->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'organization_ids' => 'Selected organizations must belong to at least one chosen state.',
+            ]);
+        }
+
+        $organizationAllowedProjectIds = $selectedOrganizations
+            ->flatMap(fn ($organization) => $organization->programs->flatMap(fn ($program) => $program->projects->pluck('id')))
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        if ($selectedProjectIds->diff($organizationAllowedProjectIds)->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'project_ids' => 'Selected projects must be reachable from the chosen organizations.',
+            ]);
+        }
+
+        $programAllowedAgreementIds = Program::query()
+            ->whereKey($selectedProgramIds)
+            ->with('agreements:id')
+            ->get()
+            ->flatMap(fn ($program) => $program->agreements->pluck('id'))
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        if ($selectedAgreementIds->diff($programAllowedAgreementIds)->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'agreement_ids' => 'Selected agreements must belong to at least one chosen program.',
+            ]);
         }
 
         $agreements->loadMissing(['organizations:id', 'states:id']);
@@ -772,9 +821,6 @@ class ActivityController extends Controller
             ->unique()
             ->values()
             ->all();
-
-        $selectedOrganizationIds = collect($validated['organization_ids'] ?? [])->map(fn ($id) => (int) $id);
-        $selectedStateIds = collect($validated['state_ids'] ?? [])->map(fn ($id) => (int) $id);
 
         if ($selectedOrganizationIds->diff($allowedOrganizationIds)->isNotEmpty()) {
             throw ValidationException::withMessages([
