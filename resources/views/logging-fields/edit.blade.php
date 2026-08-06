@@ -3,15 +3,16 @@
 @section('title', 'Edit Logging Field')
 
 @section('content')
-<div class="row justify-content-center mb-4">
-    <div class="col-lg-8">
-        <h1>Edit Logging Field</h1>
-        <p class="text-muted">Update the field definition for "{{ $loggingField->name }}".</p>
-    </div>
-</div>
-
 <div class="row justify-content-center">
     <div class="col-lg-8">
+        <x-page-header
+            context="form"
+            :title="old('name', $loggingField->name)"
+            entity-type="Logging Field"
+            mode="edit"
+            description="Update the field definition for this field."
+        />
+
         <div class="card">
             <div class="card-body">
                 @if ($errors->any())
@@ -34,6 +35,6 @@
     </div>
 </div>
 
-<x-save-bar form-id="logging-field-edit-form" cancel-url="{{ route('logging-fields.index') }}" save-label="Save Changes" :last-saved-at="$loggingField->updated_at" />
+<x-save-bar form-id="logging-field-edit-form" save-label="Save Changes" :last-saved-at="$loggingField->updated_at" />
 
 @endsection

@@ -19,10 +19,9 @@
             @csrf
             @method('PUT')
 
-            <x-form-page-header
+            <x-page-header
+                context="form"
                 title="Edit Profile"
-                :back-route="route('profile')"
-                back-label="Back to profile"
             />
 
             <div class="card mb-4">
@@ -95,5 +94,5 @@
         </form>
     </div>
 </div>
-<x-save-bar form-id="profile-edit-form" cancel-url="{{ route('profile') }}" save-label="Save" />
+<x-save-bar form-id="profile-edit-form" :resolve-cancel="true" save-label="Save" />
 @endsection

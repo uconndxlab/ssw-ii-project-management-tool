@@ -16,14 +16,10 @@
         ];
     });
 @endphp
-<div class="row mb-4">
-    <div class="col-12">
-        <h1>Edit Team: {{ $team->name }}</h1>
-    </div>
-</div>
-
 <div class="row">
     <div class="col-md-8">
+        <x-page-header context="form" :title="old('name', $team->name)" entity-type="Team" mode="edit" />
+
         <div class="card">
             <div class="card-body">
                 @if ($errors->any())
@@ -106,5 +102,5 @@
         </div>
     </div>
 </div>
-<x-save-bar form-id="teams-edit-form" cancel-url="{{ route('teams.index') }}" save-label="Save Team" :last-saved-at="$team->updated_at" />
+<x-save-bar form-id="teams-edit-form" save-label="Save Team" :last-saved-at="$team->updated_at" />
 @endsection

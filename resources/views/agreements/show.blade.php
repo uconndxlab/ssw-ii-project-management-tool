@@ -13,16 +13,15 @@
     $activityOnlyPrograms = $programs->filter(fn ($program) => !$agreementProgramIds->contains((int) $program->id));
 @endphp
 
-<x-entity-show
-    title="{{ $agreement->name }}"
-    type="Agreement"
-    :typeBadgeClass="\App\Support\EntityBadge::typeClasses('agreement')"
-    editRoute="{{ auth()->user()->isAdmin() ? route('agreements.edit', $agreement) : null }}"
-    backRoute="{{ route('agreements.index') }}"
-    backLabel="All Agreements"
-    mainCardTitle="Deliverables"
-    :activityFirst="true"
->
+<x-page-header
+    context="show"
+    :title="$agreement->name"
+    entity-type="Agreement"
+    :active="$agreement->active"
+    :action-url="auth()->user()->isAdmin() ? route('agreements.edit', $agreement) : null"
+/>
+
+<x-entity-show mainCardTitle="Deliverables" :activityFirst="true">
     {{-- ── Summary ─────────────────────────────────────────────────────── --}}
     <x-slot:summary>
         <dl class="row mb-0" style="min-width: 0;">

@@ -9,17 +9,17 @@
     $viaTeams = $scopeBySource['viaTeams'];
 @endphp
 
-<x-entity-show
-    title="{{ $user->name }}"
-    type="{{ ucfirst($user->role) }}"
-    badgeKind="role"
-    backRoute="{{ $isProfile ? route('dashboard') : route('admin.users.index') }}"
-    editRoute="{{ $isProfile ? route('profile.edit') : route('admin.users.edit', $user) }}"
-    editLabel="{{ $isProfile ? 'Edit profile' : 'Edit' }}"
-    backLabel="{{ $isProfile ? 'Home' : 'All Users' }}"
-    mainCardTitle="Agreements"
-    :activityFirst="true"
->
+<x-page-header
+    context="show"
+    :title="$user->name"
+    :entity-type="ucfirst($user->role)"
+    badge-kind="role"
+    :active="$user->active"
+    :action-url="$isProfile ? route('profile.edit') : route('admin.users.edit', $user)"
+    :action-label="$isProfile ? 'Edit profile' : 'Edit'"
+/>
+
+<x-entity-show mainCardTitle="Agreements" :activityFirst="true">
     {{-- ── Summary ─────────────────────────────────────────────────────── --}}
     <x-slot:summary>
         @if(!$user->active)

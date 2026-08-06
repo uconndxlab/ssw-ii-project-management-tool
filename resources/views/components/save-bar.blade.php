@@ -1,6 +1,7 @@
 @props([
     'formId',
     'cancelUrl'   => null,
+    'resolveCancel' => true,
     'saveLabel'   => 'Save',
     'lastSavedAt' => null,
 ])
@@ -11,6 +12,10 @@
     $savedTime    = $lastSavedAt
         ? \Carbon\Carbon::parse($lastSavedAt)->format('g:i A')
         : '';
+    $resolvedBackTarget = $resolveCancel
+        ? app(\App\Services\SessionBackTargetService::class)->resolve(request())
+        : null;
+    $cancelUrl = $resolveCancel ? ($resolvedBackTarget['url'] ?? null) : $cancelUrl;
 @endphp
 
 {{-- Sticky bottom save bar --}}

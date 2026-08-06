@@ -17,9 +17,9 @@
 
         <form method="POST" action="{{ route('contact-families.store') }}" id="contact-families-create-form">
             @csrf
-            <x-form-page-header
+            <x-page-header
+                context="form"
                 entity-type="Contact Family"
-                entity-type-badge-class="bg-info text-dark"
                 mode="create"
                 :show-active="true"
                 :active-default="old('active', true)"
@@ -29,5 +29,5 @@
         </form>
     </div>
 </div>
-<x-save-bar form-id="contact-families-create-form" cancel-url="{{ route('contact-families.index') }}" save-label="Create Contact Family" />
+<x-save-bar form-id="contact-families-create-form" save-label="Create Contact Family" />
 @endsection

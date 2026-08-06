@@ -38,6 +38,7 @@ class EntityBadge
             'state' => 'bg-info-subtle text-info-emphasis border',
             'team' => 'bg-secondary-subtle text-secondary-emphasis border',
             'organization' => 'entity-badge--organization border',
+            'activity' => 'bg-secondary-subtle text-secondary-emphasis border',
             'activity-type' => 'bg-secondary-subtle text-secondary-emphasis border',
             'contact-family' => 'bg-secondary-subtle text-secondary-emphasis border',
             'logging-field' => 'bg-secondary-subtle text-secondary-emphasis border',

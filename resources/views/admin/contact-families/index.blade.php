@@ -4,13 +4,7 @@
 
 @section('content')
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1 class="h2 mb-1">Contact Families</h1>
-        <p class="text-muted small mb-0">{{ $contactFamilies->count() }} total</p>
-    </div>
-    <a href="{{ route('contact-families.create') }}" class="btn btn-primary">+ Add Contact Family</a>
-</div>
+<x-page-header context="index" title="Contact Families" description="{{ $contactFamilies->count() }} total" :action-url="route('contact-families.create')" />
 
 <div class="card shadow-sm mb-3">
     <div class="card-body py-2">

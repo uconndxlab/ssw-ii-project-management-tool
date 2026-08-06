@@ -4,15 +4,11 @@
 
 @section('content')
 <div class="container-fluid py-4">
-
-    <div class="row mb-4">
-        <div class="col-12">
-            <h1 class="display-6 mb-1">Search</h1>
-            @if($query)
-                <p class="text-muted">Results for <strong>{{ $query }}</strong></p>
-            @endif
-        </div>
-    </div>
+    <x-page-header
+        context="index"
+        title="Search"
+        :description="$query ? 'Results for ' . $query : 'Search agreements, organizations, and people.'"
+    />
 
     {{-- Search bar --}}
     <div class="row mb-4">

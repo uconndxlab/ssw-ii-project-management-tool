@@ -42,14 +42,14 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
     Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
-    
+
     // Agreements - visible to all authenticated users (with visibility filtering in controller)
     Route::post('/agreements/{agreement}/duplicate', [AgreementController::class, 'duplicate'])->name('agreements.duplicate');
     Route::resource('agreements', AgreementController::class);
-    
+
     // Agreement attachment routes
     Route::get('/agreements/{agreement}/attachments/{attachment}/download', [AgreementController::class, 'downloadAttachment'])->name('agreements.attachments.download');
-    
+
     // Activities - visible to all authenticated users (with visibility filtering in controller)
     Route::get('/activities', [ActivityController::class, 'index'])->name('activities.index');
     Route::get('/activities/create', [ActivityController::class, 'create'])->name('activities.create');
@@ -59,17 +59,17 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::put('/activities/{activity}', [ActivityController::class, 'update'])->name('activities.update');
     Route::post('/activities/{activity}/duplicate', [ActivityController::class, 'duplicate'])->name('activities.duplicate');
     Route::delete('/activities/{activity}', [ActivityController::class, 'destroy'])->name('activities.destroy');
-    
+
     // Document download for activity logging field uploads
     Route::get('/activities/{activity}/logging-field-document/{context}/{fieldId}/{agreementId?}', [ActivityController::class, 'downloadLoggingFieldDocument'])
         ->name('activities.logging-field-document.download');
 
     // HTMX endpoint for filtering activity types by contact family
     Route::get('/activity-types/by-family', [ActivityTypeController::class, 'getByFamily'])->name('activity-types.by-family');
-    
+
     // Reports
     // Route::get('/reports/activities', [ReportController::class, 'activities'])->name('reports.activities');
-    
+
     // Organizations - viewable by all, admin-only for create/edit/delete
     Route::get('/organizations', [OrganizationController::class, 'index'])->name('organizations.index');
     // Register /create before the {organization} wildcard to prevent route swallowing
@@ -90,7 +90,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         // User show page (admin-only)
         Route::get('/users/{user}', [AdminUserController::class, 'show'])->name('users.show');
     });
-    
+
     // Admin user management
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');

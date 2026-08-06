@@ -3,15 +3,10 @@
 @section('title', 'Create Logging Field')
 
 @section('content')
-<div class="row justify-content-center mb-4">
-    <div class="col-lg-8">
-        <h1>Create Logging Field</h1>
-        <p class="text-muted">Define a new field that can be used across the application.</p>
-    </div>
-</div>
-
 <div class="row justify-content-center">
     <div class="col-lg-8">
+        <x-page-header context="form" entity-type="Logging Field" description="Define a new field that can be used across the application." />
+
         <div class="card">
             <div class="card-body">
                 @if ($errors->any())
@@ -33,6 +28,6 @@
     </div>
 </div>
 
-<x-save-bar form-id="logging-field-create-form" cancel-url="{{ route('logging-fields.index') }}" save-label="Create Logging Field" />
+<x-save-bar form-id="logging-field-create-form" save-label="Create Logging Field" />
 
 @endsection

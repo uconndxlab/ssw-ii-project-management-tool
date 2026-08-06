@@ -1,13 +1,9 @@
 {{--
-    Shared "Show" layout component for all major entities.
+    Shared show-page body layout component.
 
     Props:
-        title          - Entity name / heading
-        type           - Label for the type badge (e.g. "State", "Agreement")
-        typeBadgeClass - Bootstrap bg-* class for the badge (default: bg-secondary)
-        editRoute      - URL string for the Edit button (omit to hide)
-        backRoute      - URL string for the Back button
-        backLabel      - Text for the Back button (default: "Back")
+        mainCardTitle - Title for the primary right-side card
+        activityFirst - Whether recent activity appears before the main card
 
     Named slots:
         $summary       - Core field list (left column)
@@ -15,55 +11,11 @@
         $activity      - Recent activity content (right column, bottom)
 --}}
 @props([
-    'title',
-    'type'           => null,
-    'typeBadgeClass' => 'bg-secondary',
-    'badgeKind'      => null,
-    'editRoute'      => null,
-    'editLabel'      => 'Edit',
-    'backRoute',
-    'backLabel'      => 'Back',
     'mainCardTitle'  => 'Relationships',
     'activityFirst'  => false,
-    'active'         => null,
 ])
 
-{{-- ── Page Header ──────────────────────────────────────────────────────── --}}
-<div class="mb-4">
-    <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
-        <div class="min-w-0 flex-grow-1">
-            <a href="{{ $backRoute }}" class="btn btn-link btn-sm text-muted text-decoration-none px-0 mb-1">
-                <i class="bi bi-arrow-left me-1"></i>{{ $backLabel }}
-            </a>
-
-            @if(filled($type) || ! is_null($active))
-                <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-                    @if(filled($type))
-                        @if($badgeKind)
-                            <x-category-badge :kind="$badgeKind">{{ $type }}</x-category-badge>
-                        @else
-                            <x-entity-type-badge :label="$type" :badge-class="$typeBadgeClass" />
-                        @endif
-                    @endif
-                    @if(! is_null($active))
-                        <x-status-badge :active="$active" />
-                    @endif
-                </div>
-            @endif
-            <h1 class="h2 mb-0 fw-bold">{{ $title }}</h1>
-        </div>
-
-        @if($editRoute)
-            <a href="{{ $editRoute }}" class="btn btn-outline-primary flex-shrink-0">
-                <i class="bi bi-pencil-square me-1"></i>{{ $editLabel }}
-            </a>
-        @endif
-    </div>
-</div>
-
-{{-- ── Three-column card grid ───────────────────────────────────────────── --}}
 <div class="row g-4">
-
     {{-- Summary column (narrow) --}}
     <div class="col-lg-4">
         <div class="card shadow-sm entity-show-card h-100">
@@ -78,11 +30,8 @@
         </div>
     </div>
 
-    {{-- Relationships + Activity column (wide) --}}
     <div class="col-lg-8 d-flex flex-column gap-4">
-
         @if($activityFirst)
-            {{-- Recent Activity card --}}
             <div class="card shadow-sm entity-show-card">
                 <div class="card-header bg-light py-2 px-3">
                     <span class="text-muted fw-semibold small text-uppercase mb-0" style="letter-spacing:.05em;">
@@ -130,6 +79,5 @@
                 </div>
             </div>
         @endif
-
     </div>
 </div>

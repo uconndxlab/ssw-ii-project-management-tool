@@ -16,14 +16,10 @@
         ];
     });
 @endphp
-<div class="row mb-4">
-    <div class="col-12">
-        <h1>Create Team</h1>
-    </div>
-</div>
-
 <div class="row">
     <div class="col-md-8">
+        <x-page-header context="form" entity-type="Team" />
+
         <div class="card">
             <div class="card-body">
                 @if ($errors->any())
@@ -109,5 +105,5 @@
         </div>
     </div>
 </div>
-<x-save-bar form-id="teams-create-form" cancel-url="{{ route('teams.index') }}" save-label="Create Team" />
+<x-save-bar form-id="teams-create-form" save-label="Create Team" />
 @endsection

@@ -18,11 +18,11 @@
         <form method="POST" action="{{ route('activity-types.update', $activityType) }}" id="activity-types-edit-form">
             @csrf
             @method('PUT')
-            <x-form-page-header
+            <x-page-header
+                context="form"
+                :title="old('name', $activityType->name)"
                 entity-type="Activity Type"
-                entity-type-badge-class="bg-primary"
                 mode="edit"
-                :record-name="old('name', $activityType->name)"
                 :show-active="true"
                 :active-default="old('active', $activityType->active)"
                 active-help="Only active activity types appear in activity forms."
@@ -31,5 +31,5 @@
         </form>
     </div>
 </div>
-<x-save-bar form-id="activity-types-edit-form" cancel-url="{{ route('activity-types.index') }}" save-label="Save Activity Type" :last-saved-at="$activityType->updated_at" />
+<x-save-bar form-id="activity-types-edit-form" save-label="Save Activity Type" :last-saved-at="$activityType->updated_at" />
 @endsection

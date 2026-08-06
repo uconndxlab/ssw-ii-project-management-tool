@@ -8,31 +8,22 @@
 @endphp
 <div class="row mb-4">
     <div class="col-12">
-        <a href="{{ route('activities.index') }}" class="btn btn-link btn-sm text-muted text-decoration-none px-0 mb-2">
-            <i class="bi bi-arrow-left me-1"></i>Back to activities
-        </a>
-        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
-            <div class="flex-grow-1 min-w-0">
-                <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-                    <x-entity-type-badge label="Activity" :badge-class="\App\Support\EntityBadge::typeClasses('activity')" />
-                    @if($activity->cancelled)
-                        <x-status-badge :active="false" inactive-label="Cancelled" />
-                    @endif
-                    @if($activity->internal_only)
-                        <span class="badge bg-warning text-dark">Internal only</span>
-                    @endif
-                </div>
-                <h1 class="h2 mb-1 fw-bold">{{ $activity->activityType->name }}</h1>
-                <p class="mb-1 text-muted">{{ $activity->engagement_date->format('F d, Y') }}</p>
-                <div class="small text-muted">{{ $activity->activityType->contactFamily->name }} · Logged by {{ $activity->user->name }}</div>
-            </div>
-            <div>
-                @if($canManageActivity)
-                <a href="{{ route('activities.edit', $activity) }}" class="btn btn-primary">Edit</a>
+        <x-page-header
+            context="show"
+            :title="$activity->activityType->name"
+            entity-type="Activity"
+            :description="$activity->engagement_date->format('F d, Y') . ' · ' . $activity->activityType->contactFamily->name . ' · Logged by ' . $activity->user->name"
+            :action-url="$canManageActivity ? route('activities.edit', $activity) : null"
+        >
+            <x-slot:badges>
+                @if($activity->internal_only)
+                    <span class="badge bg-warning text-dark">Internal only</span>
                 @endif
-                <a href="{{ route('activities.index') }}" class="btn btn-secondary">Back to Activities</a>
-            </div>
-        </div>
+                @if($activity->cancelled)
+                    <x-status-badge :active="false" inactive-label="Cancelled" />
+                @endif
+            </x-slot:badges>
+        </x-page-header>
     </div>
 </div>
 

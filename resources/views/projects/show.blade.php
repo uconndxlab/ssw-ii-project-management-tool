@@ -3,14 +3,15 @@
 @section('title', $project->name)
 
 @section('content')
-<x-entity-show
-    title="{{ $project->name }}"
-    type="Project"
-    typeBadgeClass="bg-dark"
-    editRoute="{{ route('projects.edit', $project) }}"
-    backRoute="{{ route('projects.index') }}"
-    backLabel="All Projects"
->
+<x-page-header
+    context="show"
+    :title="$project->name"
+    entity-type="Project"
+    :active="$project->active"
+    :action-url="route('projects.edit', $project)"
+/>
+
+<x-entity-show>
     {{-- ── Summary ─────────────────────────────────────────────────────── --}}
     <x-slot:summary>
         <dl class="row mb-0">

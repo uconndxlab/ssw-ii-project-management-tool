@@ -5,25 +5,19 @@
 @section('content')
 <div class="row mb-4">
     <div class="col-12">
-        <div class="d-flex justify-content-between align-items-start">
-            <div>
-                <h1>{{ $loggingField->name }}</h1>
-                <p class="text-muted mb-0">
-                    @if($loggingField->is_active)
-                        <span class="badge bg-success ms-2">Active</span>
-                    @else
-                        <span class="badge bg-secondary ms-2">Inactive</span>
-                    @endif
-                    @if($loggingField->is_full_width)
-                        <span class="badge bg-dark ms-2">Full width</span>
-                    @endif
-                </p>
-            </div>
-            <div class="d-flex gap-2">
-                <a href="{{ route('logging-fields.edit', $loggingField) }}" class="btn btn-outline-primary">Edit</a>
-                <a href="{{ route('logging-fields.index') }}" class="btn btn-outline-secondary">Back to List</a>
-            </div>
-        </div>
+        <x-page-header
+            context="show"
+            :title="$loggingField->name"
+            entity-type="Logging Field"
+            :active="$loggingField->is_active"
+            :action-url="route('logging-fields.edit', $loggingField)"
+        >
+            <x-slot:badges>
+                @if($loggingField->is_full_width)
+                    <span class="badge bg-dark">Full width</span>
+                @endif
+            </x-slot:badges>
+        </x-page-header>
     </div>
 </div>
 

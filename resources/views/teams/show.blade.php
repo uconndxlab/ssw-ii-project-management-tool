@@ -4,12 +4,8 @@
 
 @section('content')
 <div class="row mb-4">
-    <div class="col-12 d-flex justify-content-between align-items-center">
-        <h1>{{ $team->name }}</h1>
-        <div class="btn-group">
-            <a href="{{ route('teams.edit', $team) }}" class="btn btn-primary">Edit Team</a>
-            <a href="{{ route('teams.index') }}" class="btn btn-secondary">Back to Teams</a>
-        </div>
+    <div class="col-12">
+        <x-page-header context="show" :title="$team->name" entity-type="Team" :active="$team->active" :action-url="route('teams.edit', $team)" />
     </div>
 </div>
 
@@ -63,7 +59,7 @@
                                     <x-user-link :user="$user" class="d-block fw-semibold" />
                                     <small class="text-muted">{{ $user->email }}</small>
                                 </div>
-                                <span class="badge 
+                                <span class="badge
                                     @if($user->role === 'admin') bg-danger
                                     @elseif($user->role === 'consultant') bg-info
                                     @else bg-secondary

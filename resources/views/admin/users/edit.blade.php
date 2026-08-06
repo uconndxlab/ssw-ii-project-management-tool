@@ -18,13 +18,11 @@
         <form method="POST" action="{{ route('admin.users.update', $user) }}" id="users-edit-form">
             @csrf
             @method('PUT')
-            <x-form-page-header
+            <x-page-header
+                context="form"
+                :title="$user->name"
                 entity-type="User"
-                :entity-type-badge-class="\App\Support\EntityBadge::typeClasses('user')"
                 mode="edit"
-                :record-name="$user->name"
-                :back-route="\App\Support\UserProfileLink::route($user) ?? route('admin.users.index')"
-                back-label="Back to user"
                 :show-active="true"
                 :active-default="old('active', $user->active)"
                 active-help="Inactive users cannot log in and are removed from teams, agreements, and assignment pickers. Activity history and contributions are kept."
@@ -33,5 +31,5 @@
         </form>
     </div>
 </div>
-<x-save-bar form-id="users-edit-form" cancel-url="{{ route('admin.users.index') }}" save-label="Save User" :last-saved-at="$user->updated_at" />
+<x-save-bar form-id="users-edit-form" save-label="Save User" :last-saved-at="$user->updated_at" />
 @endsection

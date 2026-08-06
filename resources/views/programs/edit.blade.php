@@ -3,14 +3,10 @@
 @section('title', 'Edit Program')
 
 @section('content')
-<div class="row justify-content-center mb-4">
-    <div class="col-md-6">
-        <h1>Edit Program</h1>
-    </div>
-</div>
-
 <div class="row justify-content-center">
     <div class="col-md-6">
+        <x-page-header context="form" :title="old('name', $program->name)" entity-type="Program" mode="edit" />
+
         <div class="card">
             <div class="card-header">
                 <h5 class="mb-0">Program Details</h5>
@@ -94,5 +90,5 @@
         </div>
     </div>
 </div>
-<x-save-bar form-id="programs-edit-form" cancel-url="{{ route('programs.index') }}" save-label="Save Program" :last-saved-at="$program->updated_at" />
+<x-save-bar form-id="programs-edit-form" save-label="Save Program" :last-saved-at="$program->updated_at" />
 @endsection

@@ -3,14 +3,10 @@
 @section('title', 'Edit Project')
 
 @section('content')
-<div class="row justify-content-center mb-4">
-    <div class="col-md-6">
-        <h1>Edit Project: {{ $project->name }}</h1>
-    </div>
-</div>
-
 <div class="row justify-content-center">
     <div class="col-md-6">
+        <x-page-header context="form" :title="old('name', $project->name)" entity-type="Project" mode="edit" />
+
         <div class="card">
             <div class="card-header">
                 <h5 class="mb-0">Project Details</h5>
@@ -73,5 +69,5 @@
         </div>
     </div>
 </div>
-<x-save-bar form-id="projects-edit-form" cancel-url="{{ route('projects.index') }}" save-label="Save Project" :last-saved-at="$project->updated_at" />
+<x-save-bar form-id="projects-edit-form" save-label="Save Project" :last-saved-at="$project->updated_at" />
 @endsection

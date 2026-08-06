@@ -3,14 +3,15 @@
 @section('title', $organization->name)
 
 @section('content')
-<x-entity-show
-    title="{{ $organization->name }}"
-    type="Organization"
-    typeBadgeClass="bg-primary"
-    editRoute="{{ auth()->user()->isAdmin() ? route('organizations.edit', $organization) : null }}"
-    backRoute="{{ route('organizations.index') }}"
-    backLabel="All Organizations"
->
+<x-page-header
+    context="show"
+    :title="$organization->name"
+    entity-type="Organization"
+    :active="$organization->active"
+    :action-url="auth()->user()->isAdmin() ? route('organizations.edit', $organization) : null"
+/>
+
+<x-entity-show>
     {{-- ── Summary ─────────────────────────────────────────────────────── --}}
     <x-slot:summary>
         <dl class="row mb-0">

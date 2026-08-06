@@ -3,14 +3,10 @@
 @section('title', 'Create State')
 
 @section('content')
-<div class="row justify-content-center mb-4">
-    <div class="col-md-6">
-        <h1>Create State</h1>
-    </div>
-</div>
-
 <div class="row justify-content-center">
     <div class="col-md-6">
+        <x-page-header context="form" entity-type="State" />
+
         <div class="card">
             <div class="card-body">
                 @if ($errors->any())
@@ -44,5 +40,5 @@
         </div>
     </div>
 </div>
-<x-save-bar form-id="states-create-form" cancel-url="{{ route('states.index') }}" save-label="Create State" />
+<x-save-bar form-id="states-create-form" save-label="Create State" />
 @endsection

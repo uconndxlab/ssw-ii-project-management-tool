@@ -3,14 +3,10 @@
 @section('title', 'Create Project')
 
 @section('content')
-<div class="row justify-content-center mb-4">
-    <div class="col-md-6">
-        <h1>Create Project</h1>
-    </div>
-</div>
-
 <div class="row justify-content-center">
     <div class="col-md-6">
+        <x-page-header context="form" entity-type="Project" />
+
         <div class="card">
             <div class="card-header">
                 <h5 class="mb-0">Project Details</h5>
@@ -72,5 +68,5 @@
         </div>
     </div>
 </div>
-<x-save-bar form-id="projects-create-form" cancel-url="{{ route('projects.index') }}" save-label="Create Project" />
+<x-save-bar form-id="projects-create-form" save-label="Create Project" />
 @endsection

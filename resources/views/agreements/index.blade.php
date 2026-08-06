@@ -4,15 +4,7 @@
 
 @section('content')
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1 class="h2 mb-1">Agreements</h1>
-        <p class="text-muted small mb-0">{{ $agreements->total() }} total</p>
-    </div>
-    @if(auth()->user()->isAdmin())
-        <a href="{{ route('agreements.create') }}" class="btn btn-primary">+ Create Agreement</a>
-    @endif
-</div>
+<x-page-header context="index" title="Agreements" description="{{ $agreements->total() }} total" :action-url="auth()->user()->isAdmin() ? route('agreements.create') : null" />
 
 <div class="card shadow-sm mb-3">
     <div class="card-body py-2">

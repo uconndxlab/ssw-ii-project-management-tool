@@ -17,9 +17,9 @@
 
         <form method="POST" action="{{ route('activity-types.store') }}" id="activity-types-create-form">
             @csrf
-            <x-form-page-header
+            <x-page-header
+                context="form"
                 entity-type="Activity Type"
-                entity-type-badge-class="bg-primary"
                 mode="create"
                 :show-active="true"
                 :active-default="old('active', true)"
@@ -29,5 +29,5 @@
         </form>
     </div>
 </div>
-<x-save-bar form-id="activity-types-create-form" cancel-url="{{ route('activity-types.index') }}" save-label="Create Activity Type" />
+<x-save-bar form-id="activity-types-create-form" save-label="Create Activity Type" />
 @endsection

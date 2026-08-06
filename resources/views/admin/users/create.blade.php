@@ -17,12 +17,10 @@
 
         <form method="POST" action="{{ route('admin.users.store') }}" id="users-create-form">
             @csrf
-            <x-form-page-header
+            <x-page-header
+                context="form"
                 entity-type="User"
-                :entity-type-badge-class="\App\Support\EntityBadge::typeClasses('user')"
                 mode="create"
-                :back-route="route('admin.users.index')"
-                back-label="All Users"
                 :show-active="true"
                 :active-default="old('active', true)"
                 active-help="Inactive users cannot log in and are removed from teams, agreements, and assignment pickers. Activity history and contributions are kept."
@@ -31,5 +29,5 @@
         </form>
     </div>
 </div>
-<x-save-bar form-id="users-create-form" cancel-url="{{ route('admin.users.index') }}" save-label="Create User" />
+<x-save-bar form-id="users-create-form" save-label="Create User" />
 @endsection

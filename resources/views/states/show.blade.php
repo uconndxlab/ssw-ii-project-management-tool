@@ -3,14 +3,14 @@
 @section('title', $state->name)
 
 @section('content')
-<x-entity-show
-    title="{{ $state->name }}"
-    type="State"
-    typeBadgeClass="bg-info text-dark"
-    editRoute="{{ auth()->user()->isAdmin() ? route('states.edit', $state) : null }}"
-    backRoute="{{ route('states.index') }}"
-    backLabel="All States"
->
+<x-page-header
+    context="show"
+    :title="$state->name"
+    entity-type="State"
+    :action-url="auth()->user()->isAdmin() ? route('states.edit', $state) : null"
+/>
+
+<x-entity-show>
     {{-- ── Summary ─────────────────────────────────────────────────────── --}}
     <x-slot:summary>
         <dl class="row mb-0">

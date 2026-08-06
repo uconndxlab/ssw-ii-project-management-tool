@@ -135,11 +135,7 @@
     $isEditMode = $formMode === 'edit';
     $formId = $isEditMode ? 'activity-edit-form' : 'activity-create-form';
     $formAction = $isEditMode ? route('activities.update', $activity) : route('activities.store');
-    $backRoute = $isEditMode && $activity
-        ? route('activities.show', $activity)
-        : route('activities.index');
-    $backLabel = $isEditMode ? 'Back to activity' : 'Back to activities';
-    $saveLabel = $isEditMode ? 'Save Activity' : 'Create Activity';
+    $saveLabel = $isEditMode ? 'Save Activity' : 'Log Activity';
     $agreementsWithPerAgreementFields = $agreements->filter(function ($agreement) {
         return $agreement->agreementLoggingFields->isNotEmpty()
             || $agreement->require_payor
@@ -326,13 +322,11 @@
                 @method('PUT')
             @endif
 
-            <x-form-page-header
+            <x-page-header
+                context="form"
+                :title="$isEditMode ? $recordName : null"
                 entity-type="Activity"
-                :entity-type-badge-class="\App\Support\EntityBadge::typeClasses('activity')"
-                :mode="$isEditMode ? 'edit' : 'create'"
-                :record-name="$recordName"
-                :back-route="$backRoute"
-                :back-label="$backLabel"
+                mode="{{ $isEditMode ? 'edit' : 'create' }}"
             />
 
             <div class="d-grid gap-4">
@@ -804,7 +798,6 @@
 
 <x-save-bar
     :form-id="$formId"
-    :cancel-url="$backRoute"
     :save-label="$saveLabel"
     :last-saved-at="$activity?->updated_at"
 />
