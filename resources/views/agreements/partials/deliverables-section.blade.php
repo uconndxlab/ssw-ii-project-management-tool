@@ -295,8 +295,8 @@
                 <div class="modal-content">
                     <div class="modal-header">
                         <div>
-                            <h5 class="modal-title mb-0" id="deliverable-editor-modal-label">Deliverable Form</h5>
-                            <div class="text-muted small">Add a new deliverable or edit the selected row, then save it into the table.</div>
+                            <h5 class="modal-title mb-0" id="deliverable-editor-modal-label">Create Deliverable</h5>
+                            <div class="text-muted small" id="deliverable-editor-modal-description">Create a new deliverable or edit the selected row, then save it into the table.</div>
                         </div>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
@@ -332,6 +332,8 @@
         const editorModalEl = document.getElementById('deliverable-editor-modal');
         const editorCard = editorModalEl ? editorModalEl.querySelector('.modal-content') : null;
         const editorFieldset = editorModalEl ? editorModalEl.querySelector('[data-deliverable-fields]') : null;
+        const editorTitle = document.getElementById('deliverable-editor-modal-label');
+        const editorDescription = document.getElementById('deliverable-editor-modal-description');
 
         if (!tableBody || !hiddenInputs || !saveButton || !clearButton || !editorKeyInput || !editorFieldset) {
             return;
@@ -360,6 +362,76 @@
         let nextTempId = 1;
         const rowStore = {};
         const editorModal = window.bootstrap ? bootstrap.Modal.getOrCreateInstance(editorModalEl) : null;
+        let editorMode = 'create';
+
+        function syncSelectableCardStates() {
+            editorFieldset.querySelectorAll('input[type="radio"]').forEach(function (input) {
+                const label = input.closest('label.form-check.border.rounded');
+                if (!label) {
+                    return;
+                }
+
+                label.classList.toggle('border-primary', input.checked);
+                label.classList.toggle('bg-light', input.checked);
+            });
+        }
+
+        function syncEditorHeading() {
+            if (editorTitle) {
+                editorTitle.textContent = editorMode === 'edit' ? 'Edit Deliverable' : 'Create Deliverable';
+            }
+
+            if (editorDescription) {
+                editorDescription.textContent = editorMode === 'edit'
+                    ? 'Edit the selected deliverable, then save it into the table.'
+                    : 'Create a new deliverable, then save it into the table.';
+            }
+        }
+
+        function setEditorIdentity(rowKey, rowId) {
+            const fieldPrefix = 'deliverable_editor';
+
+            currentKey = rowKey || null;
+            editorKeyInput.value = rowKey || '';
+            editorCard.querySelector('[name="deliverable_editor[id]"]')?.remove();
+
+            if (rowId === undefined || rowId === null || rowId === '') {
+                return;
+            }
+
+            const idInput = document.createElement('input');
+            idInput.type = 'hidden';
+            idInput.name = fieldPrefix + '[id]';
+            idInput.value = rowId;
+            editorFieldset.prepend(idInput);
+        }
+
+        function blankEditableFields(lockState) {
+            const classificationLocked = !!lockState?.classification_locked;
+            const semanticLocked = !!lockState?.semantic_locked;
+
+            if (!classificationLocked) {
+                const familySelect = editorFieldset.querySelector('[data-deliverable-contact-family]');
+                if (familySelect) familySelect.value = '';
+                const typeSelect = editorFieldset.querySelector('[data-deliverable-activity-type]');
+                if (typeSelect) typeSelect.value = '';
+                const programSelect = editorFieldset.querySelector('[data-deliverable-program]');
+                if (programSelect) programSelect.value = '';
+            }
+
+            if (!semanticLocked) {
+                editorFieldset.querySelectorAll('[data-deliverable-metric], [data-deliverable-time-basis], [data-deliverable-basis], [data-deliverable-grouping], [data-deliverable-target-unit]').forEach(function (radio) {
+                    radio.checked = false;
+                });
+
+                const additionalTime = editorFieldset.querySelector('[data-deliverable-additional-time]');
+                if (additionalTime) additionalTime.checked = false;
+            }
+
+            editorFieldset.querySelectorAll('[data-deliverable-target], [data-deliverable-target-locked], [data-deliverable-due-date], [data-deliverable-notes]').forEach(function (input) {
+                input.value = '';
+            });
+        }
 
         function selectedProgramIds() {
             const picker = document.getElementById('agreement-scope-programs');
@@ -879,6 +951,11 @@
             }
 
             if (metric !== 'time') {
+                unitInputs.forEach(function (input) {
+                    input.checked = false;
+                    input.disabled = false;
+                    input.closest('label')?.classList.remove('text-muted');
+                });
                 return;
             }
 
@@ -950,10 +1027,9 @@
             }
 
             if (!isTimeMetric) {
-                const observedInput = editorFieldset.querySelector('[data-deliverable-time-basis][value="observed"]');
-                if (observedInput) {
-                    observedInput.checked = true;
-                }
+                timeBasisInputs.forEach(function (input) {
+                    input.checked = false;
+                });
             }
 
             syncTargetUnitState();
@@ -1010,6 +1086,8 @@
             if (additionalTimeCheckbox && !showAdditionalTime) {
                 additionalTimeCheckbox.checked = false;
             }
+
+            syncSelectableCardStates();
 
             const assignment = getSelectedAssignmentState();
             renderAssignmentLedger(assignment.user_ids, assignment.team_ids);
@@ -1107,16 +1185,9 @@
         }
 
         function setEditorData(rowKey, rowData) {
-            currentKey = rowKey;
-            editorKeyInput.value = rowKey || '';
-            const fieldPrefix = 'deliverable_editor';
-
-            editorCard.querySelector('[name="deliverable_editor[id]"]')?.remove();
-            const idInput = document.createElement('input');
-            idInput.type = 'hidden';
-            idInput.name = fieldPrefix + '[id]';
-            idInput.value = rowData.id || '';
-            editorFieldset.prepend(idInput);
+            editorMode = 'edit';
+            syncEditorHeading();
+            setEditorIdentity(rowKey, rowData.id || '');
 
             const familySelect = editorFieldset.querySelector('[data-deliverable-contact-family]');
             if (familySelect) familySelect.value = rowData.contact_family_id || '';
@@ -1163,27 +1234,21 @@
         }
 
         function clearEditor(showModal) {
-            currentKey = null;
-            editorKeyInput.value = '';
-            editorCard.querySelector('[name="deliverable_editor[id]"]')?.remove();
+            const sourceRow = currentKey ? rowStore[currentKey] || null : null;
 
-            const familySelect = editorFieldset.querySelector('[data-deliverable-contact-family]');
-            if (familySelect) familySelect.value = '';
-            const typeSelect = editorFieldset.querySelector('[data-deliverable-activity-type]');
-            if (typeSelect) typeSelect.value = '';
-            const programSelect = editorFieldset.querySelector('[data-deliverable-program]');
-            if (programSelect) programSelect.value = '';
+            if (editorMode === 'edit' && sourceRow) {
+                setEditorIdentity(currentKey, sourceRow.id || '');
+                blankEditableFields(sourceRow);
+                applyLockState(sourceRow);
+            } else {
+                editorMode = 'create';
+                const createKey = currentKey;
+                setEditorIdentity(createKey, '');
+                blankEditableFields({ classification_locked: false, semantic_locked: false });
+                applyLockState({ classification_locked: false, semantic_locked: false });
+            }
 
-            editorFieldset.querySelectorAll('[data-deliverable-metric], [data-deliverable-time-basis], [data-deliverable-basis], [data-deliverable-grouping], [data-deliverable-target-unit]').forEach(function (radio) {
-                radio.checked = false;
-            });
-            editorFieldset.querySelectorAll('[data-deliverable-target], [data-deliverable-target-locked], [data-deliverable-due-date], [data-deliverable-notes]').forEach(function (input) {
-                input.value = '';
-            });
-            const additionalTime = editorFieldset.querySelector('[data-deliverable-additional-time]');
-            if (additionalTime) additionalTime.checked = false;
-
-            applyLockState({ classification_locked: false, semantic_locked: false });
+            syncEditorHeading();
             syncActivityTypeOptions();
             renderAssignmentLedger([], []);
 
@@ -1424,9 +1489,9 @@
         addButtons.forEach(function (button) {
             button.addEventListener('click', function () {
                 const newKey = newRowKey();
+                editorMode = 'create';
                 currentKey = newKey;
                 clearEditor();
-                editorKeyInput.value = newKey;
             });
         });
 
