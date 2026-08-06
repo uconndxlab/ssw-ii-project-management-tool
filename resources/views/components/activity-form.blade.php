@@ -1301,24 +1301,6 @@
         htmx.trigger(family, 'change');
     }
 
-    function updateAgreementAutoFill() {
-        const agreementId = firstSelectedAgreementId();
-        const config = agreementConfigs[agreementId] || {};
-
-        if (agreementId && config.organization_ids) {
-            const orgPicker = document.getElementById('activity-organizations-picker');
-            if (orgPicker && !selectedValues('organization_ids[]').length) {
-                orgPicker.dispatchEvent(new CustomEvent('token-picker:set', { detail: config.organization_ids }));
-            }
-        }
-        if (agreementId && config.state_ids) {
-            const statePicker = document.getElementById('activity-states-picker');
-            if (statePicker && !selectedValues('state_ids[]').length) {
-                statePicker.dispatchEvent(new CustomEvent('token-picker:set', { detail: config.state_ids }));
-            }
-        }
-    }
-
     function updateAgreementLoggingGroups() {
         const selected = new Set(selectedAgreementIds());
         const section = document.getElementById('agreement-logging-section');
@@ -1479,7 +1461,6 @@
             restrictScopePickers();
             restrictClassificationOptions();
             refreshActivityTypes();
-            updateAgreementAutoFill();
             updateAgreementLoggingGroups();
             updateTimeTrackingSection();
             markDirty();
@@ -1492,9 +1473,6 @@
             restrictScopePickers();
             restrictClassificationOptions();
             refreshActivityTypes();
-            if (!isEditMode) {
-                updateAgreementAutoFill();
-            }
             updateAgreementLoggingGroups();
             updateTimeTrackingSection();
         });
