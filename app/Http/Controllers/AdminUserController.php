@@ -32,7 +32,7 @@ class AdminUserController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                   ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('kfs_number', 'like', "%{$search}%");
+                  ->orWhere('po_number', 'like', "%{$search}%");
             });
         }
 
@@ -86,7 +86,7 @@ class AdminUserController extends Controller
 
         match ($sort) {
             'email' => $query->orderBy('users.email', $direction),
-            'kfs' => $query->orderByRaw("COALESCE(users.kfs_number, '') {$dir}")->orderBy('users.name', 'asc'),
+            'po' => $query->orderByRaw("COALESCE(users.po_number, '') {$dir}")->orderBy('users.name', 'asc'),
             'role' => $query->orderBy('users.role', $direction),
             'supervisor' => $query->orderBy(
                 User::query()->select('name')->whereColumn('id', 'users.supervisor_id'),
@@ -148,7 +148,7 @@ class AdminUserController extends Controller
             'email' => $validated['email'],
             'password' => $validated['password'],
             'role' => $validated['role'],
-            'kfs_number' => $validated['kfs_number'] ?? null,
+            'po_number' => $validated['po_number'] ?? null,
             'active' => $isActive,
             'supervisor_id' => $validated['supervisor_id'] ?? null,
         ]);
@@ -179,7 +179,7 @@ class AdminUserController extends Controller
             'name' => $validated['name'],
             'email' => $validated['email'],
             'role' => $validated['role'],
-            'kfs_number' => $validated['kfs_number'] ?? null,
+            'po_number' => $validated['po_number'] ?? null,
             'active' => $isActive,
             'supervisor_id' => $validated['supervisor_id'] ?? null,
         ];

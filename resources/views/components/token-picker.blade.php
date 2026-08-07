@@ -51,7 +51,7 @@
             'contextBadgeClass' => data_get($item, 'contextBadgeClass', $optionBadgeClass ?? $entityBadgeClass ?? 'bg-primary-subtle text-primary-emphasis border'),
             'meta' => filled(data_get($item, 'meta'))
                 ? (string) data_get($item, 'meta')
-                : (filled(data_get($item, 'kfs_number')) ? (string) data_get($item, 'kfs_number') : null),
+                : (filled(data_get($item, 'po_number')) ? (string) data_get($item, 'po_number') : null),
             'selectedBadgeClass' => data_get($item, 'selectedBadgeClass', $optionBadgeClass ?? $entityBadgeClass),
         ];
     })->filter(fn ($option) => $option['value'] !== '')->values()->all();

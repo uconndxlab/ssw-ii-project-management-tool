@@ -38,18 +38,18 @@
             </div>
 
             <div class="mb-3">
-                <label for="kfs_number" class="form-label">KFS Number</label>
+                <label for="po_number" class="form-label">PO Number</label>
                 <input type="text"
-                       class="form-control @error('kfs_number') is-invalid @enderror"
-                       id="kfs_number"
-                       name="kfs_number"
-                       value="{{ old('kfs_number', $organization?->kfs_number ?? '') }}"
+                       class="form-control @error('po_number') is-invalid @enderror"
+                       id="po_number"
+                       name="po_number"
+                       value="{{ old('po_number', $organization?->po_number ?? '') }}"
                        maxlength="7"
                        pattern="[A-Za-z0-9]*"
                        autocomplete="off"
                        placeholder="e.g. 4232321">
-                <div class="form-text">Optional. Up to 7 alphanumeric characters (Kuali Financial System account number).</div>
-                @error('kfs_number')
+                <div class="form-text">Optional. Up to 7 alphanumeric characters.</div>
+                @error('po_number')
                     <div class="invalid-feedback">{{ $message }}</div>
                 @enderror
             </div>

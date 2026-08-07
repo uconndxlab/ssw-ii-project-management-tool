@@ -41,7 +41,7 @@ class ActivityFundingSourceTokens
 
         foreach ($agreements as $agreement) {
             $orgTokens = $agreement->organizations
-                ->filter(fn ($org) => filled($org->kfs_number))
+                ->filter(fn ($org) => filled($org->po_number))
                 ->map(fn ($org) => ActivityAgreementFundingSource::tokenFor(
                     ActivityAgreementFundingSource::SOURCE_ORGANIZATION,
                     (int) $org->id
@@ -52,7 +52,7 @@ class ActivityFundingSourceTokens
             $userTokens = $agreement->users
                 ->concat($agreement->teams->flatMap(fn ($team) => $team->users))
                 ->unique('id')
-                ->filter(fn ($user) => filled($user->kfs_number))
+                ->filter(fn ($user) => filled($user->po_number))
                 ->map(fn ($user) => ActivityAgreementFundingSource::tokenFor(
                     ActivityAgreementFundingSource::SOURCE_USER,
                     (int) $user->id
@@ -83,7 +83,7 @@ class ActivityFundingSourceTokens
             $agreementOptions = [];
 
             foreach ($agreement->organizations as $organization) {
-                if (!filled($organization->kfs_number)) {
+                if (!filled($organization->po_number)) {
                     continue;
                 }
 
@@ -95,10 +95,10 @@ class ActivityFundingSourceTokens
                 $agreementOptions[] = [
                     'value' => $token,
                     'label' => $organization->name,
-                    'search' => strtolower(trim($organization->name.' '.$organization->kfs_number)),
+                    'search' => strtolower(trim($organization->name.' '.$organization->po_number)),
                     'entity' => 'organization',
                     'contextLabels' => ['Organization'],
-                    'meta' => $organization->kfs_number,
+                    'meta' => $organization->po_number,
                 ];
             }
 
@@ -107,7 +107,7 @@ class ActivityFundingSourceTokens
                 ->unique('id');
 
             foreach ($memberUsers as $user) {
-                if (!filled($user->kfs_number)) {
+                if (!filled($user->po_number)) {
                     continue;
                 }
 
@@ -119,10 +119,10 @@ class ActivityFundingSourceTokens
                 $agreementOptions[] = [
                     'value' => $token,
                     'label' => $user->name,
-                    'search' => strtolower(trim($user->name.' '.$user->kfs_number.' '.($user->email ?? ''))),
+                    'search' => strtolower(trim($user->name.' '.$user->po_number.' '.($user->email ?? ''))),
                     'entity' => 'user',
                     'contextLabels' => ['User'],
-                    'meta' => $user->kfs_number,
+                    'meta' => $user->po_number,
                 ];
             }
 

@@ -30,7 +30,7 @@ class OrganizationController extends Controller
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('kfs_number', 'like', "%{$search}%")
+                    ->orWhere('po_number', 'like', "%{$search}%")
                     ->orWhereHas('states', function ($stateQuery) use ($search) {
                         $stateQuery->where('name', 'like', "%{$search}%");
                     });
@@ -149,7 +149,7 @@ class OrganizationController extends Controller
     {
         $states = State::orderBy('name', 'asc')->get();
         $projects = ProjectProgramScope::activeProjectsWithPrograms();
-        $users = User::query()->active()->orderBy('name')->get();
+        $users = User::query()->active()->orderBy('name', 'asc')->get();
 
         return view('organizations.create', compact('states', 'projects', 'users'));
     }
@@ -160,7 +160,7 @@ class OrganizationController extends Controller
 
         $organization = Organization::create([
             'name' => $validated['name'],
-            'kfs_number' => $validated['kfs_number'] ?? null,
+            'po_number' => $validated['po_number'] ?? null,
             'active' => $request->boolean('active'),
         ]);
         $organization->states()->sync($validated['state_ids']);
@@ -180,7 +180,7 @@ class OrganizationController extends Controller
         $organization->load(['states', 'programs.projects', 'users']);
         $states = State::orderBy('name', 'asc')->get();
         $projects = ProjectProgramScope::activeProjectsWithPrograms();
-        $users = User::query()->active()->orderBy('name')->get();
+        $users = User::query()->active()->orderBy('name', 'asc')->get();
 
         return view('organizations.edit', compact('organization', 'states', 'projects', 'users'));
     }
@@ -191,7 +191,7 @@ class OrganizationController extends Controller
 
         $organization->update([
             'name' => $validated['name'],
-            'kfs_number' => $validated['kfs_number'] ?? null,
+            'po_number' => $validated['po_number'] ?? null,
             'active' => $request->boolean('active'),
         ]);
         $organization->states()->sync($validated['state_ids']);
@@ -219,12 +219,12 @@ class OrganizationController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => ['required', 'string', 'max:255'],
-            'kfs_number' => [
+            'po_number' => [
                 'nullable',
                 'string',
                 'max:7',
                 'regex:/^[A-Za-z0-9]+$/',
-                Rule::unique('organizations', 'kfs_number')->ignore($organization?->id),
+                Rule::unique('organizations', 'po_number')->ignore($organization?->id),
             ],
             'active' => ['nullable', 'boolean'],
             'state_ids' => ['required', 'array', 'min:1'],
@@ -236,9 +236,9 @@ class OrganizationController extends Controller
             'user_ids' => ['nullable', 'array'],
             'user_ids.*' => ['exists:users,id'],
         ], [
-            'kfs_number.regex' => 'The KFS number must be 1-7 alphanumeric characters.',
-            'kfs_number.max' => 'The KFS number must be 1-7 alphanumeric characters.',
-            'kfs_number.unique' => 'This KFS number is already assigned to another organization.',
+            'po_number.regex' => 'The PO number must be 1-7 alphanumeric characters.',
+            'po_number.max' => 'The PO number must be 1-7 alphanumeric characters.',
+            'po_number.unique' => 'This PO number is already assigned to another organization.',
         ]);
 
         $validator->after(function ($validator) use ($request) {
@@ -257,7 +257,7 @@ class OrganizationController extends Controller
         $dir = $direction === 'desc' ? 'DESC' : 'ASC';
 
         match ($sort) {
-            'kfs' => $query->orderByRaw("COALESCE(organizations.kfs_number, '') {$dir}")->orderBy('organizations.name', 'asc'),
+            'po' => $query->orderByRaw("COALESCE(organizations.po_number, '') {$dir}")->orderBy('organizations.name', 'asc'),
             'states' => $query->orderByRaw($this->minOrganizationStateNameSql()." {$dir}")->orderBy('organizations.name', 'asc'),
             'projects' => $query->orderByRaw($this->minOrganizationProjectNameSql()." {$dir}")->orderBy('organizations.name', 'asc'),
             'programs' => $query->orderByRaw($this->minOrganizationProgramNameSql()." {$dir}")->orderBy('organizations.name', 'asc'),

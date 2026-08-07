@@ -14,7 +14,7 @@ class Organization extends Model
     protected $fillable = [
         'name',
         'active',
-        'kfs_number',
+        'po_number',
     ];
 
     protected function casts(): array

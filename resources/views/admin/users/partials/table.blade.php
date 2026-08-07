@@ -17,7 +17,7 @@
                         <x-table-sort-link column="email" label="Email" :sort="$s" :direction="$d" :url="$url('email')" target="#users-table" />
                     </th>
                     <th>
-                        <x-table-sort-link column="kfs" label="KFS" :sort="$s" :direction="$d" :url="$url('kfs')" target="#users-table" />
+                        <x-table-sort-link column="po" label="PO" :sort="$s" :direction="$d" :url="$url('po')" target="#users-table" />
                     </th>
                     <th>
                         <x-table-sort-link column="role" label="Role" :sort="$s" :direction="$d" :url="$url('role')" target="#users-table" />
@@ -45,7 +45,7 @@
                         <x-user-link :user="$user" class="fw-semibold text-decoration-none text-dark d-block" />
                     </td>
                     <td class="text-muted small">{{ $user->email }}</td>
-                    <td class="text-muted small">{{ $user->kfs_number ?: '—' }}</td>
+                    <td class="text-muted small">{{ $user->po_number ?: '—' }}</td>
                     <td>
                         <x-category-badge kind="role">{{ ucfirst($user->role) }}</x-category-badge>
                     </td>

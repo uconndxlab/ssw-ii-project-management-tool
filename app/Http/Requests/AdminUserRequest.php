@@ -20,9 +20,9 @@ class AdminUserRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'kfs_number.regex' => 'The KFS number must be 1-7 alphanumeric characters.',
-            'kfs_number.max' => 'The KFS number must be 1-7 alphanumeric characters.',
-            'kfs_number.unique' => 'This KFS number is already assigned to another user.',
+            'po_number.regex' => 'The PO number must be 1-7 alphanumeric characters.',
+            'po_number.max' => 'The PO number must be 1-7 alphanumeric characters.',
+            'po_number.unique' => 'This PO number is already assigned to another user.',
         ];
     }
 
@@ -33,12 +33,12 @@ class AdminUserRequest extends FormRequest
 
         return [
             'name' => ['required', 'string', 'max:255'],
-            'kfs_number' => [
+            'po_number' => [
                 'nullable',
                 'string',
                 'max:7',
                 'regex:/^[A-Za-z0-9]+$/',
-                Rule::unique('users', 'kfs_number')->ignore($userId),
+                Rule::unique('users', 'po_number')->ignore($userId),
             ],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($userId)],
             'password' => [$userId ? 'nullable' : 'required', Password::defaults()],

@@ -14,7 +14,7 @@
                         <x-table-sort-link column="name" label="Name" :sort="$s" :direction="$d" :url="$url('name')" target="#organizations-table" />
                     </th>
                     <th>
-                        <x-table-sort-link column="kfs" label="KFS" :sort="$s" :direction="$d" :url="$url('kfs')" target="#organizations-table" />
+                        <x-table-sort-link column="po" label="PO" :sort="$s" :direction="$d" :url="$url('po')" target="#organizations-table" />
                     </th>
                     <th>
                         <x-table-sort-link column="states" label="State(s)" :sort="$s" :direction="$d" :url="$url('states')" target="#organizations-table" />
@@ -45,7 +45,7 @@
                             {{ $organization->name }}
                         </a>
                     </td>
-                    <td class="text-muted small">{{ $organization->kfs_number ?: '—' }}</td>
+                    <td class="text-muted small">{{ $organization->po_number ?: '—' }}</td>
                     <td>
                         <x-table-badge-list
                             kind="state"

@@ -22,7 +22,7 @@
         @endif
     </div>
 
-    @if(($organization->pivot->payor_source ?? false) && filled($organization->kfs_number))
-        <div class="text-muted small mt-1">{{ $organization->kfs_number }}</div>
+    @if(($organization->pivot->payor_source ?? false) && filled($organization->po_number))
+        <div class="text-muted small mt-1">{{ $organization->po_number }}</div>
     @endif
 </div>

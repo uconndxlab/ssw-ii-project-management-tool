@@ -27,8 +27,8 @@
                 @endif
             </dd>
 
-            <dt class="col-5 text-muted fw-normal small">KFS Number</dt>
-            <dd class="col-7 mb-2">{{ $organization->kfs_number ?: '—' }}</dd>
+            <dt class="col-5 text-muted fw-normal small">PO Number</dt>
+            <dd class="col-7 mb-2">{{ $organization->po_number ?: '—' }}</dd>
 
             <dt class="col-5 text-muted fw-normal small">State(s)</dt>
             <dd class="col-7 mb-2">

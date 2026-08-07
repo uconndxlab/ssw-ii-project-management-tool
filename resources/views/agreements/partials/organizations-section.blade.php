@@ -23,13 +23,13 @@
         return [
             'value' => $organization->id,
             'label' => $organization->name,
-            'search' => trim($organization->name . ' ' . ($organization->kfs_number ?? '')),
+            'search' => trim($organization->name . ' ' . ($organization->po_number ?? '')),
         ];
     });
 
     $organizationLabels = $organizations->pluck('name', 'id');
-    $organizationKfsNumbers = $organizations->mapWithKeys(function ($organization) {
-        return [(string) $organization->id => $organization->kfs_number];
+    $organizationPoNumbers = $organizations->mapWithKeys(function ($organization) {
+        return [(string) $organization->id => $organization->po_number];
     });
 @endphp
 
@@ -86,7 +86,7 @@
                          data-selected-payor-source-ids='@json(array_values(array_map("strval", $selectedPayorSourceIds)))'
                          data-selected-recipient-ids='@json(array_values(array_map("strval", $selectedRecipientIds)))'
                          data-organization-labels='@json($organizationLabels)'
-                         data-organization-kfs-numbers='@json($organizationKfsNumbers)'>
+                         data-organization-po-numbers='@json($organizationPoNumbers)'>
                         <div data-organization-payor-source-inputs></div>
                         <div data-organization-recipient-inputs></div>
                         <div class="d-grid gap-2" data-organizations-ledger></div>
@@ -197,7 +197,7 @@
         }
 
         const organizationLabels = parseJson(section.dataset.organizationLabels, {});
-        const organizationKfsNumbers = parseJson(section.dataset.organizationKfsNumbers, {});
+        const organizationPoNumbers = parseJson(section.dataset.organizationPoNumbers, {});
         const selectedPayorSourceIds = new Set(getHiddenInputIds(section, '[data-organization-payor-source-inputs]'));
         const selectedRecipientIds = new Set(getHiddenInputIds(section, '[data-organization-recipient-inputs]'));
         const selectedOrganizationIds = getSelectedIdsFromTokenPicker(organizationPicker);
@@ -261,12 +261,12 @@
             title.textContent = organizationLabels[String(organizationId)] || ('Organization ' + organizationId);
             titleWrap.appendChild(title);
 
-            const kfsNumber = organizationKfsNumbers[String(organizationId)];
-            if (kfsNumber) {
-                const kfs = document.createElement('div');
-                kfs.className = 'small text-muted';
-                kfs.textContent = kfsNumber;
-                titleWrap.appendChild(kfs);
+            const poNumber = organizationPoNumbers[String(organizationId)];
+            if (poNumber) {
+                const po = document.createElement('div');
+                po.className = 'small text-muted';
+                po.textContent = poNumber;
+                titleWrap.appendChild(po);
             }
 
             const actions = document.createElement('div');

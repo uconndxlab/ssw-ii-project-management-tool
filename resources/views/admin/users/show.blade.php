@@ -43,8 +43,8 @@
                 </a>
             </dd>
 
-            <dt class="col-5 text-muted fw-normal small">KFS Number</dt>
-            <dd class="col-7 mb-2">{{ $user->kfs_number ?: '—' }}</dd>
+            <dt class="col-5 text-muted fw-normal small">PO Number</dt>
+            <dd class="col-7 mb-2">{{ $user->po_number ?: '—' }}</dd>
 
             <dt class="col-5 text-muted fw-normal small">Supervisor</dt>
             <dd class="col-7 mb-2">

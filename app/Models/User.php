@@ -28,7 +28,7 @@ class User extends Authenticatable
         'role',
         'active',
         'supervisor_id',
-        'kfs_number',
+        'po_number',
     ];
 
     /**
