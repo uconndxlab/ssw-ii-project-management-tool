@@ -880,6 +880,10 @@
     const contactFamilyAdditionalTimeMap = @json($contactFamilies->mapWithKeys(fn ($family) => [(string) $family->id => (bool) $family->track_additional_time]));
     const participantDirectory = @json($participantOptionMap);
     const historicalParticipantIds = @json($historicalParticipantIds);
+    const initialStateIds = @json(array_map('strval', $selectedStateIds));
+    const initialOrganizationIds = @json(array_map('strval', $selectedOrganizationIds));
+    const initialProjectIds = @json(array_map('strval', $selectedProjectIds));
+    const initialProgramIds = @json(array_map('strval', $selectedProgramIds));
     const initialAgreementIds = @json(array_map('strval', $selectedAgreementIds));
     const visibleStateIds = @json($visibleStateIds);
     const visibleOrganizationIds = @json($visibleOrganizationIds);
@@ -893,6 +897,8 @@
     const form = document.getElementById(@json($formId));
     const isEditMode = @json($isEditMode);
     let agreementsPickerInitialized = false;
+    let preserveInitialCoverageSelections = isEditMode;
+    let coverageInteractionDetected = false;
 
     if (!form) return;
 
@@ -952,6 +958,10 @@
         return selectedValues('organization_ids[]').map(String);
     }
 
+    function selectedProjectIds() {
+        return selectedValues('project_ids[]').map(String);
+    }
+
     function selectedProgramIds() {
         return selectedValues('program_ids[]').map(String);
     }
@@ -962,6 +972,29 @@
         return Array.from(new Set((values || []).map(String))).filter(function (value) {
             return allowedSet.has(String(value));
         });
+    }
+
+    function mergePreservedCoverage(allowedValues, preservedValues) {
+        const normalizedAllowed = Array.isArray(allowedValues) ? allowedValues.map(String) : [];
+
+        if (!preserveInitialCoverageSelections) {
+            return normalizedAllowed;
+        }
+
+        return Array.from(new Set(normalizedAllowed.concat((preservedValues || []).map(String))));
+    }
+
+    function noteCoverageInteraction(event) {
+        if (event.isTrusted) {
+            coverageInteractionDetected = true;
+        }
+    }
+
+    function stopPreservingInitialCoverageIfNeeded() {
+        if (coverageInteractionDetected) {
+            preserveInitialCoverageSelections = false;
+            coverageInteractionDetected = false;
+        }
     }
 
     function joinNames(items) {
@@ -999,7 +1032,7 @@
                     : 'Search states...',
             }
         }));
-        statePicker.dispatchEvent(new CustomEvent('token-picker:restrict', { detail: visibleStateIds }));
+        statePicker.dispatchEvent(new CustomEvent('token-picker:restrict', { detail: mergePreservedCoverage(visibleStateIds, initialStateIds) }));
     }
 
     function restrictOrganizationPicker() {
@@ -1026,7 +1059,9 @@
                     : 'No organizations match the selected states...',
             }
         }));
-        orgPicker.dispatchEvent(new CustomEvent('token-picker:restrict', { detail: allowedOrganizationIds }));
+        orgPicker.dispatchEvent(new CustomEvent('token-picker:restrict', {
+            detail: mergePreservedCoverage(allowedOrganizationIds, initialOrganizationIds)
+        }));
     }
 
     function restrictParticipantPicker() {
@@ -1339,10 +1374,12 @@
                 placeholder: projectPlaceholder,
             }
         }));
-        projectPicker.dispatchEvent(new CustomEvent('token-picker:restrict', { detail: allowedProjectIds }));
+        projectPicker.dispatchEvent(new CustomEvent('token-picker:restrict', {
+            detail: mergePreservedCoverage(allowedProjectIds, initialProjectIds)
+        }));
         scopeSection.dispatchEvent(new CustomEvent('project-program-scope:restrict', {
             detail: {
-                programIds: visibleProgramIds,
+                programIds: mergePreservedCoverage(visibleProgramIds, initialProgramIds),
                 forceProjectDisabled: disableProjects,
                 forceProgramDisabled: forceProgramDisabled,
                 projectDisabledPlaceholder: projectPlaceholder,
@@ -1375,7 +1412,9 @@
                     : 'No agreements match the selected programs...',
             }
         }));
-        agreementPicker.dispatchEvent(new CustomEvent('token-picker:restrict', { detail: allowedAgreementIds }));
+        agreementPicker.dispatchEvent(new CustomEvent('token-picker:restrict', {
+            detail: mergePreservedCoverage(allowedAgreementIds, initialAgreementIds)
+        }));
     }
 
     function restrictClassificationOptions() {
@@ -1634,20 +1673,29 @@
         });
     }
 
+    document.getElementById('activity-states-picker')?.addEventListener('click', noteCoverageInteraction, true);
+    document.getElementById('activity-states-picker')?.addEventListener('input', noteCoverageInteraction, true);
     document.getElementById('activity-states-picker')?.addEventListener('token-picker:change', function () {
+        stopPreservingInitialCoverageIfNeeded();
         restrictOrganizationPicker();
         restrictScopePickers();
         restrictAgreementPicker();
         markDirty();
     });
 
+    document.getElementById('activity-organizations-picker')?.addEventListener('click', noteCoverageInteraction, true);
+    document.getElementById('activity-organizations-picker')?.addEventListener('input', noteCoverageInteraction, true);
     document.getElementById('activity-organizations-picker')?.addEventListener('token-picker:change', function () {
+        stopPreservingInitialCoverageIfNeeded();
         restrictScopePickers();
         restrictAgreementPicker();
         markDirty();
     });
 
+    form.querySelector('[data-scope-id="activity-coverage-scope"]')?.addEventListener('click', noteCoverageInteraction, true);
+    form.querySelector('[data-scope-id="activity-coverage-scope"]')?.addEventListener('input', noteCoverageInteraction, true);
     form.querySelector('[data-scope-id="activity-coverage-scope"]')?.addEventListener('project-program-scope:change', function () {
+        stopPreservingInitialCoverageIfNeeded();
         restrictAgreementPicker();
         markDirty();
     });
