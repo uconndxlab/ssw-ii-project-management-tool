@@ -89,6 +89,7 @@ class AgreementDeliverableDisplay
             $progress['user_focus'] = [
                 'completed' => $completed,
                 'target' => $target,
+                'has_target' => (bool) ($row['has_target'] ?? $progress['has_target']),
                 'percent' => $target > 0 ? min(100, ($completed / $target) * 100) : 0,
                 'shared' => false,
             ];
@@ -110,6 +111,7 @@ class AgreementDeliverableDisplay
             $progress['user_focus'] = [
                 'completed' => $completed,
                 'target' => null,
+                'has_target' => false,
                 'percent' => null,
                 'shared' => true,
             ];
@@ -120,6 +122,7 @@ class AgreementDeliverableDisplay
         $progress['user_focus'] = [
             'completed' => (float) $progress['completed_value'],
             'target' => (float) $progress['target'],
+            'has_target' => (bool) $progress['has_target'],
             'percent' => (float) $progress['percent'],
             'shared' => true,
         ];
@@ -291,6 +294,7 @@ class AgreementDeliverableDisplay
         return [
             'deliverable' => $deliverable,
             'target' => $target,
+            'has_target' => $target > 0,
             'completed_value' => $completedValue,
             'percent' => $target > 0 ? min(100, ($completedValue / $target) * 100) : 0,
             'unit_label' => $unitLabel,
@@ -472,6 +476,7 @@ class AgreementDeliverableDisplay
             'team_name' => $summary['team_name'] ?? null,
             'completed_value' => $completed,
             'target' => $target,
+            'has_target' => $target > 0,
             'percent' => $target > 0 ? min(100, ($completed / $target) * 100) : 0,
             'is_currently_assigned' => $isLive,
         ];

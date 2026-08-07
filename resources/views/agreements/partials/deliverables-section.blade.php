@@ -24,7 +24,7 @@
         if (($row['contribution_basis'] ?? '') === 'user' && !empty($row['user_grouping_mode'])) {
             $parts[] = ucfirst($row['user_grouping_mode']);
         }
-        if (!empty($row['target_quantity'])) {
+        if ($row['target_quantity'] !== '' && $row['target_quantity'] !== null) {
             $suffix = '';
             if (($row['metric_type'] ?? '') === 'time') {
                 $isAllotted = ($row['time_basis'] ?? 'observed') === 'allotted';
@@ -39,7 +39,10 @@
                 }
                 $suffix = ($isAllotted && $unit === 'days') ? ' days' : ' hrs';
             }
-            $parts[] = number_format((float) $row['target_quantity'], 1) . $suffix;
+            $targetQuantity = (float) $row['target_quantity'];
+            $parts[] = $targetQuantity > 0
+                ? number_format($targetQuantity, 1) . $suffix
+                : 'No target';
         }
         if (!empty($row['include_additional_time'])) {
             $parts[] = 'Incl. prep/follow up';
@@ -485,14 +488,15 @@
             if (rowData.contribution_basis === 'user' && rowData.user_grouping_mode) {
                 parts.push(rowData.user_grouping_mode.charAt(0).toUpperCase() + rowData.user_grouping_mode.slice(1));
             }
-            if (rowData.target_quantity) {
+            if (rowData.target_quantity !== '' && rowData.target_quantity !== null && rowData.target_quantity !== undefined) {
                 let suffix = '';
                 if (rowData.metric_type === 'time') {
                     const isAllotted = (rowData.time_basis || 'observed') === 'allotted';
                     const unit = rowData.allotted_time_unit || resolveDefaultAllottedTimeUnit(rowData);
                     suffix = (isAllotted && unit === 'days') ? ' days' : ' hrs';
                 }
-                parts.push(parseFloat(rowData.target_quantity).toFixed(1) + suffix);
+                const targetQuantity = parseFloat(rowData.target_quantity);
+                parts.push(targetQuantity > 0 ? targetQuantity.toFixed(1) + suffix : 'No target');
             }
             if (rowData.include_additional_time) parts.push('Incl. prep/follow up');
             return parts.join(' · ');

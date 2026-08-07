@@ -30,6 +30,7 @@
                                 @php
                                     $deliverable = $progress['deliverable'];
                                     $target = $progress['target'];
+                                    $hasTarget = $progress['has_target'];
                                     $completedValue = $progress['completed_value'];
                                     $percent = $progress['percent'];
                                     $unitLabel = $progress['unit_label'];
@@ -49,7 +50,7 @@
                                                 <div class="text-muted">{{ number_format($target, 1) }} {{ strtolower($unitLabel) }} each</div>
                                             @else
                                                 <strong>{{ number_format($completedValue, 1) }}</strong>
-                                                @if($target > 0)
+                                                @if($hasTarget)
                                                     <span class="text-muted">/ {{ number_format($target, 1) }}</span>
                                                 @endif
                                                 <div class="text-muted">{{ $unitLabel }}</div>
@@ -57,7 +58,7 @@
                                         </div>
                                     </div>
 
-                                    @if(!$progress['is_individual'])
+                                    @if(!$progress['is_individual'] && $hasTarget)
                                         <div class="progress mb-3" style="height:6px;">
                                             <div class="progress-bar {{ $percent >= 100 ? 'bg-success' : 'bg-primary' }}" style="width:{{ $percent }}%"></div>
                                         </div>
@@ -92,6 +93,7 @@
                                                     $userPercent = $individual['percent'];
                                                     $userCompleted = $individual['completed_value'];
                                                     $userTarget = $individual['target'];
+                                                    $userHasTarget = $individual['has_target'];
                                                 @endphp
                                                 <div class="mb-3">
                                                     <div class="d-flex justify-content-between align-items-center gap-2 small mb-1">
@@ -99,12 +101,14 @@
                                                             <x-user-link :user="$individual['user']" :label="$renderContributorLabel($individual)" class="fw-semibold" />
                                                         </span>
                                                         <span class="text-muted text-nowrap">
-                                                            {{ number_format($userCompleted, 1) }}@if($userTarget > 0) / {{ number_format($userTarget, 1) }}@endif {{ strtolower($unitLabel) }}
+                                                            {{ number_format($userCompleted, 1) }}@if($userHasTarget) / {{ number_format($userTarget, 1) }}@endif {{ strtolower($unitLabel) }}
                                                         </span>
                                                     </div>
-                                                    <div class="progress" style="height:5px;">
-                                                        <div class="progress-bar {{ $userPercent >= 100 ? 'bg-success' : 'bg-primary' }}" style="width:{{ $userPercent }}%"></div>
-                                                    </div>
+                                                    @if($userHasTarget)
+                                                        <div class="progress" style="height:5px;">
+                                                            <div class="progress-bar {{ $userPercent >= 100 ? 'bg-success' : 'bg-primary' }}" style="width:{{ $userPercent }}%"></div>
+                                                        </div>
+                                                    @endif
                                                 </div>
                                             @empty
                                                 <div class="text-muted small">No users currently assigned.</div>
@@ -126,17 +130,20 @@
                                                     $userPercent = $individual['percent'];
                                                     $userCompleted = $individual['completed_value'];
                                                     $userTarget = $individual['target'];
+                                                    $userHasTarget = $individual['has_target'];
                                                 @endphp
                                                 <div class="mb-3">
                                                     <div class="d-flex justify-content-between align-items-center gap-2 small mb-1">
                                                         <span class="text-muted">{{ $renderContributorLabel($individual) }}</span>
                                                         <span class="text-muted text-nowrap">
-                                                            {{ number_format($userCompleted, 1) }}@if($userTarget > 0) / {{ number_format($userTarget, 1) }}@endif {{ strtolower($unitLabel) }}
+                                                            {{ number_format($userCompleted, 1) }}@if($userHasTarget) / {{ number_format($userTarget, 1) }}@endif {{ strtolower($unitLabel) }}
                                                         </span>
                                                     </div>
-                                                    <div class="progress" style="height:5px;">
-                                                        <div class="progress-bar bg-secondary" style="width:{{ $userPercent }}%"></div>
-                                                    </div>
+                                                    @if($userHasTarget)
+                                                        <div class="progress" style="height:5px;">
+                                                            <div class="progress-bar bg-secondary" style="width:{{ $userPercent }}%"></div>
+                                                        </div>
+                                                    @endif
                                                 </div>
                                             @endforeach
                                         </div>

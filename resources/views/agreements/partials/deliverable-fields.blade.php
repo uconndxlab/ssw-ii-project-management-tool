@@ -242,6 +242,7 @@
                            min="0"
                            step="0.1"
                            data-deliverable-target>
+                          <div class="form-text">Leave this at 0 to remove target requirement.</div>
                     <div class="mt-2 {{ $showTargetUnitPicker ? '' : 'd-none' }}" data-target-unit-wrapper>
                         <div class="d-flex gap-3">
                             <label class="form-check mb-0">
@@ -363,6 +364,7 @@
                            min="0"
                            step="0.1"
                            data-deliverable-target-locked>
+                    <div class="form-text">Leave this at 0 to remove target requirement.</div>
                 </div>
             </div>
         </div>

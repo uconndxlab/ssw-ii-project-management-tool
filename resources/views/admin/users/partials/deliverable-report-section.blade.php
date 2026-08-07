@@ -37,13 +37,13 @@
                                                 <div><strong>{{ number_format($focus['completed'], 1) }}</strong> {{ $unitLower }}</div>
                                             @elseif($focus['shared'])
                                                 <strong>{{ number_format($focus['completed'], 1) }}</strong>
-                                                @if(($focus['target'] ?? 0) > 0)
+                                                @if($focus['has_target'] ?? false)
                                                     <span class="text-muted">/ {{ number_format($focus['target'], 1) }}</span>
                                                 @endif
                                                 <div class="text-muted">{{ $unitLabel }}</div>
                                             @else
                                                 <strong>{{ number_format($focus['completed'], 1) }}</strong>
-                                                @if(($focus['target'] ?? 0) > 0)
+                                                @if($focus['has_target'] ?? false)
                                                     <span class="text-muted">/ {{ number_format($focus['target'], 1) }}</span>
                                                 @endif
                                                 <div class="text-muted">{{ $unitLower }}</div>
@@ -51,7 +51,7 @@
                                         </div>
                                     </div>
 
-                                    @if(!$focus['shared'] || ($focus['percent'] ?? null) !== null)
+                                    @if($focus['has_target'] ?? false)
                                         @php $barPercent = (float) ($focus['percent'] ?? 0); @endphp
                                         <div class="progress" style="height:6px;">
                                             <div class="progress-bar {{ $barPercent >= 100 ? 'bg-success' : 'bg-primary' }}" style="width:{{ $barPercent }}%"></div>
