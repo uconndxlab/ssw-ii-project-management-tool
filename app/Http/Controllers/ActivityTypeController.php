@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AgreementDeliverable;
+use App\Models\Activity;
 use App\Models\ActivityType;
 use App\Models\ContactFamily;
 use App\Models\LoggingField;
@@ -279,13 +280,17 @@ class ActivityTypeController extends Controller
 
     public function destroy(ActivityType $activityType)
     {
-        if ($activityType->activities()->count() > 0) {
+        $isUsedInActivities = Activity::query()
+            ->where('activity_type_id', $activityType->getKey())
+            ->exists();
+
+        if ($isUsedInActivities) {
             return redirect()
                 ->route('activity-types.index')
                 ->with('error', 'Cannot delete activity type that is used in activities.');
         }
 
-        ActivityType::destroy($activityType->id);
+        ActivityType::query()->whereKey($activityType->getKey())->delete();
 
         return redirect()
             ->route('activity-types.index')
