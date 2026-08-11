@@ -308,6 +308,7 @@
             refreshProgramPicker();
         });
 
+        projectPicker.addEventListener('token-picker:change', refreshProgramPicker);
         programPicker.addEventListener('token-picker:change', notifyScopeChange);
         refreshProjectPicker();
         refreshProgramPicker();
