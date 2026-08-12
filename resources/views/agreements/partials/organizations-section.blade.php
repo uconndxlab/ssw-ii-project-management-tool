@@ -35,12 +35,16 @@
         return [
             'value' => $organization->id,
             'label' => $organization->name,
-            'search' => trim($organization->name),
-            'meta' => filled($organization->po_number) ? $organization->po_number : null,
+            'search' => trim($organization->name . ' ' . ($organization->po_number ?? '')),
+            'meta' => filled($organization->po_number) ? 'PO: ' . $organization->po_number : null,
         ];
     });
 
     $organizationLabels = $organizations->pluck('name', 'id');
+    $organizationPoNumbers = $organizations->mapWithKeys(fn ($organization) => [
+        (string) $organization->id => $organization->po_number,
+    ]);
+    $organizationEntityBadgeClass = \App\Support\EntityBadge::relationClasses('organization');
 @endphp
 
 <div class="mb-4">
@@ -60,7 +64,7 @@
                 disabled-placeholder="Select at least one program and state first..."
                 :disabled="empty($selectedProgramIds) || empty($selectedStateIds)"
                 :open-on-focus="false"
-                :show-selected="false"
+                :show-selected="true"
                 :height="'300px'"
                 entity="organization"
             />
@@ -102,6 +106,8 @@
                  data-selected-payor-source-ids='@json(array_values(array_map("strval", $selectedPayorSourceIds)))'
                  data-selected-recipient-ids='@json(array_values(array_map("strval", $selectedRecipientIds)))'
                  data-organization-labels='@json($organizationLabels)'
+                 data-organization-po-numbers='@json($organizationPoNumbers)'
+                 data-organization-badge-class="{{ $organizationEntityBadgeClass }}"
                  data-selected-organization-kfs-numbers='@json($selectedOrganizationKfsNumbers)'>
                 <div data-organization-payor-source-inputs></div>
                 <div data-organization-recipient-inputs></div>
@@ -181,7 +187,7 @@
             return [];
         }
 
-        return Array.from(kfsSection.querySelectorAll('[data-kfs-hidden-inputs] input[type="hidden"]')).map(function (input) {
+        return Array.from(kfsSection.querySelectorAll('[data-token-inputs] input[type="hidden"]')).map(function (input) {
             return String(input.value);
         });
     }
@@ -232,6 +238,7 @@
         }
 
         const organizationLabels = parseJson(section.dataset.organizationLabels, {});
+        const organizationPoNumbers = parseJson(section.dataset.organizationPoNumbers, {});
         const selectedOrganizationKfsNumbers = getStoredOrganizationKfsSelections(section);
         const selectedPayorSourceIds = new Set(getHiddenInputIds(section, '[data-organization-payor-source-inputs]'));
         const selectedRecipientIds = new Set(getHiddenInputIds(section, '[data-organization-recipient-inputs]'));
@@ -296,6 +303,27 @@
             return wrapper;
         }
 
+        function createOrganizationLabel(organizationId) {
+            const wrap = document.createElement('div');
+            wrap.className = 'd-grid gap-1 min-w-0';
+
+            const title = document.createElement('div');
+            title.className = 'fw-semibold small';
+            title.textContent = organizationLabels[String(organizationId)] || ('Organization ' + organizationId);
+            wrap.appendChild(title);
+
+            const poNumber = organizationPoNumbers[String(organizationId)];
+
+            if (poNumber) {
+                const meta = document.createElement('div');
+                meta.className = 'small text-muted';
+                meta.textContent = 'PO: ' + poNumber;
+                wrap.appendChild(meta);
+            }
+
+            return wrap;
+        }
+
         function createKfsTokenButton(organizationId, number, isSelected) {
             const button = document.createElement('button');
             button.type = 'button';
@@ -332,15 +360,11 @@
             card.className = 'border rounded overflow-hidden bg-body';
 
             const row = document.createElement('div');
-            row.className = 'd-flex justify-content-between align-items-start gap-3 px-3 py-2';
+            row.className = 'd-flex justify-content-between align-items-start gap-3 px-3 pt-2 pb-1';
 
             const titleWrap = document.createElement('div');
             titleWrap.className = 'min-w-0';
-
-            const title = document.createElement('div');
-            title.className = 'fw-semibold small';
-            title.textContent = organizationLabels[String(organizationId)] || ('Organization ' + organizationId);
-            titleWrap.appendChild(title);
+            titleWrap.appendChild(createOrganizationLabel(organizationId));
 
             const actions = document.createElement('div');
             actions.className = 'd-flex align-items-center gap-3 flex-shrink-0';
@@ -399,12 +423,15 @@
 
             if (selectedPayorSourceIds.has(String(organizationId))) {
                 const kfsWrap = document.createElement('div');
+                const divider = document.createElement('hr');
                 const kfsSelected = currentOrganizationKfsSelections[String(organizationId)]
                     || selectedOrganizationKfsNumbers[String(organizationId)]
                     || [];
 
-                kfsWrap.className = 'px-3 pb-3 pt-1';
+                kfsWrap.className = 'px-3 pb-3 pt-0';
                 kfsWrap.setAttribute('data-organization-kfs-group', String(organizationId));
+                divider.className = 'mt-1 mb-2';
+                kfsWrap.appendChild(divider);
 
                 if (agreementKfsNumbers.length === 0) {
                     const empty = document.createElement('div');

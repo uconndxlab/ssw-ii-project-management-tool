@@ -215,6 +215,7 @@ class AgreementController extends Controller
 
         $agreement->load([
             'organizations',
+            'organizationKfsAccounts',
             'states',
             'programs.projects',
             'users',

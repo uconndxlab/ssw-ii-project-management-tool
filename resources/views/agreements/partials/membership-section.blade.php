@@ -25,6 +25,8 @@
             'value' => $user->id,
             'label' => $user->name,
             'search' => trim($user->name . ' ' . ($user->email ?? '') . ' ' . ($user->role ?? '')),
+            'meta' => filled($user->po_number) ? 'PO: ' . $user->po_number : null,
+            'contextLabels' => ['User'],
         ];
     });
 
@@ -144,6 +146,7 @@
                              data-program-allowed-user-ids='@json($agreementUserOptions->pluck("value")->values())'
                              data-selected-principal-investigator-ids='@json($selectedPrincipalInvestigatorIds)'
                              data-user-names='@json($users->mapWithKeys(fn ($user) => [(string) $user->id => $user->name]))'
+                             data-user-po-numbers='@json($users->mapWithKeys(fn ($user) => [(string) $user->id => $user->po_number]))'
                              data-user-roles='@json($users->mapWithKeys(fn ($user) => [(string) $user->id => $user->role ?? '']))'
                              data-entity-badge-classes='@json($membershipEntityBadgeClasses)'
                              data-team-labels='@json($teams->pluck("name", "id"))'
@@ -311,6 +314,7 @@
 
         const teamLabels = parseJson(section.dataset.teamLabels, {});
         const userNames = parseJson(section.dataset.userNames, {});
+        const userPoNumbers = parseJson(section.dataset.userPoNumbers, {});
         const userRoles = parseJson(section.dataset.userRoles, {});
         const entityBadgeClasses = parseJson(section.dataset.entityBadgeClasses, {});
         const teamMembers = parseJson(section.dataset.teamMembers, {});
@@ -344,20 +348,33 @@
         }
 
         function createMemberLabel(userId) {
-            const wrap = document.createElement('span');
-            wrap.className = 'd-inline-flex align-items-center gap-1 small';
+            const wrap = document.createElement('div');
+            wrap.className = 'd-grid gap-1 min-w-0';
+
+            const primary = document.createElement('div');
+            primary.className = 'd-inline-flex flex-wrap align-items-center gap-1 small';
 
             const name = document.createElement('span');
             name.className = 'fw-semibold text-dark';
             name.textContent = userNames[String(userId)] || ('User ' + userId);
-            wrap.appendChild(name);
+            primary.appendChild(name);
 
             const role = userRoles[String(userId)];
             if (role) {
                 const roleBadge = document.createElement('span');
                 roleBadge.className = 'badge ' + (entityBadgeClasses.role || 'bg-light text-muted border');
                 roleBadge.textContent = role.charAt(0).toUpperCase() + role.slice(1);
-                wrap.appendChild(roleBadge);
+                primary.appendChild(roleBadge);
+            }
+
+            wrap.appendChild(primary);
+
+            const poNumber = userPoNumbers[String(userId)];
+            if (poNumber) {
+                const meta = document.createElement('div');
+                meta.className = 'small text-muted';
+                meta.textContent = 'PO: ' + poNumber;
+                wrap.appendChild(meta);
             }
 
             return wrap;

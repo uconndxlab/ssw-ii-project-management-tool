@@ -7,25 +7,40 @@
         ->unique()
         ->values()
         ->all();
+    $kfsOptions = collect($kfsAccounts ?? collect())
+        ->map(fn ($account) => [
+            'value' => $normalizeKfs($account->number),
+            'label' => $normalizeKfs($account->number),
+            'search' => $normalizeKfs($account->number),
+        ])
+        ->unique('value')
+        ->sortBy('label')
+        ->values();
 @endphp
 
-<div data-agreement-kfs-section data-selected-kfs='@json($selectedKfsNumbers)'>
+<div data-agreement-kfs-section>
     <label class="form-label">KFS Accounts</label>
     <div class="d-flex flex-wrap gap-2 mb-2" data-kfs-list></div>
-    <div class="d-flex gap-2 align-items-start">
-        <div class="form-control d-flex align-items-center py-1" style="min-height: 42px;">
-            <input type="text"
-                   class="border-0 flex-grow-1"
-                   style="outline: none; min-width: 160px;"
-                   data-kfs-input
-                   placeholder="Enter a KFS number and press Add"
-                   autocomplete="off">
+    <div class="d-flex gap-2 align-items-start flex-nowrap">
+        <div class="flex-grow-1 min-w-0" data-kfs-picker-wrap>
+            <x-token-picker
+                picker-id="agreement-kfs-accounts"
+                name="kfs_numbers[]"
+                :options="$kfsOptions"
+                :selected-ids="$selectedKfsNumbers"
+                label-key="label"
+                value-key="value"
+                search-key="search"
+                placeholder="Search or enter a KFS number..."
+                :open-on-focus="true"
+                :show-selected="false"
+                :height="'220px'"
+            />
         </div>
-        <button type="button" class="btn btn-outline-secondary btn-sm px-3" style="min-width: 140px; height: 42px;" data-kfs-add-button>Add KFS</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm px-3 flex-shrink-0" style="min-width: 140px; height: 42px;" data-kfs-add-button>Add KFS</button>
     </div>
     <div class="form-text mt-2">Attach KFS accounts to this agreement. You can type any 1-7 character alphanumeric KFS number.</div>
     <div class="text-danger small mt-2 d-none" data-kfs-inline-error></div>
-    <div data-kfs-hidden-inputs></div>
 
     @error('kfs_numbers')
         <div class="text-danger small mt-2">{{ $message }}</div>
@@ -60,52 +75,56 @@
         }
 
         const addButton = section.querySelector('[data-kfs-add-button]');
-        const input = section.querySelector('[data-kfs-input]');
+        const picker = section.querySelector('[data-token-picker]');
+        const input = picker ? picker.querySelector('[data-token-search]') : null;
         const list = section.querySelector('[data-kfs-list]');
-        const hiddenInputs = section.querySelector('[data-kfs-hidden-inputs]');
         const inlineError = section.querySelector('[data-kfs-inline-error]');
-        let selectedNumbers = parseJson(section.dataset.selectedKfs, []).map(normalizeKfs).filter(Boolean);
+        if (!picker || !input || !list) {
+            return;
+        }
 
-        function render() {
+        function selectedNumbers() {
+            return Array.from(picker.querySelectorAll('[data-token-inputs] input[type="hidden"]')).map(function (hiddenInput) {
+                return normalizeKfs(hiddenInput.value);
+            }).filter(Boolean);
+        }
+
+        function renderSelectedList() {
+            const numbers = selectedNumbers();
+
             list.innerHTML = '';
-            hiddenInputs.innerHTML = '';
 
-            selectedNumbers.forEach(function (number) {
+            numbers.forEach(function (number) {
                 const badge = document.createElement('span');
                 const removeButton = document.createElement('button');
-                const hiddenInput = document.createElement('input');
 
                 badge.className = 'badge text-bg-light border d-inline-flex align-items-center gap-1';
                 badge.innerHTML = '<span class="d-inline-flex flex-wrap align-items-baseline gap-0"></span>';
-
-                const text = badge.querySelector('span');
-                text.textContent = number;
+                badge.querySelector('span').textContent = number;
 
                 removeButton.type = 'button';
                 removeButton.className = 'btn-close';
                 removeButton.style.fontSize = '10px';
                 removeButton.setAttribute('aria-label', 'Remove KFS account');
                 removeButton.addEventListener('click', function () {
-                    selectedNumbers = selectedNumbers.filter(function (value) {
-                        return value !== number;
-                    });
-                    render();
+                    picker.dispatchEvent(new CustomEvent('token-picker:set', {
+                        detail: numbers.filter(function (value) {
+                            return value !== number;
+                        }),
+                        bubbles: true,
+                    }));
                 });
 
-                hiddenInput.type = 'hidden';
-                hiddenInput.name = 'kfs_numbers[]';
-                hiddenInput.value = number;
-
-                badge.appendChild(text);
                 badge.appendChild(removeButton);
                 list.appendChild(badge);
-                hiddenInputs.appendChild(hiddenInput);
             });
+        }
 
+        function dispatchChange() {
             section.dispatchEvent(new CustomEvent('agreement-kfs:change', {
                 bubbles: true,
                 detail: {
-                    numbers: selectedNumbers.slice(),
+                    numbers: selectedNumbers(),
                 },
             }));
         }
@@ -142,13 +161,19 @@
                 return;
             }
 
-            if (!selectedNumbers.includes(number)) {
-                selectedNumbers.push(number);
-                selectedNumbers.sort();
-            }
+            picker.dispatchEvent(new CustomEvent('token-picker:add-option', {
+                detail: {
+                    option: {
+                        value: number,
+                        label: number,
+                        search: number,
+                    },
+                    select: true,
+                },
+                bubbles: true,
+            }));
 
             input.value = '';
-            render();
         }
 
         addButton?.addEventListener('click', tryAddCurrentValue);
@@ -161,7 +186,14 @@
             tryAddCurrentValue();
         });
 
-        render();
+        picker.addEventListener('token-picker:change', function () {
+            clearError();
+            renderSelectedList();
+            dispatchChange();
+        });
+
+        renderSelectedList();
+        dispatchChange();
         section.dataset.agreementKfsInitialized = 'true';
     }
 

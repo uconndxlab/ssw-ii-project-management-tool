@@ -186,6 +186,49 @@
             }));
         }
 
+        function upsertOption(rawOption) {
+            if (typeof rawOption !== 'object' || rawOption === null) {
+                return null;
+            }
+
+            const value = String(rawOption.value || '').trim();
+
+            if (value === '') {
+                return null;
+            }
+
+            const existing = optionByValue(value);
+            const normalized = {
+                value: value,
+                label: String(rawOption.label || value),
+                search: String(rawOption.search || rawOption.label || value).toLowerCase(),
+                entity: rawOption.entity || null,
+                context: rawOption.context || null,
+                contextLabels: Array.isArray(rawOption.contextLabels)
+                    ? rawOption.contextLabels.filter(function (label) {
+                        return label !== null && String(label).trim() !== '';
+                    }).map(function (label) {
+                        return String(label);
+                    })
+                    : [],
+                contextBadgeClass: rawOption.contextBadgeClass || null,
+                meta: rawOption.meta || null,
+                selectedBadgeClass: rawOption.selectedBadgeClass || null,
+            };
+
+            if (existing) {
+                Object.assign(existing, normalized);
+                return existing;
+            }
+
+            options.push(normalized);
+            options.sort(function (left, right) {
+                return String(left.label).localeCompare(String(right.label), undefined, { sensitivity: 'base' });
+            });
+
+            return normalized;
+        }
+
         function syncSelectionToAllowedValues() {
             if (allowedValues === null) {
                 return;
@@ -389,6 +432,26 @@
                     }
                 }
             });
+
+            if (!listWrap.classList.contains('d-none')) {
+                renderList(true);
+            }
+        });
+
+        picker.addEventListener('token-picker:add-option', function (event) {
+            const detail = typeof event.detail === 'object' && event.detail !== null ? event.detail : {};
+            const option = upsertOption(detail.option || detail);
+
+            if (!option) {
+                return;
+            }
+
+            if (detail.select !== false) {
+                selected.add(String(option.value));
+                renderSelected();
+                writeHiddenInputs();
+                picker.dispatchEvent(new CustomEvent('token-picker:change', { bubbles: true }));
+            }
 
             if (!listWrap.classList.contains('d-none')) {
                 renderList(true);

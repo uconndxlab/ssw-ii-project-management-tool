@@ -70,10 +70,20 @@
                 </div>
             </dd>
 
+            @php
+                $organizationKfsNumbers = $agreement->organizationKfsAccounts
+                    ->groupBy(fn ($account) => (int) $account->pivot->organization_id)
+                    ->map(fn ($accounts) => $accounts->pluck('number')->sort()->values()->all())
+                    ->all();
+            @endphp
+
             <dt class="col-5 text-muted fw-normal small">Organizations</dt>
             <dd class="col-7 mb-2" style="min-width: 0;">
                 @forelse($agreement->organizations->sortBy('name') as $org)
-                    <x-organization-relation-row :organization="$org" :class="$loop->last ? '' : 'border-bottom'" />
+                    <x-organization-relation-row
+                        :organization="$org"
+                        :kfs-numbers="$organizationKfsNumbers[(int) $org->id] ?? []"
+                        :class="$loop->last ? '' : 'border-bottom'" />
                 @empty
                     <span class="text-muted small">None</span>
                 @endforelse

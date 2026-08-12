@@ -1288,13 +1288,19 @@ class ActivityController extends Controller
                         continue;
                     }
 
+                    $snapshot = ActivityFundingSourceTokens::snapshotForSelection($agreement, $role, $parsed);
+
+                    if (is_array($snapshot['kfs_numbers_snapshot'] ?? null)) {
+                        $snapshot['kfs_numbers_snapshot'] = json_encode(array_values($snapshot['kfs_numbers_snapshot']));
+                    }
+
                     $rows[] = [
                         'activity_id' => $activity->id,
                         'agreement_id' => $agreementId,
                         'role' => $role,
                         'source_type' => $parsed['source_type'],
                         'source_id' => $parsed['source_id'],
-                        ...ActivityFundingSourceTokens::snapshotForSelection($agreement, $role, $parsed),
+                        ...$snapshot,
                         'created_at' => now(),
                         'updated_at' => now(),
                     ];

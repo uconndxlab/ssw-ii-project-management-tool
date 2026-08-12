@@ -1,6 +1,7 @@
 @props([
     'organization',
     'showRoute' => null,
+    'kfsNumbers' => [],
 ])
 
 @php
@@ -22,7 +23,15 @@
         @endif
     </div>
 
-    @if(($organization->pivot->payor_source ?? false) && filled($organization->po_number))
-        <div class="text-muted small mt-1">{{ $organization->po_number }}</div>
+    @if(filled($organization->po_number))
+        <div class="text-muted small mt-1">PO: {{ $organization->po_number }}</div>
+    @endif
+
+    @if(!empty($kfsNumbers))
+        <div class="d-flex flex-wrap gap-1 mt-1">
+            @foreach($kfsNumbers as $number)
+                <span class="badge bg-primary-subtle text-primary-emphasis border">KFS: {{ $number }}</span>
+            @endforeach
+        </div>
     @endif
 </div>
