@@ -71,28 +71,24 @@
             <div class="col-12">
                 <x-relationship-scroll-panel
                     title="Programs"
+                    kind="program"
                     :count="$project->programs->count()"
-                    header-badge-class="bg-warning-subtle text-warning-emphasis border"
                 >
                     <x-slot:headerActions>
                         <a href="{{ route('programs.create') }}" class="btn btn-sm btn-outline-primary">+ Add Program</a>
                     </x-slot:headerActions>
 
                     @forelse($project->programs->sortBy('name') as $program)
-                        <div class="border rounded overflow-hidden bg-body px-3 py-2">
-                            <div class="d-flex justify-content-between align-items-start gap-2">
-                                <div class="min-w-0">
-                                    <a href="{{ route('programs.show', $program) }}" class="fw-semibold small text-decoration-underline d-block">
-                                        {{ $program->name }}
-                                    </a>
-                                    <small class="text-muted">{{ $program->activities->count() }} activities</small>
-                                </div>
+                        <x-relationship-ledger-row
+                            :title="$program->name"
+                            :href="route('programs.show', $program)"
+                            kind="program"
+                            title-as-badge
+                            wrap-title
+                            :meta-lines="[number_format($program->activities->count()) . ' activities']">
+                            <x-slot:actions>
                                 <div class="d-flex align-items-center gap-2 flex-shrink-0">
-                                    @if($program->active)
-                                        <span class="badge bg-success">Active</span>
-                                    @else
-                                        <span class="badge bg-secondary">Inactive</span>
-                                    @endif
+                                    <x-status-badge :active="$program->active" />
                                     <a href="{{ route('programs.edit', $program) }}"
                                        class="btn btn-sm btn-outline-secondary"
                                        data-bs-toggle="tooltip"
@@ -102,8 +98,8 @@
                                         <i class="bi bi-pencil-square"></i>
                                     </a>
                                 </div>
-                            </div>
-                        </div>
+                            </x-slot:actions>
+                        </x-relationship-ledger-row>
                     @empty
                         <p class="text-muted small mb-0 py-2">No programs in this project yet.</p>
                     @endforelse
@@ -115,14 +111,16 @@
                     <div class="col-md-6 d-flex">
                         <x-relationship-scroll-panel
                             title="Organizations"
+                            kind="organization"
                             :count="$project->organizations->count()"
-                            header-badge-class="bg-primary-subtle text-primary-emphasis border"
                             class="w-100"
                         >
                             @forelse($project->organizations->sortBy('name') as $org)
                                 <x-relationship-list-item
                                     :href="route('organizations.show', $org)"
                                     :title="$org->name"
+                                    kind="organization"
+                                    title-as-badge
                                 />
                             @empty
                                 <p class="text-muted small mb-0 py-2">No organizations linked.</p>
@@ -133,8 +131,8 @@
                     <div class="col-md-6 d-flex">
                         <x-relationship-scroll-panel
                             title="Agreements"
+                            kind="agreement"
                             :count="$agreements->count()"
-                            header-badge-class="bg-success-subtle text-success-emphasis border"
                             class="w-100"
                         >
                             @forelse($agreements as $agreement)
@@ -142,6 +140,9 @@
                                     :href="$agreement->isLinkable() ? route('agreements.show', $agreement) : null"
                                     :title="$agreement->name"
                                     :subtitle="$agreement->abstract ? \Illuminate\Support\Str::limit($agreement->abstract, 150) : null"
+                                    kind="agreement"
+                                    title-as-badge
+                                    wrap-title
                                 />
                             @empty
                                 <p class="text-muted small mb-0 py-2">No agreements linked via programs.</p>

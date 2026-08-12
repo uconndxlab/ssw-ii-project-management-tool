@@ -6,32 +6,32 @@
 
 @php
     $href = $showRoute ?? route('organizations.show', $organization);
+    $contextBadges = [];
+
+    if ($organization->pivot->payor_source ?? false) {
+        $contextBadges[] = ['label' => 'Payor source', 'kind' => 'payor-source'];
+    }
+
+    if ($organization->pivot->recipient ?? false) {
+        $contextBadges[] = ['label' => 'Recipient', 'kind' => 'recipient'];
+    }
+
+    $metaLines = collect($kfsNumbers)
+        ->map(fn ($number) => ['label' => 'KFS', 'value' => $number])
+        ->values();
+
+    if (filled($organization->po_number)) {
+        $metaLines->push(['label' => 'PO', 'value' => $organization->po_number]);
+    }
 @endphp
 
-<div {{ $attributes->merge(['class' => 'py-2 min-w-0']) }}>
-    <div class="d-flex flex-wrap align-items-center gap-1 min-w-0">
-        <x-entity-relation-badge kind="organization" :href="$href" wrap>
-            {{ $organization->name }}
-        </x-entity-relation-badge>
-
-        @if($organization->pivot->payor_source ?? false)
-            <x-category-badge kind="payor-source">Payor source</x-category-badge>
-        @endif
-
-        @if($organization->pivot->recipient ?? false)
-            <x-category-badge kind="recipient">Recipient</x-category-badge>
-        @endif
-    </div>
-
-    @if(filled($organization->po_number))
-        <div class="text-muted small mt-1">PO: {{ $organization->po_number }}</div>
-    @endif
-
-    @if(!empty($kfsNumbers))
-        <div class="d-flex flex-wrap gap-1 mt-1">
-            @foreach($kfsNumbers as $number)
-                <span class="badge bg-primary-subtle text-primary-emphasis border">KFS: {{ $number }}</span>
-            @endforeach
-        </div>
-    @endif
-</div>
+<x-relationship-ledger-row
+    :title="$organization->name"
+    :href="$href"
+    kind="organization"
+    title-as-badge
+    wrap-title
+    :context-badges="$contextBadges"
+    :meta-lines="$metaLines->all()"
+    {{ $attributes }}
+/>

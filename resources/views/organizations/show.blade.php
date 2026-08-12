@@ -80,26 +80,26 @@
     <x-slot:relationships>
         <div class="row g-4 align-items-stretch">
             <div class="col-md-7 d-flex flex-column">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="fw-semibold mb-0">
-                        Agreements
-                        <span class="badge bg-success-subtle text-success-emphasis border rounded-pill ms-1">{{ $agreements->count() }}</span>
-                    </h6>
-                    @if(auth()->user()->isAdmin())
-                        <a href="{{ route('agreements.create') }}" class="btn btn-sm btn-outline-success">+ New</a>
-                    @endif
-                </div>
                 <x-relationship-scroll-panel
                     title="Linked agreements"
+                    kind="agreement"
                     :count="$agreements->count()"
-                    header-badge-class="bg-success-subtle text-success-emphasis border"
                     class="flex-grow-1"
                 >
+                    @if(auth()->user()->isAdmin())
+                        <x-slot:headerActions>
+                            <a href="{{ route('agreements.create') }}" class="btn btn-sm btn-outline-success">+ New</a>
+                        </x-slot:headerActions>
+                    @endif
+
                     @forelse($agreements as $agreement)
                         <x-relationship-list-item
                             :href="$agreement->isLinkable() ? route('agreements.show', $agreement) : null"
                             :title="$agreement->name"
                             :subtitle="$agreement->abstract ? \Illuminate\Support\Str::limit($agreement->abstract, 150) : null"
+                            kind="agreement"
+                            title-as-badge
+                            wrap-title
                         />
                     @empty
                         <p class="text-muted small mb-0 py-2">No agreements yet.</p>

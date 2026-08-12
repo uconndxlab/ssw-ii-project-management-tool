@@ -80,8 +80,8 @@
             <div class="col-md-6 d-flex">
                 <x-relationship-scroll-panel
                     title="Agreements"
+                    kind="agreement"
                     :count="$agreements->count()"
-                    header-badge-class="bg-success-subtle text-success-emphasis border"
                     class="w-100"
                 >
                     @forelse($agreements as $agreement)
@@ -89,6 +89,9 @@
                             :href="$agreement->isLinkable() ? route('agreements.show', $agreement) : null"
                             :title="$agreement->name"
                             :subtitle="$agreement->abstract ? \Illuminate\Support\Str::limit($agreement->abstract, 150) : null"
+                            kind="agreement"
+                            title-as-badge
+                            wrap-title
                         />
                     @empty
                         <p class="text-muted small mb-0 py-2">No agreements linked to this program yet.</p>
@@ -99,14 +102,16 @@
             <div class="col-md-6 d-flex">
                 <x-relationship-scroll-panel
                     title="Organizations"
+                    kind="organization"
                     :count="$organizations->count()"
-                    header-badge-class="bg-primary-subtle text-primary-emphasis border"
                     class="w-100"
                 >
                     @forelse($organizations as $org)
                         <x-relationship-list-item
                             :href="route('organizations.show', $org)"
                             :title="$org->name"
+                            kind="organization"
+                            title-as-badge
                         />
                     @empty
                         <p class="text-muted small mb-0 py-2">No organizations linked.</p>

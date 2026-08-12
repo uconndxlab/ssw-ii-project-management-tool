@@ -11,6 +11,10 @@
     $hasAnyUsers = $directUsers->isNotEmpty() || $agreement->teams->isNotEmpty();
     $agreementProgramIds = $agreement->programs->pluck('id')->map(fn ($id) => (int) $id);
     $activityOnlyPrograms = $programs->filter(fn ($program) => !$agreementProgramIds->contains((int) $program->id));
+    $organizationKfsNumbers = $agreement->organizationKfsAccounts
+        ->groupBy(fn ($account) => (int) $account->pivot->organization_id)
+        ->map(fn ($accounts) => $accounts->pluck('number')->sort()->values()->all())
+        ->all();
 @endphp
 
 <x-page-header
@@ -22,6 +26,13 @@
 />
 
 <x-entity-show mainCardTitle="Deliverables" :activityFirst="true">
+    <x-slot:activityHeaderMeta>
+        <x-entity-count-badge kind="activity" :count="$lifetimeTotals['activities']" />
+        <span class="text-muted small">Lifetime</span>
+        <x-entity-count-badge kind="activity" :count="$ytdTotals['activities']" />
+        <span class="text-muted small">YTD</span>
+    </x-slot:activityHeaderMeta>
+
     {{-- ── Summary ─────────────────────────────────────────────────────── --}}
     <x-slot:summary>
         <dl class="row mb-0" style="min-width: 0;">
@@ -43,86 +54,101 @@
                 <dt class="col-5 text-muted fw-normal small">Extension End</dt>
                 <dd class="col-7 mb-2 small">{{ $agreement->extension_end_date?->format('M d, Y') ?? '—' }}</dd>
             @endif
+        </dl>
 
-            <dt class="col-5 text-muted fw-normal small">Projects</dt>
-            <dd class="col-7 mb-2">
-                <div class="d-flex flex-wrap gap-1">
-                    @forelse($agreement->projects->sortBy('name') as $project)
-                        <x-entity-relation-badge kind="project" :href="route('projects.show', $project)">
-                            {{ $project->name }}
-                        </x-entity-relation-badge>
-                    @empty
-                        <span class="text-muted small">None</span>
-                    @endforelse
-                </div>
-            </dd>
+        <div class="d-grid gap-3 mt-3">
+            <x-relationship-scroll-panel
+                title="Projects"
+                kind="project"
+                :count="$agreement->projects->count()"
+                collapsible
+                :collapsed="true">
+                @forelse($agreement->projects->sortBy('name') as $project)
+                    <x-relationship-ledger-row
+                        :title="$project->name"
+                        :href="route('projects.show', $project)"
+                        kind="project"
+                        title-as-badge
+                        wrap-title
+                    />
+                @empty
+                    <p class="text-muted small mb-0 py-1">No projects linked.</p>
+                @endforelse
+            </x-relationship-scroll-panel>
 
-            <dt class="col-5 text-muted fw-normal small">Programs</dt>
-            <dd class="col-7 mb-2">
-                <div class="d-flex flex-wrap gap-1">
-                    @forelse($agreement->programs->sortBy('name') as $program)
-                        <x-entity-relation-badge kind="program" :href="route('programs.show', $program)">
-                            {{ $program->name }}
-                        </x-entity-relation-badge>
-                    @empty
-                        <span class="text-muted small">None</span>
-                    @endforelse
-                </div>
-            </dd>
+            <x-relationship-scroll-panel
+                title="Programs"
+                kind="program"
+                :count="$agreement->programs->count()"
+                collapsible
+                :collapsed="true">
+                @forelse($agreement->programs->sortBy('name') as $program)
+                    <x-relationship-ledger-row
+                        :title="$program->name"
+                        :href="route('programs.show', $program)"
+                        kind="program"
+                        title-as-badge
+                        wrap-title
+                    />
+                @empty
+                    <p class="text-muted small mb-0 py-1">No programs linked.</p>
+                @endforelse
+            </x-relationship-scroll-panel>
 
-            @php
-                $organizationKfsNumbers = $agreement->organizationKfsAccounts
-                    ->groupBy(fn ($account) => (int) $account->pivot->organization_id)
-                    ->map(fn ($accounts) => $accounts->pluck('number')->sort()->values()->all())
-                    ->all();
-            @endphp
-
-            <dt class="col-5 text-muted fw-normal small">Organizations</dt>
-            <dd class="col-7 mb-2" style="min-width: 0;">
+            <x-relationship-scroll-panel
+                title="Organizations"
+                kind="organization"
+                :count="$agreement->organizations->count()"
+                collapsible
+                :collapsed="true">
                 @forelse($agreement->organizations->sortBy('name') as $org)
                     <x-organization-relation-row
                         :organization="$org"
                         :kfs-numbers="$organizationKfsNumbers[(int) $org->id] ?? []"
-                        :class="$loop->last ? '' : 'border-bottom'" />
+                    />
                 @empty
-                    <span class="text-muted small">None</span>
+                    <p class="text-muted small mb-0 py-1">No organizations linked.</p>
                 @endforelse
-            </dd>
+            </x-relationship-scroll-panel>
 
-            <dt class="col-5 text-muted fw-normal small">States</dt>
-            <dd class="col-7 mb-2">
-                <div class="d-flex flex-wrap gap-1">
-                    @forelse($agreement->states as $state)
-                        <x-entity-relation-badge kind="state" :href="route('states.show', $state)">
-                            {{ $state->name }}
-                        </x-entity-relation-badge>
-                    @empty
-                        <span class="text-muted small">None</span>
-                    @endforelse
-                </div>
-            </dd>
-
-            <dt class="col-5 text-muted fw-normal small">Activities</dt>
-            <dd class="col-7 mb-2">
-                <x-entity-count-badge kind="activity" :count="$lifetimeTotals['activities']" />
-                <span class="text-muted small ms-1">lifetime</span>
-                <x-entity-count-badge kind="activity" :count="$ytdTotals['activities']" class="ms-2" />
-                <span class="text-muted small ms-1">YTD</span>
-            </dd>
+            <x-relationship-scroll-panel
+                title="States"
+                kind="state"
+                :count="$agreement->states->count()"
+                collapsible
+                :collapsed="true">
+                @forelse($agreement->states->sortBy('name') as $state)
+                    <x-relationship-ledger-row
+                        :title="$state->name"
+                        :href="route('states.show', $state)"
+                        kind="state"
+                        title-as-badge
+                        wrap-title
+                    />
+                @empty
+                    <p class="text-muted small mb-0 py-1">No states linked.</p>
+                @endforelse
+            </x-relationship-scroll-panel>
 
             @if($activityOnlyPrograms->isNotEmpty())
-                <dt class="col-5 text-muted fw-normal small">Programs in Activity</dt>
-                <dd class="col-7 mb-2">
-                    <div class="d-flex flex-wrap gap-1">
-                        @foreach($activityOnlyPrograms as $program)
-                            <x-entity-relation-badge kind="program" :href="route('programs.show', $program)">
-                                {{ $program->name }}
-                            </x-entity-relation-badge>
-                        @endforeach
-                    </div>
-                </dd>
+                <x-relationship-scroll-panel
+                    title="Programs in Activity"
+                    kind="program"
+                    :count="$activityOnlyPrograms->count()"
+                    collapsible
+                    :collapsed="true">
+                    @foreach($activityOnlyPrograms->sortBy('name') as $program)
+                        <x-relationship-ledger-row
+                            :title="$program->name"
+                            :href="route('programs.show', $program)"
+                            kind="program"
+                            title-as-badge
+                            wrap-title
+                        />
+                    @endforeach
+                </x-relationship-scroll-panel>
             @endif
-        </dl>
+        </div>
 
         @if($agreement->abstract)
             <hr>

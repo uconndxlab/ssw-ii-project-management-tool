@@ -62,6 +62,7 @@ class EntityBadge
     {
         return match ($kind) {
             'pi' => 'bg-warning-subtle text-warning-emphasis border',
+            'kfs' => 'bg-primary-subtle text-primary-emphasis border',
             'payor-source', 'recipient', 'role' => 'bg-light text-muted border',
             'contact-family' => 'bg-light text-muted border',
             'activity-type' => 'bg-light text-muted border',
