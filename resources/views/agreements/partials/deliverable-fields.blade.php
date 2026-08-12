@@ -110,6 +110,7 @@
                             @endphp
                             <option value="{{ $family->id }}"
                                     data-program-ids='@json($familyProgramIds)'
+                                    data-scope-mode="{{ $family->program_scope_mode?->value ?? 'all' }}"
                                     data-global="{{ empty($familyProgramIds) ? 'true' : 'false' }}"
                                     data-track-additional-time="{{ $family->track_additional_time ? '1' : '0' }}"
                                     @selected((string) ($row['contact_family_id'] ?? '') === (string) $family->id)>
@@ -130,6 +131,7 @@
                             <option value="{{ $type->id }}"
                                     data-contact-family-id="{{ $type->contact_family_id }}"
                                     data-program-ids='@json($activityTypeProgramIds)'
+                                    data-scope-mode="{{ $type->program_scope_mode?->value ?? 'all' }}"
                                     data-global="{{ empty($activityTypeProgramIds) ? 'true' : 'false' }}"
                                     data-duration-hours="{{ (float) $type->duration_hours > 0 ? $type->duration_hours : '' }}"
                                     data-duration-days="{{ (float) $type->duration_days > 0 ? $type->duration_days : '' }}"

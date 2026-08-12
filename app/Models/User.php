@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\ProgramScopeMode;
 use App\Models\Concerns\HasProgramScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -28,6 +29,7 @@ class User extends Authenticatable
         'role',
         'active',
         'supervisor_id',
+        'program_scope_mode',
         'po_number',
     ];
 
@@ -52,6 +54,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'active' => 'boolean',
+            'program_scope_mode' => ProgramScopeMode::class,
         ];
     }
 

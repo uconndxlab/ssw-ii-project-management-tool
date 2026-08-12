@@ -95,10 +95,13 @@
                 :projects="$projects"
                 :selected-project-ids="old('project_ids', $organization?->projects?->pluck('id')->toArray() ?? [])"
                 :selected-program-ids="old('program_ids', $organization?->programs?->pluck('id')->toArray() ?? [])"
-                project-empty-selection-label="None"
-                program-empty-selection-label="None"
+                :show-scope-mode-selector="true"
+                :selected-scope-mode="old('program_scope_mode', $organization?->program_scope_mode?->value ?? 'specific')"
+                project-empty-selection-label=""
+                program-empty-selection-label=""
                 project-help-text="Use projects to filter the program list; project participation is inferred and not saved."
-                program-help-text="Programs are the saved organization scope. Leave both filters empty for no program scope; otherwise leaving programs empty saves all currently listed programs."
+                program-help-text="Programs are the saved organization scope when Specific is selected."
+                scope-mode-help-text="Choose whether this organization applies to all programs, only specific programs, or no programs."
             />
         </x-section-card>
     </div>

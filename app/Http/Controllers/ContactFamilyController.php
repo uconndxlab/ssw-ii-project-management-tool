@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ProgramScopeMode;
 use App\Models\ContactFamily;
 use App\Models\LoggingField;
 use App\Models\Program;
@@ -33,7 +34,7 @@ class ContactFamilyController extends Controller
             $projectId = (int) $request->input('project_id');
             $query->where(function ($q) use ($projectId) {
                 $q->whereHas('programs.projects', fn ($relation) => $relation->where('projects.id', $projectId))
-                    ->orWhereDoesntHave('programs');
+                    ->orWhere('contact_families.program_scope_mode', ProgramScopeMode::All->value);
             });
         }
 
@@ -41,7 +42,7 @@ class ContactFamilyController extends Controller
             $programId = (int) $request->input('program_id');
             $query->where(function ($q) use ($programId) {
                 $q->whereHas('programs', fn ($relation) => $relation->where('programs.id', $programId))
-                    ->orWhereDoesntHave('programs');
+                    ->orWhere('contact_families.program_scope_mode', ProgramScopeMode::All->value);
             });
         }
 
@@ -124,6 +125,7 @@ class ContactFamilyController extends Controller
             'contact_family_logging_field_ids.*' => ['exists:logging_fields,id'],
             'required_contact_family_logging_field_ids' => ['nullable', 'array'],
             'required_contact_family_logging_field_ids.*' => ['exists:logging_fields,id'],
+            'program_scope_mode' => ['required', 'in:all,specific,none'],
             'project_ids' => ['nullable', 'array'],
             'project_ids.*' => ['distinct', 'exists:projects,id'],
             'program_ids' => ['nullable', 'array'],
@@ -131,18 +133,19 @@ class ContactFamilyController extends Controller
         ]);
 
         $validator->after(function ($validator) use ($request) {
+            $mode = $request->input('program_scope_mode', ProgramScopeMode::All->value);
             $projectIds = ProjectProgramScope::normalizeIds($request->input('project_ids', []));
             $programIds = ProjectProgramScope::normalizeIds($request->input('program_ids', []));
 
-            ProjectProgramScope::validateSelection($validator, $projectIds, $programIds);
+            ProjectProgramScope::validateModeSelection($validator, $mode, ContactFamily::class, $projectIds, $programIds);
 
-            if ($projectIds === [] && $programIds === []) {
+            if (ProjectProgramScope::normalizeMode($mode, ContactFamily::class) !== ProgramScopeMode::Specific) {
                 return;
             }
 
             ProjectProgramScope::validateScopedAssignments(
                 $validator,
-                ProjectProgramScope::effectiveProgramIds($projectIds, $programIds),
+                $programIds,
                 ProjectProgramScope::normalizeIds($request->input('contact_family_logging_field_ids', [])),
                 LoggingField::class,
                 'contact_family_logging_field_ids',
@@ -155,15 +158,19 @@ class ContactFamilyController extends Controller
         $validated['active'] = $request->has('active');
         $validated['track_additional_time'] = $request->has('track_additional_time');
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
+        $validated['program_scope_mode'] = ProjectProgramScope::normalizeMode($validated['program_scope_mode'] ?? null, ContactFamily::class)->value;
 
         $contactFamily = ContactFamily::create([
             'name' => $validated['name'],
             'active' => $validated['active'],
             'track_additional_time' => $validated['track_additional_time'],
             'sort_order' => $validated['sort_order'],
+            'program_scope_mode' => $validated['program_scope_mode'],
         ]);
 
-        $contactFamily->programs()->sync(ProjectProgramScope::effectiveProgramIds(
+        $contactFamily->programs()->sync(ProjectProgramScope::modeAwareProgramIds(
+            $validated['program_scope_mode'],
+            ContactFamily::class,
             $validated['project_ids'] ?? [],
             $validated['program_ids'] ?? []
         ));
@@ -205,6 +212,7 @@ class ContactFamilyController extends Controller
             'contact_family_logging_field_ids.*' => ['exists:logging_fields,id'],
             'required_contact_family_logging_field_ids' => ['nullable', 'array'],
             'required_contact_family_logging_field_ids.*' => ['exists:logging_fields,id'],
+            'program_scope_mode' => ['required', 'in:all,specific,none'],
             'project_ids' => ['nullable', 'array'],
             'project_ids.*' => ['distinct', 'exists:projects,id'],
             'program_ids' => ['nullable', 'array'],
@@ -212,18 +220,19 @@ class ContactFamilyController extends Controller
         ]);
 
         $validator->after(function ($validator) use ($request) {
+            $mode = $request->input('program_scope_mode', ProgramScopeMode::All->value);
             $projectIds = ProjectProgramScope::normalizeIds($request->input('project_ids', []));
             $programIds = ProjectProgramScope::normalizeIds($request->input('program_ids', []));
 
-            ProjectProgramScope::validateSelection($validator, $projectIds, $programIds);
+            ProjectProgramScope::validateModeSelection($validator, $mode, ContactFamily::class, $projectIds, $programIds);
 
-            if ($projectIds === [] && $programIds === []) {
+            if (ProjectProgramScope::normalizeMode($mode, ContactFamily::class) !== ProgramScopeMode::Specific) {
                 return;
             }
 
             ProjectProgramScope::validateScopedAssignments(
                 $validator,
-                ProjectProgramScope::effectiveProgramIds($projectIds, $programIds),
+                $programIds,
                 ProjectProgramScope::normalizeIds($request->input('contact_family_logging_field_ids', [])),
                 LoggingField::class,
                 'contact_family_logging_field_ids',
@@ -236,14 +245,18 @@ class ContactFamilyController extends Controller
         $validated['active'] = $request->has('active');
         $validated['track_additional_time'] = $request->has('track_additional_time');
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
+        $validated['program_scope_mode'] = ProjectProgramScope::normalizeMode($validated['program_scope_mode'] ?? null, ContactFamily::class)->value;
 
         $contactFamily->update([
             'name' => $validated['name'],
             'active' => $validated['active'],
             'track_additional_time' => $validated['track_additional_time'],
             'sort_order' => $validated['sort_order'],
+            'program_scope_mode' => $validated['program_scope_mode'],
         ]);
-        $contactFamily->programs()->sync(ProjectProgramScope::effectiveProgramIds(
+        $contactFamily->programs()->sync(ProjectProgramScope::modeAwareProgramIds(
+            $validated['program_scope_mode'],
+            ContactFamily::class,
             $validated['project_ids'] ?? [],
             $validated['program_ids'] ?? []
         ));

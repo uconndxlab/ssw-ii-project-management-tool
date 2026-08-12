@@ -1,4 +1,5 @@
 @php
+    use App\Enums\ProgramScopeMode;
     use App\Enums\AgreementTimeTrackingRequirement;
 
     $agreement = $agreement ?? null;
@@ -10,6 +11,17 @@
         $agreement?->projects?->pluck('id')->values()->all() ?? []
     );
     $selectedProgramIds = old('program_ids', $agreement?->programs?->pluck('id')->toArray() ?? []);
+    $selectedProgramScopeMode = old('program_scope_mode', $agreement?->program_scope_mode?->value ?? 'specific');
+    $allActiveProgramIds = collect($projects ?? [])
+        ->flatMap(fn ($project) => $project->programs ?? collect())
+        ->pluck('id')
+        ->map(fn ($id) => (string) $id)
+        ->unique()
+        ->values()
+        ->all();
+    $effectiveSelectedProgramIds = $selectedProgramScopeMode === ProgramScopeMode::All->value
+        ? $allActiveProgramIds
+        : array_values(array_map('strval', $selectedProgramIds));
 
     $selectedStateIds = old('state_ids', $agreement?->states?->pluck('id')->toArray() ?? []);
     $selectedAgreementLoggingFieldIds = old('agreement_logging_field_ids', $agreementLoggingFieldCollection->pluck('id')->toArray());
@@ -49,6 +61,9 @@
     $organizationProgramMap = $organizations->mapWithKeys(fn ($organization) => [
         (string) $organization->id => $organization->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all(),
     ])->all();
+    $organizationProgramScopeModeMap = $organizations->mapWithKeys(fn ($organization) => [
+        (string) $organization->id => $organization->program_scope_mode?->value ?? 'specific',
+    ])->all();
 
     $organizationStateMap = $organizations->mapWithKeys(fn ($organization) => [
         (string) $organization->id => $organization->states->pluck('id')->map(fn ($id) => (string) $id)->values()->all(),
@@ -57,13 +72,22 @@
     $userProgramMap = $users->mapWithKeys(fn ($user) => [
         (string) $user->id => $user->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all(),
     ])->all();
+    $userProgramScopeModeMap = $users->mapWithKeys(fn ($user) => [
+        (string) $user->id => $user->program_scope_mode?->value ?? 'specific',
+    ])->all();
 
     $teamProgramMap = $teams->mapWithKeys(fn ($team) => [
         (string) $team->id => $team->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all(),
     ])->all();
+    $teamProgramScopeModeMap = $teams->mapWithKeys(fn ($team) => [
+        (string) $team->id => $team->program_scope_mode?->value ?? 'specific',
+    ])->all();
 
     $loggingFieldProgramMap = $agreementLoggingFields->mapWithKeys(fn ($field) => [
         (string) $field->id => $field->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all(),
+    ])->all();
+    $loggingFieldProgramScopeModeMap = $agreementLoggingFields->mapWithKeys(fn ($field) => [
+        (string) $field->id => $field->program_scope_mode?->value ?? 'all',
     ])->all();
 @endphp
 
@@ -90,10 +114,14 @@
                 :projects="$projects"
                 :selected-project-ids="$selectedProjectIds"
                 :selected-program-ids="$selectedProgramIds"
+                :show-scope-mode-selector="true"
+                :selected-scope-mode="$selectedProgramScopeMode"
+                :scope-mode-options="['all' => 'All', 'specific' => 'Specific']"
                 project-label="Projects *"
                 program-label="Programs *"
                 project-help-text="Required only to filter the program list; projects are not saved on the agreement."
-                program-help-text="Select programs explicitly. These saved programs determine teams, users, logging fields, contact families, and activity types available below. Organizations also require at least one program and one state."
+                program-help-text="Select programs explicitly when Specific is selected. These saved programs determine teams, users, logging fields, contact families, and activity types available below. Organizations also require at least one program and one state."
+                scope-mode-help-text="Choose whether this agreement applies to all programs or only specific programs."
                 :expand-empty-programs="false"
             />
         </div>
@@ -120,7 +148,7 @@
         @include('agreements.partials.organizations-section', [
             'agreement' => $agreement,
             'organizations' => $organizations,
-            'selectedProgramIds' => $selectedProgramIds,
+            'selectedProgramIds' => $effectiveSelectedProgramIds,
             'selectedStateIds' => $selectedStateIds,
             'kfsAccounts' => $kfsAccounts ?? collect(),
         ])
@@ -264,6 +292,7 @@
                                data-agreement-logging-field-option
                                data-option-id="{{ $field->id }}"
                                data-program-ids='@json($fieldProgramIds)'
+                               data-scope-mode="{{ $field->program_scope_mode?->value ?? 'all' }}"
                                data-global="{{ empty($fieldProgramIds) ? 'true' : 'false' }}">
                             <input class="form-check-input mt-1"
                                    type="checkbox"
@@ -335,9 +364,13 @@
     'agreement' => $agreement,
     'teams' => $teams,
     'users' => $users,
+    'selectedProgramIds' => $effectiveSelectedProgramIds,
 ])
 
-@include('agreements.partials.deliverables-section', ['agreement' => $agreement])
+@include('agreements.partials.deliverables-section', [
+    'agreement' => $agreement,
+    'selectedProgramIds' => $effectiveSelectedProgramIds,
+])
 
 @once
 <script>
@@ -359,18 +392,51 @@
         }, {});
     }
 
-    function allowedIds(programMap, selectedProgramIds, allowGlobal) {
-        const selected = new Set((selectedProgramIds || []).map(String));
+    function normalizeModeMap(map) {
+        return Object.entries(map || {}).reduce(function (carry, entry) {
+            carry[String(entry[0])] = String(entry[1] || 'specific');
+            return carry;
+        }, {});
+    }
 
+    function matchesProgramScope(programIds, scopeMode, selectedProgramIds, selectedScopeMode, allowGlobal) {
+        const normalizedProgramIds = Array.isArray(programIds) ? programIds.map(String) : [];
+        const selectedPrograms = new Set((selectedProgramIds || []).map(String));
+        const normalizedScopeMode = String(scopeMode || 'specific');
+        const normalizedSelectedScopeMode = String(selectedScopeMode || 'specific');
+
+        if (normalizedSelectedScopeMode === 'all') {
+            return normalizedScopeMode !== 'none';
+        }
+
+        if (normalizedScopeMode === 'all') {
+            return true;
+        }
+
+        if (normalizedScopeMode === 'none') {
+            return false;
+        }
+
+        if (normalizedProgramIds.length === 0) {
+            return allowGlobal;
+        }
+
+        if (selectedPrograms.size === 0) {
+            return false;
+        }
+
+        return normalizedProgramIds.some(function (programId) {
+            return selectedPrograms.has(String(programId));
+        });
+    }
+
+    function allowedIds(programMap, modeMap, selectedProgramIds, selectedScopeMode, allowGlobal) {
         return Object.entries(programMap || {}).reduce(function (carry, entry) {
             const optionId = String(entry[0]);
             const programIds = Array.isArray(entry[1]) ? entry[1].map(String) : [];
-            const isGlobal = programIds.length === 0;
-            const matches = selected.size > 0 && programIds.some(function (programId) {
-                return selected.has(String(programId));
-            });
+            const scopeMode = modeMap && modeMap[optionId] ? String(modeMap[optionId]) : 'specific';
 
-            if ((isGlobal && allowGlobal) || matches) {
+            if (matchesProgramScope(programIds, scopeMode, selectedProgramIds, selectedScopeMode, allowGlobal)) {
                 carry.push(optionId);
             }
 
@@ -378,9 +444,21 @@
         }, []);
     }
 
-    function allowedOrganizationIds(organizationProgramMap, organizationStateMap, selectedProgramIds, selectedStateIds) {
-        const programAllowed = new Set(allowedIds(organizationProgramMap, selectedProgramIds, false));
-        const stateAllowed = new Set(allowedIds(organizationStateMap, selectedStateIds, false));
+    function allowedOrganizationIds(organizationProgramMap, organizationProgramScopeModeMap, organizationStateMap, selectedProgramIds, selectedStateIds, selectedScopeMode) {
+        const programAllowed = new Set(allowedIds(organizationProgramMap, organizationProgramScopeModeMap, selectedProgramIds, selectedScopeMode, false));
+        const stateAllowed = new Set(Object.entries(organizationStateMap || {}).reduce(function (carry, entry) {
+            const optionId = String(entry[0]);
+            const stateIds = Array.isArray(entry[1]) ? entry[1].map(String) : [];
+            const selectedStates = new Set((selectedStateIds || []).map(String));
+
+            if (stateIds.some(function (stateId) {
+                return selectedStates.has(String(stateId));
+            })) {
+                carry.push(optionId);
+            }
+
+            return carry;
+        }, []));
 
         return Array.from(programAllowed).filter(function (organizationId) {
             return stateAllowed.has(String(organizationId));
@@ -406,15 +484,13 @@
         }));
     }
 
-    function syncLoggingFieldOptions(selectedProgramIds) {
+    function syncLoggingFieldOptions(selectedProgramIds, selectedScopeMode) {
         const selectedPrograms = new Set((selectedProgramIds || []).map(String));
 
         document.querySelectorAll('[data-agreement-logging-field-option]').forEach(function (option) {
             const programIds = JSON.parse(option.dataset.programIds || '[]').map(String);
-            const isGlobal = option.dataset.global === 'true';
-            const visible = isGlobal || (selectedPrograms.size > 0 && programIds.some(function (programId) {
-                return selectedPrograms.has(String(programId));
-            }));
+            const scopeMode = String(option.dataset.scopeMode || 'specific');
+            const visible = matchesProgramScope(programIds, scopeMode, Array.from(selectedPrograms), selectedScopeMode, true);
 
             option.classList.toggle('d-none', !visible);
             option.querySelectorAll('input').forEach(function (input) {
@@ -439,13 +515,26 @@
             return;
         }
 
+        const allProgramIds = @json($allActiveProgramIds);
         const organizationProgramMap = normalizeProgramMap(@json($organizationProgramMap));
+        const organizationProgramScopeModeMap = normalizeModeMap(@json($organizationProgramScopeModeMap));
         const organizationStateMap = normalizeProgramMap(@json($organizationStateMap));
         const teamProgramMap = normalizeProgramMap(@json($teamProgramMap));
+        const teamProgramScopeModeMap = normalizeModeMap(@json($teamProgramScopeModeMap));
         const userProgramMap = normalizeProgramMap(@json($userProgramMap));
+        const userProgramScopeModeMap = normalizeModeMap(@json($userProgramScopeModeMap));
+
+        function currentSelectedScopeMode() {
+            const checked = document.querySelector('input[name="program_scope_mode"]:checked');
+
+            return checked ? String(checked.value) : 'specific';
+        }
 
         function refreshAgreementScope() {
-            const selectedProgramIds = selectedIdsFromPicker(programPicker);
+            const selectedScopeMode = currentSelectedScopeMode();
+            const selectedProgramIds = selectedScopeMode === 'all'
+                ? allProgramIds.slice()
+                : selectedIdsFromPicker(programPicker);
             const selectedStateIds = selectedIdsFromPicker(statePicker);
             const hasSelectedPrograms = selectedProgramIds.length > 0;
             const hasSelectedStates = selectedStateIds.length > 0;
@@ -461,9 +550,11 @@
                 canSelectOrganizations
                     ? allowedOrganizationIds(
                         organizationProgramMap,
+                        organizationProgramScopeModeMap,
                         organizationStateMap,
                         selectedProgramIds,
-                        selectedStateIds
+                        selectedStateIds,
+                        selectedScopeMode
                     )
                     : [],
                 !canSelectOrganizations,
@@ -472,14 +563,14 @@
 
             setPickerRestriction(
                 teamPicker,
-                allowedIds(teamProgramMap, selectedProgramIds, false),
+                allowedIds(teamProgramMap, teamProgramScopeModeMap, selectedProgramIds, selectedScopeMode, false),
                 !hasSelectedPrograms,
                 'Select at least one program first...'
             );
 
             setPickerRestriction(
                 userPicker,
-                allowedIds(userProgramMap, selectedProgramIds, false),
+                allowedIds(userProgramMap, userProgramScopeModeMap, selectedProgramIds, selectedScopeMode, false),
                 !hasSelectedPrograms,
                 'Select at least one program first...'
             );
@@ -491,13 +582,13 @@
             }
 
             if (membershipSection) {
-                membershipSection.dataset.programAllowedUserIds = JSON.stringify(allowedIds(userProgramMap, selectedProgramIds, false));
+                membershipSection.dataset.programAllowedUserIds = JSON.stringify(allowedIds(userProgramMap, userProgramScopeModeMap, selectedProgramIds, selectedScopeMode, false));
                 membershipSection.dispatchEvent(new CustomEvent('agreement-scope:change', {
                     bubbles: true,
                 }));
             }
 
-            syncLoggingFieldOptions(selectedProgramIds);
+            syncLoggingFieldOptions(selectedProgramIds, selectedScopeMode);
 
             document.dispatchEvent(new CustomEvent('agreement-scope:change', {
                 detail: {
@@ -507,6 +598,9 @@
         }
 
         programPicker.addEventListener('token-picker:change', refreshAgreementScope);
+        document.querySelectorAll('input[name="program_scope_mode"]').forEach(function (input) {
+            input.addEventListener('change', refreshAgreementScope);
+        });
         if (statePicker) {
             statePicker.addEventListener('token-picker:change', refreshAgreementScope);
         }

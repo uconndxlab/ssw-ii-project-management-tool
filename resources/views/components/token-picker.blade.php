@@ -132,7 +132,7 @@
         const defaultPlaceholder = picker.dataset.placeholder || 'Search...';
         let disabledPlaceholder = picker.dataset.disabledPlaceholder || defaultPlaceholder;
         const showSelected = picker.dataset.showSelected === 'true';
-        const emptySelectionLabel = (picker.dataset.emptySelectionLabel || '').trim();
+        let emptySelectionLabel = (picker.dataset.emptySelectionLabel || '').trim();
         const defaultSelectedBadgeClass = (picker.dataset.selectedBadgeClass || '').trim();
         const options = parseJson(optionsNode, []);
         const initialSelected = new Set(parseJson({ textContent: picker.dataset.selected || '[]' }, []));
@@ -472,6 +472,21 @@
             }
 
             applyDisabledState();
+        });
+
+        picker.addEventListener('token-picker:set-empty-selection-label', function (event) {
+            const detail = event.detail;
+
+            if (typeof detail === 'string') {
+                emptySelectionLabel = detail.trim();
+            } else if (typeof detail === 'object' && detail !== null && typeof detail.label === 'string') {
+                emptySelectionLabel = detail.label.trim();
+            } else {
+                emptySelectionLabel = '';
+            }
+
+            picker.dataset.emptySelectionLabel = emptySelectionLabel;
+            renderSelected();
         });
 
         searchInput.addEventListener('focus', function () {

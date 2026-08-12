@@ -3,6 +3,7 @@
     $d    = $direction ?? 'asc';
     $flip = fn($col) => ($s === $col && $d === 'asc') ? 'desc' : 'asc';
     $url  = fn($col) => route('organizations.index', array_merge(request()->query(), ['sort' => $col, 'direction' => $flip($col), 'page' => 1]));
+    $scopeEmptyLabel = fn ($mode, string $allLabel, string $noneLabel) => ($mode?->value ?? $mode) === 'none' ? $noneLabel : $allLabel;
 @endphp
 
 <div class="card shadow-sm app-index-table-card">
@@ -58,6 +59,7 @@
                             kind="project"
                             :items="$organization->projects"
                             route-name="projects.show"
+                            :empty-label="$scopeEmptyLabel($organization->program_scope_mode, 'All projects', 'No projects')"
                         />
                     </td>
                     <td>
@@ -65,6 +67,7 @@
                             kind="program"
                             :items="$organization->programs"
                             route-name="programs.show"
+                            :empty-label="$scopeEmptyLabel($organization->program_scope_mode, 'All programs', 'No programs')"
                         />
                     </td>
                     <td>

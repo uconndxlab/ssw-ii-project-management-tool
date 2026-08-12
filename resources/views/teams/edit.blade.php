@@ -69,11 +69,14 @@
                             :projects="$projects"
                             :selected-project-ids="$selectedProjectIds"
                             :selected-program-ids="$selectedProgramIds"
+                            :show-scope-mode-selector="true"
+                            :selected-scope-mode="old('program_scope_mode', $team->program_scope_mode?->value ?? 'specific')"
                             project-help-text="Use projects to filter programs; team projects are inferred and not saved."
-                            program-help-text="Programs are the saved team scope. Leaving programs empty saves all currently listed programs under the selected projects."
+                            program-help-text="Programs are the saved team scope when Specific is selected."
+                            scope-mode-help-text="Choose whether this team applies to all programs, only specific programs, or no programs."
                         />
-                        <div class="alert alert-warning small mt-3 mb-0">
-                            Leaving projects and programs empty will keep the team saved, but it will not be available for agreement assignment.
+                        <div class="alert alert-warning small mt-3 mb-0 d-none" data-team-none-scope-warning>
+                            Teams with None scope will save successfully, but they will not be available for program-scoped agreement assignment.
                         </div>
                     </div>
 
@@ -104,4 +107,29 @@
     </div>
 </div>
 <x-save-bar form-id="teams-edit-form" save-label="Save Team" :last-saved-at="$team->updated_at" />
+
+@once
+<script>
+(function () {
+    function syncTeamNoneScopeWarning(section) {
+        const warning = document.querySelector('[data-team-none-scope-warning]');
+
+        if (!section || !warning) {
+            return;
+        }
+
+        const checked = section.querySelector('input[name="program_scope_mode"]:checked');
+        warning.classList.toggle('d-none', !checked || checked.value !== 'none');
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const section = document.querySelector('[data-scope-id="team-edit-scope"]');
+        syncTeamNoneScopeWarning(section);
+        section?.addEventListener('project-program-scope:change', function () {
+            syncTeamNoneScopeWarning(section);
+        });
+    });
+})();
+</script>
+@endonce
 @endsection

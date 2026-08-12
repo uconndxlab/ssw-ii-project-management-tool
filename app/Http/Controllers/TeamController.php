@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ProgramScopeMode;
 use App\Models\Program;
 use App\Models\Project;
 use App\Models\Team;
@@ -31,12 +32,18 @@ class TeamController extends Controller
 
         if ($request->filled('project_id')) {
             $projectId = (int) $request->input('project_id');
-            $query->whereHas('programs.projects', fn ($relation) => $relation->where('projects.id', $projectId));
+            $query->where(function ($q) use ($projectId) {
+                $q->whereHas('programs.projects', fn ($relation) => $relation->where('projects.id', $projectId))
+                    ->orWhere('teams.program_scope_mode', ProgramScopeMode::All->value);
+            });
         }
 
         if ($request->filled('program_id')) {
             $programId = (int) $request->input('program_id');
-            $query->whereHas('programs', fn ($relation) => $relation->where('programs.id', $programId));
+            $query->where(function ($q) use ($programId) {
+                $q->whereHas('programs', fn ($relation) => $relation->where('programs.id', $programId))
+                    ->orWhere('teams.program_scope_mode', ProgramScopeMode::All->value);
+            });
         }
 
         // Search
@@ -115,6 +122,7 @@ class TeamController extends Controller
             'active' => ['required', 'boolean'],
             'user_ids' => ['nullable', 'array'],
             'user_ids.*' => ['exists:users,id'],
+            'program_scope_mode' => ['required', 'in:all,specific,none'],
             'project_ids' => ['nullable', 'array'],
             'project_ids.*' => ['distinct', 'exists:projects,id'],
             'program_ids' => ['nullable', 'array'],
@@ -122,22 +130,28 @@ class TeamController extends Controller
         ]);
 
         $validator->after(function ($validator) use ($request) {
-            ProjectProgramScope::validateSelection(
+            ProjectProgramScope::validateModeSelection(
                 $validator,
+                $request->input('program_scope_mode', ProgramScopeMode::Specific->value),
+                Team::class,
                 ProjectProgramScope::normalizeIds($request->input('project_ids', [])),
                 ProjectProgramScope::normalizeIds($request->input('program_ids', []))
             );
         });
 
         $validated = $validator->validate();
+        $validated['program_scope_mode'] = ProjectProgramScope::normalizeMode($validated['program_scope_mode'] ?? null, Team::class)->value;
 
         $team = Team::create([
             'name' => $validated['name'],
             'active' => $validated['active'],
+            'program_scope_mode' => $validated['program_scope_mode'],
         ]);
 
         $team->users()->sync($validated['user_ids'] ?? []);
-        $team->programs()->sync(ProjectProgramScope::effectiveProgramIds(
+        $team->programs()->sync(ProjectProgramScope::modeAwareProgramIds(
+            $validated['program_scope_mode'],
+            Team::class,
             $validated['project_ids'] ?? [],
             $validated['program_ids'] ?? []
         ));
@@ -206,6 +220,7 @@ class TeamController extends Controller
             'active' => ['required', 'boolean'],
             'user_ids' => ['nullable', 'array'],
             'user_ids.*' => ['exists:users,id'],
+            'program_scope_mode' => ['required', 'in:all,specific,none'],
             'project_ids' => ['nullable', 'array'],
             'project_ids.*' => ['distinct', 'exists:projects,id'],
             'program_ids' => ['nullable', 'array'],
@@ -213,22 +228,28 @@ class TeamController extends Controller
         ]);
 
         $validator->after(function ($validator) use ($request) {
-            ProjectProgramScope::validateSelection(
+            ProjectProgramScope::validateModeSelection(
                 $validator,
+                $request->input('program_scope_mode', ProgramScopeMode::Specific->value),
+                Team::class,
                 ProjectProgramScope::normalizeIds($request->input('project_ids', [])),
                 ProjectProgramScope::normalizeIds($request->input('program_ids', []))
             );
         });
 
         $validated = $validator->validate();
+        $validated['program_scope_mode'] = ProjectProgramScope::normalizeMode($validated['program_scope_mode'] ?? null, Team::class)->value;
 
         $team->update([
             'name' => $validated['name'],
             'active' => $validated['active'],
+            'program_scope_mode' => $validated['program_scope_mode'],
         ]);
 
         $team->users()->sync($validated['user_ids'] ?? []);
-        $team->programs()->sync(ProjectProgramScope::effectiveProgramIds(
+        $team->programs()->sync(ProjectProgramScope::modeAwareProgramIds(
+            $validated['program_scope_mode'],
+            Team::class,
             $validated['project_ids'] ?? [],
             $validated['program_ids'] ?? []
         ));

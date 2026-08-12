@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ProgramScopeMode;
 use App\Models\Concerns\HasProgramScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -16,6 +17,7 @@ class ContactFamily extends Model
         'active',
         'track_additional_time',
         'sort_order',
+        'program_scope_mode',
     ];
 
     protected function casts(): array
@@ -24,6 +26,7 @@ class ContactFamily extends Model
             'active' => 'boolean',
             'track_additional_time' => 'boolean',
             'sort_order' => 'integer',
+            'program_scope_mode' => ProgramScopeMode::class,
         ];
     }
 

@@ -355,8 +355,11 @@
         ]]));
         const activityTypeContactFamilyMap = @json($activityTypes->mapWithKeys(fn ($type) => [(string) $type->id => (string) $type->contact_family_id]));
         const programLookup = @json($programLookup->map(fn ($p) => $p->name));
+        const allProgramIds = @json($allActiveProgramIds ?? []);
         const contactFamilyProgramMap = @json($contactFamilies->mapWithKeys(fn ($family) => [(string) $family->id => $family->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all()]));
+        const contactFamilyProgramScopeModeMap = @json($contactFamilies->mapWithKeys(fn ($family) => [(string) $family->id => $family->program_scope_mode?->value ?? 'all']));
         const activityTypeProgramMap = @json($activityTypes->mapWithKeys(fn ($type) => [(string) $type->id => $type->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all()]));
+        const activityTypeProgramScopeModeMap = @json($activityTypes->mapWithKeys(fn ($type) => [(string) $type->id => $type->program_scope_mode?->value ?? 'all']));
         const teamMembersMap = @json($teams->mapWithKeys(fn ($team) => [(string) $team->id => $team->users->pluck('id')->map(fn ($id) => (string) $id)->values()->all()]));
         const agreementTeamPickerId = 'agreement-{{ $agreement ? 'edit' : 'create' }}-teams';
         const agreementUserPickerId = 'agreement-{{ $agreement ? 'edit' : 'create' }}-users';
@@ -437,11 +440,22 @@
         }
 
         function selectedProgramIds() {
+            const selectedScopeMode = currentAgreementScopeMode();
+            if (selectedScopeMode === 'all') {
+                return Array.isArray(allProgramIds) ? allProgramIds.map(String) : [];
+            }
+
             const picker = document.getElementById('agreement-scope-programs');
             if (!picker) return [];
             return Array.from(picker.querySelectorAll('[data-token-inputs] input')).map(function (input) {
                 return String(input.value);
             });
+        }
+
+        function currentAgreementScopeMode() {
+            const checked = document.querySelector('input[name="program_scope_mode"]:checked');
+
+            return checked ? String(checked.value) : 'specific';
         }
 
         function selectedIdsFromPicker(pickerId) {
@@ -452,10 +466,12 @@
             });
         }
 
-        function isAllowedByPrograms(programIds, allowGlobal, activeProgramIds) {
+        function isAllowedByPrograms(programIds, scopeMode, allowGlobal, activeProgramIds) {
             const normalizedProgramIds = Array.isArray(programIds) ? programIds.map(String) : [];
             const selectedPrograms = new Set((activeProgramIds || []).map(String));
-            if (normalizedProgramIds.length === 0) return allowGlobal;
+            const normalizedScopeMode = String(scopeMode || 'specific');
+            if (normalizedScopeMode === 'none') return false;
+            if (normalizedProgramIds.length === 0) return normalizedScopeMode === 'all' ? true : allowGlobal;
             if (selectedPrograms.size === 0) return false;
             return normalizedProgramIds.some(function (programId) {
                 return selectedPrograms.has(String(programId));
@@ -504,7 +520,7 @@
 
         function activityTypeIsInScope(typeId, contactFamilyId) {
             const programIds = activityTypeProgramMap[String(typeId)] || [];
-            if (!isAllowedByPrograms(programIds, true, selectedProgramIds())) {
+            if (!isAllowedByPrograms(programIds, activityTypeProgramScopeModeMap[String(typeId)] || 'all', true, selectedProgramIds())) {
                 return false;
             }
 
@@ -898,7 +914,7 @@
             Array.from(contactFamilySelect.options).forEach(function (option) {
                 if (!option.value) { option.hidden = false; option.disabled = false; return; }
                 const programIds = JSON.parse(option.dataset.programIds || '[]');
-                const visible = isAllowedByPrograms(programIds, true, activeProgramIds);
+                const visible = isAllowedByPrograms(programIds, option.dataset.scopeMode || 'all', true, activeProgramIds);
                 option.hidden = !visible;
                 option.disabled = !visible;
             });
@@ -912,7 +928,7 @@
                 if (!option.value) { option.hidden = false; option.disabled = false; return; }
                 const matchesFamily = !contactFamilySelect.value || option.dataset.contactFamilyId === contactFamilySelect.value;
                 const programIds = JSON.parse(option.dataset.programIds || '[]');
-                const matchesPrograms = isAllowedByPrograms(programIds, true, activeProgramIds);
+                const matchesPrograms = isAllowedByPrograms(programIds, option.dataset.scopeMode || 'all', true, activeProgramIds);
                 const matches = matchesFamily && matchesPrograms;
                 option.hidden = !matches;
                 option.disabled = !matches;
@@ -1318,8 +1334,8 @@
                 const rowKey = rowData.row_key;
                 if (!rowKey || rowData._delete === '1') return;
 
-                const familyAllowed = !rowData.contact_family_id || isAllowedByPrograms(contactFamilyProgramMap[String(rowData.contact_family_id)] || [], true, activeProgramIds);
-                const typeAllowed = !rowData.activity_type_id || isAllowedByPrograms(activityTypeProgramMap[String(rowData.activity_type_id)] || [], true, activeProgramIds);
+                const familyAllowed = !rowData.contact_family_id || isAllowedByPrograms(contactFamilyProgramMap[String(rowData.contact_family_id)] || [], contactFamilyProgramScopeModeMap[String(rowData.contact_family_id)] || 'all', true, activeProgramIds);
+                const typeAllowed = !rowData.activity_type_id || isAllowedByPrograms(activityTypeProgramMap[String(rowData.activity_type_id)] || [], activityTypeProgramScopeModeMap[String(rowData.activity_type_id)] || 'all', true, activeProgramIds);
                 const programAllowed = !rowData.program_id || activeProgramIds.includes(String(rowData.program_id));
 
                 if (!familyAllowed || !typeAllowed || !programAllowed) {

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\AgreementTimeTrackingRequirement;
+use App\Enums\ProgramScopeMode;
 use App\Models\Concerns\HasProgramScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -25,6 +26,7 @@ class Agreement extends Model
         'time_tracking_mode',
         'require_payor',
         'require_payee',
+        'program_scope_mode',
     ];
 
     protected function casts(): array
@@ -38,6 +40,7 @@ class Agreement extends Model
             'time_tracking_mode' => AgreementTimeTrackingRequirement::class,
             'require_payor' => 'boolean',
             'require_payee' => 'boolean',
+            'program_scope_mode' => ProgramScopeMode::class,
         ];
     }
 

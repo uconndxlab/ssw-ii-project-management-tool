@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ProgramScopeMode;
 use App\Models\Organization;
 use App\Models\Program;
 use App\Models\Project;
@@ -51,12 +52,18 @@ class OrganizationController extends Controller
 
         if ($request->filled('project_id')) {
             $projectId = (int) $request->input('project_id');
-            $query->whereHas('programs.projects', fn ($relation) => $relation->where('projects.id', $projectId));
+            $query->where(function ($q) use ($projectId) {
+                $q->whereHas('programs.projects', fn ($relation) => $relation->where('projects.id', $projectId))
+                    ->orWhere('organizations.program_scope_mode', ProgramScopeMode::All->value);
+            });
         }
 
         if ($request->filled('program_id')) {
             $programId = (int) $request->input('program_id');
-            $query->whereHas('programs', fn ($relation) => $relation->where('programs.id', $programId));
+            $query->where(function ($q) use ($programId) {
+                $q->whereHas('programs', fn ($relation) => $relation->where('programs.id', $programId))
+                    ->orWhere('organizations.program_scope_mode', ProgramScopeMode::All->value);
+            });
         }
 
         $sort = $request->input('sort', 'name');
@@ -162,9 +169,12 @@ class OrganizationController extends Controller
             'name' => $validated['name'],
             'po_number' => $validated['po_number'] ?? null,
             'active' => $request->boolean('active'),
+            'program_scope_mode' => $validated['program_scope_mode'],
         ]);
         $organization->states()->sync($validated['state_ids']);
-        $organization->programs()->sync(ProjectProgramScope::effectiveProgramIds(
+        $organization->programs()->sync(ProjectProgramScope::modeAwareProgramIds(
+            $validated['program_scope_mode'],
+            Organization::class,
             $validated['project_ids'] ?? [],
             $validated['program_ids'] ?? []
         ));
@@ -193,9 +203,12 @@ class OrganizationController extends Controller
             'name' => $validated['name'],
             'po_number' => $validated['po_number'] ?? null,
             'active' => $request->boolean('active'),
+            'program_scope_mode' => $validated['program_scope_mode'],
         ]);
         $organization->states()->sync($validated['state_ids']);
-        $organization->programs()->sync(ProjectProgramScope::effectiveProgramIds(
+        $organization->programs()->sync(ProjectProgramScope::modeAwareProgramIds(
+            $validated['program_scope_mode'],
+            Organization::class,
             $validated['project_ids'] ?? [],
             $validated['program_ids'] ?? []
         ));
@@ -229,6 +242,7 @@ class OrganizationController extends Controller
             'active' => ['nullable', 'boolean'],
             'state_ids' => ['required', 'array', 'min:1'],
             'state_ids.*' => ['exists:states,id'],
+            'program_scope_mode' => ['required', Rule::in(ProgramScopeMode::values())],
             'program_ids' => ['nullable', 'array'],
             'program_ids.*' => ['distinct', 'exists:programs,id'],
             'project_ids' => ['nullable', 'array'],
@@ -242,14 +256,19 @@ class OrganizationController extends Controller
         ]);
 
         $validator->after(function ($validator) use ($request) {
-            ProjectProgramScope::validateSelection(
+            ProjectProgramScope::validateModeSelection(
                 $validator,
+                $request->input('program_scope_mode', ProgramScopeMode::Specific->value),
+                Organization::class,
                 ProjectProgramScope::normalizeIds($request->input('project_ids', [])),
                 ProjectProgramScope::normalizeIds($request->input('program_ids', []))
             );
         });
 
-        return $validator->validate();
+        $validated = $validator->validate();
+        $validated['program_scope_mode'] = ProjectProgramScope::normalizeMode($validated['program_scope_mode'] ?? null, Organization::class)->value;
+
+        return $validated;
     }
 
     private function applyOrganizationIndexSort($query, string $sort, string $direction): void

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ProgramScopeMode;
 use App\Models\AgreementDeliverable;
 use App\Models\Activity;
 use App\Models\ActivityType;
@@ -53,7 +54,7 @@ class ActivityTypeController extends Controller
             $projectId = (int) $request->input('project_id');
             $query->where(function ($q) use ($projectId) {
                 $q->whereHas('programs.projects', fn ($relation) => $relation->where('projects.id', $projectId))
-                    ->orWhereDoesntHave('programs');
+                    ->orWhere('activity_types.program_scope_mode', ProgramScopeMode::All->value);
             });
         }
 
@@ -61,7 +62,7 @@ class ActivityTypeController extends Controller
             $programId = (int) $request->input('program_id');
             $query->where(function ($q) use ($programId) {
                 $q->whereHas('programs', fn ($relation) => $relation->where('programs.id', $programId))
-                    ->orWhereDoesntHave('programs');
+                    ->orWhere('activity_types.program_scope_mode', ProgramScopeMode::All->value);
             });
         }
 
@@ -200,9 +201,12 @@ class ActivityTypeController extends Controller
         $validated['active'] = $request->has('active');
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
         $validated = $this->normalizeValidatedDuration($validated);
+        $validated['program_scope_mode'] = ProjectProgramScope::normalizeMode($validated['program_scope_mode'] ?? null, ActivityType::class)->value;
 
         $activityType = ActivityType::create($validated);
-        $activityType->programs()->sync(ProjectProgramScope::effectiveProgramIds(
+        $activityType->programs()->sync(ProjectProgramScope::modeAwareProgramIds(
+            $validated['program_scope_mode'],
+            ActivityType::class,
             $validated['project_ids'] ?? [],
             $validated['program_ids'] ?? []
         ));
@@ -258,9 +262,12 @@ class ActivityTypeController extends Controller
         $validated['active'] = $request->has('active');
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
         $validated = $this->normalizeValidatedDuration($validated);
+        $validated['program_scope_mode'] = ProjectProgramScope::normalizeMode($validated['program_scope_mode'] ?? null, ActivityType::class)->value;
 
         $activityType->update($validated);
-        $activityType->programs()->sync(ProjectProgramScope::effectiveProgramIds(
+        $activityType->programs()->sync(ProjectProgramScope::modeAwareProgramIds(
+            $validated['program_scope_mode'],
+            ActivityType::class,
             $validated['project_ids'] ?? [],
             $validated['program_ids'] ?? []
         ));
@@ -374,6 +381,7 @@ class ActivityTypeController extends Controller
             'activity_type_logging_field_ids.*' => ['exists:logging_fields,id'],
             'required_activity_type_logging_field_ids' => ['nullable', 'array'],
             'required_activity_type_logging_field_ids.*' => ['exists:logging_fields,id'],
+            'program_scope_mode' => ['required', 'in:all,specific,none'],
             'project_ids' => ['nullable', 'array'],
             'project_ids.*' => ['distinct', 'exists:projects,id'],
             'program_ids' => ['nullable', 'array'],
@@ -384,18 +392,19 @@ class ActivityTypeController extends Controller
     private function addActivityTypeValidatorAfter($validator, Request $request): void
     {
         $validator->after(function ($validator) use ($request) {
+            $mode = $request->input('program_scope_mode', ProgramScopeMode::All->value);
             $projectIds = ProjectProgramScope::normalizeIds($request->input('project_ids', []));
             $programIds = ProjectProgramScope::normalizeIds($request->input('program_ids', []));
 
-            ProjectProgramScope::validateSelection($validator, $projectIds, $programIds);
+            ProjectProgramScope::validateModeSelection($validator, $mode, ActivityType::class, $projectIds, $programIds);
 
-            if ($projectIds === [] && $programIds === []) {
+            if (ProjectProgramScope::normalizeMode($mode, ActivityType::class) !== ProgramScopeMode::Specific) {
                 return;
             }
 
             ProjectProgramScope::validateScopedAssignments(
                 $validator,
-                ProjectProgramScope::effectiveProgramIds($projectIds, $programIds),
+                $programIds,
                 ProjectProgramScope::normalizeIds($request->input('activity_type_logging_field_ids', [])),
                 LoggingField::class,
                 'activity_type_logging_field_ids',

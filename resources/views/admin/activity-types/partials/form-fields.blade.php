@@ -66,10 +66,13 @@
             :projects="$projects"
             :selected-project-ids="$selectedProjectIds"
             :selected-program-ids="$selectedProgramIds"
+            :show-scope-mode-selector="true"
+            :selected-scope-mode="old('program_scope_mode', $activityType->program_scope_mode?->value ?? 'all')"
             project-empty-selection-label="All projects"
             program-empty-selection-label="All programs"
             project-help-text="Optional filter for finding programs; projects are inferred and not saved."
-            program-help-text="Programs are the saved scope. Leave both filters empty to make this type global; leaving programs empty after selecting projects saves all currently listed programs."
+            program-help-text="Programs are the saved scope when Specific is selected."
+            scope-mode-help-text="Choose whether this activity type applies to all programs, only specific programs, or no programs."
         />
     </div>
 

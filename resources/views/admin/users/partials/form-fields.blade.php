@@ -119,8 +119,11 @@
             :projects="$projects"
             :selected-project-ids="$selectedProjectIds"
             :selected-program-ids="$selectedProgramIds"
+            :show-scope-mode-selector="true"
+            :selected-scope-mode="old('program_scope_mode', $user->program_scope_mode?->value ?? 'specific')"
             project-help-text="Use projects to filter the program list; project assignments are inferred and not saved."
-            program-help-text="Programs are the saved user scope. Leaving programs empty saves all programs currently listed under the selected projects."
+            program-help-text="Programs are the saved user scope when Specific is selected."
+            scope-mode-help-text="Choose whether this user applies to all programs, only specific programs, or no programs."
         />
     </div>
 </div>

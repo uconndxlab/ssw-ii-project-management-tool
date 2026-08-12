@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\AgreementRequest;
+use App\Enums\ProgramScopeMode;
 use App\Models\Organization;
 use App\Models\Agreement;
 use App\Models\AgreementDeliverable;
@@ -69,12 +70,18 @@ class AgreementController extends Controller
 
         if ($request->filled('project_id')) {
             $projectId = (int) $request->input('project_id');
-            $query->whereHas('programs.projects', fn ($relation) => $relation->where('projects.id', $projectId));
+            $query->where(function ($q) use ($projectId) {
+                $q->whereHas('programs.projects', fn ($relation) => $relation->where('projects.id', $projectId))
+                    ->orWhere('agreements.program_scope_mode', ProgramScopeMode::All->value);
+            });
         }
 
         if ($request->filled('program_id')) {
             $programId = (int) $request->input('program_id');
-            $query->whereHas('programs', fn ($relation) => $relation->where('programs.id', $programId));
+            $query->where(function ($q) use ($programId) {
+                $q->whereHas('programs', fn ($relation) => $relation->where('programs.id', $programId))
+                    ->orWhere('agreements.program_scope_mode', ProgramScopeMode::All->value);
+            });
         }
 
         $sort = $request->input('sort', 'name');
@@ -177,6 +184,7 @@ class AgreementController extends Controller
             $agreement = Agreement::create([
                 'name' => $validated['name'],
                 'active' => true,
+                'program_scope_mode' => $validated['program_scope_mode'],
                 'abstract' => $validated['abstract'] ?? null,
                 'start_date' => $validated['start_date'],
                 'end_date' => $validated['end_date'],
@@ -300,6 +308,7 @@ class AgreementController extends Controller
             $agreement->update([
                 'name' => $validated['name'],
                 'active' => array_key_exists('active', $validated) ? (bool) $validated['active'] : $agreement->active,
+                'program_scope_mode' => $validated['program_scope_mode'],
                 'abstract' => $validated['abstract'] ?? null,
                 'start_date' => $validated['start_date'],
                 'end_date' => $validated['end_date'],
@@ -357,7 +366,12 @@ class AgreementController extends Controller
 
     private function syncAgreementRelations(Agreement $agreement, array $validated): void
     {
-        $selectedProgramIds = array_values(array_unique($validated['program_ids'] ?? []));
+        $selectedProgramIds = ProjectProgramScope::modeAwareProgramIds(
+            $validated['program_scope_mode'] ?? ProgramScopeMode::Specific->value,
+            Agreement::class,
+            $validated['project_ids'] ?? [],
+            $validated['program_ids'] ?? []
+        );
 
         $organizationIds = collect($validated['organization_ids'] ?? [])
             ->map(fn ($id) => (int) $id)

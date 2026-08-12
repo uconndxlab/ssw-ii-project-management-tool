@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Enums\ProgramScopeMode;
 use App\Models\Program;
 use App\Models\Project;
 use Illuminate\Database\Eloquent\Model;
@@ -9,6 +10,29 @@ use Illuminate\Support\Collection;
 
 class ProjectProgramScope
 {
+    public static function defaultModeForModel(string $modelClass): ProgramScopeMode
+    {
+        return match ($modelClass) {
+            \App\Models\LoggingField::class,
+            \App\Models\ContactFamily::class,
+            \App\Models\ActivityType::class => ProgramScopeMode::All,
+            default => ProgramScopeMode::Specific,
+        };
+    }
+
+    public static function normalizeMode(ProgramScopeMode|string|null $mode, string $modelClass): ProgramScopeMode
+    {
+        if ($mode instanceof ProgramScopeMode) {
+            return $mode;
+        }
+
+        if (is_string($mode) && $mode !== '') {
+            return ProgramScopeMode::from($mode);
+        }
+
+        return self::defaultModeForModel($modelClass);
+    }
+
     public static function activeProjectsWithPrograms()
     {
         return Project::query()
@@ -114,6 +138,45 @@ class ProjectProgramScope
             ->map(fn ($id) => (int) $id)
             ->intersect(collect($selectedProgramIds)->map(fn ($id) => (int) $id))
             ->isNotEmpty();
+    }
+
+    public static function modeAwareProgramIds(ProgramScopeMode|string|null $mode, string $modelClass, array $projectIds, array $programIds): array
+    {
+        $normalizedMode = self::normalizeMode($mode, $modelClass);
+
+        return match ($normalizedMode) {
+            ProgramScopeMode::All, ProgramScopeMode::None => [],
+            ProgramScopeMode::Specific => self::normalizeIds($programIds),
+        };
+    }
+
+    public static function modeAllowsAnyPrograms(ProgramScopeMode|string|null $mode, string $modelClass): bool
+    {
+        return self::normalizeMode($mode, $modelClass) !== ProgramScopeMode::None;
+    }
+
+    public static function validateModeSelection(
+        $validator,
+        ProgramScopeMode|string|null $mode,
+        string $modelClass,
+        array $projectIds,
+        array $programIds,
+        string $projectKey = 'project_ids',
+        string $programKey = 'program_ids'
+    ): void {
+        $normalizedMode = self::normalizeMode($mode, $modelClass);
+
+        if ($normalizedMode !== ProgramScopeMode::Specific) {
+            return;
+        }
+
+        if (empty($programIds)) {
+            $validator->errors()->add($programKey, 'Select at least one program when Specific scope is selected.');
+
+            return;
+        }
+
+        self::validateSelection($validator, $projectIds, $programIds, $projectKey, $programKey);
     }
 
     public static function validateScopedAssignments(

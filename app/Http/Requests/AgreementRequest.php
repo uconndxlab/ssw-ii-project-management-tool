@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\AgreementTimeTrackingRequirement;
+use App\Enums\ProgramScopeMode;
 use App\Models\Agreement;
 use App\Models\AgreementDeliverable;
 use App\Support\ActivityTypeDuration;
@@ -11,6 +12,7 @@ use App\Models\ActivityType;
 use App\Models\ContactFamily;
 use App\Models\LoggingField;
 use App\Models\Organization;
+use App\Models\Program;
 use App\Support\ProjectProgramScope;
 use App\Models\Team;
 use App\Models\User;
@@ -53,6 +55,7 @@ class AgreementRequest extends FormRequest
             'organization_kfs_numbers' => ['nullable', 'array'],
             'state_ids' => ['nullable', 'array'],
             'state_ids.*' => ['exists:states,id'],
+            'program_scope_mode' => ['required', Rule::in([ProgramScopeMode::All->value, ProgramScopeMode::Specific->value])],
             'project_ids' => ['nullable', 'array'],
             'project_ids.*' => ['distinct', 'exists:projects,id'],
             'program_ids' => ['nullable', 'array'],
@@ -124,6 +127,10 @@ class AgreementRequest extends FormRequest
                 ->map(fn ($id) => (int) $id)
                 ->unique()
                 ->values();
+            $programScopeMode = ProjectProgramScope::normalizeMode(
+                $this->input('program_scope_mode', ProgramScopeMode::Specific->value),
+                Agreement::class
+            );
 
             $stateIds = collect($this->input('state_ids', []))
                 ->filter(fn ($id) => $id !== null && $id !== '')
@@ -131,9 +138,13 @@ class AgreementRequest extends FormRequest
                 ->unique()
                 ->values();
 
-            if ($programIds->isEmpty()) {
-                $validator->errors()->add('program_ids', 'Select at least one program.');
-            }
+            ProjectProgramScope::validateModeSelection(
+                $validator,
+                $programScopeMode,
+                Agreement::class,
+                $projectIds->all(),
+                $programIds->all()
+            );
 
             if ($stateIds->isEmpty()) {
                 $validator->errors()->add('state_ids', 'Select at least one state.');
@@ -143,25 +154,9 @@ class AgreementRequest extends FormRequest
                 return;
             }
 
-            if ($projectIds->isEmpty()) {
-                $validator->errors()->add('project_ids', 'Select at least one project before assigning programs.');
-
-                return;
-            }
-
-            if ($programIds->isNotEmpty()) {
-                ProjectProgramScope::validateSelection(
-                    $validator,
-                    $projectIds->all(),
-                    $programIds->all()
-                );
-
-                if ($validator->errors()->isNotEmpty()) {
-                    return;
-                }
-            }
-
-            $selectedProgramIdSet = $programIds->map(fn ($id) => (int) $id)->values();
+            $selectedProgramIdSet = $programScopeMode === ProgramScopeMode::All
+                ? Program::query()->where('active', true)->pluck('id')->map(fn ($id) => (int) $id)->values()
+                : $programIds->map(fn ($id) => (int) $id)->values();
             $selectedStateIdSet = $stateIds->map(fn ($id) => (int) $id)->values();
 
             $matchesSelectedScope = function (Collection $scopedIds, bool $allowGlobal, Collection $selectedIdSet): bool {
@@ -176,8 +171,33 @@ class AgreementRequest extends FormRequest
                 return $scopedIds->intersect($selectedIdSet)->isNotEmpty();
             };
 
-            $matchesSelectedPrograms = function (Collection $scopedProgramIds, bool $allowGlobal) use ($matchesSelectedScope, $selectedProgramIdSet): bool {
-                return $matchesSelectedScope($scopedProgramIds, $allowGlobal, $selectedProgramIdSet);
+            $matchesSelectedPrograms = function (
+                Collection $scopedProgramIds,
+                ProgramScopeMode|string|null $entityMode,
+                string $entityModelClass,
+            ) use ($programScopeMode, $selectedProgramIdSet): bool {
+                if ($programScopeMode === ProgramScopeMode::All) {
+                    return ProjectProgramScope::modeAllowsAnyPrograms($entityMode, $entityModelClass);
+                }
+
+                $normalizedEntityMode = ProjectProgramScope::normalizeMode($entityMode, $entityModelClass);
+
+                if ($normalizedEntityMode === ProgramScopeMode::All) {
+                    return true;
+                }
+
+                if ($normalizedEntityMode === ProgramScopeMode::None) {
+                    return false;
+                }
+
+                if ($selectedProgramIdSet->isEmpty()) {
+                    return false;
+                }
+
+                return $scopedProgramIds
+                    ->map(fn ($id) => (int) $id)
+                    ->intersect($selectedProgramIdSet)
+                    ->isNotEmpty();
             };
 
             $matchesSelectedStates = function (Collection $scopedStateIds, bool $allowGlobal) use ($matchesSelectedScope, $selectedStateIdSet): bool {
@@ -218,7 +238,7 @@ class AgreementRequest extends FormRequest
                         $organizationProgramIds = $organization->programs->pluck('id')->map(fn ($id) => (int) $id)->values();
                         $organizationStateIds = $organization->states->pluck('id')->map(fn ($id) => (int) $id)->values();
 
-                        return !$matchesSelectedPrograms($organizationProgramIds, false)
+                        return !$matchesSelectedPrograms($organizationProgramIds, $organization->program_scope_mode, Organization::class)
                             || !$matchesSelectedStates($organizationStateIds, false);
                     })
                     ->pluck('id');
@@ -317,7 +337,8 @@ class AgreementRequest extends FormRequest
                     ->get()
                     ->filter(fn (Team $team) => !$matchesSelectedPrograms(
                         $team->programs->pluck('id')->map(fn ($id) => (int) $id)->values(),
-                        false
+                        $team->program_scope_mode,
+                        Team::class
                     ))
                     ->pluck('id');
 
@@ -333,7 +354,8 @@ class AgreementRequest extends FormRequest
                     ->get()
                     ->filter(fn (User $user) => !$matchesSelectedPrograms(
                         $user->programs->pluck('id')->map(fn ($id) => (int) $id)->values(),
-                        false
+                        $user->program_scope_mode,
+                        User::class
                     ))
                     ->pluck('id');
 
@@ -400,7 +422,8 @@ class AgreementRequest extends FormRequest
                     ->get()
                     ->filter(fn (LoggingField $field) => !$matchesSelectedPrograms(
                         $field->programs->pluck('id')->map(fn ($id) => (int) $id)->values(),
-                        true
+                        $field->program_scope_mode,
+                        LoggingField::class
                     ))
                     ->pluck('id');
 
@@ -435,7 +458,8 @@ class AgreementRequest extends FormRequest
                     ->get()
                     ->filter(fn (ContactFamily $family) => !$matchesSelectedPrograms(
                         $family->programs->pluck('id')->map(fn ($id) => (int) $id)->values(),
-                        true
+                        $family->program_scope_mode,
+                        ContactFamily::class
                     ))
                     ->pluck('id');
 
@@ -458,7 +482,8 @@ class AgreementRequest extends FormRequest
                     ->get()
                     ->filter(fn (ActivityType $type) => !$matchesSelectedPrograms(
                         $type->programs->pluck('id')->map(fn ($id) => (int) $id)->values(),
-                        true
+                        $type->program_scope_mode,
+                        ActivityType::class
                     ))
                     ->pluck('id');
 
@@ -474,7 +499,7 @@ class AgreementRequest extends FormRequest
                 ->unique()
                 ->values();
 
-            if ($deliverableProgramIds->isNotEmpty()) {
+            if ($programScopeMode !== ProgramScopeMode::All && $deliverableProgramIds->isNotEmpty()) {
                 $invalidDeliverableProgramIds = $deliverableProgramIds
                     ->diff($selectedProgramIdSet)
                     ->values();
@@ -492,7 +517,8 @@ class AgreementRequest extends FormRequest
                     ->get()
                     ->filter(fn (Team $team) => $matchesSelectedPrograms(
                         $team->programs->pluck('id')->map(fn ($id) => (int) $id)->values(),
-                        false
+                        $team->program_scope_mode,
+                        Team::class
                     ))
                     ->flatMap(fn (Team $team) => $team->users->pluck('id'))
                     ->map(fn ($id) => (int) $id)
@@ -673,7 +699,8 @@ class AgreementRequest extends FormRequest
 
                             return !$matchesSelectedPrograms(
                                 $user->programs->pluck('id')->map(fn ($id) => (int) $id)->values(),
-                                false
+                                $user->program_scope_mode,
+                                User::class
                             );
                         })
                         ->pluck('id');
@@ -690,7 +717,8 @@ class AgreementRequest extends FormRequest
                         ->get()
                         ->filter(fn (Team $team) => !$matchesSelectedPrograms(
                             $team->programs->pluck('id')->map(fn ($id) => (int) $id)->values(),
-                            false
+                            $team->program_scope_mode,
+                            Team::class
                         ))
                         ->pluck('id');
 

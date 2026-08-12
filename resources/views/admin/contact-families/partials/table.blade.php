@@ -3,6 +3,7 @@
     $d    = $direction ?? 'asc';
     $flip = fn($col) => ($s === $col && $d === 'asc') ? 'desc' : 'asc';
     $url  = fn($col) => route('contact-families.index', array_merge(request()->query(), ['sort' => $col, 'direction' => $flip($col)]));
+    $scopeEmptyLabel = fn ($mode, string $allLabel, string $noneLabel) => ($mode?->value ?? $mode) === 'none' ? $noneLabel : $allLabel;
 @endphp
 
 <div class="card shadow-sm app-index-table-card">
@@ -37,7 +38,7 @@
                             kind="project"
                             :items="$family->projects"
                             route-name="projects.show"
-                            empty-label="All projects"
+                            :empty-label="$scopeEmptyLabel($family->program_scope_mode, 'All projects', 'No projects')"
                         />
                     </td>
                     <td>
@@ -45,7 +46,7 @@
                             kind="program"
                             :items="$family->programs"
                             route-name="programs.show"
-                            empty-label="All programs"
+                            :empty-label="$scopeEmptyLabel($family->program_scope_mode, 'All programs', 'No programs')"
                         />
                     </td>
                     <td><span class="badge bg-secondary">{{ $family->activity_types_count }}</span></td>

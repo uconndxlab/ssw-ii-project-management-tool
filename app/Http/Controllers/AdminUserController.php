@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\AdminUserRequest;
+use App\Enums\ProgramScopeMode;
 use App\Models\Program;
 use App\Models\Project;
 use App\Models\User;
@@ -44,7 +45,11 @@ class AdminUserController extends Controller
             $projectId = (int) $request->input('project_id');
             $query->where(function ($q) use ($projectId) {
                 $q->whereHas('programs.projects', fn ($relation) => $relation->where('projects.id', $projectId))
-                    ->orWhereHas('teams.programs.projects', fn ($relation) => $relation->where('projects.id', $projectId));
+                    ->orWhere('users.program_scope_mode', ProgramScopeMode::All->value)
+                    ->orWhereHas('teams', function ($teamQuery) use ($projectId) {
+                        $teamQuery->where('teams.program_scope_mode', ProgramScopeMode::All->value)
+                            ->orWhereHas('programs.projects', fn ($relation) => $relation->where('projects.id', $projectId));
+                    });
             });
         }
 
@@ -52,7 +57,11 @@ class AdminUserController extends Controller
             $programId = (int) $request->input('program_id');
             $query->where(function ($q) use ($programId) {
                 $q->whereHas('programs', fn ($relation) => $relation->where('programs.id', $programId))
-                    ->orWhereHas('teams.programs', fn ($relation) => $relation->where('programs.id', $programId));
+                    ->orWhere('users.program_scope_mode', ProgramScopeMode::All->value)
+                    ->orWhereHas('teams', function ($teamQuery) use ($programId) {
+                        $teamQuery->where('teams.program_scope_mode', ProgramScopeMode::All->value)
+                            ->orWhereHas('programs', fn ($relation) => $relation->where('programs.id', $programId));
+                    });
             });
         }
 
@@ -151,6 +160,7 @@ class AdminUserController extends Controller
             'po_number' => $validated['po_number'] ?? null,
             'active' => $isActive,
             'supervisor_id' => $validated['supervisor_id'] ?? null,
+            'program_scope_mode' => $validated['program_scope_mode'],
         ]);
 
         if ($isActive) {
@@ -182,6 +192,7 @@ class AdminUserController extends Controller
             'po_number' => $validated['po_number'] ?? null,
             'active' => $isActive,
             'supervisor_id' => $validated['supervisor_id'] ?? null,
+            'program_scope_mode' => $validated['program_scope_mode'],
         ];
 
         if (!empty($validated['password'])) {
@@ -273,7 +284,9 @@ class AdminUserController extends Controller
 
     private function syncScopeAssignments(User $user, array $validated): void
     {
-        $user->programs()->sync(ProjectProgramScope::effectiveProgramIds(
+        $user->programs()->sync(ProjectProgramScope::modeAwareProgramIds(
+            $validated['program_scope_mode'] ?? null,
+            User::class,
             $validated['project_ids'] ?? [],
             $validated['program_ids'] ?? []
         ));

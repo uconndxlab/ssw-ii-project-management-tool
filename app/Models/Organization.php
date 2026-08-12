@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ProgramScopeMode;
 use App\Models\Concerns\HasProgramScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -15,12 +16,14 @@ class Organization extends Model
         'name',
         'active',
         'po_number',
+        'program_scope_mode',
     ];
 
     protected function casts(): array
     {
         return [
             'active' => 'boolean',
+            'program_scope_mode' => ProgramScopeMode::class,
         ];
     }
 

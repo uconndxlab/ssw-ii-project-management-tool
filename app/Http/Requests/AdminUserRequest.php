@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\ProgramScopeMode;
 use App\Support\ProjectProgramScope;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
@@ -48,6 +49,7 @@ class AdminUserRequest extends FormRequest
                 'nullable',
                 Rule::exists('users', 'id')->where(fn ($query) => $query->where('active', true)),
             ],
+            'program_scope_mode' => ['required', Rule::in(ProgramScopeMode::values())],
             'project_ids' => ['nullable', 'array'],
             'project_ids.*' => ['distinct', 'exists:projects,id'],
             'program_ids' => ['nullable', 'array'],
@@ -110,19 +112,13 @@ class AdminUserRequest extends FormRequest
                 ->unique()
                 ->values();
 
-            if ($programIds->isNotEmpty() && $projectIds->isEmpty()) {
-                $validator->errors()->add('project_ids', 'Select at least one project before assigning programs.');
-
-                return;
-            }
-
-            if ($programIds->isNotEmpty()) {
-                ProjectProgramScope::validateSelection(
-                    $validator,
-                    $projectIds->all(),
-                    $programIds->all()
-                );
-            }
+            ProjectProgramScope::validateModeSelection(
+                $validator,
+                $this->input('program_scope_mode', ProgramScopeMode::Specific->value),
+                User::class,
+                $projectIds->all(),
+                $programIds->all()
+            );
         });
     }
 

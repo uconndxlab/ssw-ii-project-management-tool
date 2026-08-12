@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ProgramScopeMode;
 use App\Models\Concerns\HasProgramScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -23,6 +24,7 @@ class LoggingField extends Model
         'available_in_agreements',
         'available_in_contact_families',
         'available_in_activities',
+        'program_scope_mode',
     ];
 
     protected function casts(): array
@@ -35,6 +37,7 @@ class LoggingField extends Model
             'available_in_agreements' => 'boolean',
             'available_in_contact_families' => 'boolean',
             'available_in_activities' => 'boolean',
+            'program_scope_mode' => ProgramScopeMode::class,
         ];
     }
 

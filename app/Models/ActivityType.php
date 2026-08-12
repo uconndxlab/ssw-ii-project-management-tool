@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ProgramScopeMode;
 use App\Models\Concerns\HasProgramScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,6 +20,7 @@ class ActivityType extends Model
         'sort_order',
         'duration_days',
         'duration_hours',
+        'program_scope_mode',
     ];
 
     protected function casts(): array
@@ -29,6 +31,7 @@ class ActivityType extends Model
             'duration_days' => 'decimal:1',
             'duration_hours' => 'decimal:1',
             'contact_family_id' => 'integer',
+            'program_scope_mode' => ProgramScopeMode::class,
         ];
     }
 

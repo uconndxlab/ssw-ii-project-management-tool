@@ -3,6 +3,7 @@
     $d    = $direction ?? 'asc';
     $flip = fn($col) => ($s === $col && $d === 'asc') ? 'desc' : 'asc';
     $url  = fn($col) => route('admin.users.index', array_merge(request()->query(), ['sort' => $col, 'direction' => $flip($col), 'page' => 1]));
+    $scopeEmptyLabel = fn ($mode, string $allLabel, string $noneLabel) => ($mode?->value ?? $mode) === 'none' ? $noneLabel : $allLabel;
 @endphp
 
 <div class="card shadow-sm app-index-table-card">
@@ -62,25 +63,31 @@
                     <td>
                         <x-table-badge-list
                             kind="project"
-                            :items="collect($scope['index']['projects'])->map(fn ($entry) => [
+                            :items="($user->program_scope_mode?->value ?? null) === 'all'
+                                ? collect()
+                                : collect($scope['index']['projects'])->map(fn ($entry) => [
                                 'name' => $entry['model']->name,
                                 'href' => route('projects.show', $entry['model']),
                                 'title' => $entry['viaTeam'] && $entry['teamNames'] ? 'Via team: ' . $entry['teamNames'] : null,
                             ])"
                             href-key="href"
                             title-key="title"
+                            :empty-label="$scopeEmptyLabel($user->program_scope_mode, 'All projects', 'No projects')"
                         />
                     </td>
                     <td>
                         <x-table-badge-list
                             kind="program"
-                            :items="collect($scope['index']['programs'])->map(fn ($entry) => [
+                            :items="($user->program_scope_mode?->value ?? null) === 'all'
+                                ? collect()
+                                : collect($scope['index']['programs'])->map(fn ($entry) => [
                                 'name' => $entry['model']->name,
                                 'href' => route('programs.show', $entry['model']),
                                 'title' => $entry['viaTeam'] && $entry['teamNames'] ? 'Via team: ' . $entry['teamNames'] : null,
                             ])"
                             href-key="href"
                             title-key="title"
+                            :empty-label="$scopeEmptyLabel($user->program_scope_mode, 'All programs', 'No programs')"
                         />
                     </td>
                     <td class="text-end text-nowrap">

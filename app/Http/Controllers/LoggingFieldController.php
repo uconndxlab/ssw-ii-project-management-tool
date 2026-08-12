@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ProgramScopeMode;
 use App\Models\ContactFamily;
 use App\Models\LoggingField;
 use App\Models\Program;
@@ -55,7 +56,7 @@ class LoggingFieldController extends Controller
             $projectId = (int) $request->input('project_id');
             $query->where(function ($q) use ($projectId) {
                 $q->whereHas('programs.projects', fn ($relation) => $relation->where('projects.id', $projectId))
-                    ->orWhereDoesntHave('programs');
+                    ->orWhere('logging_fields.program_scope_mode', ProgramScopeMode::All->value);
             });
         }
 
@@ -63,7 +64,7 @@ class LoggingFieldController extends Controller
             $programId = (int) $request->input('program_id');
             $query->where(function ($q) use ($programId) {
                 $q->whereHas('programs', fn ($relation) => $relation->where('programs.id', $programId))
-                    ->orWhereDoesntHave('programs');
+                    ->orWhere('logging_fields.program_scope_mode', ProgramScopeMode::All->value);
             });
         }
 
@@ -162,6 +163,7 @@ class LoggingFieldController extends Controller
             'available_in_agreements' => 'boolean',
             'available_in_contact_families' => 'boolean',
             'available_in_activities' => 'boolean',
+            'program_scope_mode' => ['required', 'in:all,specific,none'],
             'project_ids' => ['nullable', 'array'],
             'project_ids.*' => ['distinct', 'exists:projects,id'],
             'program_ids' => ['nullable', 'array'],
@@ -169,8 +171,10 @@ class LoggingFieldController extends Controller
         ]);
 
         $validator->after(function ($validator) use ($request) {
-            ProjectProgramScope::validateSelection(
+            ProjectProgramScope::validateModeSelection(
                 $validator,
+                $request->input('program_scope_mode', ProgramScopeMode::All->value),
+                LoggingField::class,
                 ProjectProgramScope::normalizeIds($request->input('project_ids', [])),
                 ProjectProgramScope::normalizeIds($request->input('program_ids', []))
             );
@@ -194,9 +198,12 @@ class LoggingFieldController extends Controller
         $validated['available_in_agreements'] = $request->boolean('available_in_agreements');
         $validated['available_in_contact_families'] = $request->boolean('available_in_contact_families');
         $validated['available_in_activities'] = $request->boolean('available_in_activities');
+        $validated['program_scope_mode'] = ProjectProgramScope::normalizeMode($validated['program_scope_mode'] ?? null, LoggingField::class)->value;
 
         $loggingField = LoggingField::create($validated);
-        $loggingField->programs()->sync(ProjectProgramScope::effectiveProgramIds(
+        $loggingField->programs()->sync(ProjectProgramScope::modeAwareProgramIds(
+            $validated['program_scope_mode'],
+            LoggingField::class,
             $validated['project_ids'] ?? [],
             $validated['program_ids'] ?? []
         ));
@@ -248,6 +255,7 @@ class LoggingFieldController extends Controller
             'available_in_agreements' => 'boolean',
             'available_in_contact_families' => 'boolean',
             'available_in_activities' => 'boolean',
+            'program_scope_mode' => ['required', 'in:all,specific,none'],
             'project_ids' => ['nullable', 'array'],
             'project_ids.*' => ['distinct', 'exists:projects,id'],
             'program_ids' => ['nullable', 'array'],
@@ -255,8 +263,10 @@ class LoggingFieldController extends Controller
         ]);
 
         $validator->after(function ($validator) use ($request) {
-            ProjectProgramScope::validateSelection(
+            ProjectProgramScope::validateModeSelection(
                 $validator,
+                $request->input('program_scope_mode', ProgramScopeMode::All->value),
+                LoggingField::class,
                 ProjectProgramScope::normalizeIds($request->input('project_ids', [])),
                 ProjectProgramScope::normalizeIds($request->input('program_ids', []))
             );
@@ -280,6 +290,7 @@ class LoggingFieldController extends Controller
         $validated['available_in_agreements'] = $request->boolean('available_in_agreements');
         $validated['available_in_contact_families'] = $request->boolean('available_in_contact_families');
         $validated['available_in_activities'] = $request->boolean('available_in_activities');
+        $validated['program_scope_mode'] = ProjectProgramScope::normalizeMode($validated['program_scope_mode'] ?? null, LoggingField::class)->value;
 
         // Regenerate slug if name changed
         if ($validated['name'] !== $loggingField->name) {
@@ -287,7 +298,9 @@ class LoggingFieldController extends Controller
         }
 
         $loggingField->update($validated);
-        $loggingField->programs()->sync(ProjectProgramScope::effectiveProgramIds(
+        $loggingField->programs()->sync(ProjectProgramScope::modeAwareProgramIds(
+            $validated['program_scope_mode'],
+            LoggingField::class,
             $validated['project_ids'] ?? [],
             $validated['program_ids'] ?? []
         ));
