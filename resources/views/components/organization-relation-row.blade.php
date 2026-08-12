@@ -16,12 +16,12 @@
         $contextBadges[] = ['label' => 'Recipient', 'kind' => 'recipient'];
     }
 
-    $metaLines = collect($kfsNumbers)
-        ->map(fn ($number) => ['label' => 'KFS', 'value' => $number])
-        ->values();
-
     if (filled($organization->po_number)) {
-        $metaLines->push(['label' => 'PO', 'value' => $organization->po_number]);
+        $metaLines[] = ['label' => 'PO', 'value' => $organization->po_number];
+    }
+
+    if (!empty($kfsNumbers)) {
+        $metaLines[] = ['label' => 'KFS', 'value' => implode(', ', $kfsNumbers)];
     }
 @endphp
 
@@ -32,6 +32,6 @@
     title-as-badge
     wrap-title
     :context-badges="$contextBadges"
-    :meta-lines="$metaLines->all()"
+    :meta-lines="$metaLines"
     {{ $attributes }}
 />

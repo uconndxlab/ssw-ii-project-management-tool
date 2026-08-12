@@ -19,12 +19,12 @@
 
             <dt class="col-5 text-muted fw-normal small">Organizations</dt>
             <dd class="col-7 mb-2">
-                <span class="badge bg-primary-subtle text-primary-emphasis border rounded-pill">{{ $state->organizations->count() }}</span>
+                <x-entity-count-badge kind="organization" :count="$state->organizations->count()" />
             </dd>
 
             <dt class="col-5 text-muted fw-normal small">Agreements</dt>
             <dd class="col-7 mb-2">
-                <span class="badge bg-success-subtle text-success-emphasis border rounded-pill">{{ $state->agreements->count() }}</span>
+                <x-entity-count-badge kind="agreement" :count="$state->agreements->count()" />
             </dd>
 
             <dt class="col-5 text-muted fw-normal small">Added</dt>
@@ -56,6 +56,7 @@
                     title="Organizations"
                     kind="organization"
                     :count="$state->organizations->count()"
+                    collapsible
                     class="w-100"
                 >
                     @forelse($state->organizations->sortBy('name') as $org)
@@ -76,6 +77,7 @@
                     title="Agreements"
                     kind="agreement"
                     :count="$state->agreements->count()"
+                    collapsible
                     class="w-100"
                 >
                     @forelse($state->agreements->sortBy('name') as $agreement)

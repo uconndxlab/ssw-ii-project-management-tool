@@ -28,23 +28,26 @@
         ];
     };
 
-    $normalizeMetaLine = function (mixed $line): ?string {
+    $normalizeMetaLine = function (mixed $line): ?array {
         if (is_string($line)) {
-            return $line;
+            return ['label' => null, 'value' => $line];
         }
 
         if (!is_array($line)) {
             return null;
         }
 
-        $label = $line['label'] ?? null;
-        $value = $line['value'] ?? null;
+        $label = filled($line['label'] ?? null) ? (string) $line['label'] : null;
+        $value = filled($line['value'] ?? null) ? (string) $line['value'] : null;
 
-        if (filled($label) && filled($value)) {
-            return $label . ': ' . $value;
+        if (!filled($label) && !filled($value)) {
+            return null;
         }
 
-        return $value ?: $label;
+        return [
+            'label' => $label,
+            'value' => $value,
+        ];
     };
 
     $contextBadges = collect($contextBadges)
@@ -59,7 +62,7 @@
 
     $metaLines = collect($metaLines)
         ->map($normalizeMetaLine)
-        ->filter(fn ($line) => filled($line))
+        ->filter(fn ($line) => filled($line['label'] ?? null) || filled($line['value'] ?? null))
         ->values();
 
     $actionsFilled = isset($actions) && filled(trim((string) $actions));
@@ -123,7 +126,14 @@
                 @if($metaLines->isNotEmpty())
                     <ul class="small text-muted mb-0 ps-3 {{ filled($description) || $metaBadges->isNotEmpty() ? 'mt-2' : '' }}">
                         @foreach($metaLines as $line)
-                            <li>{{ $line }}</li>
+                            <li>
+                                @if(filled($line['label'] ?? null))
+                                    <span class="fw-semibold text-body">{{ $line['label'] }}:</span>
+                                @endif
+                                @if(filled($line['value'] ?? null))
+                                    <span class="fw-normal text-muted">{{ $line['value'] }}</span>
+                                @endif
+                            </li>
                         @endforeach
                     </ul>
                 @endif

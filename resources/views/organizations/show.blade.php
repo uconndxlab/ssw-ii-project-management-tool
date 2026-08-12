@@ -31,15 +31,7 @@
             <dd class="col-7 mb-2">{{ $organization->po_number ?: '—' }}</dd>
 
             <dt class="col-5 text-muted fw-normal small">State(s)</dt>
-            <dd class="col-7 mb-2">
-                <div class="d-flex flex-wrap gap-1">
-                    @forelse($organization->states as $state)
-                        <x-entity-relation-badge kind="state" :href="route('states.show', $state)">{{ $state->name }}</x-entity-relation-badge>
-                    @empty
-                        <span class="text-muted small">—</span>
-                    @endforelse
-                </div>
-            </dd>
+            <dd class="col-7 mb-2"><x-entity-count-badge kind="state" :count="$organization->states->count()" /></dd>
 
             <dt class="col-5 text-muted fw-normal small">Associated Users</dt>
             <dd class="col-7 mb-2">
@@ -52,14 +44,35 @@
 
             <dt class="col-5 text-muted fw-normal small">Agreements</dt>
             <dd class="col-7 mb-2">
-                <span class="badge bg-success-subtle text-success-emphasis border rounded-pill">{{ $agreements->count() }}</span>
+                <x-entity-count-badge kind="agreement" :count="$agreements->count()" />
             </dd>
 
             <dt class="col-5 text-muted fw-normal small">Staff</dt>
             <dd class="col-7 mb-2">
-                <span class="badge bg-primary rounded-pill">{{ $teamMembers->count() }}</span>
+                <x-entity-count-badge kind="team" :count="$teamMembers->count()" />
             </dd>
         </dl>
+
+        <x-relationship-scroll-panel
+            title="States"
+            kind="state"
+            :count="$organization->states->count()"
+            height="220px"
+            collapsible
+            :collapsed="true"
+            class="mt-3">
+            @forelse($organization->states->sortBy('name') as $state)
+                <x-relationship-ledger-row
+                    :title="$state->name"
+                    :href="route('states.show', $state)"
+                    kind="state"
+                    title-as-badge
+                    wrap-title
+                />
+            @empty
+                <p class="text-muted small mb-0 py-1">No states linked.</p>
+            @endforelse
+        </x-relationship-scroll-panel>
 
         <hr>
 
@@ -84,6 +97,7 @@
                     title="Linked agreements"
                     kind="agreement"
                     :count="$agreements->count()"
+                    collapsible
                     class="flex-grow-1"
                 >
                     @if(auth()->user()->isAdmin())

@@ -26,28 +26,17 @@
 
             <dt class="col-5 text-muted fw-normal small">Programs</dt>
             <dd class="col-7 mb-2">
-                <span class="badge bg-warning-subtle text-warning-emphasis border rounded-pill">{{ $project->programs->count() }}</span>
+                <x-entity-count-badge kind="program" :count="$project->programs->count()" />
             </dd>
 
             <dt class="col-5 text-muted fw-normal small">Organizations</dt>
             <dd class="col-7 mb-2">
-                <span class="badge bg-primary-subtle text-primary-emphasis border rounded-pill">{{ $project->organizations->count() }}</span>
+                <x-entity-count-badge kind="organization" :count="$project->organizations->count()" />
             </dd>
 
             <dt class="col-5 text-muted fw-normal small">Agreements</dt>
             <dd class="col-7 mb-2">
-                <span class="badge bg-success-subtle text-success-emphasis border rounded-pill">{{ $agreements->count() }}</span>
-            </dd>
-
-            <dt class="col-5 text-muted fw-normal small">States</dt>
-            <dd class="col-7 mb-2">
-                <div class="d-flex flex-wrap gap-1">
-                    @forelse($states as $state)
-                        <x-entity-relation-badge kind="state" :href="route('states.show', $state)">{{ $state->name }}</x-entity-relation-badge>
-                    @empty
-                        <span class="text-muted small">—</span>
-                    @endforelse
-                </div>
+                <x-entity-count-badge kind="agreement" :count="$agreements->count()" />
             </dd>
 
             <dt class="col-5 text-muted fw-normal small">Created</dt>
@@ -56,6 +45,27 @@
             <dt class="col-5 text-muted fw-normal small">Updated</dt>
             <dd class="col-7 mb-0 small text-muted">{{ $project->updated_at->format('M d, Y') }}</dd>
         </dl>
+
+        <x-relationship-scroll-panel
+            title="States"
+            kind="state"
+            :count="$states->count()"
+            height="220px"
+            collapsible
+            :collapsed="true"
+            class="mt-3">
+            @forelse($states->sortBy('name') as $state)
+                <x-relationship-ledger-row
+                    :title="$state->name"
+                    :href="route('states.show', $state)"
+                    kind="state"
+                    title-as-badge
+                    wrap-title
+                />
+            @empty
+                <p class="text-muted small mb-0 py-1">No states linked.</p>
+            @endforelse
+        </x-relationship-scroll-panel>
 
         @if($project->description)
             <hr>
@@ -73,6 +83,7 @@
                     title="Programs"
                     kind="program"
                     :count="$project->programs->count()"
+                    collapsible
                 >
                     <x-slot:headerActions>
                         <a href="{{ route('programs.create') }}" class="btn btn-sm btn-outline-primary">+ Add Program</a>
@@ -113,6 +124,7 @@
                             title="Organizations"
                             kind="organization"
                             :count="$project->organizations->count()"
+                            collapsible
                             class="w-100"
                         >
                             @forelse($project->organizations->sortBy('name') as $org)
@@ -133,6 +145,7 @@
                             title="Agreements"
                             kind="agreement"
                             :count="$agreements->count()"
+                            collapsible
                             class="w-100"
                         >
                             @forelse($agreements as $agreement)

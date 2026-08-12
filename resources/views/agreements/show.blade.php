@@ -15,6 +15,7 @@
         ->groupBy(fn ($account) => (int) $account->pivot->organization_id)
         ->map(fn ($accounts) => $accounts->pluck('number')->sort()->values()->all())
         ->all();
+    $userProfileRoute = fn ($user) => \App\Support\UserProfileLink::route($user);
 @endphp
 
 <x-page-header
@@ -165,53 +166,58 @@
                         $teamOnlyUsers = $team->users->whereNotIn('id', $directUserIds);
                     @endphp
                     @if($teamOnlyUsers->isNotEmpty())
-                        <div class="border rounded overflow-hidden bg-body">
-                            <div class="px-3 py-2 border-bottom bg-light d-flex align-items-center gap-2">
-                                <x-entity-relation-badge kind="team" :href="route('teams.show', $team)">
-                                    {{ $team->name }}
-                                </x-entity-relation-badge>
-                                <x-entity-count-badge kind="team" :count="$teamOnlyUsers->count()" class="ms-auto" />
-                            </div>
-                            <div class="px-3 py-1">
-                                @foreach($teamOnlyUsers as $user)
-                                    <x-staff-member-row
-                                        :user="$user"
-                                        :role="$user->role"
-                                        :is-principal-investigator="$agreement->principalInvestigators->contains('id', $user->id)"
-                                        :class="$loop->last ? '' : 'border-bottom'"
-                                    />
-                                @endforeach
-                            </div>
-                        </div>
+                        <x-relationship-scroll-panel
+                            :title="$team->name"
+                            :title-href="route('teams.show', $team)"
+                            kind="team"
+                            :count="$teamOnlyUsers->count()"
+                            collapsible
+                            height="220px">
+                            @foreach($teamOnlyUsers as $user)
+                                <x-relationship-ledger-row
+                                    :title="$user->name"
+                                    :href="$userProfileRoute($user)"
+                                    kind="user"
+                                    :context-badges="array_values(array_filter([
+                                        filled($user->role) ? ['label' => ucfirst($user->role), 'kind' => 'role'] : null,
+                                        $agreement->principalInvestigators->contains('id', $user->id) ? ['label' => 'PI', 'kind' => 'pi'] : null,
+                                    ]))"
+                                />
+                            @endforeach
+                        </x-relationship-scroll-panel>
                     @endif
                 @endforeach
 
                 @if($directUsers->isNotEmpty())
-                    <div class="border rounded overflow-hidden bg-body">
-                        <div class="px-3 py-2 border-bottom bg-light">
-                            <span class="small fw-semibold text-muted text-uppercase" style="letter-spacing:.05em;">Additional users</span>
-                        </div>
-                        <div class="px-3 py-1">
-                            @foreach($directUsers as $user)
-                                <x-staff-member-row
-                                    :user="$user"
-                                    :role="$user->role"
-                                    :is-principal-investigator="!empty($user->is_principal_investigator)"
-                                    :class="$loop->last ? '' : 'border-bottom'"
-                                >
-                                    <x-slot:after>
-                                        @if(!empty($user->also_in_teams))
+                    <x-relationship-scroll-panel
+                        title="Additional Users"
+                        kind="user"
+                        :count="$directUsers->count()"
+                        collapsible
+                        height="220px">
+                        @foreach($directUsers as $user)
+                            <x-relationship-ledger-row
+                                :title="$user->name"
+                                :href="$userProfileRoute($user)"
+                                kind="user"
+                                :context-badges="array_values(array_filter([
+                                    filled($user->role) ? ['label' => ucfirst($user->role), 'kind' => 'role'] : null,
+                                    !empty($user->is_principal_investigator) ? ['label' => 'PI', 'kind' => 'pi'] : null,
+                                ]))">
+                                <x-slot:footer>
+                                    @if(!empty($user->also_in_teams))
+                                        <div class="d-flex flex-wrap gap-1">
                                             @foreach($agreement->teams->filter(fn ($team) => $team->users->contains('id', $user->id)) as $team)
                                                 <x-entity-relation-badge kind="team" :href="route('teams.show', $team)">
                                                     {{ $team->name }}
                                                 </x-entity-relation-badge>
                                             @endforeach
-                                        @endif
-                                    </x-slot:after>
-                                </x-staff-member-row>
-                            @endforeach
-                        </div>
-                    </div>
+                                        </div>
+                                    @endif
+                                </x-slot:footer>
+                            </x-relationship-ledger-row>
+                        @endforeach
+                    </x-relationship-scroll-panel>
                 @endif
             </div>
         @else
