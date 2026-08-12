@@ -150,6 +150,17 @@
 <script>
 (function () {
     function refreshScopedLoggingFields(effectiveProgramIds) {
+        if ((effectiveProgramIds || []).length === 0) {
+            document.querySelectorAll('[data-scoped-logging-field-option]').forEach(function (option) {
+                option.classList.remove('d-none');
+                option.querySelectorAll('input').forEach(function (input) {
+                    input.disabled = false;
+                });
+            });
+
+            return;
+        }
+
         const selectedPrograms = new Set((effectiveProgramIds || []).map(String));
 
         document.querySelectorAll('[data-scoped-logging-field-option]').forEach(function (option) {

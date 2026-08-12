@@ -389,6 +389,10 @@ class ActivityTypeController extends Controller
 
             ProjectProgramScope::validateSelection($validator, $projectIds, $programIds);
 
+            if ($projectIds === [] && $programIds === []) {
+                return;
+            }
+
             ProjectProgramScope::validateScopedAssignments(
                 $validator,
                 ProjectProgramScope::effectiveProgramIds($projectIds, $programIds),

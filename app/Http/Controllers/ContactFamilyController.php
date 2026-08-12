@@ -136,6 +136,10 @@ class ContactFamilyController extends Controller
 
             ProjectProgramScope::validateSelection($validator, $projectIds, $programIds);
 
+            if ($projectIds === [] && $programIds === []) {
+                return;
+            }
+
             ProjectProgramScope::validateScopedAssignments(
                 $validator,
                 ProjectProgramScope::effectiveProgramIds($projectIds, $programIds),
@@ -212,6 +216,10 @@ class ContactFamilyController extends Controller
             $programIds = ProjectProgramScope::normalizeIds($request->input('program_ids', []));
 
             ProjectProgramScope::validateSelection($validator, $projectIds, $programIds);
+
+            if ($projectIds === [] && $programIds === []) {
+                return;
+            }
 
             ProjectProgramScope::validateScopedAssignments(
                 $validator,
