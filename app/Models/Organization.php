@@ -46,6 +46,13 @@ class Organization extends Model
             ->withTimestamps();
     }
 
+    public function kfsAccounts(): BelongsToMany
+    {
+        return $this->belongsToMany(KfsAccount::class, 'agreement_organization_kfs_account')
+            ->withPivot(['agreement_id'])
+            ->withTimestamps();
+    }
+
     public function activities(): BelongsToMany
     {
         return $this->belongsToMany(Activity::class, 'activity_organization')->withTimestamps();

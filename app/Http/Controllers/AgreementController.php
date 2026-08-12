@@ -10,6 +10,7 @@ use App\Support\AgreementDeliverableDisplay;
 use App\Models\AgreementCertificationCandidate;
 use App\Models\ActivityType;
 use App\Models\ContactFamily;
+use App\Models\KfsAccount;
 use App\Models\LoggingField;
 use App\Models\Project;
 use App\Models\Program;
@@ -377,7 +378,17 @@ class AgreementController extends Controller
             ])
             ->all();
 
+        $agreementKfsAccounts = $this->resolveKfsAccounts($validated['kfs_numbers'] ?? []);
+        $agreementKfsByNumber = $agreementKfsAccounts->keyBy(fn (KfsAccount $account) => strtoupper($account->number));
+
         $agreement->organizations()->sync($organizationSync);
+        $agreement->kfsAccounts()->sync($agreementKfsAccounts->pluck('id')->all());
+        $this->syncAgreementOrganizationKfsAssignments(
+            $agreement,
+            $organizationIds->all(),
+            $validated['organization_kfs_numbers'] ?? [],
+            $agreementKfsByNumber
+        );
         $agreement->states()->sync($validated['state_ids'] ?? []);
         $agreement->programs()->sync($selectedProgramIds);
 
@@ -412,6 +423,86 @@ class AgreementController extends Controller
             $syncData[$fieldId] = ['is_required' => in_array($fieldId, $requiredFieldIds)];
         }
         $agreement->agreementLoggingFields()->sync($syncData);
+    }
+
+    /**
+     * @param  array<int|string, mixed>  $values
+     * @return \Illuminate\Support\Collection<int, KfsAccount>
+     */
+    private function resolveKfsAccounts(array $values)
+    {
+        $numbers = collect($values)
+            ->filter(fn ($value) => is_string($value) || is_numeric($value))
+            ->map(fn ($value) => strtoupper(trim((string) $value)))
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($numbers->isEmpty()) {
+            return collect();
+        }
+
+        return $numbers->map(function (string $number) {
+            return KfsAccount::query()->firstOrCreate([
+                'number' => $number,
+            ]);
+        })->values();
+    }
+
+    /**
+     * @param  array<int, int>  $selectedOrganizationIds
+     * @param  array<string, mixed>  $organizationKfsNumbers
+     * @param  \Illuminate\Support\Collection<string, KfsAccount>  $agreementKfsByNumber
+     */
+    private function syncAgreementOrganizationKfsAssignments(
+        Agreement $agreement,
+        array $selectedOrganizationIds,
+        array $organizationKfsNumbers,
+        $agreementKfsByNumber,
+    ): void {
+        $rows = [];
+        $selectedOrganizationIdSet = collect($selectedOrganizationIds)
+            ->map(fn ($id) => (int) $id)
+            ->unique();
+
+        foreach ($organizationKfsNumbers as $organizationId => $numbers) {
+            $normalizedOrganizationId = (int) $organizationId;
+
+            if (!$selectedOrganizationIdSet->contains($normalizedOrganizationId) || !is_array($numbers)) {
+                continue;
+            }
+
+            $normalizedNumbers = collect($numbers)
+                ->filter(fn ($value) => is_string($value) || is_numeric($value))
+                ->map(fn ($value) => strtoupper(trim((string) $value)))
+                ->filter()
+                ->unique()
+                ->values();
+
+            foreach ($normalizedNumbers as $number) {
+                $account = $agreementKfsByNumber->get($number);
+
+                if (!$account) {
+                    continue;
+                }
+
+                $rows[] = [
+                    'agreement_id' => $agreement->id,
+                    'organization_id' => $normalizedOrganizationId,
+                    'kfs_account_id' => $account->id,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            }
+        }
+
+        DB::table('agreement_organization_kfs_account')
+            ->where('agreement_id', $agreement->id)
+            ->delete();
+
+        if ($rows !== []) {
+            DB::table('agreement_organization_kfs_account')->insert($rows);
+        }
     }
 
     private function softUnassignDeliverableUsersOutsideAgreementMembership(Agreement $agreement): void
@@ -742,12 +833,23 @@ class AgreementController extends Controller
             ->active()
             ->with(['states', 'programs.projects'])
             ->get();
+        $kfsAccounts = KfsAccount::query()->ordered()->get();
 
         if ($agreement) {
-            $agreement->loadMissing(['organizations.states', 'organizations.programs.projects']);
+            $agreement->loadMissing([
+                'organizations.states',
+                'organizations.programs.projects',
+                'kfsAccounts',
+                'organizationKfsAccounts',
+            ]);
             $organizations = $organizations
                 ->merge($agreement->organizations ?? collect())
                 ->unique('id');
+            $kfsAccounts = $kfsAccounts
+                ->merge($agreement->kfsAccounts ?? collect())
+                ->unique('id')
+                ->sortBy('number')
+                ->values();
         }
 
         $organizations = $organizations->sortBy('name')->values();
@@ -794,6 +896,8 @@ class AgreementController extends Controller
                 'programs.projects',
                 'certificationCandidates',
                 'principalInvestigators.programs',
+                'kfsAccounts',
+                'organizationKfsAccounts',
             ]);
         }
 
@@ -823,7 +927,8 @@ class AgreementController extends Controller
             'activityTypes',
             'projects',
             'agreementLoggingFields',
-            'candidateNameSuggestions'
+            'candidateNameSuggestions',
+            'kfsAccounts'
         );
     }
 

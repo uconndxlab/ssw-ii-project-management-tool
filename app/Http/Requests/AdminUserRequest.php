@@ -20,8 +20,8 @@ class AdminUserRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'po_number.regex' => 'The PO number must be 1-7 alphanumeric characters.',
-            'po_number.max' => 'The PO number must be 1-7 alphanumeric characters.',
+            'po_number.regex' => 'The PO number must be exactly 6 digits.',
+            'po_number.size' => 'The PO number must be exactly 6 digits.',
             'po_number.unique' => 'This PO number is already assigned to another user.',
         ];
     }
@@ -36,8 +36,8 @@ class AdminUserRequest extends FormRequest
             'po_number' => [
                 'nullable',
                 'string',
-                'max:7',
-                'regex:/^[A-Za-z0-9]+$/',
+                'size:6',
+                'regex:/^[0-9]{6}$/',
                 Rule::unique('users', 'po_number')->ignore($userId),
             ],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($userId)],

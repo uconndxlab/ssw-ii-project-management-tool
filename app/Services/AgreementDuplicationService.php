@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Agreement;
 use App\Models\AgreementAttachment;
 use App\Models\AgreementDeliverable;
+use App\Models\KfsAccount;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
@@ -22,6 +23,8 @@ class AgreementDuplicationService
             'agreementLoggingFields',
             'certificationCandidates',
             'attachments',
+            'kfsAccounts',
+            'organizationKfsAccounts',
             'deliverables' => fn ($query) => $query
                 ->whereNull('retired_at')
                 ->with(['users', 'teams']),
@@ -51,6 +54,23 @@ class AgreementDuplicationService
                     ])
                     ->all()
             );
+            $copy->kfsAccounts()->sync($source->kfsAccounts->pluck('id')->all());
+
+            $organizationKfsRows = $source->organizationKfsAccounts
+                ->map(function (KfsAccount $account) use ($copy) {
+                    return [
+                        'agreement_id' => $copy->id,
+                        'organization_id' => (int) $account->pivot->organization_id,
+                        'kfs_account_id' => $account->id,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                })
+                ->all();
+
+            if ($organizationKfsRows !== []) {
+                DB::table('agreement_organization_kfs_account')->insert($organizationKfsRows);
+            }
             $copy->states()->sync($source->states->pluck('id')->all());
             $copy->programs()->sync($source->programs->pluck('id')->all());
             $copy->users()->sync($source->users->pluck('id')->all());

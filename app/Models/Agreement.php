@@ -48,6 +48,19 @@ class Agreement extends Model
             ->withTimestamps();
     }
 
+    public function kfsAccounts(): BelongsToMany
+    {
+        return $this->belongsToMany(KfsAccount::class, 'agreement_kfs_account')
+            ->withTimestamps();
+    }
+
+    public function organizationKfsAccounts(): BelongsToMany
+    {
+        return $this->belongsToMany(KfsAccount::class, 'agreement_organization_kfs_account')
+            ->withPivot(['organization_id'])
+            ->withTimestamps();
+    }
+
     public function states(): BelongsToMany
     {
         return $this->belongsToMany(State::class, 'agreement_state')->withTimestamps();

@@ -44,11 +44,11 @@
                        id="po_number"
                        name="po_number"
                        value="{{ old('po_number', $organization?->po_number ?? '') }}"
-                       maxlength="7"
-                       pattern="[A-Za-z0-9]*"
+                       maxlength="6"
+                       pattern="[0-9]{6}"
                        autocomplete="off"
-                       placeholder="e.g. 4232321">
-                <div class="form-text">Optional. Up to 7 alphanumeric characters.</div>
+                       placeholder="e.g. 423232">
+                <div class="form-text">Optional. Must be exactly 6 digits.</div>
                 @error('po_number')
                     <div class="invalid-feedback">{{ $message }}</div>
                 @enderror

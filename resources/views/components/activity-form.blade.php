@@ -33,6 +33,8 @@
 
     $agreementConfigs = $agreements->mapWithKeys(function ($agreement) use ($availableOrganizationIds) {
         $deliverables = $agreement->deliverables ?? collect();
+        $kfsNumbersByOrganization = $agreement->organizationKfsAccounts
+            ->groupBy(fn ($account) => (string) $account->pivot->organization_id);
 
         return [
             $agreement->id => [
@@ -73,15 +75,22 @@
                 'time_tracking_mode' => $agreement->time_tracking_mode?->value,
                 'require_payor' => (bool) $agreement->require_payor,
                 'require_payee' => (bool) $agreement->require_payee,
-                'po_organization_ids' => $agreement->organizations
-                    ->filter(fn ($organization) => filled($organization->po_number))
+                'payor_organization_ids' => $agreement->organizations
+                    ->filter(fn ($organization) => (bool) ($organization->pivot->payor_source ?? false))
+                    ->filter(fn ($organization) => $kfsNumbersByOrganization->has((string) $organization->id))
                     ->pluck('id')
                     ->map(fn ($id) => (string) $id)
                     ->values()
                     ->all(),
-                'po_member_user_ids' => $agreement->users
+                'payee_organization_ids' => $agreement->organizations
+                    ->filter(fn ($organization) => preg_match('/^[0-9]{6}$/', (string) $organization->po_number) === 1)
+                    ->pluck('id')
+                    ->map(fn ($id) => (string) $id)
+                    ->values()
+                    ->all(),
+                'payee_member_user_ids' => $agreement->users
                     ->concat($agreement->teams->flatMap(fn ($team) => $team->users))
-                    ->filter(fn ($user) => filled($user->po_number))
+                    ->filter(fn ($user) => preg_match('/^[0-9]{6}$/', (string) $user->po_number) === 1)
                     ->pluck('id')
                     ->map(fn ($id) => (string) $id)
                     ->unique()
@@ -768,7 +777,7 @@
                             <div id="agreement-logging-groups" class="d-grid gap-3">
                             @foreach($agreementsWithPerAgreementFields as $agreement)
                                 @php
-                                    $fundingOptions = $fundingSourceOptionsByAgreement[$agreement->id] ?? [];
+                                    $fundingOptions = $fundingSourceOptionsByAgreement[$agreement->id] ?? ['payor' => [], 'payee' => []];
                                     $selectedPayorTokens = old(
                                         "funding_sources.{$agreement->id}.payor",
                                         data_get($fundingSourceData, "{$agreement->id}.payor", [])
@@ -807,11 +816,11 @@
                                     @if($agreement->require_payor)
                                         <div class="mb-3" data-funding-source-picker data-agreement-id="{{ $agreement->id }}" data-funding-role="payor">
                                             <label class="form-label fw-semibold">Payor Sources</label>
-                                            <p class="text-muted small mb-2">Optional. Select from agreement organizations and users with PO numbers.</p>
+                                            <p class="text-muted small mb-2">Optional. Select from agreement organizations that are marked as payor sources and linked to one or more KFS accounts on this agreement.</p>
                                             <x-token-picker
                                                 picker-id="activity-funding-payor-{{ $agreement->id }}"
                                                 name="funding_sources[{{ $agreement->id }}][payor][]"
-                                                :options="$fundingOptions"
+                                                :options="$fundingOptions['payor']"
                                                 label-key="label"
                                                 value-key="value"
                                                 search-key="search"
@@ -820,7 +829,7 @@
                                                 :height="'240px'"
                                             />
                                             <div class="text-muted small mt-2 d-none" data-funding-empty-notice="{{ $agreement->id }}-payor">
-                                                No payor sources available - no agreement organizations or users have PO numbers configured.
+                                                No payor sources available - no payor organizations on this agreement are linked to KFS accounts.
                                             </div>
                                             @error("funding_sources.{$agreement->id}.payor")
                                                 <div class="text-danger small mt-1">{{ $message }}</div>
@@ -834,11 +843,11 @@
                                     @if($agreement->require_payee)
                                         <div class="mb-0" data-funding-source-picker data-agreement-id="{{ $agreement->id }}" data-funding-role="payee">
                                             <label class="form-label fw-semibold">Payee Sources</label>
-                                            <p class="text-muted small mb-2">Optional. Select from agreement organizations and users with PO numbers.</p>
+                                            <p class="text-muted small mb-2">Optional. Select from users and organizations with PO numbers. This payee field is separate from the agreement KFS payor setup.</p>
                                             <x-token-picker
                                                 picker-id="activity-funding-payee-{{ $agreement->id }}"
                                                 name="funding_sources[{{ $agreement->id }}][payee][]"
-                                                :options="$fundingOptions"
+                                                :options="$fundingOptions['payee']"
                                                 label-key="label"
                                                 value-key="value"
                                                 search-key="search"
@@ -847,7 +856,7 @@
                                                 :height="'240px'"
                                             />
                                             <div class="text-muted small mt-2 d-none" data-funding-empty-notice="{{ $agreement->id }}-payee">
-                                                No payee sources available - no agreement organizations or users have PO numbers configured.
+                                                No payee sources available - no users or organizations with PO numbers are available on this agreement.
                                             </div>
                                             @error("funding_sources.{$agreement->id}.payee")
                                                 <div class="text-danger small mt-1">{{ $message }}</div>
@@ -1087,7 +1096,7 @@
         participantPicker.dispatchEvent(new CustomEvent('token-picker:restrict', { detail: restrictedIds }));
     }
 
-    function eligibleFundingTokens(agreementId) {
+    function eligibleFundingTokens(agreementId, role) {
         const config = agreementConfigs[String(agreementId)];
 
         if (!config) {
@@ -1096,13 +1105,19 @@
 
         const tokens = [];
 
-        (config.po_organization_ids || []).forEach(function (id) {
-            tokens.push('organization:' + id);
-        });
+        if (role === 'payor') {
+            (config.payor_organization_ids || []).forEach(function (id) {
+                tokens.push('organization:' + id);
+            });
+        } else {
+            (config.payee_organization_ids || []).forEach(function (id) {
+                tokens.push('organization:' + id);
+            });
 
-        (config.po_member_user_ids || []).forEach(function (id) {
-            tokens.push('user:' + id);
-        });
+            (config.payee_member_user_ids || []).forEach(function (id) {
+                tokens.push('user:' + id);
+            });
+        }
 
         return tokens;
     }
@@ -1134,14 +1149,16 @@
                 return;
             }
 
-            const eligible = eligibleFundingTokens(agreementId);
+            const eligible = eligibleFundingTokens(agreementId, role);
             const roleLabel = role === 'payor' ? 'payor' : 'payee';
 
             if (eligible.length === 0) {
                 picker.dispatchEvent(new CustomEvent('token-picker:set-disabled', {
                     detail: {
                         disabled: true,
-                        placeholder: 'No ' + roleLabel + ' sources with PO numbers on this agreement...',
+                        placeholder: role === 'payor'
+                            ? 'No payor organizations linked to KFS accounts on this agreement...'
+                            : 'No payee sources with PO numbers on this agreement...',
                     },
                 }));
                 emptyNotice?.classList.remove('d-none');

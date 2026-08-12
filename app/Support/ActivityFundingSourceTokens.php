@@ -4,6 +4,8 @@ namespace App\Support;
 
 use App\Models\ActivityAgreementFundingSource;
 use App\Models\Agreement;
+use App\Models\Organization;
+use App\Models\User;
 use Illuminate\Support\Collection;
 
 class ActivityFundingSourceTokens
@@ -40,7 +42,19 @@ class ActivityFundingSourceTokens
         $result = [];
 
         foreach ($agreements as $agreement) {
-            $orgTokens = $agreement->organizations
+            $kfsNumbersByOrganization = self::kfsNumbersByOrganization($agreement);
+
+            $payorTokens = $agreement->organizations
+                ->filter(fn ($org) => (bool) ($org->pivot->payor_source ?? false))
+                ->filter(fn ($org) => !empty($kfsNumbersByOrganization[(int) $org->id] ?? []))
+                ->map(fn ($org) => ActivityAgreementFundingSource::tokenFor(
+                    ActivityAgreementFundingSource::SOURCE_ORGANIZATION,
+                    (int) $org->id
+                ))
+                ->values()
+                ->all();
+
+            $payeeOrgTokens = $agreement->organizations
                 ->filter(fn ($org) => filled($org->po_number))
                 ->map(fn ($org) => ActivityAgreementFundingSource::tokenFor(
                     ActivityAgreementFundingSource::SOURCE_ORGANIZATION,
@@ -49,9 +63,7 @@ class ActivityFundingSourceTokens
                 ->values()
                 ->all();
 
-            $userTokens = $agreement->users
-                ->concat($agreement->teams->flatMap(fn ($team) => $team->users))
-                ->unique('id')
+            $payeeUserTokens = self::memberUsers($agreement)
                 ->filter(fn ($user) => filled($user->po_number))
                 ->map(fn ($user) => ActivityAgreementFundingSource::tokenFor(
                     ActivityAgreementFundingSource::SOURCE_USER,
@@ -60,11 +72,9 @@ class ActivityFundingSourceTokens
                 ->values()
                 ->all();
 
-            $tokens = array_values(array_unique(array_merge($orgTokens, $userTokens)));
-
             $result[(int) $agreement->id] = [
-                ActivityAgreementFundingSource::ROLE_PAYOR => $tokens,
-                ActivityAgreementFundingSource::ROLE_PAYEE => $tokens,
+                ActivityAgreementFundingSource::ROLE_PAYOR => array_values(array_unique($payorTokens)),
+                ActivityAgreementFundingSource::ROLE_PAYEE => array_values(array_unique(array_merge($payeeOrgTokens, $payeeUserTokens))),
             ];
         }
 
@@ -80,34 +90,42 @@ class ActivityFundingSourceTokens
         $options = [];
 
         foreach ($agreements as $agreement) {
-            $agreementOptions = [];
+            $agreementOptions = [
+                ActivityAgreementFundingSource::ROLE_PAYOR => [],
+                ActivityAgreementFundingSource::ROLE_PAYEE => [],
+            ];
+            $kfsNumbersByOrganization = self::kfsNumbersByOrganization($agreement);
 
             foreach ($agreement->organizations as $organization) {
-                if (!filled($organization->po_number)) {
-                    continue;
+                $token = ActivityAgreementFundingSource::tokenFor(ActivityAgreementFundingSource::SOURCE_ORGANIZATION, (int) $organization->id);
+
+                if ((bool) ($organization->pivot->payor_source ?? false) && !empty($kfsNumbersByOrganization[(int) $organization->id] ?? [])) {
+                    $kfsNumbers = $kfsNumbersByOrganization[(int) $organization->id];
+
+                    $agreementOptions[ActivityAgreementFundingSource::ROLE_PAYOR][] = [
+                        'value' => $token,
+                        'label' => $organization->name,
+                        'search' => strtolower(trim($organization->name.' '.implode(' ', $kfsNumbers))),
+                        'entity' => 'organization',
+                        'contextLabels' => ['Organization'],
+                        'meta' => 'KFS: '.implode(', ', $kfsNumbers),
+                    ];
                 }
 
-                $token = ActivityAgreementFundingSource::tokenFor(
-                    ActivityAgreementFundingSource::SOURCE_ORGANIZATION,
-                    (int) $organization->id
-                );
-
-                $agreementOptions[] = [
-                    'value' => $token,
-                    'label' => $organization->name,
-                    'search' => strtolower(trim($organization->name.' '.$organization->po_number)),
-                    'entity' => 'organization',
-                    'contextLabels' => ['Organization'],
-                    'meta' => $organization->po_number,
-                ];
+                if (self::hasValidPoNumber($organization->po_number)) {
+                    $agreementOptions[ActivityAgreementFundingSource::ROLE_PAYEE][] = [
+                        'value' => $token,
+                        'label' => $organization->name,
+                        'search' => strtolower(trim($organization->name.' '.$organization->po_number)),
+                        'entity' => 'organization',
+                        'contextLabels' => ['Organization'],
+                        'meta' => $organization->po_number,
+                    ];
+                }
             }
 
-            $memberUsers = $agreement->users
-                ->concat($agreement->teams->flatMap(fn ($team) => $team->users))
-                ->unique('id');
-
-            foreach ($memberUsers as $user) {
-                if (!filled($user->po_number)) {
+            foreach (self::memberUsers($agreement) as $user) {
+                if (!self::hasValidPoNumber($user->po_number)) {
                     continue;
                 }
 
@@ -116,7 +134,7 @@ class ActivityFundingSourceTokens
                     (int) $user->id
                 );
 
-                $agreementOptions[] = [
+                $agreementOptions[ActivityAgreementFundingSource::ROLE_PAYEE][] = [
                     'value' => $token,
                     'label' => $user->name,
                     'search' => strtolower(trim($user->name.' '.$user->po_number.' '.($user->email ?? ''))),
@@ -126,11 +144,73 @@ class ActivityFundingSourceTokens
                 ];
             }
 
-            usort($agreementOptions, fn ($a, $b) => strcasecmp($a['label'], $b['label']));
+            foreach ($agreementOptions as $role => $roleOptions) {
+                usort($roleOptions, fn ($a, $b) => strcasecmp($a['label'], $b['label']));
+                $agreementOptions[$role] = $roleOptions;
+            }
 
             $options[(int) $agreement->id] = $agreementOptions;
         }
 
         return $options;
+    }
+
+    /**
+     * @return array{kfs_numbers_snapshot: array<int, string>|null, po_number_snapshot: string|null}
+     */
+    public static function snapshotForSelection(Agreement $agreement, string $role, array $parsed): array
+    {
+        $snapshot = [
+            'kfs_numbers_snapshot' => null,
+            'po_number_snapshot' => null,
+        ];
+
+        if ($role === ActivityAgreementFundingSource::ROLE_PAYOR
+            && $parsed['source_type'] === ActivityAgreementFundingSource::SOURCE_ORGANIZATION) {
+            $snapshot['kfs_numbers_snapshot'] = self::kfsNumbersByOrganization($agreement)[$parsed['source_id']] ?? null;
+
+            return $snapshot;
+        }
+
+        if ($parsed['source_type'] === ActivityAgreementFundingSource::SOURCE_ORGANIZATION) {
+            $organization = $agreement->organizations->firstWhere('id', $parsed['source_id']);
+            $snapshot['po_number_snapshot'] = $organization?->po_number;
+
+            return $snapshot;
+        }
+
+        if ($parsed['source_type'] === ActivityAgreementFundingSource::SOURCE_USER) {
+            $user = self::memberUsers($agreement)->firstWhere('id', $parsed['source_id']);
+            $snapshot['po_number_snapshot'] = $user?->po_number;
+        }
+
+        return $snapshot;
+    }
+
+    /**
+     * @return array<int, array<int, string>>
+     */
+    private static function kfsNumbersByOrganization(Agreement $agreement): array
+    {
+        return $agreement->organizationKfsAccounts
+            ->groupBy(fn ($account) => (int) $account->pivot->organization_id)
+            ->map(fn ($accounts) => $accounts->pluck('number')->sort()->values()->all())
+            ->all();
+    }
+
+    /**
+     * @return Collection<int, User>
+     */
+    private static function memberUsers(Agreement $agreement): Collection
+    {
+        return $agreement->users
+            ->concat($agreement->teams->flatMap(fn ($team) => $team->users))
+            ->unique('id')
+            ->values();
+    }
+
+    private static function hasValidPoNumber(mixed $value): bool
+    {
+        return is_string($value) && preg_match('/^[0-9]{6}$/', $value) === 1;
     }
 }

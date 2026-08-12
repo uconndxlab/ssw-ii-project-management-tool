@@ -29,6 +29,14 @@ class AgreementRequest extends FormRequest
         return $user !== null && $user->isAdmin();
     }
 
+    public function messages(): array
+    {
+        return [
+            'kfs_numbers.*.regex' => 'Each KFS number must be 1-7 alphanumeric characters.',
+            'kfs_numbers.*.max' => 'Each KFS number must be 1-7 alphanumeric characters.',
+        ];
+    }
+
     public function rules(): array
     {
         return [
@@ -40,6 +48,9 @@ class AgreementRequest extends FormRequest
             'organization_payor_source_ids.*' => ['distinct', 'exists:organizations,id'],
             'organization_recipient_ids' => ['nullable', 'array'],
             'organization_recipient_ids.*' => ['distinct', 'exists:organizations,id'],
+            'kfs_numbers' => ['nullable', 'array'],
+            'kfs_numbers.*' => ['nullable', 'string', 'max:7', 'regex:/^[A-Za-z0-9]+$/'],
+            'organization_kfs_numbers' => ['nullable', 'array'],
             'state_ids' => ['nullable', 'array'],
             'state_ids.*' => ['exists:states,id'],
             'project_ids' => ['nullable', 'array'],
@@ -237,6 +248,43 @@ class AgreementRequest extends FormRequest
 
             if ($orphanRecipientIds->isNotEmpty()) {
                 $validator->errors()->add('organization_recipient_ids', 'Recipient organizations must be selected on the agreement.');
+            }
+
+            $normalizeKfsNumbers = function ($values): Collection {
+                return collect($values ?? [])
+                    ->filter(fn ($value) => is_string($value) || is_numeric($value))
+                    ->map(fn ($value) => strtoupper(trim((string) $value)))
+                    ->filter()
+                    ->unique()
+                    ->values();
+            };
+
+            $selectedKfsNumbers = $normalizeKfsNumbers($this->input('kfs_numbers', []));
+
+            foreach (($this->input('organization_kfs_numbers', []) ?? []) as $organizationId => $numbers) {
+                if (!is_array($numbers)) {
+                    continue;
+                }
+
+                $normalizedOrganizationId = (int) $organizationId;
+
+                if (!in_array($normalizedOrganizationId, $selectedOrganizationIdSet, true)) {
+                    if ($normalizeKfsNumbers($numbers)->isNotEmpty()) {
+                        $validator->errors()->add('organization_kfs_numbers', 'Organizations with KFS assignments must be selected on the agreement.');
+                    }
+
+                    continue;
+                }
+
+                $unknownNumbers = $normalizeKfsNumbers($numbers)
+                    ->reject(fn (string $number) => $selectedKfsNumbers->contains($number));
+
+                if ($unknownNumbers->isNotEmpty()) {
+                    $validator->errors()->add(
+                        'organization_kfs_numbers.' . $organizationId,
+                        'Organization KFS assignments must use KFS numbers attached to this agreement.'
+                    );
+                }
             }
 
             $directUserIds = collect($this->input('user_ids', []))

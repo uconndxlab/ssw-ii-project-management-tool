@@ -222,8 +222,8 @@ class OrganizationController extends Controller
             'po_number' => [
                 'nullable',
                 'string',
-                'max:7',
-                'regex:/^[A-Za-z0-9]+$/',
+                'size:6',
+                'regex:/^[0-9]{6}$/',
                 Rule::unique('organizations', 'po_number')->ignore($organization?->id),
             ],
             'active' => ['nullable', 'boolean'],
@@ -236,8 +236,8 @@ class OrganizationController extends Controller
             'user_ids' => ['nullable', 'array'],
             'user_ids.*' => ['exists:users,id'],
         ], [
-            'po_number.regex' => 'The PO number must be 1-7 alphanumeric characters.',
-            'po_number.max' => 'The PO number must be 1-7 alphanumeric characters.',
+            'po_number.regex' => 'The PO number must be exactly 6 digits.',
+            'po_number.size' => 'The PO number must be exactly 6 digits.',
             'po_number.unique' => 'This PO number is already assigned to another organization.',
         ]);
 

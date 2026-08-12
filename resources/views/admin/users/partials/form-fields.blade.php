@@ -28,11 +28,11 @@
                    id="po_number"
                    name="po_number"
                    value="{{ old('po_number', $user->po_number ?? '') }}"
-                   maxlength="7"
-                   pattern="[A-Za-z0-9]*"
+                   maxlength="6"
+                   pattern="[0-9]{6}"
                    autocomplete="off"
-                   placeholder="e.g. 4232321">
-            <small class="text-muted d-block mt-1">Optional. Up to 7 alphanumeric characters.</small>
+                     placeholder="e.g. 423232">
+                 <small class="text-muted d-block mt-1">Optional. Must be exactly 6 digits.</small>
             @error('po_number')
                 <div class="invalid-feedback">{{ $message }}</div>
             @enderror

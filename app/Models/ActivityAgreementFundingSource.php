@@ -18,6 +18,8 @@ class ActivityAgreementFundingSource extends Model
         'role',
         'source_type',
         'source_id',
+        'kfs_numbers_snapshot',
+        'po_number_snapshot',
     ];
 
     protected function casts(): array
@@ -26,6 +28,7 @@ class ActivityAgreementFundingSource extends Model
             'activity_id' => 'integer',
             'agreement_id' => 'integer',
             'source_id' => 'integer',
+            'kfs_numbers_snapshot' => 'array',
         ];
     }
 

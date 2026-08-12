@@ -247,6 +247,8 @@ class ActivityController extends Controller
         // Pre-load agreement-scoped selections used to constrain the activity form.
         $agreements->load([
             'organizations',
+            'organizationKfsAccounts',
+            'kfsAccounts',
             'states',
             'deliverables.activityType',
             'users',
@@ -432,6 +434,8 @@ class ActivityController extends Controller
             ->values();
         $agreements->load([
             'organizations',
+            'organizationKfsAccounts',
+            'kfsAccounts',
             'states',
             'deliverables.activityType',
             'users',
@@ -1290,6 +1294,7 @@ class ActivityController extends Controller
                         'role' => $role,
                         'source_type' => $parsed['source_type'],
                         'source_id' => $parsed['source_id'],
+                        ...ActivityFundingSourceTokens::snapshotForSelection($agreement, $role, $parsed),
                         'created_at' => now(),
                         'updated_at' => now(),
                     ];
