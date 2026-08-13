@@ -91,6 +91,7 @@
                 <option value="text" @selected(request('field_type') === 'text')>Text</option>
                 <option value="textarea" @selected(request('field_type') === 'textarea')>Textarea</option>
                 <option value="checkbox" @selected(request('field_type') === 'checkbox')>Checkbox</option>
+                <option value="multiselect" @selected(request('field_type') === 'multiselect')>Multiselect</option>
                 <option value="select" @selected(request('field_type') === 'select')>Select</option>
                 <option value="document" @selected(request('field_type') === 'document')>Document Upload</option>
             </select>

@@ -12,6 +12,11 @@ class LoggingField extends Model
 {
     use HasProgramScope;
 
+    public const FIELD_TYPE_CHECKBOX = 'checkbox';
+    public const FIELD_TYPE_MULTISELECT = 'multiselect';
+    public const FIELD_TYPE_CHECKBOX_GROUP = 'checkbox_group';
+    public const FIELD_TYPE_SELECT = 'select';
+
     protected $fillable = [
         'name',
         'slug',
@@ -115,9 +120,82 @@ class LoggingField extends Model
             'decimal' => 'Decimal',
             'text' => 'Text',
             'textarea' => 'Textarea',
-            'checkbox' => 'Checkbox',
-            'select' => 'Select',
+            self::FIELD_TYPE_CHECKBOX => 'Checkbox',
+            self::FIELD_TYPE_MULTISELECT => 'Multiselect',
+            self::FIELD_TYPE_SELECT => 'Select',
             'document' => 'Document Upload',
         ];
+    }
+
+    public function fieldTypeLabel(): string
+    {
+        if ($this->isMultiselect()) {
+            return self::fieldTypes()[self::FIELD_TYPE_MULTISELECT];
+        }
+
+        return self::fieldTypes()[$this->field_type] ?? Str::of($this->field_type)->replace('_', ' ')->title()->toString();
+    }
+
+    public function usesOptions(): bool
+    {
+        return in_array($this->field_type, [self::FIELD_TYPE_SELECT, self::FIELD_TYPE_MULTISELECT, self::FIELD_TYPE_CHECKBOX_GROUP], true);
+    }
+
+    public function isMultiselect(): bool
+    {
+        return in_array($this->field_type, [self::FIELD_TYPE_MULTISELECT, self::FIELD_TYPE_CHECKBOX_GROUP], true);
+    }
+
+    public function normalizedOptions(): array
+    {
+        return collect($this->options_json ?? [])
+            ->map(function ($option, $index) {
+                if (is_string($option)) {
+                    $label = trim($option);
+
+                    if ($label === '') {
+                        return null;
+                    }
+
+                    return [
+                        'id' => $label,
+                        'label' => $label,
+                    ];
+                }
+
+                if (!is_array($option)) {
+                    return null;
+                }
+
+                $label = trim((string) ($option['label'] ?? $option['value'] ?? ''));
+
+                if ($label === '') {
+                    return null;
+                }
+
+                return [
+                    'id' => (string) ($option['id'] ?? Str::uuid()),
+                    'label' => $label,
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    public function optionValues(): array
+    {
+        return collect($this->normalizedOptions())
+            ->pluck('id')
+            ->map(fn ($id) => (string) $id)
+            ->values()
+            ->all();
+    }
+
+    public function optionLabelMap(): array
+    {
+        return collect($this->normalizedOptions())
+            ->mapWithKeys(fn ($option) => [(string) $option['id'] => $option['label']])
+            ->all();
     }
 }

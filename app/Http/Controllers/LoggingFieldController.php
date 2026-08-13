@@ -9,11 +9,17 @@ use App\Models\Program;
 use App\Models\Project;
 use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
 class LoggingFieldController extends Controller
 {
+    private const OPTION_FIELD_TYPES = [
+        LoggingField::FIELD_TYPE_SELECT,
+        LoggingField::FIELD_TYPE_MULTISELECT,
+    ];
+
     /**
      * Display a listing of logging fields.
      */
@@ -154,9 +160,13 @@ class LoggingFieldController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255|unique:logging_fields,name',
-            'field_type' => 'required|in:number,decimal,text,textarea,checkbox,select,document',
+            'field_type' => ['required', Rule::in(array_keys(LoggingField::fieldTypes()))],
             'help_text' => 'nullable|string|max:1000',
             'options_json' => 'nullable|string',
+            'option_rows' => 'nullable|array',
+            'option_rows.*.id' => 'nullable|string|max:100',
+            'option_rows.*.label' => 'nullable|string|max:255',
+            'option_rows.*._delete' => 'nullable|boolean',
             'is_active' => 'boolean',
             'sort_order' => 'nullable|integer|min:0',
             'is_full_width' => 'boolean',
@@ -178,20 +188,41 @@ class LoggingFieldController extends Controller
                 ProjectProgramScope::normalizeIds($request->input('project_ids', [])),
                 ProjectProgramScope::normalizeIds($request->input('program_ids', []))
             );
+
+            $fieldType = (string) $request->input('field_type');
+
+            if (!in_array($fieldType, self::OPTION_FIELD_TYPES, true)) {
+                return;
+            }
+
+            $options = $this->normalizedOptionsFromRequest($request->input('option_rows', []), $request->input('options_json'));
+
+            if ($options === null) {
+                $validator->errors()->add('option_rows', 'Options could not be parsed.');
+
+                return;
+            }
+
+            if ($options === []) {
+                $validator->errors()->add('option_rows', 'Add at least one option.');
+
+                return;
+            }
+
+            $labels = collect($options)->pluck('label');
+
+            if ($labels->count() !== $labels->unique(fn ($label) => Str::lower($label))->count()) {
+                $validator->errors()->add('option_rows', 'Option labels must be unique.');
+            }
         });
 
         $validated = $validator->validate();
 
-        // Parse options JSON for select fields
-        if ($validated['field_type'] === 'select' && !empty($validated['options_json'])) {
-            $options = json_decode($validated['options_json'], true);
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                return back()->withErrors(['options_json' => 'Invalid JSON format'])->withInput();
-            }
-            $validated['options_json'] = $options;
-        } else {
-            $validated['options_json'] = null;
-        }
+        $validated['options_json'] = $this->optionPayloadForFieldType(
+            $validated['field_type'],
+            $request->input('option_rows', []),
+            $request->input('options_json')
+        );
 
         $validated['is_active'] = $request->boolean('is_active', true);
         $validated['is_full_width'] = $request->boolean('is_full_width');
@@ -246,9 +277,13 @@ class LoggingFieldController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255|unique:logging_fields,name,' . $loggingField->id,
-            'field_type' => 'required|in:number,decimal,text,textarea,checkbox,select,document',
+            'field_type' => ['required', Rule::in(array_keys(LoggingField::fieldTypes()))],
             'help_text' => 'nullable|string|max:1000',
             'options_json' => 'nullable|string',
+            'option_rows' => 'nullable|array',
+            'option_rows.*.id' => 'nullable|string|max:100',
+            'option_rows.*.label' => 'nullable|string|max:255',
+            'option_rows.*._delete' => 'nullable|boolean',
             'is_active' => 'boolean',
             'sort_order' => 'nullable|integer|min:0',
             'is_full_width' => 'boolean',
@@ -270,20 +305,41 @@ class LoggingFieldController extends Controller
                 ProjectProgramScope::normalizeIds($request->input('project_ids', [])),
                 ProjectProgramScope::normalizeIds($request->input('program_ids', []))
             );
+
+            $fieldType = (string) $request->input('field_type');
+
+            if (!in_array($fieldType, self::OPTION_FIELD_TYPES, true)) {
+                return;
+            }
+
+            $options = $this->normalizedOptionsFromRequest($request->input('option_rows', []), $request->input('options_json'));
+
+            if ($options === null) {
+                $validator->errors()->add('option_rows', 'Options could not be parsed.');
+
+                return;
+            }
+
+            if ($options === []) {
+                $validator->errors()->add('option_rows', 'Add at least one option.');
+
+                return;
+            }
+
+            $labels = collect($options)->pluck('label');
+
+            if ($labels->count() !== $labels->unique(fn ($label) => Str::lower($label))->count()) {
+                $validator->errors()->add('option_rows', 'Option labels must be unique.');
+            }
         });
 
         $validated = $validator->validate();
 
-        // Parse options JSON for select fields
-        if ($validated['field_type'] === 'select' && !empty($validated['options_json'])) {
-            $options = json_decode($validated['options_json'], true);
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                return back()->withErrors(['options_json' => 'Invalid JSON format'])->withInput();
-            }
-            $validated['options_json'] = $options;
-        } else {
-            $validated['options_json'] = null;
-        }
+        $validated['options_json'] = $this->optionPayloadForFieldType(
+            $validated['field_type'],
+            $request->input('option_rows', []),
+            $request->input('options_json')
+        );
 
         $validated['is_active'] = $request->boolean('is_active');
         $validated['is_full_width'] = $request->boolean('is_full_width');
@@ -307,6 +363,85 @@ class LoggingFieldController extends Controller
 
         return redirect()->route('logging-fields.index')
             ->with('success', 'Logging field updated successfully.');
+    }
+
+    private function optionPayloadForFieldType(string $fieldType, mixed $optionRows, ?string $fallbackJson): ?array
+    {
+        if (!in_array($fieldType, self::OPTION_FIELD_TYPES, true)) {
+            return null;
+        }
+
+        return $this->normalizedOptionsFromRequest($optionRows, $fallbackJson) ?? [];
+    }
+
+    private function normalizedOptionsFromRequest(mixed $optionRows, ?string $fallbackJson): ?array
+    {
+        if (is_array($optionRows) && $optionRows !== []) {
+            return collect($optionRows)
+                ->map(function ($row) {
+                    if (!is_array($row) || !empty($row['_delete'])) {
+                        return null;
+                    }
+
+                    $label = trim((string) ($row['label'] ?? $row['value'] ?? ''));
+
+                    if ($label === '') {
+                        return null;
+                    }
+
+                    return [
+                        'id' => (string) ($row['id'] ?? Str::uuid()),
+                        'label' => $label,
+                    ];
+                })
+                ->filter()
+                ->values()
+                ->all();
+        }
+
+        if (blank($fallbackJson)) {
+            return [];
+        }
+
+        $decoded = json_decode($fallbackJson, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE || !is_array($decoded)) {
+            return null;
+        }
+
+        return collect($decoded)
+            ->map(function ($option) {
+                if (is_string($option)) {
+                    $label = trim($option);
+
+                    if ($label === '') {
+                        return null;
+                    }
+
+                    return [
+                        'id' => $label,
+                        'label' => $label,
+                    ];
+                }
+
+                if (!is_array($option)) {
+                    return null;
+                }
+
+                $label = trim((string) ($option['label'] ?? $option['value'] ?? ''));
+
+                if ($label === '') {
+                    return null;
+                }
+
+                return [
+                    'id' => (string) ($option['id'] ?? Str::uuid()),
+                    'label' => $label,
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
     }
 
     /**

@@ -343,6 +343,7 @@
                                             @foreach($agreement->agreementLoggingFields as $field)
                                                 @php
                                                     $value = $agreementValues[$field->id] ?? null;
+                                                    $optionLabelMap = $field->optionLabelMap();
                                                 @endphp
                                                 @if($value !== null && $value !== '')
                                                     <div class="col-md-6">
@@ -352,6 +353,12 @@
                                                                 <a href="{{ route('activities.logging-field-document.download', ['activity' => $activity, 'context' => 'agreement', 'fieldId' => $field->id, 'agreementId' => $agreement->id]) }}" class="text-decoration-none" target="_blank">
                                                                     <i class="bi bi-file-earmark-arrow-down me-1"></i>{{ basename($value) }}
                                                                 </a>
+                                                            @elseif($field->isMultiselect() && is_array($value))
+                                                                <div class="d-flex flex-wrap gap-1">
+                                                                    @foreach($value as $selectedId)
+                                                                        <span class="badge text-bg-light border">{{ $optionLabelMap[(string) $selectedId] ?? $selectedId }}</span>
+                                                                    @endforeach
+                                                                </div>
                                                             @elseif(is_bool($value))
                                                                 {{ $value ? 'Yes' : 'No' }}
                                                             @else
@@ -381,6 +388,7 @@
                             @foreach($activity->activityType->contactFamily->contactFamilyLoggingFields as $field)
                                 @php
                                     $value = $contactFamilyLoggingValues[$field->id] ?? null;
+                                    $optionLabelMap = $field->optionLabelMap();
                                 @endphp
                                 @if($value !== null && $value !== '')
                                     <div class="col-md-6">
@@ -390,6 +398,12 @@
                                                 <a href="{{ route('activities.logging-field-document.download', ['activity' => $activity, 'context' => 'contact_family', 'fieldId' => $field->id]) }}" class="text-decoration-none" target="_blank">
                                                     <i class="bi bi-file-earmark-arrow-down me-1"></i>{{ basename($value) }}
                                                 </a>
+                                            @elseif($field->isMultiselect() && is_array($value))
+                                                <div class="d-flex flex-wrap gap-1">
+                                                    @foreach($value as $selectedId)
+                                                        <span class="badge text-bg-light border">{{ $optionLabelMap[(string) $selectedId] ?? $selectedId }}</span>
+                                                    @endforeach
+                                                </div>
                                             @elseif(is_bool($value))
                                                 {{ $value ? 'Yes' : 'No' }}
                                             @else
@@ -410,6 +424,7 @@
                             @foreach($activity->activityType->activityTypeLoggingFields as $field)
                                 @php
                                     $value = $activityTypeLoggingValues[$field->id] ?? null;
+                                    $optionLabelMap = $field->optionLabelMap();
                                 @endphp
                                 @if($field && $value !== null && $value !== '')
                                     <div class="col-md-6">
@@ -419,6 +434,12 @@
                                                 <a href="{{ route('activities.logging-field-document.download', ['activity' => $activity, 'context' => 'activity_type', 'fieldId' => $field->id]) }}" class="text-decoration-none" target="_blank">
                                                     <i class="bi bi-file-earmark-arrow-down me-1"></i>{{ basename($value) }}
                                                 </a>
+                                            @elseif($field->isMultiselect() && is_array($value))
+                                                <div class="d-flex flex-wrap gap-1">
+                                                    @foreach($value as $selectedId)
+                                                        <span class="badge text-bg-light border">{{ $optionLabelMap[(string) $selectedId] ?? $selectedId }}</span>
+                                                    @endforeach
+                                                </div>
                                             @elseif(is_bool($value))
                                                 {{ $value ? 'Yes' : 'No' }}
                                             @else

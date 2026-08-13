@@ -36,7 +36,7 @@
                         </tr>
                         <tr>
                             <td class="text-muted">Field Type</td>
-                            <td><span class="badge bg-secondary">{{ ucfirst($loggingField->field_type) }}</span></td>
+                            <td><span class="badge bg-secondary">{{ $loggingField->fieldTypeLabel() }}</span></td>
                         </tr>
                         <tr>
                             <td class="text-muted">Available In</td>
@@ -54,13 +54,13 @@
                                 </div>
                             </td>
                         </tr>
-                        @if($loggingField->field_type === 'select' && $loggingField->options_json)
+                        @if($loggingField->usesOptions() && $loggingField->normalizedOptions())
                         <tr>
                             <td class="text-muted">Options</td>
                             <td>
                                 <ul class="mb-0">
-                                    @foreach($loggingField->options_json as $option)
-                                        <li>{{ $option }}</li>
+                                    @foreach($loggingField->normalizedOptions() as $option)
+                                        <li>{{ $option['label'] }}</li>
                                     @endforeach
                                 </ul>
                             </td>

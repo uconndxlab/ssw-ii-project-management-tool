@@ -145,7 +145,7 @@
                            {{ in_array($field->id, $selectedActivityTypeLoggingFieldIds) ? 'checked' : '' }}>
                     <div class="flex-grow-1">
                         <div class="fw-semibold">{{ $field->name }}</div>
-                        <div class="small text-muted">{{ ucfirst($field->field_type) }}{{ $field->help_text ? ' · ' . $field->help_text : '' }}</div>
+                        <div class="small text-muted">{{ $field->fieldTypeLabel() }}{{ $field->help_text ? ' · ' . $field->help_text : '' }}</div>
                     </div>
                     <div class="form-check m-0">
                         <input class="form-check-input"

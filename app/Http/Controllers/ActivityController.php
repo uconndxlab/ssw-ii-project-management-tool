@@ -750,16 +750,25 @@ class ActivityController extends Controller
 
         foreach ($agreements as $agreement) {
             foreach ($scopedFields['agreements'][(string) $agreement->id] ?? collect() as $field) {
-                $rules["agreement_logging_values.{$agreement->id}.{$field->id}"] = $this->rulesForField($field->field_type, (bool) $field->pivot->is_required, $field->options_json ?? []);
+                $rules = array_merge(
+                    $rules,
+                    $this->rulesForField($field, (bool) $field->pivot->is_required, "agreement_logging_values.{$agreement->id}.{$field->id}")
+                );
             }
         }
 
         foreach ($scopedFields['contact_family'] as $field) {
-            $rules["contact_family_logging_values.{$field->id}"] = $this->rulesForField($field->field_type, (bool) $field->pivot->is_required, $field->options_json ?? []);
+            $rules = array_merge(
+                $rules,
+                $this->rulesForField($field, (bool) $field->pivot->is_required, "contact_family_logging_values.{$field->id}")
+            );
         }
 
         foreach ($scopedFields['activity_type'] as $field) {
-            $rules["activity_logging_values.{$field->id}"] = $this->rulesForField($field->field_type, (bool) $field->pivot->is_required, $field->options_json ?? []);
+            $rules = array_merge(
+                $rules,
+                $this->rulesForField($field, (bool) $field->pivot->is_required, "activity_logging_values.{$field->id}")
+            );
         }
 
         return $rules;
@@ -773,15 +782,18 @@ class ActivityController extends Controller
         foreach ($agreements as $agreement) {
             foreach ($scopedFields['agreements'][(string) $agreement->id] ?? collect() as $field) {
                 $attributes["agreement_logging_values.{$agreement->id}.{$field->id}"] = $agreement->name . ': ' . $field->name;
+                $attributes["agreement_logging_values.{$agreement->id}.{$field->id}.*"] = $agreement->name . ': ' . $field->name;
             }
         }
 
         foreach ($scopedFields['contact_family'] as $field) {
             $attributes["contact_family_logging_values.{$field->id}"] = $contactFamily->name . ': ' . $field->name;
+            $attributes["contact_family_logging_values.{$field->id}.*"] = $contactFamily->name . ': ' . $field->name;
         }
 
         foreach ($scopedFields['activity_type'] as $field) {
             $attributes["activity_logging_values.{$field->id}"] = $activityType->name . ': ' . $field->name;
+            $attributes["activity_logging_values.{$field->id}.*"] = $activityType->name . ': ' . $field->name;
         }
 
         return $attributes;
@@ -1312,18 +1324,24 @@ class ActivityController extends Controller
         }
     }
 
-    private function rulesForField(string $fieldType, bool $required, array $options = []): array
+    private function rulesForField(LoggingField $field, bool $required, string $inputKey): array
     {
         $prefix = $required ? ['required'] : ['nullable'];
+        $fieldType = $field->field_type;
+        $optionValues = $field->optionValues();
 
         return match ($fieldType) {
-            'number' => array_merge($prefix, ['integer']),
-            'decimal' => array_merge($prefix, ['numeric']),
-            'checkbox' => array_merge($prefix, ['boolean']),
-            'select' => array_merge($prefix, [Rule::in($options)]),
-            'document' => array_merge($required ? ['required'] : ['nullable'], ['file', 'mimes:pdf,doc,docx,xls,xlsx,png,jpg,jpeg', 'max:'.config('uploads.max_file_kb')]),
-            'textarea', 'text' => array_merge($prefix, ['string', 'max:5000']),
-            default => array_merge($prefix, ['string', 'max:5000']),
+            'number' => [$inputKey => array_merge($prefix, ['integer'])],
+            'decimal' => [$inputKey => array_merge($prefix, ['numeric'])],
+            LoggingField::FIELD_TYPE_CHECKBOX => [$inputKey => array_merge($prefix, ['boolean'])],
+            LoggingField::FIELD_TYPE_SELECT => [$inputKey => array_merge($prefix, [Rule::in($optionValues)])],
+            LoggingField::FIELD_TYPE_MULTISELECT => [
+                $inputKey => array_merge($prefix, ['array', 'min:1']),
+                $inputKey . '.*' => ['string', Rule::in($optionValues)],
+            ],
+            'document' => [$inputKey => array_merge($required ? ['required'] : ['nullable'], ['file', 'mimes:pdf,doc,docx,xls,xlsx,png,jpg,jpeg', 'max:'.config('uploads.max_file_kb')])],
+            'textarea', 'text' => [$inputKey => array_merge($prefix, ['string', 'max:5000'])],
+            default => [$inputKey => array_merge($prefix, ['string', 'max:5000'])],
         };
     }
 
@@ -1398,6 +1416,7 @@ class ActivityController extends Controller
             'context_type' => $contextType,
             'context_id' => $contextId,
             'value_text' => null,
+            'value_json' => null,
             'value_number' => null,
             'value_boolean' => null,
             'file_path' => null,
@@ -1413,7 +1432,8 @@ class ActivityController extends Controller
 
         return match ($field->field_type) {
             'number', 'decimal' => $value === null ? null : array_merge($payload, ['value_number' => $value]),
-            'checkbox' => array_merge($payload, ['value_boolean' => $value]),
+            LoggingField::FIELD_TYPE_CHECKBOX => array_merge($payload, ['value_boolean' => $value]),
+            LoggingField::FIELD_TYPE_MULTISELECT => $value === null ? null : array_merge($payload, ['value_json' => $value]),
             default => $value === null ? null : array_merge($payload, ['value_text' => (string) $value]),
         };
     }
@@ -1423,9 +1443,26 @@ class ActivityController extends Controller
         return match ($fieldType) {
             'number' => $value === null || $value === '' ? null : (int) $value,
             'decimal' => $value === null || $value === '' ? null : (float) $value,
-            'checkbox' => (bool) $value,
+            LoggingField::FIELD_TYPE_CHECKBOX => (bool) $value,
+            LoggingField::FIELD_TYPE_MULTISELECT => $this->normalizeLoggingFieldSelections($value),
             default => $value === '' ? null : $value,
         };
+    }
+
+    private function normalizeLoggingFieldSelections(mixed $value): ?array
+    {
+        if (!is_array($value)) {
+            return null;
+        }
+
+        $selections = collect($value)
+            ->map(fn ($item) => trim((string) $item))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        return $selections === [] ? null : $selections;
     }
 
     public function downloadLoggingFieldDocument(Activity $activity, string $context, int $fieldId, ?int $agreementId = null): \Symfony\Component\HttpFoundation\StreamedResponse

@@ -3,8 +3,12 @@
     $inputId = $inputId ?? str_replace(['[', ']'], ['_', ''], $inputName) . '_' . $fieldId;
     $isRequired = $isRequired ?? false;
     $value = $value ?? null;
-    $options = $field->options_json ?? [];
+    $options = $field->normalizedOptions();
     $downloadContext = $downloadContext ?? (str_starts_with($inputName, 'contact_family') ? 'contact_family' : 'agreement');
+    $resolvedValue = old($oldKey ?? '', $value);
+    $selectedOptionIds = is_array($resolvedValue)
+        ? collect($resolvedValue)->map(fn ($item) => (string) $item)->all()
+        : [(string) $resolvedValue];
 @endphp
 
 <div class="mb-3">
@@ -15,18 +19,39 @@
         @endif
     </label>
 
+    @if($field->isMultiselect() && $field->help_text)
+        <div class="form-text mt-0 mb-2">{{ $field->help_text }}</div>
+    @endif
+
     @if($field->field_type === 'textarea')
         <textarea class="form-control"
                   id="{{ $inputId }}"
                   name="{{ $inputName }}"
-                  rows="3">{{ old($oldKey ?? '', $value) }}</textarea>
+                  rows="3">{{ $resolvedValue }}</textarea>
     @elseif($field->field_type === 'select')
         <select class="form-select" id="{{ $inputId }}" name="{{ $inputName }}">
             <option value="">Select…</option>
             @foreach($options as $option)
-                <option value="{{ $option }}" {{ (string) old($oldKey ?? '', $value) === (string) $option ? 'selected' : '' }}>{{ $option }}</option>
+                <option value="{{ $option['id'] }}" {{ (string) $resolvedValue === (string) $option['id'] ? 'selected' : '' }}>{{ $option['label'] }}</option>
             @endforeach
         </select>
+    @elseif($field->isMultiselect())
+        <div class="d-grid gap-2">
+            @foreach($options as $index => $option)
+                @php
+                    $optionInputId = $inputId . '_option_' . $index;
+                @endphp
+                <div class="form-check">
+                    <input class="form-check-input"
+                           type="checkbox"
+                           id="{{ $optionInputId }}"
+                           name="{{ $inputName }}[]"
+                           value="{{ $option['id'] }}"
+                           {{ in_array((string) $option['id'], $selectedOptionIds, true) ? 'checked' : '' }}>
+                    <label class="form-check-label" for="{{ $optionInputId }}">{{ $option['label'] }}</label>
+                </div>
+            @endforeach
+        </div>
     @elseif($field->field_type === 'checkbox')
         <input type="hidden" name="{{ $inputName }}" value="0">
         <div class="form-check">
@@ -35,7 +60,7 @@
                    id="{{ $inputId }}"
                    name="{{ $inputName }}"
                    value="1"
-                   {{ old($oldKey ?? '', $value) ? 'checked' : '' }}>
+                   {{ $resolvedValue ? 'checked' : '' }}>
             <label class="form-check-label" for="{{ $inputId }}">Yes</label>
         </div>
     @elseif($field->field_type === 'document')
@@ -65,20 +90,20 @@
                id="{{ $inputId }}"
                name="{{ $inputName }}"
                step="{{ $field->field_type === 'decimal' ? '0.01' : '1' }}"
-               value="{{ old($oldKey ?? '', $value) }}">
+             value="{{ $resolvedValue }}">
     @else
         <input type="text"
                class="form-control"
                id="{{ $inputId }}"
                name="{{ $inputName }}"
-               value="{{ old($oldKey ?? '', $value) }}">
+             value="{{ $resolvedValue }}">
     @endif
 
     @error($oldKey ?? '')
         <div class="text-danger small mt-1">{{ $message }}</div>
     @enderror
 
-    @if($field->help_text)
+    @if($field->help_text && !$field->isMultiselect())
         <div class="form-text">{{ $field->help_text }}</div>
     @endif
 </div>

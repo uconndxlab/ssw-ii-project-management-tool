@@ -43,7 +43,7 @@
                             <br><small class="text-muted">{{ Str::limit($field->help_text, 60) }}</small>
                         @endif
                     </td>
-                    <td><span class="badge bg-secondary">{{ ucfirst($field->field_type) }}</span></td>
+                    <td><span class="badge bg-secondary">{{ $field->fieldTypeLabel() }}</span></td>
                     <td>
                         <x-table-badge-list
                             kind="project"

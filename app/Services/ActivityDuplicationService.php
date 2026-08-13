@@ -116,6 +116,7 @@ class ActivityDuplicationService
             'context_type' => $answer->context_type,
             'context_id' => $answer->context_id,
             'value_text' => $answer->value_text,
+            'value_json' => $answer->value_json,
             'value_number' => $answer->value_number,
             'value_boolean' => $answer->value_boolean,
             'file_path' => $filePath,

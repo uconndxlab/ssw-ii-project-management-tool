@@ -13,6 +13,7 @@ class ActivityLoggingFieldAnswer extends Model
         'context_type',
         'context_id',
         'value_text',
+        'value_json',
         'value_number',
         'value_boolean',
         'file_path',
@@ -24,6 +25,7 @@ class ActivityLoggingFieldAnswer extends Model
             'activity_id' => 'integer',
             'logging_field_id' => 'integer',
             'context_id' => 'integer',
+            'value_json' => 'array',
             'value_number' => 'float',
             'value_boolean' => 'boolean',
         ];
@@ -51,6 +53,10 @@ class ActivityLoggingFieldAnswer extends Model
 
         if ($this->value_number !== null) {
             return $this->value_number;
+        }
+
+        if ($this->value_json !== null) {
+            return $this->value_json;
         }
 
         return $this->value_text;
