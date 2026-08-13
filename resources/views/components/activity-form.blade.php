@@ -394,7 +394,7 @@
 
             <div class="d-grid gap-4">
                     <x-section-card title="Agreements & Coverage">
-                        <div>
+                        <div class="mb-4">
                             <label class="form-label fw-semibold">Agreements <span class="text-danger">*</span></label>
                             <x-token-picker
                                 picker-id="activity-agreements-picker"
@@ -560,7 +560,9 @@
                                         required>
                                     <option value="">{{ empty($selectedAgreementIds) ? 'Select at least one agreement first...' : 'Select contact family...' }}</option>
                                     @foreach($contactFamilies as $family)
-                                        <option value="{{ $family->id }}" {{ (string) $currentContactFamilyId === (string) $family->id ? 'selected' : '' }}>
+                                        <option value="{{ $family->id }}"
+                                                data-helper-text="{{ e($family->helper_text ?? '') }}"
+                                                {{ (string) $currentContactFamilyId === (string) $family->id ? 'selected' : '' }}>
                                             {{ $family->name }}
                                         </option>
                                     @endforeach
@@ -569,6 +571,7 @@
                                 @error('contact_family_id')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
+                                <div class="form-text d-none" id="contact_family_helper_text"></div>
                             </div>
 
                             <div class="col-md-6">
@@ -585,6 +588,7 @@
                                 @error('activity_type_id')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
+                                <div class="form-text d-none" id="activity_type_helper_text"></div>
                             </div>
                         </div>
 
@@ -1796,6 +1800,21 @@
         type.disabled = !family.value;
     }
 
+    function updateSelectHelperText(selectId, targetId) {
+        const select = document.getElementById(selectId);
+        const target = document.getElementById(targetId);
+
+        if (!select || !target) {
+            return;
+        }
+
+        const selectedOption = select.options[select.selectedIndex];
+        const helperText = selectedOption?.dataset?.helperText || '';
+
+        target.textContent = helperText;
+        target.classList.toggle('d-none', helperText.trim() === '');
+    }
+
     function markDirty() {}
 
     const agreementsPicker = document.getElementById('activity-agreements-picker');
@@ -1868,6 +1887,7 @@
             const selectedType = document.getElementById('activity_type_selected');
             if (selectedType && event.isTrusted) selectedType.value = '';
             updateActivityTypeState();
+            updateSelectHelperText('contact_family_id', 'contact_family_helper_text');
             updateContactFamilyLoggingGroups();
             updateActivityLoggingGroups();
             updateAdditionalContactTimeFields();
@@ -1878,6 +1898,7 @@
                 initialAllottedDurationHours = null;
                 initialAllottedDurationDays = null;
             }
+            updateSelectHelperText('activity_type_id', 'activity_type_helper_text');
             updateActivityLoggingGroups();
         }
         markDirty();
@@ -1899,6 +1920,7 @@
             }
         }
         if (type) type.dispatchEvent(new Event('change', { bubbles: true }));
+        updateSelectHelperText('activity_type_id', 'activity_type_helper_text');
         updateAllottedDurationDisplay(false);
     });
 
@@ -1919,6 +1941,8 @@
     updateActivityLoggingGroups();
     updateAdditionalContactTimeFields();
     updateAllottedDurationDisplay(isEditMode);
+    updateSelectHelperText('contact_family_id', 'contact_family_helper_text');
+    updateSelectHelperText('activity_type_id', 'activity_type_helper_text');
     renderParticipantTimeRows();
 })();
 </script>

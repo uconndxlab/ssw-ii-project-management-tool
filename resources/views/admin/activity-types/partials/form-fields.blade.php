@@ -61,6 +61,18 @@
     </div>
 
     <div class="mb-3">
+        <label for="helper_text" class="form-label">Activity Form Helper Text</label>
+        <textarea class="form-control @error('helper_text') is-invalid @enderror"
+                  id="helper_text"
+                  name="helper_text"
+                  rows="3">{{ old('helper_text', $activityType->helper_text ?? '') }}</textarea>
+        @error('helper_text')
+            <div class="invalid-feedback">{{ $message }}</div>
+        @enderror
+        <div class="form-text">Optional text shown beneath this activity type when selected in activity logging.</div>
+    </div>
+
+    <div class="mb-3">
         <x-project-program-scope-picker
             :scope-id="$scopeId"
             :projects="$projects"

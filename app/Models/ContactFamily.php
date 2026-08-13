@@ -14,6 +14,7 @@ class ContactFamily extends Model
 
     protected $fillable = [
         'name',
+        'helper_text',
         'active',
         'track_additional_time',
         'sort_order',

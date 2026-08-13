@@ -362,6 +362,7 @@ class ActivityTypeController extends Controller
             $html .= '<option value="' . $type->id . '"'
                 . ' data-duration-hours="' . e((string) $durationHours) . '"'
                 . ' data-duration-days="' . e((string) $durationDays) . '"'
+                . ' data-helper-text="' . e((string) ($type->helper_text ?? '')) . '"'
                 . $selected . '>' . e($type->name) . '</option>';
         }
 
@@ -372,6 +373,7 @@ class ActivityTypeController extends Controller
     {
         return [
             'name' => ['required', 'string', 'max:255'],
+            'helper_text' => ['nullable', 'string', 'max:1000'],
             'contact_family_id' => ['required', 'exists:contact_families,id'],
             'active' => ['boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],

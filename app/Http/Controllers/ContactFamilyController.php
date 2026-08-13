@@ -118,6 +118,7 @@ class ContactFamilyController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => ['required', 'string', 'max:255', 'unique:contact_families,name'],
+            'helper_text' => ['nullable', 'string', 'max:1000'],
             'active' => ['boolean'],
             'track_additional_time' => ['boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
@@ -162,6 +163,7 @@ class ContactFamilyController extends Controller
 
         $contactFamily = ContactFamily::create([
             'name' => $validated['name'],
+            'helper_text' => $validated['helper_text'] ?? null,
             'active' => $validated['active'],
             'track_additional_time' => $validated['track_additional_time'],
             'sort_order' => $validated['sort_order'],
@@ -205,6 +207,7 @@ class ContactFamilyController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => ['required', 'string', 'max:255', 'unique:contact_families,name,'.$contactFamily->id],
+            'helper_text' => ['nullable', 'string', 'max:1000'],
             'active' => ['boolean'],
             'track_additional_time' => ['boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
@@ -249,6 +252,7 @@ class ContactFamilyController extends Controller
 
         $contactFamily->update([
             'name' => $validated['name'],
+            'helper_text' => $validated['helper_text'] ?? null,
             'active' => $validated['active'],
             'track_additional_time' => $validated['track_additional_time'],
             'sort_order' => $validated['sort_order'],

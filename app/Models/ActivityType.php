@@ -15,6 +15,7 @@ class ActivityType extends Model
 
     protected $fillable = [
         'name',
+        'helper_text',
         'contact_family_id',
         'active',
         'sort_order',
