@@ -92,9 +92,9 @@ class Agreement extends Model
     public function agreementLoggingFields(): BelongsToMany
     {
         return $this->belongsToMany(LoggingField::class, 'agreement_logging_field_assignments', 'agreement_id', 'logging_field_id')
-            ->withPivot('is_required')
+            ->withPivot('is_required', 'sort_order')
             ->withTimestamps()
-            ->orderBy('sort_order', 'asc')
+            ->orderBy('agreement_logging_field_assignments.sort_order', 'asc')
             ->orderBy('name', 'asc');
     }
 

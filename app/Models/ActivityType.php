@@ -49,9 +49,9 @@ class ActivityType extends Model
     public function activityTypeLoggingFields(): BelongsToMany
     {
         return $this->belongsToMany(LoggingField::class, 'activity_type_logging_field_assignments', 'activity_type_id', 'logging_field_id')
-            ->withPivot('is_required')
+            ->withPivot('is_required', 'sort_order')
             ->withTimestamps()
-            ->orderBy('sort_order', 'asc')
+            ->orderBy('activity_type_logging_field_assignments.sort_order', 'asc')
             ->orderBy('name', 'asc');
     }
 

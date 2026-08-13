@@ -212,9 +212,10 @@ class ActivityTypeController extends Controller
         ));
 
         $syncData = [];
-        foreach (($validated['activity_type_logging_field_ids'] ?? []) as $fieldId) {
+        foreach (array_values(array_unique($validated['activity_type_logging_field_ids'] ?? [])) as $index => $fieldId) {
             $syncData[$fieldId] = [
                 'is_required' => in_array($fieldId, $validated['required_activity_type_logging_field_ids'] ?? []),
+                'sort_order' => $index + 1,
             ];
         }
         $activityType->activityTypeLoggingFields()->sync($syncData);
@@ -273,9 +274,10 @@ class ActivityTypeController extends Controller
         ));
 
         $syncData = [];
-        foreach (($validated['activity_type_logging_field_ids'] ?? []) as $fieldId) {
+        foreach (array_values(array_unique($validated['activity_type_logging_field_ids'] ?? [])) as $index => $fieldId) {
             $syncData[$fieldId] = [
                 'is_required' => in_array($fieldId, $validated['required_activity_type_logging_field_ids'] ?? []),
+                'sort_order' => $index + 1,
             ];
         }
         $activityType->activityTypeLoggingFields()->sync($syncData);

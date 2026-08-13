@@ -39,9 +39,9 @@ class ContactFamily extends Model
     public function contactFamilyLoggingFields(): BelongsToMany
     {
         return $this->belongsToMany(LoggingField::class, 'contact_family_logging_field_assignments', 'contact_family_id', 'logging_field_id')
-            ->withPivot('is_required')
+            ->withPivot('is_required', 'sort_order')
             ->withTimestamps()
-            ->orderBy('sort_order', 'asc')
+            ->orderBy('contact_family_logging_field_assignments.sort_order', 'asc')
             ->orderBy('name', 'asc');
     }
 

@@ -87,76 +87,13 @@
     @if($contactFamilyLoggingFields->isEmpty())
         <div class="alert alert-light border mb-0">No activity family logging fields have been defined yet.</div>
     @else
-        <div class="border rounded">
-            @foreach($contactFamilyLoggingFields as $field)
-                @php
-                    $fieldProgramIds = $field->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all();
-                @endphp
-                <label class="d-flex align-items-start gap-3 px-3 py-2 border-bottom {{ $loop->last ? 'border-bottom-0' : '' }}"
-                       data-scoped-logging-field-option
-                       data-option-id="{{ $field->id }}"
-                       data-program-ids='@json($fieldProgramIds)'
-                       data-global="{{ empty($fieldProgramIds) ? 'true' : 'false' }}">
-                    <input class="form-check-input mt-1"
-                           type="checkbox"
-                           name="contact_family_logging_field_ids[]"
-                           value="{{ $field->id }}"
-                           {{ in_array($field->id, $selectedContactFamilyLoggingFieldIds) ? 'checked' : '' }}>
-                    <div class="flex-grow-1">
-                        <div class="fw-semibold">{{ $field->name }}</div>
-                        <div class="small text-muted">{{ $field->fieldTypeLabel() }}{{ $field->help_text ? ' · ' . $field->help_text : '' }}</div>
-                    </div>
-                    <div class="form-check m-0">
-                        <input class="form-check-input"
-                               type="checkbox"
-                               name="required_contact_family_logging_field_ids[]"
-                               value="{{ $field->id }}"
-                               {{ in_array($field->id, $requiredContactFamilyLoggingFieldIds) ? 'checked' : '' }}>
-                        <label class="form-check-label small">Required</label>
-                    </div>
-                </label>
-            @endforeach
-        </div>
+        <x-logging-field-assignment-picker
+            :fields="$contactFamilyLoggingFields"
+            :selected-field-ids="$selectedContactFamilyLoggingFieldIds"
+            :required-field-ids="$requiredContactFamilyLoggingFieldIds"
+            field-id-input-name="contact_family_logging_field_ids"
+            required-input-name="required_contact_family_logging_field_ids"
+            picker-id="contact-family-logging-field-picker"
+        />
     @endif
 </x-section-card>
-
-@once
-<script>
-(function () {
-    function refreshScopedLoggingFields(effectiveProgramIds) {
-        if ((effectiveProgramIds || []).length === 0) {
-            document.querySelectorAll('[data-scoped-logging-field-option]').forEach(function (option) {
-                option.classList.remove('d-none');
-                option.querySelectorAll('input').forEach(function (input) {
-                    input.disabled = false;
-                });
-            });
-
-            return;
-        }
-
-        const selectedPrograms = new Set((effectiveProgramIds || []).map(String));
-
-        document.querySelectorAll('[data-scoped-logging-field-option]').forEach(function (option) {
-            const programIds = JSON.parse(option.dataset.programIds || '[]').map(String);
-            const isGlobal = option.dataset.global === 'true';
-            const visible = isGlobal || programIds.some(function (programId) {
-                return selectedPrograms.has(programId);
-            });
-
-            option.classList.toggle('d-none', !visible);
-            option.querySelectorAll('input').forEach(function (input) {
-                if (!visible) {
-                    input.checked = false;
-                }
-                input.disabled = !visible;
-            });
-        });
-    }
-
-    document.addEventListener('project-program-scope:change', function (event) {
-        refreshScopedLoggingFields(event.detail?.effectiveProgramIds || []);
-    });
-})();
-</script>
-@endonce

@@ -315,9 +315,22 @@
             $contactFamilyLoggingValues = $activity->contact_family_logging_values;
             $activityTypeLoggingValues = $activity->activity_type_logging_values;
             $fundingSourcesByAgreement = $activity->agreementFundingSources->groupBy('agreement_id');
-            $hasAgreementFieldContent = !empty($agreementLoggingValues) || $activity->agreementFundingSources->isNotEmpty();
+            $agreementScopedFields = $scopedLoggingFields['agreements'] ?? collect();
+            $contactFamilyScopedFields = $scopedLoggingFields['contact_family'] ?? collect();
+            $activityTypeScopedFields = $scopedLoggingFields['activity_type'] ?? collect();
+            $hasRenderableValue = function ($value) {
+                if (is_array($value)) {
+                    return !empty($value);
+                }
+
+                return $value !== null && $value !== '';
+            };
+            $hasAgreementFieldContent = $activity->agreements->contains(function ($agreement) use ($agreementScopedFields, $fundingSourcesByAgreement) {
+                return ($agreementScopedFields[(string) $agreement->id] ?? collect())->isNotEmpty()
+                    || $fundingSourcesByAgreement->get($agreement->id, collect())->isNotEmpty();
+            });
         @endphp
-        @if($hasAgreementFieldContent || !empty($contactFamilyLoggingValues) || !empty($activityTypeLoggingValues))
+        @if($hasAgreementFieldContent || $contactFamilyScopedFields->isNotEmpty() || $activityTypeScopedFields->isNotEmpty())
         <div class="card mt-3">
             <div class="card-header">
                 <h5 class="mb-0">Dynamic Logging Fields</h5>
@@ -328,11 +341,12 @@
                         <h6 class="mb-3">Agreement Fields</h6>
                         @foreach($activity->agreements as $agreement)
                             @php
+                                $visibleFields = $agreementScopedFields[(string) $agreement->id] ?? collect();
                                 $agreementValues = $agreementLoggingValues[$agreement->id] ?? [];
                                 $agreementFunding = $fundingSourcesByAgreement->get($agreement->id, collect());
                                 $payorSources = $agreementFunding->where('role', 'payor');
                                 $payeeSources = $agreementFunding->where('role', 'payee');
-                                $hasLoggingValues = collect($agreementValues)->filter(fn ($value) => $value !== null && $value !== '')->isNotEmpty();
+                                $hasLoggingValues = $visibleFields->isNotEmpty();
                                 $hasFundingSources = $payorSources->isNotEmpty() || $payeeSources->isNotEmpty();
                             @endphp
                             @if($hasLoggingValues || $hasFundingSources)
@@ -340,20 +354,19 @@
                                     <div class="fw-semibold mb-2">{{ $agreement->name }}</div>
                                     @if($hasLoggingValues)
                                         <div class="row g-2">
-                                            @foreach($agreement->agreementLoggingFields as $field)
+                                            @foreach($visibleFields as $field)
                                                 @php
                                                     $value = $agreementValues[$field->id] ?? null;
                                                     $optionLabelMap = $field->optionLabelMap();
                                                 @endphp
-                                                @if($value !== null && $value !== '')
-                                                    <div class="col-md-6">
-                                                        <div class="small text-muted">{{ $field->name }}</div>
-                                                        <div>
-                                                            @if($field->field_type === 'document')
+                                                <div class="col-md-6">
+                                                    <div class="small text-muted">{{ $field->name }}</div>
+                                                    <div>
+                                                        @if($field->field_type === 'document' && $hasRenderableValue($value))
                                                                 <a href="{{ route('activities.logging-field-document.download', ['activity' => $activity, 'context' => 'agreement', 'fieldId' => $field->id, 'agreementId' => $agreement->id]) }}" class="text-decoration-none" target="_blank">
                                                                     <i class="bi bi-file-earmark-arrow-down me-1"></i>{{ basename($value) }}
                                                                 </a>
-                                                            @elseif($field->isMultiselect() && is_array($value))
+                                                            @elseif($field->isMultiselect() && is_array($value) && !empty($value))
                                                                 <div class="d-flex flex-wrap gap-1">
                                                                     @foreach($value as $selectedId)
                                                                         <span class="badge text-bg-light border">{{ $optionLabelMap[(string) $selectedId] ?? $selectedId }}</span>
@@ -361,12 +374,13 @@
                                                                 </div>
                                                             @elseif(is_bool($value))
                                                                 {{ $value ? 'Yes' : 'No' }}
-                                                            @else
+                                                            @elseif($hasRenderableValue($value))
                                                                 {{ $value }}
+                                                            @else
+                                                                <span class="text-muted">-</span>
                                                             @endif
-                                                        </div>
                                                     </div>
-                                                @endif
+                                                </div>
                                             @endforeach
                                         </div>
                                     @endif
@@ -381,24 +395,23 @@
                     </div>
                 @endif
 
-                @if(!empty($contactFamilyLoggingValues))
+                @if($contactFamilyScopedFields->isNotEmpty())
                     <div>
                         <h6 class="mb-3">Family Fields</h6>
                         <div class="row g-2">
-                            @foreach($activity->activityType->contactFamily->contactFamilyLoggingFields as $field)
+                            @foreach($contactFamilyScopedFields as $field)
                                 @php
                                     $value = $contactFamilyLoggingValues[$field->id] ?? null;
                                     $optionLabelMap = $field->optionLabelMap();
                                 @endphp
-                                @if($value !== null && $value !== '')
-                                    <div class="col-md-6">
-                                        <div class="small text-muted">{{ $field->name }}</div>
-                                        <div>
-                                            @if($field->field_type === 'document')
+                                <div class="col-md-6">
+                                    <div class="small text-muted">{{ $field->name }}</div>
+                                    <div>
+                                        @if($field->field_type === 'document' && $hasRenderableValue($value))
                                                 <a href="{{ route('activities.logging-field-document.download', ['activity' => $activity, 'context' => 'contact_family', 'fieldId' => $field->id]) }}" class="text-decoration-none" target="_blank">
                                                     <i class="bi bi-file-earmark-arrow-down me-1"></i>{{ basename($value) }}
                                                 </a>
-                                            @elseif($field->isMultiselect() && is_array($value))
+                                            @elseif($field->isMultiselect() && is_array($value) && !empty($value))
                                                 <div class="d-flex flex-wrap gap-1">
                                                     @foreach($value as $selectedId)
                                                         <span class="badge text-bg-light border">{{ $optionLabelMap[(string) $selectedId] ?? $selectedId }}</span>
@@ -406,35 +419,36 @@
                                                 </div>
                                             @elseif(is_bool($value))
                                                 {{ $value ? 'Yes' : 'No' }}
-                                            @else
+                                            @elseif($hasRenderableValue($value))
                                                 {{ $value }}
+                                            @else
+                                                <span class="text-muted">-</span>
                                             @endif
-                                        </div>
                                     </div>
-                                @endif
+                                </div>
                             @endforeach
                         </div>
                     </div>
                 @endif
 
-                @if(!empty($activityTypeLoggingValues))
+                @if($activityTypeScopedFields->isNotEmpty())
                     <div class="mt-4">
                         <h6 class="mb-3">Activity Fields</h6>
                         <div class="row g-2">
-                            @foreach($activity->activityType->activityTypeLoggingFields as $field)
+                            @foreach($activityTypeScopedFields as $field)
                                 @php
                                     $value = $activityTypeLoggingValues[$field->id] ?? null;
                                     $optionLabelMap = $field->optionLabelMap();
                                 @endphp
-                                @if($field && $value !== null && $value !== '')
+                                @if($field)
                                     <div class="col-md-6">
                                         <div class="small text-muted">{{ $field->name }}</div>
                                         <div>
-                                            @if($field->field_type === 'document')
+                                            @if($field->field_type === 'document' && $hasRenderableValue($value))
                                                 <a href="{{ route('activities.logging-field-document.download', ['activity' => $activity, 'context' => 'activity_type', 'fieldId' => $field->id]) }}" class="text-decoration-none" target="_blank">
                                                     <i class="bi bi-file-earmark-arrow-down me-1"></i>{{ basename($value) }}
                                                 </a>
-                                            @elseif($field->isMultiselect() && is_array($value))
+                                            @elseif($field->isMultiselect() && is_array($value) && !empty($value))
                                                 <div class="d-flex flex-wrap gap-1">
                                                     @foreach($value as $selectedId)
                                                         <span class="badge text-bg-light border">{{ $optionLabelMap[(string) $selectedId] ?? $selectedId }}</span>
@@ -442,8 +456,10 @@
                                                 </div>
                                             @elseif(is_bool($value))
                                                 {{ $value ? 'Yes' : 'No' }}
-                                            @else
+                                            @elseif($hasRenderableValue($value))
                                                 {{ $value }}
+                                            @else
+                                                <span class="text-muted">-</span>
                                             @endif
                                         </div>
                                     </div>

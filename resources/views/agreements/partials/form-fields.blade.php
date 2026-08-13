@@ -283,37 +283,14 @@
             @if($agreementLoggingFields->isEmpty())
                 <div class="alert alert-light border mb-0">No agreement logging fields have been defined yet.</div>
             @else
-                <div class="border rounded">
-                    @foreach($agreementLoggingFields as $field)
-                        @php
-                            $fieldProgramIds = $field->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all();
-                        @endphp
-                        <label class="d-flex align-items-start gap-3 px-3 py-2 border-bottom {{ $loop->last ? 'border-bottom-0' : '' }}"
-                               data-agreement-logging-field-option
-                               data-option-id="{{ $field->id }}"
-                               data-program-ids='@json($fieldProgramIds)'
-                               data-scope-mode="{{ $field->program_scope_mode?->value ?? 'all' }}"
-                               data-global="{{ empty($fieldProgramIds) ? 'true' : 'false' }}">
-                            <input class="form-check-input mt-1"
-                                   type="checkbox"
-                                   name="agreement_logging_field_ids[]"
-                                   value="{{ $field->id }}"
-                                   {{ in_array($field->id, $selectedAgreementLoggingFieldIds) ? 'checked' : '' }}>
-                            <div class="flex-grow-1">
-                                <div class="fw-semibold">{{ $field->name }}</div>
-                                <div class="small text-muted">{{ $field->fieldTypeLabel() }}{{ $field->help_text ? ' · ' . $field->help_text : '' }}</div>
-                            </div>
-                            <div class="form-check m-0">
-                                <input class="form-check-input"
-                                       type="checkbox"
-                                       name="required_agreement_logging_field_ids[]"
-                                       value="{{ $field->id }}"
-                                       {{ in_array($field->id, $requiredAgreementLoggingFieldIds) ? 'checked' : '' }}>
-                                <label class="form-check-label small">Required</label>
-                            </div>
-                        </label>
-                    @endforeach
-                </div>
+                <x-logging-field-assignment-picker
+                    :fields="$agreementLoggingFields"
+                    :selected-field-ids="$selectedAgreementLoggingFieldIds"
+                    :required-field-ids="$requiredAgreementLoggingFieldIds"
+                    field-id-input-name="agreement_logging_field_ids"
+                    required-input-name="required_agreement_logging_field_ids"
+                    picker-id="agreement-logging-field-picker"
+                />
             @endif
         </div>
 

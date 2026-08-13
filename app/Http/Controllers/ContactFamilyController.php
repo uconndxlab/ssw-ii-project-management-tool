@@ -178,9 +178,10 @@ class ContactFamilyController extends Controller
         ));
 
         $syncData = [];
-        foreach (($validated['contact_family_logging_field_ids'] ?? []) as $fieldId) {
+        foreach (array_values(array_unique($validated['contact_family_logging_field_ids'] ?? [])) as $index => $fieldId) {
             $syncData[$fieldId] = [
                 'is_required' => in_array($fieldId, $validated['required_contact_family_logging_field_ids'] ?? []),
+                'sort_order' => $index + 1,
             ];
         }
         $contactFamily->contactFamilyLoggingFields()->sync($syncData);
@@ -266,9 +267,10 @@ class ContactFamilyController extends Controller
         ));
 
         $syncData = [];
-        foreach (($validated['contact_family_logging_field_ids'] ?? []) as $fieldId) {
+        foreach (array_values(array_unique($validated['contact_family_logging_field_ids'] ?? [])) as $index => $fieldId) {
             $syncData[$fieldId] = [
                 'is_required' => in_array($fieldId, $validated['required_contact_family_logging_field_ids'] ?? []),
+                'sort_order' => $index + 1,
             ];
         }
         $contactFamily->contactFamilyLoggingFields()->sync($syncData);

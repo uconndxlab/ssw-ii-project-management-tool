@@ -395,10 +395,32 @@ class ActivityController extends Controller
             }
         }
 
-        $activity->load(['agreements.organizations', 'agreements.states', 'organizations', 'states', 'user', 'programs.projects', 'participants', 'participantTimes.user', 'contactTime', 'activityType.contactFamily', 'activityType.activityTypeLoggingFields', 'loggingFieldAnswers.loggingField', 'agreementFundingSources']);
-        $activity->load(['agreements.agreementLoggingFields', 'activityType.contactFamily.contactFamilyLoggingFields']);
+        $activity->load([
+            'agreements.organizations',
+            'agreements.states',
+            'agreements.agreementLoggingFields.programs:id',
+            'organizations',
+            'states',
+            'user',
+            'programs.projects',
+            'participants',
+            'participantTimes.user',
+            'contactTime',
+            'activityType.contactFamily',
+            'activityType.contactFamily.contactFamilyLoggingFields.programs:id',
+            'activityType.activityTypeLoggingFields.programs:id',
+            'loggingFieldAnswers.loggingField',
+            'agreementFundingSources',
+        ]);
 
-        return view('activities.show', compact('activity'));
+        $scopedLoggingFields = $this->scopedLoggingFields(
+            $activity->agreements,
+            $activity->activityType->contactFamily,
+            $activity->activityType,
+            $activity->programs->pluck('id')->all()
+        );
+
+        return view('activities.show', compact('activity', 'scopedLoggingFields'));
     }
 
     public function edit(Activity $activity)

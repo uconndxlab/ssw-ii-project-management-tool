@@ -434,8 +434,11 @@ class AgreementController extends Controller
         $loggingFieldIds = $validated['agreement_logging_field_ids'] ?? [];
         $requiredFieldIds = $validated['required_agreement_logging_field_ids'] ?? [];
         $syncData = [];
-        foreach ($loggingFieldIds as $fieldId) {
-            $syncData[$fieldId] = ['is_required' => in_array($fieldId, $requiredFieldIds)];
+        foreach (array_values(array_unique($loggingFieldIds)) as $index => $fieldId) {
+            $syncData[$fieldId] = [
+                'is_required' => in_array($fieldId, $requiredFieldIds),
+                'sort_order' => $index + 1,
+            ];
         }
         $agreement->agreementLoggingFields()->sync($syncData);
     }
