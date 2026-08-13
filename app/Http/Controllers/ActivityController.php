@@ -229,14 +229,14 @@ class ActivityController extends Controller
 
     public function create(Request $request)
     {
-        $agreements = $this->getVisibleAgreements()->load('agreementLoggingFields');
+        $agreements = $this->getVisibleAgreements()->load('agreementLoggingFields.programs:id');
         $states = State::orderBy('name')->get();
         $organizations = Organization::active()->orderBy('name')->get();
         $organizations->load(['states:id', 'programs.projects:id']);
         $contactFamilies = ContactFamily::where('active', true)
-            ->with(['contactFamilyLoggingFields', 'activityTypes' => function ($query) {
+            ->with(['contactFamilyLoggingFields.programs:id', 'activityTypes' => function ($query) {
                 $query->where('active', true)
-                    ->with('activityTypeLoggingFields')
+                    ->with('activityTypeLoggingFields.programs:id')
                     ->orderBy('sort_order')
                     ->orderBy('name');
             }])
@@ -327,14 +327,14 @@ class ActivityController extends Controller
         $this->assertAgreementIdsAreActive($baseValidated['agreement_ids'] ?? []);
 
         $agreements = $this->resolveSelectedAgreements($baseValidated['agreement_ids'] ?? []);
+        $this->validateAgreementProjectProgramSelections($baseValidated, $agreements);
         $baseValidated['program_ids'] = $this->effectiveActivityProgramIds($baseValidated, $agreements);
-        $contactFamily = ContactFamily::with('contactFamilyLoggingFields')
+        $contactFamily = ContactFamily::with('contactFamilyLoggingFields.programs:id')
             ->findOrFail($baseValidated['contact_family_id']);
-        $activityType = ActivityType::with('activityTypeLoggingFields')->findOrFail($baseValidated['activity_type_id']);
+        $activityType = ActivityType::with('activityTypeLoggingFields.programs:id')->findOrFail($baseValidated['activity_type_id']);
 
         $this->validateAgreementCoverageSelections($baseValidated, $agreements);
         $this->validateAgreementClassificationSelections($baseValidated, $agreements);
-        $this->validateAgreementProjectProgramSelections($baseValidated, $agreements);
         $this->validateAgreementParticipantSelections($baseValidated, $agreements);
 
         $this->validateAgreementFundingSources($baseValidated, $agreements);
@@ -343,9 +343,9 @@ class ActivityController extends Controller
         $validated = array_merge(
             $baseValidated,
             $request->validate(
-                $this->dynamicLoggingFieldValidationRules($agreements, $contactFamily, $activityType),
+                $this->dynamicLoggingFieldValidationRules($agreements, $contactFamily, $activityType, $baseValidated['program_ids'] ?? []),
                 [],
-                $this->dynamicLoggingFieldValidationAttributes($agreements, $contactFamily, $activityType)
+                $this->dynamicLoggingFieldValidationAttributes($agreements, $contactFamily, $activityType, $baseValidated['program_ids'] ?? [])
             )
         );
         $activity = null;
@@ -405,7 +405,7 @@ class ActivityController extends Controller
     {
         $this->verifyActivityEditAccess($activity);
 
-        $agreements = $this->getVisibleAgreements()->load('agreementLoggingFields');
+        $agreements = $this->getVisibleAgreements()->load('agreementLoggingFields.programs:id');
         $states = State::orderBy('name')->get();
         $activity->loadMissing('organizations');
         $organizations = Organization::active()
@@ -417,9 +417,9 @@ class ActivityController extends Controller
             ->values();
         $organizations->load(['states:id', 'programs.projects:id']);
         $contactFamilies = ContactFamily::where('active', true)
-            ->with(['contactFamilyLoggingFields', 'activityTypes' => function ($query) {
+            ->with(['contactFamilyLoggingFields.programs:id', 'activityTypes' => function ($query) {
                 $query->where('active', true)
-                    ->with('activityTypeLoggingFields')
+                    ->with('activityTypeLoggingFields.programs:id')
                     ->orderBy('sort_order')
                     ->orderBy('name');
             }])
@@ -518,23 +518,23 @@ class ActivityController extends Controller
         );
 
         $agreements = $this->resolveSelectedAgreements($baseValidated['agreement_ids'] ?? []);
+        $this->validateAgreementProjectProgramSelections($baseValidated, $agreements);
         $baseValidated['program_ids'] = $this->effectiveActivityProgramIds($baseValidated, $agreements);
-        $contactFamily = ContactFamily::with('contactFamilyLoggingFields')
+        $contactFamily = ContactFamily::with('contactFamilyLoggingFields.programs:id')
             ->findOrFail($baseValidated['contact_family_id']);
-        $activityType = ActivityType::with('activityTypeLoggingFields')->findOrFail($baseValidated['activity_type_id']);
+        $activityType = ActivityType::with('activityTypeLoggingFields.programs:id')->findOrFail($baseValidated['activity_type_id']);
 
         $this->validateAgreementCoverageSelections($baseValidated, $agreements, $activity);
         $this->validateAgreementClassificationSelections($baseValidated, $agreements);
-        $this->validateAgreementProjectProgramSelections($baseValidated, $agreements);
         $this->validateAgreementParticipantSelections($baseValidated, $agreements, $activity);
         $this->validateAgreementFundingSources($baseValidated, $agreements);
         $baseValidated['time_tracking'] = $this->normalizeTimeTrackingPayload($baseValidated, $agreements, $contactFamily);
         $validated = array_merge(
             $baseValidated,
             $request->validate(
-                $this->dynamicLoggingFieldValidationRules($agreements, $contactFamily, $activityType),
+                $this->dynamicLoggingFieldValidationRules($agreements, $contactFamily, $activityType, $baseValidated['program_ids'] ?? []),
                 [],
-                $this->dynamicLoggingFieldValidationAttributes($agreements, $contactFamily, $activityType)
+                $this->dynamicLoggingFieldValidationAttributes($agreements, $contactFamily, $activityType, $baseValidated['program_ids'] ?? [])
             )
         );
 
@@ -702,7 +702,7 @@ class ActivityController extends Controller
 
         if (!empty($agreementIds)) {
             $agreements = Agreement::with([
-                'agreementLoggingFields',
+                'agreementLoggingFields.programs:id',
                 'organizations',
                 'users',
                 'teams.users',
@@ -716,42 +716,71 @@ class ActivityController extends Controller
         return $agreements;
     }
 
-    private function dynamicLoggingFieldValidationRules($agreements, ContactFamily $contactFamily, ActivityType $activityType): array
+    private function scopedLoggingFields($agreements, ContactFamily $contactFamily, ActivityType $activityType, array $selectedProgramIds): array
+    {
+        $selectedProgramIds = collect($selectedProgramIds)
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        $filterFields = function ($fields) use ($selectedProgramIds) {
+            return $fields->filter(function (LoggingField $field) use ($selectedProgramIds) {
+                return ProjectProgramScope::matchesSelectedPrograms(
+                    $field->programs->pluck('id'),
+                    $selectedProgramIds,
+                    true
+                );
+            })->values();
+        };
+
+        return [
+            'agreements' => $agreements->mapWithKeys(function ($agreement) use ($filterFields) {
+                return [(string) $agreement->id => $filterFields($agreement->agreementLoggingFields)];
+            }),
+            'contact_family' => $filterFields($contactFamily->contactFamilyLoggingFields),
+            'activity_type' => $filterFields($activityType->activityTypeLoggingFields),
+        ];
+    }
+
+    private function dynamicLoggingFieldValidationRules($agreements, ContactFamily $contactFamily, ActivityType $activityType, array $selectedProgramIds): array
     {
         $rules = [];
+        $scopedFields = $this->scopedLoggingFields($agreements, $contactFamily, $activityType, $selectedProgramIds);
 
         foreach ($agreements as $agreement) {
-            foreach ($agreement->agreementLoggingFields as $field) {
+            foreach ($scopedFields['agreements'][(string) $agreement->id] ?? collect() as $field) {
                 $rules["agreement_logging_values.{$agreement->id}.{$field->id}"] = $this->rulesForField($field->field_type, (bool) $field->pivot->is_required, $field->options_json ?? []);
             }
         }
 
-        foreach ($contactFamily->contactFamilyLoggingFields as $field) {
+        foreach ($scopedFields['contact_family'] as $field) {
             $rules["contact_family_logging_values.{$field->id}"] = $this->rulesForField($field->field_type, (bool) $field->pivot->is_required, $field->options_json ?? []);
         }
 
-        foreach ($activityType->activityTypeLoggingFields as $field) {
+        foreach ($scopedFields['activity_type'] as $field) {
             $rules["activity_logging_values.{$field->id}"] = $this->rulesForField($field->field_type, (bool) $field->pivot->is_required, $field->options_json ?? []);
         }
 
         return $rules;
     }
 
-    private function dynamicLoggingFieldValidationAttributes($agreements, ContactFamily $contactFamily, ActivityType $activityType): array
+    private function dynamicLoggingFieldValidationAttributes($agreements, ContactFamily $contactFamily, ActivityType $activityType, array $selectedProgramIds): array
     {
         $attributes = [];
+        $scopedFields = $this->scopedLoggingFields($agreements, $contactFamily, $activityType, $selectedProgramIds);
 
         foreach ($agreements as $agreement) {
-            foreach ($agreement->agreementLoggingFields as $field) {
+            foreach ($scopedFields['agreements'][(string) $agreement->id] ?? collect() as $field) {
                 $attributes["agreement_logging_values.{$agreement->id}.{$field->id}"] = $agreement->name . ': ' . $field->name;
             }
         }
 
-        foreach ($contactFamily->contactFamilyLoggingFields as $field) {
+        foreach ($scopedFields['contact_family'] as $field) {
             $attributes["contact_family_logging_values.{$field->id}"] = $contactFamily->name . ': ' . $field->name;
         }
 
-        foreach ($activityType->activityTypeLoggingFields as $field) {
+        foreach ($scopedFields['activity_type'] as $field) {
             $attributes["activity_logging_values.{$field->id}"] = $activityType->name . ': ' . $field->name;
         }
 
@@ -760,15 +789,12 @@ class ActivityController extends Controller
 
     private function validateAgreementCoverageSelections(array $validated, $agreements, ?Activity $activity = null): void
     {
-        $selectedAgreementIds = collect($validated['agreement_ids'] ?? [])->map(fn ($id) => (int) $id)->unique()->values();
         $selectedStateIds = collect($validated['state_ids'] ?? [])->map(fn ($id) => (int) $id)->unique()->values();
         $selectedOrganizationIds = collect($validated['organization_ids'] ?? [])->map(fn ($id) => (int) $id)->unique()->values();
-        $selectedProjectIds = collect($validated['project_ids'] ?? [])->map(fn ($id) => (int) $id)->unique()->values();
-        $selectedProgramIds = collect($validated['program_ids'] ?? [])->map(fn ($id) => (int) $id)->unique()->values();
 
         $selectedOrganizations = Organization::query()
             ->whereKey($selectedOrganizationIds)
-            ->with(['states:id', 'programs.projects:id'])
+            ->with(['states:id'])
             ->get();
 
         $stateAllowedOrganizationIds = $selectedOrganizations
@@ -780,33 +806,6 @@ class ActivityController extends Controller
         if ($selectedOrganizationIds->diff($stateAllowedOrganizationIds)->isNotEmpty()) {
             throw ValidationException::withMessages([
                 'organization_ids' => 'Selected organizations must belong to at least one chosen state.',
-            ]);
-        }
-
-        $organizationAllowedProjectIds = $selectedOrganizations
-            ->flatMap(fn ($organization) => $organization->programs->flatMap(fn ($program) => $program->projects->pluck('id')))
-            ->map(fn ($id) => (int) $id)
-            ->unique()
-            ->values();
-
-        if ($selectedProjectIds->diff($organizationAllowedProjectIds)->isNotEmpty()) {
-            throw ValidationException::withMessages([
-                'project_ids' => 'Selected projects must be reachable from the chosen organizations.',
-            ]);
-        }
-
-        $programAllowedAgreementIds = Program::query()
-            ->whereKey($selectedProgramIds)
-            ->with('agreements:id')
-            ->get()
-            ->flatMap(fn ($program) => $program->agreements->pluck('id'))
-            ->map(fn ($id) => (int) $id)
-            ->unique()
-            ->values();
-
-        if ($selectedAgreementIds->diff($programAllowedAgreementIds)->isNotEmpty()) {
-            throw ValidationException::withMessages([
-                'agreement_ids' => 'Selected agreements must belong to at least one chosen program.',
             ]);
         }
 
@@ -1331,6 +1330,7 @@ class ActivityController extends Controller
     private function syncLoggingFieldAnswers(Activity $activity, array $validated, $agreements, ContactFamily $contactFamily, ActivityType $activityType): void
     {
         $activity->loadMissing('loggingFieldAnswers');
+        $scopedFields = $this->scopedLoggingFields($agreements, $contactFamily, $activityType, $validated['program_ids'] ?? []);
 
         $existingAgreementValues = $activity->agreement_logging_values;
         $existingContactFamilyValues = $activity->contact_family_logging_values;
@@ -1338,7 +1338,7 @@ class ActivityController extends Controller
         $payload = [];
 
         foreach ($agreements as $agreement) {
-            foreach ($agreement->agreementLoggingFields as $field) {
+            foreach ($scopedFields['agreements'][(string) $agreement->id] ?? collect() as $field) {
                 $answer = $this->buildLoggingFieldAnswerPayload(
                     $field,
                     'agreement',
@@ -1354,7 +1354,7 @@ class ActivityController extends Controller
             }
         }
 
-        foreach ($contactFamily->contactFamilyLoggingFields as $field) {
+        foreach ($scopedFields['contact_family'] as $field) {
             $answer = $this->buildLoggingFieldAnswerPayload(
                 $field,
                 'contact_family',
@@ -1369,7 +1369,7 @@ class ActivityController extends Controller
             }
         }
 
-        foreach ($activityType->activityTypeLoggingFields as $field) {
+        foreach ($scopedFields['activity_type'] as $field) {
             $answer = $this->buildLoggingFieldAnswerPayload(
                 $field,
                 'activity_type',

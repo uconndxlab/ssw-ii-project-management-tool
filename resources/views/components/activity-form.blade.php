@@ -107,10 +107,9 @@
         ->unique()
         ->values()
         ->all();
-    $visibleOrganizationIds = $agreements
-        ->flatMap(fn ($agreement) => $agreement->organizations->pluck('id'))
+    $visibleOrganizationIds = collect($organizations)
+        ->pluck('id')
         ->map(fn ($id) => (string) $id)
-        ->filter(fn ($id) => in_array($id, $availableOrganizationIds, true))
         ->unique()
         ->values()
         ->all();
@@ -395,6 +394,24 @@
 
             <div class="d-grid gap-4">
                     <x-section-card title="Agreements & Coverage">
+                        <div>
+                            <label class="form-label fw-semibold">Agreements <span class="text-danger">*</span></label>
+                            <x-token-picker
+                                picker-id="activity-agreements-picker"
+                                name="agreement_ids[]"
+                                :items="$agreements"
+                                :selected-ids="$selectedAgreementIds"
+                                placeholder="Search agreements..."
+                                empty-message="No agreements are available."
+                                :open-on-focus="false"
+                                entity="agreement"
+                            />
+                            <div class="form-text">Start by selecting the agreements that apply to this activity. The remaining coverage options are limited to those agreements.</div>
+                            @error('agreement_ids')
+                                <div class="text-danger small mt-1">{{ $message }}</div>
+                            @enderror
+                        </div>
+
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">States <span class="text-danger">*</span></label>
@@ -404,10 +421,12 @@
                                     :items="$states"
                                     :selected-ids="$selectedStateIds"
                                     placeholder="Search states..."
+                                    disabled-placeholder="Select at least one agreement first..."
+                                    :disabled="empty($selectedAgreementIds)"
                                     :open-on-focus="false"
                                     entity="state"
                                 />
-                                <div class="form-text">Select one or more states to narrow organizations.</div>
+                                <div class="form-text">States are limited to the selected agreements and can further narrow organizations.</div>
                                 @error('state_ids')
                                     <div class="text-danger small mt-1">{{ $message }}</div>
                                 @enderror
@@ -420,12 +439,12 @@
                                     :items="$organizations"
                                     :selected-ids="$selectedOrganizationIds"
                                     placeholder="Search organizations..."
-                                    disabled-placeholder="Select at least one state first..."
-                                    :disabled="empty($selectedStateIds)"
+                                    disabled-placeholder="Select at least one agreement first..."
+                                    :disabled="empty($selectedAgreementIds)"
                                     :open-on-focus="false"
                                     entity="organization"
                                 />
-                                <div class="form-text">Organizations are limited to the selected states and your available agreements.</div>
+                                <div class="form-text">Organizations are limited to the selected agreements and optionally narrowed by states.</div>
                                 @error('organization_ids')
                                     <div class="text-danger small mt-1">{{ $message }}</div>
                                 @enderror
@@ -440,32 +459,12 @@
                                 :selected-program-ids="$selectedProgramIds"
                                 project-label="Projects *"
                                 program-label="Programs *"
-                                :project-disabled="empty($selectedOrganizationIds)"
-                                project-disabled-placeholder="Select at least one organization first..."
-                                project-help-text="Projects are limited by the selected organizations. Projects guide the available programs and are not saved on the activity."
-                                program-help-text="Programs are limited by the selected projects and determine which agreements can be logged."
+                                :project-disabled="empty($selectedAgreementIds)"
+                                project-disabled-placeholder="Select at least one agreement first..."
+                                project-help-text="Projects are limited to the selected agreements. Projects guide the available programs and are not saved on the activity."
+                                program-help-text="Programs are limited to the selected agreements and selected projects."
                                 :expand-empty-programs="false"
                             />
-                        </div>
-
-                        <div class="mt-4">
-                            <label class="form-label fw-semibold">Agreements <span class="text-danger">*</span></label>
-                            <x-token-picker
-                                picker-id="activity-agreements-picker"
-                                name="agreement_ids[]"
-                                :items="$agreements"
-                                :selected-ids="$selectedAgreementIds"
-                                placeholder="Search agreements..."
-                                disabled-placeholder="Select at least one program first..."
-                                :disabled="empty($selectedProgramIds)"
-                                empty-message="No agreements match your selected programs."
-                                :open-on-focus="false"
-                                entity="agreement"
-                            />
-                            <div class="form-text">Select the agreements that apply after choosing the activity program coverage.</div>
-                            @error('agreement_ids')
-                                <div class="text-danger small mt-1">{{ $message }}</div>
-                            @enderror
                         </div>
 
                         <div class="row g-3 mt-1">
@@ -638,7 +637,10 @@
                                     @else
                                         <div class="row g-3">
                                             @foreach($family->contactFamilyLoggingFields as $field)
-                                                <div class="{{ $field->is_full_width ? 'col-12' : 'col-md-6' }}">
+                                                <div class="{{ $field->is_full_width ? 'col-12' : 'col-md-6' }}"
+                                                     data-logging-field-item
+                                                     data-field-label="{{ e($field->name) }}"
+                                                     data-scope-program-ids='@json($field->programs->pluck("id")->map(fn ($id) => (string) $id)->values())'>
                                                     @include('activities.partials.logging-field-input', [
                                                         'field' => $field,
                                                         'inputName' => "contact_family_logging_values[{$field->id}]",
@@ -649,6 +651,9 @@
                                                     ])
                                                 </div>
                                             @endforeach
+                                        </div>
+                                        <div class="alert alert-warning small mt-3 mb-0 d-none" data-logging-scope-warning>
+                                            <span data-logging-scope-warning-text></span>
                                         </div>
                                     @endif
                                 </div>
@@ -664,7 +669,10 @@
                                     </div>
                                     <div class="row g-3">
                                         @foreach($activityType->activityTypeLoggingFields as $field)
-                                            <div class="{{ $field->is_full_width ? 'col-12' : 'col-md-6' }}">
+                                            <div class="{{ $field->is_full_width ? 'col-12' : 'col-md-6' }}"
+                                                 data-logging-field-item
+                                                 data-field-label="{{ e($field->name) }}"
+                                                 data-scope-program-ids='@json($field->programs->pluck("id")->map(fn ($id) => (string) $id)->values())'>
                                                 @include('activities.partials.logging-field-input', [
                                                     'field' => $field,
                                                     'inputName' => "activity_logging_values[{$field->id}]",
@@ -676,6 +684,9 @@
                                                 ])
                                             </div>
                                         @endforeach
+                                    </div>
+                                    <div class="alert alert-warning small mt-3 mb-0 d-none" data-logging-scope-warning>
+                                        <span data-logging-scope-warning-text></span>
                                     </div>
                                 </div>
                             @endforeach
@@ -798,7 +809,10 @@
                                     @if($agreement->agreementLoggingFields->isNotEmpty())
                                         <div class="row g-3 mb-3">
                                             @foreach($agreement->agreementLoggingFields as $field)
-                                                <div class="{{ $field->is_full_width ? 'col-12' : 'col-md-6' }}">
+                                                <div class="{{ $field->is_full_width ? 'col-12' : 'col-md-6' }}"
+                                                     data-logging-field-item
+                                                     data-field-label="{{ e($field->name) }}"
+                                                     data-scope-program-ids='@json($field->programs->pluck("id")->map(fn ($id) => (string) $id)->values())'>
                                                     @include('activities.partials.logging-field-input', [
                                                         'field' => $field,
                                                         'inputName' => "agreement_logging_values[{$agreement->id}][{$field->id}]",
@@ -864,6 +878,12 @@
                                             @error("funding_sources.{$agreement->id}.payee.*")
                                                 <div class="text-danger small mt-1">{{ $message }}</div>
                                             @enderror
+                                        </div>
+                                    @endif
+
+                                    @if($agreement->agreementLoggingFields->isNotEmpty())
+                                        <div class="alert alert-warning small mt-3 mb-0 d-none" data-logging-scope-warning>
+                                            <span data-logging-scope-warning-text></span>
                                         </div>
                                     @endif
                                 </div>
@@ -993,6 +1013,14 @@
         return Array.from(new Set(normalizedAllowed.concat((preservedValues || []).map(String))));
     }
 
+    function parseJson(text, fallback) {
+        try {
+            return JSON.parse(text || '');
+        } catch (error) {
+            return fallback;
+        }
+    }
+
     function noteCoverageInteraction(event) {
         if (event.isTrusted) {
             coverageInteractionDetected = true;
@@ -1026,8 +1054,99 @@
         return names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1];
     }
 
+    function escapeHtml(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function joinLabels(labels) {
+        const names = (labels || []).filter(Boolean);
+        const formattedNames = names.map(function (name) {
+            return '<strong>' + escapeHtml(name) + '</strong>';
+        });
+
+        if (names.length === 0) {
+            return '';
+        }
+
+        if (names.length === 1) {
+            return formattedNames[0];
+        }
+
+        if (names.length === 2) {
+            return formattedNames[0] + ' and ' + formattedNames[1];
+        }
+
+        return formattedNames.slice(0, -1).join(', ') + ', and ' + formattedNames[formattedNames.length - 1];
+    }
+
+    function setFieldContainerDisabled(container, disabled) {
+        container.querySelectorAll('input, textarea, select').forEach(function (field) {
+            field.disabled = disabled;
+        });
+    }
+
+    function loggingFieldMatchesPrograms(fieldItem, programIds) {
+        const scopedProgramIds = parseJson(fieldItem.dataset.scopeProgramIds, []).map(String);
+
+        if (scopedProgramIds.length === 0) {
+            return true;
+        }
+
+        if ((programIds || []).length === 0) {
+            return false;
+        }
+
+        return scopedProgramIds.some(function (programId) {
+            return programIds.includes(String(programId));
+        });
+    }
+
+    function updateLoggingScopeWarning(group, hiddenLabels) {
+        const warning = group.querySelector('[data-logging-scope-warning]');
+        const text = warning?.querySelector('[data-logging-scope-warning-text]');
+        const labels = Array.from(new Set((hiddenLabels || []).filter(Boolean)));
+
+        if (!warning || !text) {
+            return;
+        }
+
+        if (labels.length === 0) {
+            warning.classList.add('d-none');
+            text.innerHTML = '';
+            return;
+        }
+
+        text.innerHTML = joinLabels(labels) + ' ' + (labels.length === 1 ? 'is' : 'are') + ' not required under the current program selection.';
+        warning.classList.remove('d-none');
+    }
+
+    function applyLoggingFieldProgramScope(group) {
+        const programIds = selectedProgramIds();
+        const hiddenLabels = [];
+
+        group.querySelectorAll('[data-logging-field-item]').forEach(function (fieldItem) {
+            const visible = loggingFieldMatchesPrograms(fieldItem, programIds);
+
+            fieldItem.classList.toggle('d-none', !visible);
+            setFieldContainerDisabled(fieldItem, !visible);
+
+            if (!visible && fieldItem.dataset.fieldLabel) {
+                hiddenLabels.push(fieldItem.dataset.fieldLabel);
+            }
+        });
+
+        updateLoggingScopeWarning(group, hiddenLabels);
+    }
+
     function restrictStatePicker() {
         const statePicker = document.getElementById('activity-states-picker');
+        const agreements = selectedAgreementIds();
+        const allowedStateIds = agreements.length ? uniqueMergedIds('state_ids') : [];
 
         if (!statePicker) {
             return;
@@ -1035,36 +1154,38 @@
 
         statePicker.dispatchEvent(new CustomEvent('token-picker:set-disabled', {
             detail: {
-                disabled: visibleStateIds.length === 0,
-                placeholder: visibleStateIds.length === 0
-                    ? 'No states are available from your agreements...'
+                disabled: agreements.length === 0 || allowedStateIds.length === 0,
+                placeholder: agreements.length === 0
+                    ? 'Select at least one agreement first...'
+                    : allowedStateIds.length === 0
+                    ? 'No states are available from the selected agreements...'
                     : 'Search states...',
             }
         }));
-        statePicker.dispatchEvent(new CustomEvent('token-picker:restrict', { detail: mergePreservedCoverage(visibleStateIds, initialStateIds) }));
+        statePicker.dispatchEvent(new CustomEvent('token-picker:restrict', { detail: mergePreservedCoverage(allowedStateIds, initialStateIds) }));
     }
 
     function restrictOrganizationPicker() {
         const orgPicker = document.getElementById('activity-organizations-picker');
+        const agreements = selectedAgreementIds();
         const states = selectedStateIds();
 
         if (!orgPicker) {
             return;
         }
 
-        const allowedOrganizationIds = states.length === 0
-            ? []
-            : visibleOrganizationIds.filter(function (organizationId) {
+        const agreementOrganizationIds = agreements.length ? uniqueMergedIds('organization_ids') : [];
+        const allowedOrganizationIds = agreementOrganizationIds.filter(function (organizationId) {
                 const config = organizationConfigs[String(organizationId)] || {};
 
-                return intersectionValues(config.state_ids || [], states).length > 0;
+                return states.length === 0 || intersectionValues(config.state_ids || [], states).length > 0;
             });
 
         orgPicker.dispatchEvent(new CustomEvent('token-picker:set-disabled', {
             detail: {
-                disabled: states.length === 0 || allowedOrganizationIds.length === 0,
-                placeholder: states.length === 0
-                    ? 'Select at least one state first...'
+                disabled: agreements.length === 0 || allowedOrganizationIds.length === 0,
+                placeholder: agreements.length === 0
+                    ? 'Select at least one agreement first...'
                     : 'No organizations match the selected states...',
             }
         }));
@@ -1363,27 +1484,22 @@
     }
 
     function restrictScopePickers() {
-        const organizationIds = selectedOrganizationIds();
+        const agreements = selectedAgreementIds();
         const scopeSection = form.querySelector('[data-scope-id="activity-coverage-scope"]');
         const projectPicker = document.getElementById('activity-coverage-scope-projects');
 
         if (!scopeSection || !projectPicker) return;
 
-        const allowedProjectIds = organizationIds.length
-            ? Array.from(new Set(organizationIds.flatMap(function (organizationId) {
-                return (organizationConfigs[String(organizationId)] || {}).project_ids || [];
-            }))).filter(function (projectId) {
-                return visibleProjectIds.includes(String(projectId));
-            })
-            : [];
-        const disableProjects = organizationIds.length === 0 || allowedProjectIds.length === 0;
-        const projectPlaceholder = organizationIds.length === 0
-            ? 'Select at least one organization first...'
-            : 'No projects match the selected organizations...';
-        const forceProgramDisabled = organizationIds.length === 0 || allowedProjectIds.length === 0;
-        const programDisabledPlaceholder = organizationIds.length === 0
-            ? 'Select at least one project first...'
-            : 'No programs match the selected projects...';
+        const allowedProjectIds = agreements.length ? uniqueMergedIds('project_ids') : [];
+        const allowedProgramIds = agreements.length ? uniqueMergedIds('program_ids') : [];
+        const disableProjects = agreements.length === 0 || allowedProjectIds.length === 0;
+        const projectPlaceholder = agreements.length === 0
+            ? 'Select at least one agreement first...'
+            : 'No projects are available from the selected agreements...';
+        const forceProgramDisabled = agreements.length === 0 || allowedProgramIds.length === 0;
+        const programDisabledPlaceholder = agreements.length === 0
+            ? 'Select at least one agreement first...'
+            : 'No programs are available from the selected agreements...';
 
         projectPicker.dispatchEvent(new CustomEvent('token-picker:set-disabled', {
             detail: {
@@ -1396,7 +1512,7 @@
         }));
         scopeSection.dispatchEvent(new CustomEvent('project-program-scope:restrict', {
             detail: {
-                programIds: mergePreservedCoverage(visibleProgramIds, initialProgramIds),
+                programIds: mergePreservedCoverage(allowedProgramIds, initialProgramIds),
                 forceProjectDisabled: disableProjects,
                 forceProgramDisabled: forceProgramDisabled,
                 projectDisabledPlaceholder: projectPlaceholder,
@@ -1407,30 +1523,19 @@
 
     function restrictAgreementPicker() {
         const agreementPicker = document.getElementById('activity-agreements-picker');
-        const programIds = selectedProgramIds();
 
         if (!agreementPicker) {
             return;
         }
 
-        const allowedAgreementIds = programIds.length === 0
-            ? []
-            : Object.keys(agreementConfigs).filter(function (agreementId) {
-                const config = agreementConfigs[String(agreementId)] || {};
-
-                return intersectionValues(config.program_ids || [], programIds).length > 0;
-            });
-
         agreementPicker.dispatchEvent(new CustomEvent('token-picker:set-disabled', {
             detail: {
-                disabled: programIds.length === 0 || allowedAgreementIds.length === 0,
-                placeholder: programIds.length === 0
-                    ? 'Select at least one program first...'
-                    : 'No agreements match the selected programs...',
+                disabled: false,
+                placeholder: 'Search agreements...',
             }
         }));
         agreementPicker.dispatchEvent(new CustomEvent('token-picker:restrict', {
-            detail: mergePreservedCoverage(allowedAgreementIds, initialAgreementIds)
+            detail: mergePreservedCoverage(Object.keys(agreementConfigs), initialAgreementIds)
         }));
     }
 
@@ -1525,9 +1630,18 @@
         document.querySelectorAll('[data-agreement-logging-group]').forEach(function (group) {
             const visible = selected.has(group.dataset.agreementLoggingGroup);
             group.classList.toggle('d-none', !visible);
-            group.querySelectorAll('input, textarea, select').forEach(function (field) {
-                field.disabled = !visible;
-            });
+
+            if (!visible) {
+                group.querySelectorAll('input, textarea, select').forEach(function (field) {
+                    field.disabled = true;
+                });
+            } else {
+                group.querySelectorAll('input, textarea, select').forEach(function (field) {
+                    field.disabled = false;
+                });
+                applyLoggingFieldProgramScope(group);
+            }
+
             visibleGroups += visible ? 1 : 0;
         });
 
@@ -1581,9 +1695,17 @@
         document.querySelectorAll('[data-contact-family-logging-group]').forEach(function (group) {
             const visible = group.dataset.contactFamilyLoggingGroup === familyId;
             group.classList.toggle('d-none', !visible);
-            group.querySelectorAll('input, textarea, select').forEach(function (field) {
-                field.disabled = !visible;
-            });
+
+            if (!visible) {
+                group.querySelectorAll('input, textarea, select').forEach(function (field) {
+                    field.disabled = true;
+                });
+            } else {
+                group.querySelectorAll('input, textarea, select').forEach(function (field) {
+                    field.disabled = false;
+                });
+                applyLoggingFieldProgramScope(group);
+            }
         });
     }
 
@@ -1595,9 +1717,18 @@
         document.querySelectorAll('[data-activity-logging-group]').forEach(function (group) {
             const visible = group.dataset.activityLoggingGroup === activityTypeId;
             group.classList.toggle('d-none', !visible);
-            group.querySelectorAll('input, textarea, select').forEach(function (field) {
-                field.disabled = !visible;
-            });
+
+            if (!visible) {
+                group.querySelectorAll('input, textarea, select').forEach(function (field) {
+                    field.disabled = true;
+                });
+            } else {
+                group.querySelectorAll('input, textarea, select').forEach(function (field) {
+                    field.disabled = false;
+                });
+                applyLoggingFieldProgramScope(group);
+            }
+
             visibleGroups += visible ? 1 : 0;
         });
 
@@ -1670,7 +1801,13 @@
     const agreementsPicker = document.getElementById('activity-agreements-picker');
     if (agreementsPicker) {
         agreementsPicker.addEventListener('token-picker:change', function () {
+            if (agreementsPickerInitialized) {
+                preserveInitialCoverageSelections = false;
+            }
             agreementsPickerInitialized = true;
+            restrictStatePicker();
+            restrictOrganizationPicker();
+            restrictScopePickers();
             restrictParticipantPicker();
             restrictFundingSourcePickers();
             restrictClassificationOptions();
@@ -1681,6 +1818,9 @@
         });
         agreementsPicker.addEventListener('token-picker:initialized', function () {
             agreementsPickerInitialized = true;
+            restrictStatePicker();
+            restrictOrganizationPicker();
+            restrictScopePickers();
             restrictParticipantPicker();
             restrictFundingSourcePickers();
             restrictClassificationOptions();
@@ -1695,8 +1835,6 @@
     document.getElementById('activity-states-picker')?.addEventListener('token-picker:change', function () {
         stopPreservingInitialCoverageIfNeeded();
         restrictOrganizationPicker();
-        restrictScopePickers();
-        restrictAgreementPicker();
         markDirty();
     });
 
@@ -1704,8 +1842,6 @@
     document.getElementById('activity-organizations-picker')?.addEventListener('input', noteCoverageInteraction, true);
     document.getElementById('activity-organizations-picker')?.addEventListener('token-picker:change', function () {
         stopPreservingInitialCoverageIfNeeded();
-        restrictScopePickers();
-        restrictAgreementPicker();
         markDirty();
     });
 
@@ -1713,7 +1849,9 @@
     form.querySelector('[data-scope-id="activity-coverage-scope"]')?.addEventListener('input', noteCoverageInteraction, true);
     form.querySelector('[data-scope-id="activity-coverage-scope"]')?.addEventListener('project-program-scope:change', function () {
         stopPreservingInitialCoverageIfNeeded();
-        restrictAgreementPicker();
+        updateAgreementLoggingGroups();
+        updateContactFamilyLoggingGroups();
+        updateActivityLoggingGroups();
         markDirty();
     });
 
