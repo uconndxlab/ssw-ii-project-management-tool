@@ -103,7 +103,7 @@
 
                 <div class="row mb-3">
                     <div class="col-md-4">
-                        <strong>Contact Family:</strong>
+                        <strong>Family:</strong>
                     </div>
                     <div class="col-md-8">
                         <span class="badge bg-primary">{{ $activity->activityType->contactFamily->name }}</span>
@@ -112,7 +112,7 @@
 
                 <div class="row mb-3">
                     <div class="col-md-4">
-                        <strong>Activity Type:</strong>
+                        <strong>Type:</strong>
                     </div>
                     <div class="col-md-8">
                         <span class="badge bg-info">{{ $activity->activityType->name }}</span>
@@ -376,7 +376,7 @@
 
                 @if(!empty($contactFamilyLoggingValues))
                     <div>
-                        <h6 class="mb-3">Contact Family Fields</h6>
+                        <h6 class="mb-3">Family Fields</h6>
                         <div class="row g-2">
                             @foreach($activity->activityType->contactFamily->contactFamilyLoggingFields as $field)
                                 @php

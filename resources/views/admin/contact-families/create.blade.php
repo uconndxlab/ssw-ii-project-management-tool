@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Create Contact Family')
+@section('title', 'Create Activity Family')
 
 @section('content')
 <div class="row justify-content-center">
@@ -19,15 +19,15 @@
             @csrf
             <x-page-header
                 context="form"
-                entity-type="Contact Family"
+                entity-type="Activity Family"
                 mode="create"
                 :show-active="true"
                 :active-default="old('active', true)"
-                active-help="Only active contact families appear in activity forms."
+                active-help="Only active activity families appear in activity forms."
             />
             @include('admin.contact-families.partials.form-fields')
         </form>
     </div>
 </div>
-<x-save-bar form-id="contact-families-create-form" save-label="Create Contact Family" />
+<x-save-bar form-id="contact-families-create-form" save-label="Create Activity Family" />
 @endsection

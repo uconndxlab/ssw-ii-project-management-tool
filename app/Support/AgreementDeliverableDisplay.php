@@ -139,7 +139,7 @@ class AgreementDeliverableDisplay
 
                 return [
                     'contact_family' => $contactFamily,
-                    'contact_family_label' => $contactFamily?->name ?? 'Unspecified Contact Family',
+                    'contact_family_label' => $contactFamily?->name ?? 'Unspecified Activity Family',
                     'activity_groups' => $familyItems
                         ->groupBy(fn (array $item) => (int) ($item['deliverable']->activity_type_id ?? 0))
                         ->map(function (Collection $activityItems) {

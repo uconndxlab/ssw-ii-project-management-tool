@@ -1,10 +1,10 @@
 @extends('layouts.app')
 
-@section('title', 'Contact Families')
+@section('title', 'Activity Families')
 
 @section('content')
 
-<x-page-header context="index" title="Contact Families" description="{{ $contactFamilies->count() }} total" :action-url="route('contact-families.create')" />
+<x-page-header context="index" title="Activity Families" description="{{ $contactFamilies->count() }} total" :action-url="route('contact-families.create')" />
 
 <div class="card shadow-sm mb-3">
     <div class="card-body py-2">

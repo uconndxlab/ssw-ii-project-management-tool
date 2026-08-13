@@ -18,7 +18,7 @@
                     hx-get="{{ route('activity-types.index') }}" hx-trigger="change"
                     hx-target="#activity-types-table" hx-swap="innerHTML"
                     hx-push-url="true" hx-include="#activity-type-filters">
-                <option value="">All Contact Families</option>
+                <option value="">All Activity Families</option>
                 @foreach($contactFamilies as $cf)
                     <option value="{{ $cf->id }}" @selected((string) request('contact_family_id') === (string) $cf->id)>
                         {{ $cf->name }}

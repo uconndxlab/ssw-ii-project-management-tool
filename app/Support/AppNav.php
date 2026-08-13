@@ -59,7 +59,7 @@ class AppNav
             [
                 'header' => 'Activity Setup',
                 'items' => [
-                    ['label' => 'Contact Families', 'route' => 'contact-families.index', 'active' => ['contact-families.*']],
+                    ['label' => 'Activity Families', 'route' => 'contact-families.index', 'active' => ['contact-families.*']],
                     ['label' => 'Activity Types', 'route' => 'activity-types.index', 'active' => ['activity-types.*']],
                     ['label' => 'Logging Fields', 'route' => 'logging-fields.index', 'active' => ['logging-fields.*']],
                 ],

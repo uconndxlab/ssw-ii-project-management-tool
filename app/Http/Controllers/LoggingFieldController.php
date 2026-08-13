@@ -319,7 +319,7 @@ class LoggingFieldController extends Controller
         $contactFamilyCount = $loggingField->contactFamilies()->count();
 
         if ($agreementCount > 0 || $contactFamilyCount > 0) {
-            return back()->with('error', "Cannot delete this field. It is currently used by {$agreementCount} agreement(s) and {$contactFamilyCount} contact family/families.");
+            return back()->with('error', "Cannot delete this field. It is currently used by {$agreementCount} ".($agreementCount === 1 ? 'agreement' : 'agreements')." and {$contactFamilyCount} activity ".($contactFamilyCount === 1 ? 'family' : 'families').".");
         }
 
         LoggingField::destroy($loggingField->id);

@@ -11,7 +11,7 @@
     );
 @endphp
 
-<x-section-card title="Contact Family Details" subtitle="Define the contact family and where it should be available." class="mb-4">
+<x-section-card title="Activity Family Details" subtitle="Define the activity family and where it should be available." class="mb-4">
     <div class="mb-3">
         <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
         <input type="text"
@@ -34,7 +34,7 @@
         @error('helper_text')
             <div class="invalid-feedback">{{ $message }}</div>
         @enderror
-        <div class="form-text">Optional text shown beneath this contact family when selected in activity logging.</div>
+        <div class="form-text">Optional text shown beneath this activity family when selected in activity logging.</div>
     </div>
 
     <div class="mb-4">
@@ -49,7 +49,7 @@
             program-empty-selection-label="All programs"
             project-help-text="Optional filter for finding programs; projects are inferred and not saved."
             program-help-text="Programs are the saved scope when Specific is selected."
-            scope-mode-help-text="Choose whether this contact family applies to all programs, only specific programs, or no programs."
+            scope-mode-help-text="Choose whether this activity family applies to all programs, only specific programs, or no programs."
         />
     </div>
 
@@ -59,7 +59,7 @@
                 <div class="d-flex align-items-center gap-3">
                     <div class="flex-grow-1 min-w-0">
                         <label class="form-label mb-1" for="track_additional_time">Track activity preparation and follow up time</label>
-                        <p class="form-text mb-0">Require this contact family to capture preparation and follow up time in activity logging.</p>
+                        <p class="form-text mb-0">Require this activity family to capture preparation and follow up time in activity logging.</p>
                     </div>
                     <div class="form-check form-switch m-0 ps-0 flex-shrink-0 align-self-center">
                         <input type="checkbox"
@@ -79,13 +79,13 @@
     </div>
 </x-section-card>
 
-<x-section-card title="Classification Logging Fields" subtitle="These fields appear in the activity classification area for this contact family." class="mb-4">
+<x-section-card title="Classification Logging Fields" subtitle="These fields appear in the activity classification area for this activity family." class="mb-4">
     <div class="d-flex justify-content-end mb-3">
         <a href="{{ route('logging-fields.index') }}" class="btn btn-sm btn-outline-secondary">Manage Logging Fields</a>
     </div>
 
     @if($contactFamilyLoggingFields->isEmpty())
-        <div class="alert alert-light border mb-0">No contact family logging fields have been defined yet.</div>
+        <div class="alert alert-light border mb-0">No activity family logging fields have been defined yet.</div>
     @else
         <div class="border rounded">
             @foreach($contactFamilyLoggingFields as $field)

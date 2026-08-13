@@ -160,7 +160,7 @@
             <table class="table table-sm mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Contact Family</th>
+                        <th>Activity Family</th>
                         <th class="text-end">Activities</th>
                     </tr>
                 </thead>

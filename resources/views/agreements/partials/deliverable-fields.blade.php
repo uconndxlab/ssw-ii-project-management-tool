@@ -86,7 +86,7 @@
 
 <div class="deliverable-fields" data-deliverable-fields>
     <div class="alert alert-warning small {{ $classificationLocked ? '' : 'd-none' }}" data-deliverable-classification-lock-notice>
-        Classification is locked because matching activity history exists. Create a new deliverable to change contact family, activity type, or program filter.
+        Classification is locked because matching activity history exists. Create a new deliverable to change activity family, activity type, or program filter.
     </div>
 
     <div class="alert alert-warning small {{ $semanticLocked ? '' : 'd-none' }}" data-deliverable-semantic-lock-notice>
@@ -101,9 +101,9 @@
         <div class="{{ $classificationLocked ? 'd-none' : '' }}" data-deliverable-classification-editor>
             <div class="row g-3">
                 <div class="col-md-4">
-                    <label class="form-label">Contact Family <span class="text-danger">*</span></label>
+                    <label class="form-label">Activity Family <span class="text-danger">*</span></label>
                     <select class="form-select" name="{{ $fieldPrefix }}[contact_family_id]" data-deliverable-contact-family>
-                        <option value="">Select contact family...</option>
+                        <option value="">Select activity family...</option>
                         @foreach($contactFamilies as $family)
                             @php
                                 $familyProgramIds = $family->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all();
@@ -153,7 +153,7 @@
 
         <div class="{{ $classificationLocked ? '' : 'd-none' }}" data-deliverable-classification-readonly>
             <dl class="row mb-0 small">
-                <dt class="col-sm-4 text-muted fw-normal">Contact Family</dt>
+                <dt class="col-sm-4 text-muted fw-normal">Activity Family</dt>
                 <dd class="col-sm-8 mb-2" data-readonly-contact-family>{{ $contactFamilyLabel }}</dd>
                 <dt class="col-sm-4 text-muted fw-normal">Activity Type</dt>
                 <dd class="col-sm-8 mb-2" data-readonly-activity-type>{{ $activityTypeLabel }}</dd>
@@ -275,7 +275,7 @@
                     <label class="form-label fw-semibold d-block mb-1">Prep and Follow Up Time</label>
                     <p class="text-muted small mb-2" data-additional-time-message>
                         @if(!empty($row['contact_family_id']))
-                            The {{ $contactFamilyLabel }} contact family requires prep and follow up time to be reported in activity logging. Should this time contribute to deliverable progress?
+                            The {{ $contactFamilyLabel }} activity family requires prep and follow up time to be reported in activity logging. Should this time contribute to deliverable progress?
                         @endif
                     </p>
                     <div class="form-check form-switch">

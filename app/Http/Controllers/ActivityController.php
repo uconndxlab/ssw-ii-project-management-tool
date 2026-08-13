@@ -885,7 +885,7 @@ class ActivityController extends Controller
 
         if ($allowedContactFamilyIds->isEmpty()) {
             throw ValidationException::withMessages([
-                'contact_family_id' => 'Selected agreements do not cover any deliverable contact families.',
+                'contact_family_id' => 'Selected agreements do not cover any deliverable activity families.',
             ]);
         }
 
@@ -894,7 +894,7 @@ class ActivityController extends Controller
 
         if (!$allowedContactFamilyIds->contains($selectedContactFamilyId)) {
             throw ValidationException::withMessages([
-                'contact_family_id' => 'Selected contact family must be covered by at least one chosen agreement deliverable.',
+                'contact_family_id' => 'Selected family must be covered by at least one chosen agreement deliverable.',
             ]);
         }
 
@@ -914,7 +914,7 @@ class ActivityController extends Controller
 
             if (!$activityTypeAllowed) {
                 throw ValidationException::withMessages([
-                    'activity_type_id' => 'Selected activity type must belong to the chosen contact family.',
+                    'activity_type_id' => 'Selected type must belong to the chosen family.',
                 ]);
             }
 

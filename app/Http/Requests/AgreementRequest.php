@@ -464,7 +464,7 @@ class AgreementRequest extends FormRequest
                     ->pluck('id');
 
                 if ($invalidContactFamilyIds->isNotEmpty()) {
-                    $validator->errors()->add('deliverables', 'Deliverable contact families must be global or match one of the selected programs.');
+                    $validator->errors()->add('deliverables', 'Deliverable activity families must be global or match one of the selected programs.');
                 }
             }
 
@@ -541,7 +541,7 @@ class AgreementRequest extends FormRequest
                 }
 
                 if (empty($row['contact_family_id'])) {
-                    $validator->errors()->add("deliverables.{$deliverableIndex}.contact_family_id", 'Deliverables must select a contact family.');
+                    $validator->errors()->add("deliverables.{$deliverableIndex}.contact_family_id", 'Deliverables must select an activity family.');
                 }
 
                 $contactFamily = null;
@@ -553,7 +553,7 @@ class AgreementRequest extends FormRequest
                     $activityType = ActivityType::query()->find((int) $row['activity_type_id']);
 
                     if ($activityType && (int) $activityType->contact_family_id !== (int) $contactFamily->id) {
-                        $validator->errors()->add("deliverables.{$deliverableIndex}.activity_type_id", 'Deliverable activity types must belong to the selected contact family.');
+                        $validator->errors()->add("deliverables.{$deliverableIndex}.activity_type_id", 'Deliverable activity types must belong to the selected activity family.');
                     }
                 }
 
@@ -680,7 +680,7 @@ class AgreementRequest extends FormRequest
                 }
 
                 if (($row['include_additional_time'] ?? false) && $contactFamily && !$contactFamily->track_additional_time) {
-                    $validator->errors()->add("deliverables.{$deliverableIndex}.include_additional_time", 'The selected contact family does not track prep and follow up time.');
+                    $validator->errors()->add("deliverables.{$deliverableIndex}.include_additional_time", 'The selected activity family does not track prep and follow up time.');
                 }
 
                 if ($deliverableUserIds->isNotEmpty()) {

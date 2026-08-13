@@ -187,7 +187,7 @@ class ContactFamilyController extends Controller
 
         return redirect()
             ->route('contact-families.index')
-            ->with('success', 'Contact family created successfully.');
+            ->with('success', 'Activity family created successfully.');
     }
 
     public function edit(ContactFamily $contactFamily)
@@ -275,7 +275,7 @@ class ContactFamilyController extends Controller
 
         return redirect()
             ->route('contact-families.index')
-            ->with('success', 'Contact family updated successfully.');
+            ->with('success', 'Activity family updated successfully.');
     }
 
     public function destroy(ContactFamily $contactFamily)
@@ -283,13 +283,13 @@ class ContactFamilyController extends Controller
         if ($contactFamily->activityTypes()->count() > 0) {
             return redirect()
                 ->route('contact-families.index')
-                ->with('error', 'Cannot delete contact family with existing activity types.');
+                ->with('error', 'Cannot delete activity family with existing activity types.');
         }
 
         ContactFamily::destroy($contactFamily->id);
 
         return redirect()
             ->route('contact-families.index')
-            ->with('success', 'Contact family deleted successfully.');
+            ->with('success', 'Activity family deleted successfully.');
     }
 }

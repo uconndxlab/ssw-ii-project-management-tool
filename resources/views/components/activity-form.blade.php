@@ -546,7 +546,7 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label for="contact_family_id" class="form-label fw-semibold">
-                                    Contact Family <span class="text-danger">*</span>
+                                    Family <span class="text-danger">*</span>
                                 </label>
                                 <select class="form-select @error('contact_family_id') is-invalid @enderror"
                                         id="contact_family_id"
@@ -558,7 +558,7 @@
                                         hx-trigger="change, load"
                                         {{ empty($selectedAgreementIds) ? 'disabled' : '' }}
                                         required>
-                                    <option value="">{{ empty($selectedAgreementIds) ? 'Select at least one agreement first...' : 'Select contact family...' }}</option>
+                                    <option value="">{{ empty($selectedAgreementIds) ? 'Select at least one agreement first...' : 'Select family...' }}</option>
                                     @foreach($contactFamilies as $family)
                                         <option value="{{ $family->id }}"
                                                 data-helper-text="{{ e($family->helper_text ?? '') }}"
@@ -576,14 +576,14 @@
 
                             <div class="col-md-6">
                                 <label for="activity_type_id" class="form-label fw-semibold">
-                                    Activity Type <span class="text-danger">*</span>
+                                    Type <span class="text-danger">*</span>
                                 </label>
                                 <select class="form-select @error('activity_type_id') is-invalid @enderror"
                                         id="activity_type_id"
                                         name="activity_type_id"
                                         {{ $currentContactFamilyId ? '' : 'disabled' }}
                                         required>
-                                    <option value="">{{ empty($selectedAgreementIds) ? 'Select at least one agreement first...' : 'Select contact family first...' }}</option>
+                                    <option value="">{{ empty($selectedAgreementIds) ? 'Select at least one agreement first...' : 'Select family first...' }}</option>
                                 </select>
                                 @error('activity_type_id')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -632,12 +632,12 @@
                             @foreach($contactFamilies as $family)
                                 <div class="activity-logging-subsection d-none" data-contact-family-logging-group="{{ $family->id }}">
                                     <div class="d-flex flex-column flex-md-row align-items-md-baseline gap-1 gap-md-3 mb-3">
-                                        <div class="activity-logging-subsection-title">Contact Family Logging Fields</div>
+                                        <div class="activity-logging-subsection-title">Family Logging Fields</div>
                                         <div class="text-muted activity-logging-subsection-meta">{{ $family->name }}</div>
                                     </div>
 
                                     @if($family->contactFamilyLoggingFields->isEmpty())
-                                        <div class="text-muted small">No classification logging fields are assigned to this contact family.</div>
+                                        <div class="text-muted small">No classification logging fields are assigned to this family.</div>
                                     @else
                                         <div class="row g-3">
                                             @foreach($family->contactFamilyLoggingFields as $field)
@@ -1579,8 +1579,8 @@
                 option.disabled = false;
                 option.hidden = false;
                 option.textContent = hasAgreementSelection && allowedFamilyIds.size === 0
-                    ? 'No deliverable contact families for selected agreements...'
-                    : 'Select contact family...';
+                    ? 'No activity families available for selected agreements...'
+                    : 'Select family...';
                 return;
             }
 
@@ -1618,7 +1618,7 @@
         if (!family || !type) return;
 
         if (!family.value) {
-            type.innerHTML = '<option value="">Select contact family first...</option>';
+            type.innerHTML = '<option value="">Select family first...</option>';
             type.disabled = true;
             return;
         }

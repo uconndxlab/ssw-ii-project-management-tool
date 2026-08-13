@@ -100,8 +100,8 @@ class LoggingField extends Model
     {
         return [
             'available_in_agreements' => 'Agreements',
-            'available_in_contact_families' => 'Contact Families',
-            'available_in_activities' => 'Activities',
+            'available_in_contact_families' => 'Activity Families',
+            'available_in_activities' => 'Activity Types',
         ];
     }
 

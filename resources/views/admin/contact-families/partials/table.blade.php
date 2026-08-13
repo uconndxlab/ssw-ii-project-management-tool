@@ -59,20 +59,20 @@
                     </td>
                     <td class="text-end text-nowrap">
                         @php $actionKey = 'contact-family-actions-' . $family->id; @endphp
-                        <div class="btn-group btn-group-sm" role="group" aria-label="Contact family actions for {{ $family->name }}">
+                        <div class="btn-group btn-group-sm" role="group" aria-label="Activity family actions for {{ $family->name }}">
                             <a href="{{ route('contact-families.edit', $family) }}"
                                class="btn btn-outline-secondary"
                                data-bs-toggle="tooltip"
-                               data-bs-title="Edit contact family"
-                               aria-label="Edit contact family">
+                               data-bs-title="Edit activity family"
+                               aria-label="Edit activity family">
                                 <i class="bi bi-pencil-square"></i>
                             </a>
                             <button type="submit"
                                     form="{{ $actionKey }}-delete"
                                     class="btn btn-outline-danger"
                                     data-bs-toggle="tooltip"
-                                    data-bs-title="Delete contact family"
-                                    aria-label="Delete contact family"
+                                    data-bs-title="Delete activity family"
+                                    aria-label="Delete activity family"
                                     onclick="return confirm('Delete {{ addslashes($family->name) }}?')">
                                 <i class="bi bi-trash"></i>
                             </button>
@@ -86,8 +86,8 @@
                 @empty
                 <tr>
                     <td colspan="7" class="text-center py-5">
-                        <p class="text-muted mb-2">No contact families found.</p>
-                        <a href="{{ route('contact-families.create') }}" class="btn btn-sm btn-primary">Add Contact Family</a>
+                        <p class="text-muted mb-2">No activity families found.</p>
+                        <a href="{{ route('contact-families.create') }}" class="btn btn-sm btn-primary">Add Activity Family</a>
                     </td>
                 </tr>
                 @endforelse

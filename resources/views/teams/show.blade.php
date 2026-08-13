@@ -111,7 +111,7 @@
                                     <thead class="table-light">
                                         <tr>
                                             <th>Activity Type</th>
-                                            <th>Contact Family</th>
+                                            <th>Activity Family</th>
                                             <th class="text-center">Metric</th>
                                             <th class="text-center">Target</th>
                                             <th>Notes</th>

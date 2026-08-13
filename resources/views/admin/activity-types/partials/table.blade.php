@@ -15,7 +15,7 @@
                         <x-table-sort-link column="name" label="Name" :sort="$s" :direction="$d" :url="$url('name')" target="#activity-types-table" />
                     </th>
                     <th>
-                        <x-table-sort-link column="contact_family" label="Contact Family" :sort="$s" :direction="$d" :url="$url('contact_family')" target="#activity-types-table" />
+                        <x-table-sort-link column="contact_family" label="Activity Family" :sort="$s" :direction="$d" :url="$url('contact_family')" target="#activity-types-table" />
                     </th>
                     <th>
                         <x-table-sort-link column="projects" label="Projects" :sort="$s" :direction="$d" :url="$url('projects')" target="#activity-types-table" />

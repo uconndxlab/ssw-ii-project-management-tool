@@ -30,12 +30,12 @@
 
 <x-section-card title="Activity Type Details" subtitle="Define the activity type, scope, and reporting duration." class="mb-4">
     <div class="mb-3">
-        <label for="contact_family_id" class="form-label">Contact Family <span class="text-danger">*</span></label>
+        <label for="contact_family_id" class="form-label">Activity Family <span class="text-danger">*</span></label>
         <select class="form-select @error('contact_family_id') is-invalid @enderror"
                 id="contact_family_id"
                 name="contact_family_id"
                 required>
-            <option value="">Select contact family...</option>
+            <option value="">Select activity family...</option>
             @foreach($contactFamilies as $family)
                 <option value="{{ $family->id }}" {{ old('contact_family_id', $activityType->contact_family_id ?? null) == $family->id ? 'selected' : '' }}>
                     {{ $family->name }}

@@ -7,7 +7,7 @@
     <div class="row g-2 align-items-center">
         <div class="col-md-3">
             <input type="text" name="search" class="form-control form-control-sm"
-                   placeholder="Search contact families…" value="{{ request('search') }}"
+                   placeholder="Search activity families…" value="{{ request('search') }}"
                    hx-get="{{ route('contact-families.index') }}"
                    hx-trigger="keyup changed delay:400ms, search"
                    hx-target="#cf-table" hx-swap="innerHTML"

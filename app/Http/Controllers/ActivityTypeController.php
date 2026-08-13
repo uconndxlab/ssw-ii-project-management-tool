@@ -194,7 +194,7 @@ class ActivityTypeController extends Controller
             return back()
                 ->withInput()
                 ->withErrors([
-                    'name' => 'An activity type with this name already exists in the selected contact family.'
+                    'name' => 'An activity type with this name already exists in the selected activity family.'
                 ]);
         }
 
@@ -255,7 +255,7 @@ class ActivityTypeController extends Controller
             return back()
                 ->withInput()
                 ->withErrors([
-                    'name' => 'An activity type with this name already exists in the selected contact family.'
+                    'name' => 'An activity type with this name already exists in the selected activity family.'
                 ]);
         }
 

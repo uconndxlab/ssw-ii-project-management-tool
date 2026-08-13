@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Edit Contact Family')
+@section('title', 'Edit Activity Family')
 
 @section('content')
 <div class="row justify-content-center">
@@ -21,15 +21,15 @@
             <x-page-header
                 context="form"
                 :title="old('name', $contactFamily->name)"
-                entity-type="Contact Family"
+                entity-type="Activity Family"
                 mode="edit"
                 :show-active="true"
                 :active-default="old('active', $contactFamily->active)"
-                active-help="Only active contact families appear in activity forms."
+                active-help="Only active activity families appear in activity forms."
             />
             @include('admin.contact-families.partials.form-fields', ['contactFamily' => $contactFamily])
         </form>
     </div>
 </div>
-<x-save-bar form-id="contact-families-edit-form" save-label="Save Contact Family" :last-saved-at="$contactFamily->updated_at" />
+<x-save-bar form-id="contact-families-edit-form" save-label="Save Activity Family" :last-saved-at="$contactFamily->updated_at" />
 @endsection

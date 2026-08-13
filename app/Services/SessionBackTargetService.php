@@ -404,7 +404,7 @@ class SessionBackTargetService
             'users.show' => 'Back to user',
             'admin.users.index' => 'Back to users',
             'logging-fields.index' => 'Back to logging fields',
-            'contact-families.index' => 'Back to contact families',
+            'contact-families.index' => 'Back to activity families',
             'activity-types.index' => 'Back to activity types',
             default => 'Back',
         };
@@ -462,7 +462,7 @@ class SessionBackTargetService
             'users.show' => 'User',
             'admin.users.index' => 'Users',
             'logging-fields.index' => 'Logging Fields',
-            'contact-families.index' => 'Contact Families',
+            'contact-families.index' => 'Activity Families',
             'activity-types.index' => 'Activity Types',
             default => 'Current Page',
         };

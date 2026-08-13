@@ -56,7 +56,7 @@
                     hx-swap="innerHTML"
                     hx-push-url="true"
                     hx-include="#logging-field-filters">
-                <option value="">All Contact Families</option>
+                <option value="">All Activity Families</option>
                 @foreach($filterContactFamilies ?? [] as $contactFamily)
                     <option value="{{ $contactFamily->id }}" @selected((string) request('contact_family_id') === (string) $contactFamily->id)>
                         {{ $contactFamily->name }}
@@ -105,8 +105,8 @@
                     hx-include="#logging-field-filters">
                 <option value="">All Availability</option>
                 <option value="available_in_agreements" @selected(request('availability') === 'available_in_agreements')>Agreements</option>
-                <option value="available_in_contact_families" @selected(request('availability') === 'available_in_contact_families')>Contact Families</option>
-                <option value="available_in_activities" @selected(request('availability') === 'available_in_activities')>Activities</option>
+                <option value="available_in_contact_families" @selected(request('availability') === 'available_in_contact_families')>Activity Families</option>
+                <option value="available_in_activities" @selected(request('availability') === 'available_in_activities')>Activity Types</option>
             </select>
         </div>
         <x-table-filter-clear

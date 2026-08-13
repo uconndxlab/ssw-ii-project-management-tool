@@ -66,10 +66,10 @@
                                 <span class="badge bg-primary">Agreements</span>
                             @endif
                             @if($field->available_in_contact_families)
-                                <span class="badge bg-info text-dark">Contact Families</span>
+                                <span class="badge bg-info text-dark">Activity Families</span>
                             @endif
                             @if($field->available_in_activities)
-                                <span class="badge bg-warning text-dark">Activities</span>
+                                <span class="badge bg-warning text-dark">Activity Types</span>
                             @endif
                             @if(! $field->available_in_agreements && ! $field->available_in_contact_families && ! $field->available_in_activities)
                                 <span class="badge bg-light text-dark border">Unassigned</span>

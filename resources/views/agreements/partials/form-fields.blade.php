@@ -120,7 +120,7 @@
                 project-label="Projects *"
                 program-label="Programs *"
                 project-help-text="Required only to filter the program list; projects are not saved on the agreement."
-                program-help-text="Select programs explicitly when Specific is selected. These saved programs determine teams, users, logging fields, contact families, and activity types available below. Organizations also require at least one program and one state."
+                program-help-text="Select programs explicitly when Specific is selected. These saved programs determine teams, users, logging fields, activity families, and activity types available below. Organizations also require at least one program and one state."
                 scope-mode-help-text="Choose whether this agreement applies to all programs or only specific programs."
                 :expand-empty-programs="false"
             />

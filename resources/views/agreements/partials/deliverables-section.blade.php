@@ -1100,7 +1100,7 @@
             if (additionalTimeWrapper) additionalTimeWrapper.classList.toggle('d-none', !showAdditionalTime);
 
             if (additionalTimeMessage && showAdditionalTime) {
-                additionalTimeMessage.textContent = 'The ' + familyName + ' contact family requires prep and follow up time to be reported in activity logging. Should this time contribute to deliverable progress?';
+                additionalTimeMessage.textContent = 'The ' + familyName + ' activity family requires prep and follow up time to be reported in activity logging. Should this time contribute to deliverable progress?';
             }
 
             if (additionalTimeCheckbox && !showAdditionalTime) {
