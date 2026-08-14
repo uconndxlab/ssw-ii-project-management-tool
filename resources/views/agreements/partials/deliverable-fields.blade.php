@@ -14,21 +14,21 @@
     $basisOptions = [
         'contact' => [
             'label' => 'By Contact',
-            'description' => 'Count activity at the contact level. No user or team assignment is needed.',
+            'description' => 'Count at the contact. No assignees.',
         ],
         'user' => [
             'label' => 'By User',
-            'description' => 'Attribute activity to specific users or teams. At least one assignee is required.',
+            'description' => 'Attribute to users or teams.',
         ],
     ];
     $groupingOptions = [
         'joint' => [
             'label' => 'Joint',
-            'description' => 'One shared target. Multiple users and teams can contribute together.',
+            'description' => 'One shared target.',
         ],
         'individual' => [
             'label' => 'Individual',
-            'description' => 'One target per assigned user. Select one or more users; each tracks progress separately toward the same target.',
+            'description' => 'One target per assigned user.',
         ],
     ];
 
@@ -36,15 +36,14 @@
     $timeBasisOptions = [
         'observed' => [
             'label' => 'Observed',
-            'description' => 'Count hours logged on the activity record, including participant or contact time.',
+            'description' => 'Hours logged on the activity.',
         ],
         'allotted' => [
             'label' => 'Allotted',
-            'description' => 'Count the duration configured on the activity type, such as training days.',
+            'description' => 'Duration from the activity type.',
         ],
     ];
 
-    $selectedActivityType = $activityTypes->firstWhere('id', $row['activity_type_id'] ?? null);
     $currentTimeBasis = ($row['metric_type'] ?? '') === 'time'
         ? ($row['time_basis'] ?? 'observed')
         : 'observed';
@@ -84,126 +83,91 @@
         && $selectedContactFamily?->track_additional_time;
 @endphp
 
-<div class="deliverable-fields" data-deliverable-fields>
-    <div class="alert alert-warning small {{ $classificationLocked ? '' : 'd-none' }}" data-deliverable-classification-lock-notice>
-        Classification is locked because matching activity history exists. Create a new deliverable to change activity family, activity type, or program filter.
-    </div>
-
-    <div class="alert alert-warning small {{ $semanticLocked ? '' : 'd-none' }}" data-deliverable-semantic-lock-notice>
-        Counting rules are locked because matching activity history exists. You can still update target, due date, notes, and assignments.
-    </div>
-
-    {{-- Classification --}}
-    <div class="mb-4">
-        <h6 class="fw-semibold mb-1">Classification</h6>
-        <p class="text-muted small mb-3">Define which logged activity counts toward this deliverable.</p>
+<div class="deliverable-fields form-subsections" data-deliverable-fields>
+    <x-form-subsection title="Activity">
+        <div class="alert alert-warning small py-2 {{ $classificationLocked ? '' : 'd-none' }}" data-deliverable-classification-lock-notice>
+            Family, type, and program are locked. Duplicate this deliverable to change them.
+        </div>
 
         <div class="{{ $classificationLocked ? 'd-none' : '' }}" data-deliverable-classification-editor>
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <label class="form-label required-label">Activity Family</label>
-                    <select class="form-select" name="{{ $fieldPrefix }}[contact_family_id]" data-deliverable-contact-family>
-                        <option value="">Select activity family...</option>
-                        @foreach($contactFamilies as $family)
-                            @php
-                                $familyProgramIds = $family->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all();
-                            @endphp
-                            <option value="{{ $family->id }}"
-                                    data-program-ids='@json($familyProgramIds)'
-                                    data-scope-mode="{{ $family->program_scope_mode?->value ?? 'all' }}"
-                                    data-global="{{ empty($familyProgramIds) ? 'true' : 'false' }}"
-                                    data-track-additional-time="{{ $family->track_additional_time ? '1' : '0' }}"
-                                    @selected((string) ($row['contact_family_id'] ?? '') === (string) $family->id)>
-                                {{ $family->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
+            <x-form-field label="Activity Family" required>
+                <select class="form-select" name="{{ $fieldPrefix }}[contact_family_id]" data-deliverable-contact-family>
+                    <option value="">Select activity family...</option>
+                    @foreach($contactFamilies as $family)
+                        @php
+                            $familyProgramIds = $family->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all();
+                        @endphp
+                        <option value="{{ $family->id }}"
+                                data-program-ids='@json($familyProgramIds)'
+                                data-scope-mode="{{ $family->program_scope_mode?->value ?? 'all' }}"
+                                data-global="{{ empty($familyProgramIds) ? 'true' : 'false' }}"
+                                data-track-additional-time="{{ $family->track_additional_time ? '1' : '0' }}"
+                                @selected((string) ($row['contact_family_id'] ?? '') === (string) $family->id)>
+                            {{ $family->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </x-form-field>
 
-                <div class="col-md-4">
-                    <label class="form-label">Activity Type</label>
-                    <select class="form-select" name="{{ $fieldPrefix }}[activity_type_id]" data-deliverable-activity-type>
-                        <option value="">Any activity type</option>
-                        @foreach($activityTypes as $type)
-                            @php
-                                $activityTypeProgramIds = $type->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all();
-                            @endphp
-                            <option value="{{ $type->id }}"
-                                    data-contact-family-id="{{ $type->contact_family_id }}"
-                                    data-program-ids='@json($activityTypeProgramIds)'
-                                    data-scope-mode="{{ $type->program_scope_mode?->value ?? 'all' }}"
-                                    data-global="{{ empty($activityTypeProgramIds) ? 'true' : 'false' }}"
-                                    data-duration-hours="{{ (float) $type->duration_hours > 0 ? $type->duration_hours : '' }}"
-                                    data-duration-days="{{ (float) $type->duration_days > 0 ? $type->duration_days : '' }}"
-                                    @selected((string) ($row['activity_type_id'] ?? '') === (string) $type->id)>
-                                {{ $type->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
+            <x-form-field label="Activity Type">
+                <select class="form-select" name="{{ $fieldPrefix }}[activity_type_id]" data-deliverable-activity-type>
+                    <option value="">Any activity type</option>
+                    @foreach($activityTypes as $type)
+                        @php
+                            $activityTypeProgramIds = $type->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all();
+                        @endphp
+                        <option value="{{ $type->id }}"
+                                data-contact-family-id="{{ $type->contact_family_id }}"
+                                data-program-ids='@json($activityTypeProgramIds)'
+                                data-scope-mode="{{ $type->program_scope_mode?->value ?? 'all' }}"
+                                data-global="{{ empty($activityTypeProgramIds) ? 'true' : 'false' }}"
+                                data-duration-hours="{{ (float) $type->duration_hours > 0 ? $type->duration_hours : '' }}"
+                                data-duration-days="{{ (float) $type->duration_days > 0 ? $type->duration_days : '' }}"
+                                @selected((string) ($row['activity_type_id'] ?? '') === (string) $type->id)>
+                            {{ $type->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </x-form-field>
 
-                <div class="col-md-4">
-                    <label class="form-label">Program Filter</label>
-                    <select class="form-select" name="{{ $fieldPrefix }}[program_id]" data-deliverable-program>
-                        <option value="">Any selected agreement program</option>
-                    </select>
-                </div>
-            </div>
+            <x-form-field label="Program Filter" class="mb-0">
+                <select class="form-select" name="{{ $fieldPrefix }}[program_id]" data-deliverable-program>
+                    <option value="">Any selected agreement program</option>
+                </select>
+            </x-form-field>
         </div>
 
         <div class="{{ $classificationLocked ? '' : 'd-none' }}" data-deliverable-classification-readonly>
-            <dl class="row mb-0 small">
-                <dt class="col-sm-4 text-muted fw-normal">Activity Family</dt>
-                <dd class="col-sm-8 mb-2" data-readonly-contact-family>{{ $contactFamilyLabel }}</dd>
-                <dt class="col-sm-4 text-muted fw-normal">Activity Type</dt>
-                <dd class="col-sm-8 mb-2" data-readonly-activity-type>{{ $activityTypeLabel }}</dd>
-                <dt class="col-sm-4 text-muted fw-normal">Program Filter</dt>
-                <dd class="col-sm-8 mb-0" data-readonly-program>{{ $programLabel }}</dd>
+            <dl class="mb-0 small">
+                <dt class="text-muted fw-normal">Activity Family</dt>
+                <dd class="mb-2" data-readonly-contact-family>{{ $contactFamilyLabel }}</dd>
+                <dt class="text-muted fw-normal">Activity Type</dt>
+                <dd class="mb-2" data-readonly-activity-type>{{ $activityTypeLabel }}</dd>
+                <dt class="text-muted fw-normal">Program Filter</dt>
+                <dd class="mb-0" data-readonly-program>{{ $programLabel }}</dd>
             </dl>
         </div>
-    </div>
+    </x-form-subsection>
 
-    {{-- Details --}}
-    <div class="mb-4">
-        <h6 class="fw-semibold mb-1">Details</h6>
-        <p class="text-muted small mb-3">Optional scheduling and context for staff reviewing this deliverable.</p>
-        <div class="row g-3">
-            <div class="col-md-4">
-                <label class="form-label">Suggested Due Date</label>
-                <input type="date" class="form-control" name="{{ $fieldPrefix }}[suggested_due_date]" value="{{ $row['suggested_due_date'] ?? '' }}" data-deliverable-due-date>
-            </div>
-            <div class="col-md-8">
-                <label class="form-label">Notes</label>
-                <textarea class="form-control" name="{{ $fieldPrefix }}[notes]" rows="2" maxlength="500" data-deliverable-notes>{{ $row['notes'] ?? '' }}</textarea>
-            </div>
-        </div>
-    </div>
-
-    {{-- Requirement --}}
-    <div class="mb-4">
-        <h6 class="fw-semibold mb-1">Requirement</h6>
-        <p class="text-muted small mb-3">How progress is measured and attributed.</p>
-
-        <div class="{{ $semanticLocked ? 'd-none' : '' }}" data-deliverable-requirement-editor>
-            <div class="row g-3 mb-3">
-                <div class="col-md-6">
-                    <label class="form-label required-label">Metric</label>
-                    <div class="d-grid gap-2">
-                        @foreach($metricOptions as $value => $label)
-                            <x-form-radio-card
-                                name="{{ $fieldPrefix }}[metric_type]"
-                                :value="$value"
-                                :label="$label"
-                                :checked="($row['metric_type'] ?? '') === $value"
-                                data-deliverable-metric
-                            />
-                        @endforeach
-                    </div>
+    <div class="{{ $semanticLocked ? 'd-none' : '' }}" data-deliverable-requirement-editor>
+        <x-form-subsection title="Metric">
+            <x-form-field label="Metric" required>
+                <div class="form-radio-row">
+                    @foreach($metricOptions as $value => $label)
+                        <x-form-radio-card
+                            name="{{ $fieldPrefix }}[metric_type]"
+                            :value="$value"
+                            :label="$label"
+                            :checked="($row['metric_type'] ?? '') === $value"
+                            data-deliverable-metric
+                        />
+                    @endforeach
                 </div>
+            </x-form-field>
 
-                <div class="col-md-6" data-time-basis-wrapper>
-                    <label class="form-label">Time Measurement</label>
-                    <div class="d-grid gap-2">
+            <div class="{{ ($row['metric_type'] ?? '') === 'time' ? '' : 'd-none' }}" data-time-basis-wrapper>
+                <x-form-field label="Time Measurement">
+                    <div class="form-radio-row">
                         @foreach($timeBasisOptions as $value => $option)
                             <x-form-radio-card
                                 name="{{ $fieldPrefix }}[time_basis]"
@@ -219,11 +183,11 @@
                         <i class="bi bi-exclamation-triangle-fill text-warning flex-shrink-0" aria-hidden="true"></i>
                         <span>The selection above has no allotted time.</span>
                     </div>
-                </div>
+                </x-form-field>
             </div>
 
-            <div class="row g-3 mb-4 {{ in_array($row['metric_type'] ?? '', ['time', 'completion'], true) ? '' : 'd-none' }}" data-metric-details-wrapper>
-                <div class="col-md-4">
+            <div class="{{ in_array($row['metric_type'] ?? '', ['time', 'completion'], true) ? '' : 'd-none' }}" data-metric-details-wrapper>
+                <div class="mb-3">
                     <label class="form-label required-label" data-deliverable-target-label>
                         @if(($row['metric_type'] ?? '') === 'completion')
                             Target Completions
@@ -238,7 +202,7 @@
                            min="0"
                            step="0.1"
                            data-deliverable-target>
-                          <div class="form-text">Leave this at 0 to remove target requirement.</div>
+                    <div class="form-text">Leave this at 0 to remove target requirement.</div>
                     <div class="mt-2 {{ $showTargetUnitPicker ? '' : 'd-none' }}" data-target-unit-wrapper>
                         <div class="d-flex gap-3">
                             <label class="form-check mb-0">
@@ -265,46 +229,48 @@
                     </div>
                 </div>
 
-                <div class="col-md-8 {{ $showAdditionalTime ? '' : 'd-none' }}" data-additional-time-wrapper>
-                    <label class="form-label">Prep and Follow Up Time</label>
-                    <p class="text-muted small mb-2" data-additional-time-message>
-                        @if(!empty($row['contact_family_id']))
-                            The {{ $contactFamilyLabel }} activity family requires prep and follow up time to be reported in activity logging. Should this time contribute to deliverable progress?
-                        @endif
-                    </p>
-                    <div class="form-check form-switch">
-                        <input class="form-check-input"
-                               type="checkbox"
-                               role="switch"
-                               name="{{ $fieldPrefix }}[include_additional_time]"
-                               value="1"
-                               data-deliverable-additional-time
-                               {{ !empty($row['include_additional_time']) ? 'checked' : '' }}>
-                        <label class="form-check-label">Include prep and follow up time in deliverable progress</label>
+                <div class="{{ $showAdditionalTime ? '' : 'd-none' }}" data-additional-time-wrapper>
+                    <div class="mb-0">
+                        <div class="form-label">Prep and Follow Up</div>
+                        <p class="text-muted small mb-2" data-additional-time-message>
+                            @if(!empty($row['contact_family_id']))
+                                Should this time count toward progress?
+                            @endif
+                        </p>
+                        <div class="form-check form-switch m-0 ps-0 d-flex align-items-start gap-2">
+                            <input class="form-check-input ms-0 mt-1"
+                                   type="checkbox"
+                                   role="switch"
+                                   name="{{ $fieldPrefix }}[include_additional_time]"
+                                   value="1"
+                                   data-deliverable-additional-time
+                                   {{ !empty($row['include_additional_time']) ? 'checked' : '' }}>
+                            <label class="form-check-label">Include in deliverable progress</label>
+                        </div>
                     </div>
                 </div>
             </div>
+        </x-form-subsection>
 
-            <div class="row g-4">
-                <div class="col-lg-6">
-                    <label class="form-label required-label">Contribution Basis</label>
-                    <div class="d-grid gap-2">
-                        @foreach($basisOptions as $value => $option)
-                            <x-form-radio-card
-                                name="{{ $fieldPrefix }}[contribution_basis]"
-                                :value="$value"
-                                :label="$option['label']"
-                                :description="$option['description']"
-                                :checked="($row['contribution_basis'] ?? '') === $value"
-                                data-deliverable-basis
-                            />
-                        @endforeach
-                    </div>
+        <x-form-subsection title="Assignment">
+            <x-form-field label="Contribution Basis" required>
+                <div class="form-radio-row">
+                    @foreach($basisOptions as $value => $option)
+                        <x-form-radio-card
+                            name="{{ $fieldPrefix }}[contribution_basis]"
+                            :value="$value"
+                            :label="$option['label']"
+                            :description="$option['description']"
+                            :checked="($row['contribution_basis'] ?? '') === $value"
+                            data-deliverable-basis
+                        />
+                    @endforeach
                 </div>
+            </x-form-field>
 
-                <div class="col-lg-6 {{ ($row['contribution_basis'] ?? '') === 'user' ? '' : 'd-none' }}" data-grouping-wrapper>
-                    <label class="form-label required-label">Grouping</label>
-                    <div class="d-grid gap-2">
+            <div class="{{ ($row['contribution_basis'] ?? '') === 'user' ? '' : 'd-none' }}" data-grouping-wrapper>
+                <x-form-field label="Grouping" required class="mb-0">
+                    <div class="form-radio-row">
                         @foreach($groupingOptions as $value => $option)
                             <x-form-radio-card
                                 name="{{ $fieldPrefix }}[user_grouping_mode]"
@@ -316,68 +282,78 @@
                             />
                         @endforeach
                     </div>
-                </div>
+                </x-form-field>
             </div>
-        </div>
+        </x-form-subsection>
+    </div>
 
-        <div class="{{ $semanticLocked ? '' : 'd-none' }}" data-deliverable-requirement-readonly>
-            <dl class="row mb-3 small">
-                <dt class="col-sm-4 text-muted fw-normal">Metric</dt>
-                <dd class="col-sm-8 mb-2" data-readonly-metric>
+    <div class="{{ $semanticLocked ? '' : 'd-none' }}" data-deliverable-requirement-readonly>
+        <x-form-subsection title="Metric">
+            <div class="alert alert-warning small py-2 {{ $semanticLocked ? '' : 'd-none' }}" data-deliverable-semantic-lock-notice>
+                Counting rules are locked. Target, due date, notes, and members can still change.
+            </div>
+            <dl class="mb-3 small">
+                <dt class="text-muted fw-normal">Metric</dt>
+                <dd class="mb-2" data-readonly-metric>
                     @if(($row['metric_type'] ?? '') === 'time')
                         {{ $currentTimeBasis === 'allotted' ? 'Allotted time' : 'Time' }}
                     @else
                         {{ $metricOptions[$row['metric_type'] ?? ''] ?? '—' }}
                     @endif
                 </dd>
-                <dt class="col-sm-4 text-muted fw-normal">Contribution Basis</dt>
-                <dd class="col-sm-8 mb-2" data-readonly-basis>{{ $basisOptions[$row['contribution_basis'] ?? '']['label'] ?? '—' }}</dd>
-                <dt class="col-sm-4 text-muted fw-normal">Grouping</dt>
-                <dd class="col-sm-8 mb-2" data-readonly-grouping>{{ $groupingOptions[$row['user_grouping_mode'] ?? '']['label'] ?? '—' }}</dd>
-                <dt class="col-sm-4 text-muted fw-normal">Include Additional Time</dt>
-                <dd class="col-sm-8 mb-0" data-readonly-additional-time>{{ !empty($row['include_additional_time']) ? 'Yes' : 'No' }}</dd>
+                <dt class="text-muted fw-normal">Contribution Basis</dt>
+                <dd class="mb-2" data-readonly-basis>{{ $basisOptions[$row['contribution_basis'] ?? '']['label'] ?? '—' }}</dd>
+                <dt class="text-muted fw-normal">Grouping</dt>
+                <dd class="mb-2" data-readonly-grouping>{{ $groupingOptions[$row['user_grouping_mode'] ?? '']['label'] ?? '—' }}</dd>
+                <dt class="text-muted fw-normal">Include Additional Time</dt>
+                <dd class="mb-0" data-readonly-additional-time>{{ !empty($row['include_additional_time']) ? 'Yes' : 'No' }}</dd>
             </dl>
-            <div class="row g-3">
-                <div class="col-lg-4">
-                    <label class="form-label required-label" data-deliverable-target-label-locked>
-                        @if(($row['metric_type'] ?? '') === 'completion')
-                            Target Completions
-                        @else
-                            {{ $targetUnitLabel }}
-                        @endif
-                    </label>
-                    <input type="number"
-                           class="form-control"
-                           name="{{ $fieldPrefix }}[target_quantity]"
-                           value="{{ $row['target_quantity'] ?? '' }}"
-                           min="0"
-                           step="0.1"
-                           data-deliverable-target-locked>
-                    <div class="form-text">Leave this at 0 to remove target requirement.</div>
-                </div>
+            <div class="mb-0">
+                <label class="form-label required-label" data-deliverable-target-label-locked>
+                    @if(($row['metric_type'] ?? '') === 'completion')
+                        Target Completions
+                    @else
+                        {{ $targetUnitLabel }}
+                    @endif
+                </label>
+                <input type="number"
+                       class="form-control"
+                       name="{{ $fieldPrefix }}[target_quantity]"
+                       value="{{ $row['target_quantity'] ?? '' }}"
+                       min="0"
+                       step="0.1"
+                       data-deliverable-target-locked>
+                <div class="form-text">Leave this at 0 to remove target requirement.</div>
             </div>
-        </div>
+        </x-form-subsection>
     </div>
 
-    {{-- Assignment --}}
     <div class="{{ ($row['contribution_basis'] ?? '') === 'user' ? '' : 'd-none' }}" data-user-assignment-wrapper>
-        <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
-            <div>
-                <h6 class="fw-semibold mb-1">Assignment</h6>
-                <p class="text-muted small mb-0">Select from agreement members below. Historical contributions use activity snapshots automatically.</p>
+        <x-form-subsection title="Members">
+            <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                <p class="text-muted small mb-0">Select from agreement members. Historical contributions use activity snapshots automatically.</p>
+                <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0 d-none" data-deliverable-select-all>Select All</button>
             </div>
-            <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0 d-none" data-deliverable-select-all>Select All</button>
-        </div>
 
-        <div class="border rounded overflow-auto" style="min-height: 180px; max-height: 320px; background-color: #e9ecef;">
-            <div class="small text-muted px-3 py-2 border-bottom bg-body">
-                Agreement members
-            </div>
-            <div class="m-3" data-deliverable-assignment-ledger>
-                <div class="text-muted small py-3" data-deliverable-assignment-empty>
-                    Add teams or users to the agreement above before assigning this deliverable.
+            <div class="border rounded overflow-auto" style="min-height: 140px; max-height: 240px; background-color: #e9ecef;">
+                <div class="small text-muted px-3 py-2 border-bottom bg-body">
+                    Agreement members
+                </div>
+                <div class="m-3" data-deliverable-assignment-ledger>
+                    <div class="text-muted small py-3" data-deliverable-assignment-empty>
+                        Add teams or users in Teams &amp; Users on the agreement form.
+                    </div>
                 </div>
             </div>
-        </div>
+        </x-form-subsection>
     </div>
+
+    <x-form-subsection title="Notes">
+        <x-form-field label="Suggested Due Date">
+            <input type="date" class="form-control" name="{{ $fieldPrefix }}[suggested_due_date]" value="{{ $row['suggested_due_date'] ?? '' }}" data-deliverable-due-date>
+        </x-form-field>
+        <x-form-field label="Notes" class="mb-0">
+            <textarea class="form-control" name="{{ $fieldPrefix }}[notes]" rows="2" maxlength="500" data-deliverable-notes>{{ $row['notes'] ?? '' }}</textarea>
+        </x-form-field>
+    </x-form-subsection>
 </div>

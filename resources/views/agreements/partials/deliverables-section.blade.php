@@ -287,32 +287,24 @@
         </div>
 </x-section-card>
 
-<div class="modal fade" id="deliverable-editor-modal" tabindex="-1" aria-labelledby="deliverable-editor-modal-label" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div>
-                    <h5 class="modal-title mb-0" id="deliverable-editor-modal-label">Create Deliverable</h5>
-                    <div class="text-muted small" id="deliverable-editor-modal-description">Create a new deliverable or edit the selected row, then save it into the table.</div>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <input type="hidden" id="deliverable-editor-key" value="">
-                <div data-deliverable-editor-fields>
-                    @include('agreements.partials.deliverable-fields', [
-                        'row' => $editorDefaults,
-                        'fieldPrefix' => 'deliverable_editor',
-                    ])
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" id="deliverable-clear-button">Clear</button>
-                <button type="button" class="btn btn-primary" id="deliverable-save-button">Save Deliverable</button>
-            </div>
-        </div>
+<x-form-drawer id="deliverable-editor-drawer" title="Create Deliverable" title-id="deliverable-editor-drawer-title">
+    <x-slot:summary>
+        <div class="form-drawer-summary" id="deliverable-editor-summary">Choose a family to start.</div>
+    </x-slot>
+
+    <input type="hidden" id="deliverable-editor-key" value="">
+    <div data-deliverable-editor-fields>
+        @include('agreements.partials.deliverable-fields', [
+            'row' => $editorDefaults,
+            'fieldPrefix' => 'deliverable_editor',
+        ])
     </div>
-</div>
+
+    <x-slot:footer>
+        <button type="button" class="btn btn-outline-secondary" id="deliverable-clear-button">Clear</button>
+        <button type="button" class="btn btn-primary" id="deliverable-save-button">Save Deliverable</button>
+    </x-slot>
+</x-form-drawer>
 
 @once
 <script>
@@ -324,13 +316,12 @@
         const saveButton = document.getElementById('deliverable-save-button');
         const clearButton = document.getElementById('deliverable-clear-button');
         const editorKeyInput = document.getElementById('deliverable-editor-key');
-        const editorModalEl = document.getElementById('deliverable-editor-modal');
-        const editorCard = editorModalEl ? editorModalEl.querySelector('.modal-content') : null;
-        const editorFieldset = editorModalEl ? editorModalEl.querySelector('[data-deliverable-fields]') : null;
-        const editorTitle = document.getElementById('deliverable-editor-modal-label');
-        const editorDescription = document.getElementById('deliverable-editor-modal-description');
+        const editorDrawerEl = document.getElementById('deliverable-editor-drawer');
+        const editorFieldset = editorDrawerEl ? editorDrawerEl.querySelector('[data-deliverable-fields]') : null;
+        const editorTitle = document.getElementById('deliverable-editor-drawer-title');
+        const editorSummary = document.getElementById('deliverable-editor-summary');
 
-        if (!tableBody || !hiddenInputs || !saveButton || !clearButton || !editorKeyInput || !editorFieldset) {
+        if (!tableBody || !hiddenInputs || !saveButton || !clearButton || !editorKeyInput || !editorDrawerEl || !editorFieldset) {
             return;
         }
 
@@ -359,8 +350,27 @@
         let currentKey = null;
         let nextTempId = 1;
         const rowStore = {};
-        const editorModal = window.bootstrap ? bootstrap.Modal.getOrCreateInstance(editorModalEl) : null;
         let editorMode = 'create';
+
+        function isEditorOpen() {
+            return editorDrawerEl.classList.contains('is-open');
+        }
+
+        function openEditor() {
+            editorDrawerEl.classList.add('is-open');
+            editorDrawerEl.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('form-drawer-open');
+            const panel = editorDrawerEl.querySelector('.form-drawer-panel');
+            if (panel) {
+                panel.focus();
+            }
+        }
+
+        function closeEditor() {
+            editorDrawerEl.classList.remove('is-open');
+            editorDrawerEl.setAttribute('aria-hidden', 'true');
+            document.body.classList.remove('form-drawer-open');
+        }
 
         function syncSelectableCardStates() {
             editorFieldset.querySelectorAll('input[type="radio"]').forEach(function (input) {
@@ -378,12 +388,6 @@
             if (editorTitle) {
                 editorTitle.textContent = editorMode === 'edit' ? 'Edit Deliverable' : 'Create Deliverable';
             }
-
-            if (editorDescription) {
-                editorDescription.textContent = editorMode === 'edit'
-                    ? 'Edit the selected deliverable, then save it into the table.'
-                    : 'Create a new deliverable, then save it into the table.';
-            }
         }
 
         function setEditorIdentity(rowKey, rowId) {
@@ -391,7 +395,7 @@
 
             currentKey = rowKey || null;
             editorKeyInput.value = rowKey || '';
-            editorCard.querySelector('[name="deliverable_editor[id]"]')?.remove();
+            editorFieldset.querySelector('[name="deliverable_editor[id]"]')?.remove();
 
             if (rowId === undefined || rowId === null || rowId === '') {
                 return;
@@ -772,7 +776,7 @@
                 const empty = document.createElement('div');
                 empty.className = 'text-muted small py-2';
                 empty.setAttribute('data-deliverable-assignment-empty', '');
-                empty.textContent = 'Add teams or users to the agreement above before assigning this deliverable.';
+                empty.textContent = 'Add teams or users in Teams & Users on the agreement form.';
                 ledger.appendChild(empty);
                 if (selectAllBtn) selectAllBtn.classList.add('d-none');
                 return;
@@ -1019,7 +1023,7 @@
             const supportsAllotted = selectionSupportsAllottedTime();
 
             if (timeBasisWrapper) {
-                timeBasisWrapper.classList.toggle('opacity-50', !isTimeMetric);
+                timeBasisWrapper.classList.toggle('d-none', !isTimeMetric);
             }
 
             if (allottedWarning) {
@@ -1093,7 +1097,7 @@
             if (additionalTimeWrapper) additionalTimeWrapper.classList.toggle('d-none', !showAdditionalTime);
 
             if (additionalTimeMessage && showAdditionalTime) {
-                additionalTimeMessage.textContent = 'The ' + familyName + ' activity family requires prep and follow up time to be reported in activity logging. Should this time contribute to deliverable progress?';
+                additionalTimeMessage.textContent = 'Should prep and follow up time for ' + familyName + ' count toward progress?';
             }
 
             if (additionalTimeCheckbox && !showAdditionalTime) {
@@ -1104,6 +1108,60 @@
 
             const assignment = getSelectedAssignmentState();
             renderAssignmentLedger(assignment.user_ids, assignment.team_ids);
+            updateEditorSummary();
+        }
+
+        function updateEditorSummary() {
+            if (!editorSummary) {
+                return;
+            }
+
+            const familySelect = editorFieldset.querySelector('[data-deliverable-contact-family]');
+            const typeSelect = editorFieldset.querySelector('[data-deliverable-activity-type]');
+            const familyName = familySelect?.value
+                ? (familySelect.selectedOptions[0]?.textContent?.trim() || contactFamilyLookup[familySelect.value] || '')
+                : '';
+            const typeName = typeSelect?.value
+                ? (typeSelect.selectedOptions[0]?.textContent?.trim() || activityTypeLookup[typeSelect.value] || '')
+                : '';
+            const metric = editorFieldset.querySelector('[data-deliverable-metric]:checked')?.value || '';
+            const timeBasis = editorFieldset.querySelector('[data-deliverable-time-basis]:checked')?.value || '';
+            const target = getTargetInput()?.value;
+            const unit = editorFieldset.querySelector('[data-deliverable-target-unit]:checked')?.value || 'hours';
+            const basis = editorFieldset.querySelector('[data-deliverable-basis]:checked')?.value || '';
+            const grouping = editorFieldset.querySelector('[data-deliverable-grouping]:checked')?.value || '';
+            const assignment = getSelectedAssignmentState();
+            const parts = [];
+
+            if (familyName) {
+                parts.push(familyName);
+            }
+            if (typeName) {
+                parts.push(typeName);
+            }
+
+            if (metric === 'time') {
+                let metricPart = timeBasis === 'allotted' ? 'Allotted time' : 'Time';
+                if (target) {
+                    metricPart += ' · ' + target + (unit === 'days' ? ' days' : ' hours');
+                }
+                parts.push(metricPart);
+            } else if (metric === 'completion') {
+                parts.push(target ? target + ' completions' : 'Completion');
+            }
+
+            if (basis === 'contact') {
+                parts.push('By Contact');
+            } else if (basis === 'user') {
+                const count = (assignment.user_ids?.length || 0) + (assignment.team_ids?.length || 0);
+                let who = grouping === 'individual' ? 'Individual' : (grouping === 'joint' ? 'Joint' : 'By User');
+                if (count) {
+                    who += ' · ' + count + (count === 1 ? ' assignee' : ' assignees');
+                }
+                parts.push(who);
+            }
+
+            editorSummary.textContent = parts.length ? parts.join(' · ') : 'Choose a family to start.';
         }
 
         function applyLockState(rowData) {
@@ -1157,7 +1215,7 @@
             const targetInput = getTargetInput();
 
             const rowData = {
-                id: editorCard.querySelector('[name="deliverable_editor[id]"]')?.value || '',
+                id: editorFieldset.querySelector('[name="deliverable_editor[id]"]')?.value || '',
                 _delete: '0',
                 contact_family_id: fieldValue('[data-deliverable-contact-family]', ''),
                 activity_type_id: fieldValue('[data-deliverable-activity-type]', ''),
@@ -1243,7 +1301,7 @@
             syncEditorVisibility();
             renderAssignmentLedger(rowData.user_ids || [], rowData.team_ids || []);
 
-            if (editorModal) editorModal.show();
+            if (editorDrawerEl) openEditor();
         }
 
         function clearEditor(showModal) {
@@ -1264,8 +1322,9 @@
             syncEditorHeading();
             syncActivityTypeOptions();
             renderAssignmentLedger([], []);
+            syncEditorVisibility();
 
-            if (showModal !== false && editorModal) editorModal.show();
+            if (showModal !== false) openEditor();
         }
 
         function readHiddenRowData(hiddenRow) {
@@ -1516,7 +1575,7 @@
             if (!rowHasContent(rowData)) return;
             syncTableRow(rowKey, rowData);
             syncHiddenRow(rowKey, rowData);
-            editorModal?.hide();
+            closeEditor();
         });
 
         editorFieldset.querySelector('[data-deliverable-contact-family]')?.addEventListener('change', function () {
@@ -1547,14 +1606,30 @@
             editorFieldset.querySelectorAll('[data-deliverable-user-checkbox]').forEach(function (cb) {
                 cb.checked = true;
             });
+            updateEditorSummary();
+        });
+
+        editorFieldset.querySelectorAll('[data-deliverable-target], [data-deliverable-target-locked]').forEach(function (input) {
+            input.addEventListener('input', updateEditorSummary);
+        });
+        editorFieldset.querySelector('[data-deliverable-assignment-ledger]')?.addEventListener('change', updateEditorSummary);
+
+        editorDrawerEl.querySelectorAll('[data-form-drawer-close]').forEach(function (el) {
+            el.addEventListener('click', closeEditor);
+        });
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && isEditorOpen()) {
+                closeEditor();
+            }
         });
 
         document.addEventListener('agreement-scope:change', function () {
             syncActivityTypeOptions();
             syncStoredRowsToScope();
-            if (editorModalEl.classList.contains('show')) {
+            if (isEditorOpen()) {
                 const assignment = getSelectedAssignmentState();
                 renderAssignmentLedger(assignment.user_ids, assignment.team_ids);
+                updateEditorSummary();
             }
         });
 
@@ -1564,9 +1639,10 @@
             if (!picker) return;
             picker.addEventListener('token-picker:change', function () {
                 syncStoredRowsToScope();
-                if (editorModalEl.classList.contains('show')) {
+                if (isEditorOpen()) {
                     const assignment = getSelectedAssignmentState();
                     renderAssignmentLedger(assignment.user_ids, assignment.team_ids);
+                    updateEditorSummary();
                 }
             });
         });
