@@ -51,7 +51,7 @@
         <div class="col-lg-6">
             <div class="logging-field-assignment-card h-100">
                 <div class="mb-3">
-                    <h6 class="mb-1">Available Logging Fields</h6>
+                    <h6 class="mb-1">Available</h6>
                     <small class="text-muted">Click a field to add it.</small>
                 </div>
                 <div class="list-group" data-available-list></div>
@@ -63,8 +63,8 @@
         <div class="col-lg-6 logging-field-assignment-divider-column">
             <div class="logging-field-assignment-card h-100">
                 <div class="mb-3">
-                    <h6 class="mb-1">Selected Logging Fields</h6>
-                    <small class="text-muted">Drag to reorder. This order is used on activity entry and activity details.</small>
+                    <h6 class="mb-1">Selected</h6>
+                    <small class="text-muted">Drag to reorder.</small>
                 </div>
                 <div class="list-group" data-selected-list></div>
                 <div class="text-muted text-center small py-4 d-none" data-selected-empty-state>

@@ -198,7 +198,7 @@ class ActivityTypeController extends Controller
                 ]);
         }
 
-        $validated['active'] = $request->has('active');
+        $validated['active'] = $request->boolean('active');
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
         $validated = $this->normalizeValidatedDuration($validated);
         $validated['program_scope_mode'] = ProjectProgramScope::normalizeMode($validated['program_scope_mode'] ?? null, ActivityType::class)->value;
@@ -260,7 +260,7 @@ class ActivityTypeController extends Controller
                 ]);
         }
 
-        $validated['active'] = $request->has('active');
+        $validated['active'] = $request->boolean('active');
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
         $validated = $this->normalizeValidatedDuration($validated);
         $validated['program_scope_mode'] = ProjectProgramScope::normalizeMode($validated['program_scope_mode'] ?? null, ActivityType::class)->value;

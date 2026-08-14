@@ -12,14 +12,7 @@
     }) ?? collect();
 @endphp
 
-<div class="card mb-4">
-    <div class="card-body">
-        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
-            <div>
-                <h5 class="mb-1">Attachments</h5>
-                <p class="text-muted small mb-0">Drop files into the table or click the drop zone to browse. Remove marks files for deletion on submit.</p>
-            </div>
-        </div>
+<x-section-card title="Attachments">
 
         <div class="table-responsive mb-3">
             <table class="table table-sm align-middle">
@@ -85,8 +78,7 @@
                 <input type="hidden" name="deleted_attachment_ids[]" value="{{ $attachmentId }}">
             @endforeach
         </div>
-    </div>
-</div>
+</x-section-card>
 
 @once
     <style>

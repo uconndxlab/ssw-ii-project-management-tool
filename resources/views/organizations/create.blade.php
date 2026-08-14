@@ -3,15 +3,14 @@
 @section('title', 'Create Organization')
 
 @section('content')
-<div class="row justify-content-center">
-    <div class="col-lg-10">
-        <x-page-header context="form" entity-type="Organization" />
+<x-form-shell>
+    <x-form-errors />
 
-        <form method="POST" action="{{ route('organizations.store') }}" id="organizations-create-form">
-            @csrf
-            @include('organizations.partials.form-fields')
-        </form>
-    </div>
-</div>
+    <form method="POST" action="{{ route('organizations.store') }}" id="organizations-create-form">
+        @csrf
+        <x-page-header context="form" entity-type="Organization" />
+        @include('organizations.partials.form-fields')
+    </form>
+</x-form-shell>
 <x-save-bar form-id="organizations-create-form" save-label="Create Organization" />
 @endsection

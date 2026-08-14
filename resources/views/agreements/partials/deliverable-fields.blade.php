@@ -101,7 +101,7 @@
         <div class="{{ $classificationLocked ? 'd-none' : '' }}" data-deliverable-classification-editor>
             <div class="row g-3">
                 <div class="col-md-4">
-                    <label class="form-label">Activity Family <span class="text-danger">*</span></label>
+                    <label class="form-label required-label">Activity Family</label>
                     <select class="form-select" name="{{ $fieldPrefix }}[contact_family_id]" data-deliverable-contact-family>
                         <option value="">Select activity family...</option>
                         @foreach($contactFamilies as $family)
@@ -187,38 +187,32 @@
         <div class="{{ $semanticLocked ? 'd-none' : '' }}" data-deliverable-requirement-editor>
             <div class="row g-3 mb-3">
                 <div class="col-md-6">
-                    <label class="form-label fw-semibold d-block mb-1">Metric <span class="text-danger">*</span></label>
-                    <p class="text-muted small mb-2">Choose whether this deliverable tracks logged time or activity completions.</p>
+                    <label class="form-label required-label">Metric</label>
                     <div class="d-grid gap-2">
                         @foreach($metricOptions as $value => $label)
-                            <label class="form-check border rounded px-3 py-2 mb-0 {{ ($row['metric_type'] ?? '') === $value ? 'border-primary bg-light' : '' }}">
-                                <input class="form-check-input me-2"
-                                       type="radio"
-                                       name="{{ $fieldPrefix }}[metric_type]"
-                                       value="{{ $value }}"
-                                       data-deliverable-metric
-                                       {{ ($row['metric_type'] ?? '') === $value ? 'checked' : '' }}>
-                                <span class="form-check-label fw-semibold">{{ $label }}</span>
-                            </label>
+                            <x-form-radio-card
+                                name="{{ $fieldPrefix }}[metric_type]"
+                                :value="$value"
+                                :label="$label"
+                                :checked="($row['metric_type'] ?? '') === $value"
+                                data-deliverable-metric
+                            />
                         @endforeach
                     </div>
                 </div>
 
                 <div class="col-md-6" data-time-basis-wrapper>
-                    <label class="form-label fw-semibold d-block mb-1">Time Measurement</label>
-                    <p class="text-muted small mb-2">Choose observed logged hours or allotted duration from logged activity.</p>
+                    <label class="form-label">Time Measurement</label>
                     <div class="d-grid gap-2">
                         @foreach($timeBasisOptions as $value => $option)
-                            <label class="form-check border rounded px-3 py-2 mb-0">
-                                <input class="form-check-input me-2"
-                                       type="radio"
-                                       name="{{ $fieldPrefix }}[time_basis]"
-                                       value="{{ $value }}"
-                                       data-deliverable-time-basis
-                                       {{ $currentTimeBasis === $value ? 'checked' : '' }}>
-                                <span class="form-check-label fw-semibold">{{ $option['label'] }}</span>
-                                <span class="text-muted small d-block">{{ $option['description'] }}</span>
-                            </label>
+                            <x-form-radio-card
+                                name="{{ $fieldPrefix }}[time_basis]"
+                                :value="$value"
+                                :label="$option['label']"
+                                :description="$option['description']"
+                                :checked="$currentTimeBasis === $value"
+                                data-deliverable-time-basis
+                            />
                         @endforeach
                     </div>
                     <div class="d-flex align-items-start gap-2 text-muted small mt-2 {{ $showAllottedWarning ? '' : 'd-none' }}" data-deliverable-allotted-warning>
@@ -230,11 +224,11 @@
 
             <div class="row g-3 mb-4 {{ in_array($row['metric_type'] ?? '', ['time', 'completion'], true) ? '' : 'd-none' }}" data-metric-details-wrapper>
                 <div class="col-md-4">
-                    <label class="form-label fw-semibold d-block mb-1" data-deliverable-target-label>
+                    <label class="form-label required-label" data-deliverable-target-label>
                         @if(($row['metric_type'] ?? '') === 'completion')
-                            Target Completions <span class="text-danger">*</span>
+                            Target Completions
                         @else
-                            {{ $targetUnitLabel }} <span class="text-danger">*</span>
+                            {{ $targetUnitLabel }}
                         @endif
                     </label>
                     <input type="number"
@@ -272,7 +266,7 @@
                 </div>
 
                 <div class="col-md-8 {{ $showAdditionalTime ? '' : 'd-none' }}" data-additional-time-wrapper>
-                    <label class="form-label fw-semibold d-block mb-1">Prep and Follow Up Time</label>
+                    <label class="form-label">Prep and Follow Up Time</label>
                     <p class="text-muted small mb-2" data-additional-time-message>
                         @if(!empty($row['contact_family_id']))
                             The {{ $contactFamilyLabel }} activity family requires prep and follow up time to be reported in activity logging. Should this time contribute to deliverable progress?
@@ -293,39 +287,33 @@
 
             <div class="row g-4">
                 <div class="col-lg-6">
-                    <label class="form-label fw-semibold d-block mb-1">Contribution Basis <span class="text-danger">*</span></label>
-                    <p class="text-muted small mb-2">Choose whether activity counts at the contact level or is attributed to specific users.</p>
+                    <label class="form-label required-label">Contribution Basis</label>
                     <div class="d-grid gap-2">
                         @foreach($basisOptions as $value => $option)
-                            <label class="form-check border rounded px-3 py-2 mb-0 {{ ($row['contribution_basis'] ?? '') === $value ? 'border-primary bg-light' : '' }}">
-                                <input class="form-check-input me-2"
-                                       type="radio"
-                                       name="{{ $fieldPrefix }}[contribution_basis]"
-                                       value="{{ $value }}"
-                                       data-deliverable-basis
-                                       {{ ($row['contribution_basis'] ?? '') === $value ? 'checked' : '' }}>
-                                <span class="form-check-label fw-semibold">{{ $option['label'] }}</span>
-                                <span class="text-muted small d-block">{{ $option['description'] }}</span>
-                            </label>
+                            <x-form-radio-card
+                                name="{{ $fieldPrefix }}[contribution_basis]"
+                                :value="$value"
+                                :label="$option['label']"
+                                :description="$option['description']"
+                                :checked="($row['contribution_basis'] ?? '') === $value"
+                                data-deliverable-basis
+                            />
                         @endforeach
                     </div>
                 </div>
 
                 <div class="col-lg-6 {{ ($row['contribution_basis'] ?? '') === 'user' ? '' : 'd-none' }}" data-grouping-wrapper>
-                    <label class="form-label fw-semibold d-block mb-1">Grouping <span class="text-danger">*</span></label>
-                    <p class="text-muted small mb-2">Choose how user-based targets are applied across assignees.</p>
+                    <label class="form-label required-label">Grouping</label>
                     <div class="d-grid gap-2">
                         @foreach($groupingOptions as $value => $option)
-                            <label class="form-check border rounded px-3 py-2 mb-0 {{ ($row['user_grouping_mode'] ?? '') === $value ? 'border-primary bg-light' : '' }}">
-                                <input class="form-check-input me-2"
-                                       type="radio"
-                                       name="{{ $fieldPrefix }}[user_grouping_mode]"
-                                       value="{{ $value }}"
-                                       data-deliverable-grouping
-                                       {{ ($row['user_grouping_mode'] ?? '') === $value ? 'checked' : '' }}>
-                                <span class="form-check-label fw-semibold">{{ $option['label'] }}</span>
-                                <span class="text-muted small d-block">{{ $option['description'] }}</span>
-                            </label>
+                            <x-form-radio-card
+                                name="{{ $fieldPrefix }}[user_grouping_mode]"
+                                :value="$value"
+                                :label="$option['label']"
+                                :description="$option['description']"
+                                :checked="($row['user_grouping_mode'] ?? '') === $value"
+                                data-deliverable-grouping
+                            />
                         @endforeach
                     </div>
                 </div>
@@ -351,13 +339,12 @@
             </dl>
             <div class="row g-3">
                 <div class="col-lg-4">
-                    <label class="form-label fw-semibold d-block mb-1" data-deliverable-target-label-locked>
+                    <label class="form-label required-label" data-deliverable-target-label-locked>
                         @if(($row['metric_type'] ?? '') === 'completion')
                             Target Completions
                         @else
                             {{ $targetUnitLabel }}
                         @endif
-                        <span class="text-danger">*</span>
                     </label>
                     <input type="number"
                            class="form-control"

@@ -18,10 +18,6 @@
     'active' => null,
     'inactiveLabel' => 'Inactive',
     'mode' => 'create',
-    'showActive' => false,
-    'activeDefault' => true,
-    'activeHelp' => null,
-    'activeInputId' => 'active',
     'actionUrl' => null,
     'actionKind' => null,
     'actionLabel' => null,
@@ -43,7 +39,6 @@
     }
 
     $resolvedTitle = $title;
-    $isEditForm = $isFormContext && $mode === 'edit' && filled($resolvedTitle);
 
     if ($isFormContext && blank($resolvedTitle)) {
         $resolvedTitle = $mode === 'edit'
@@ -143,10 +138,9 @@
     $inlineDescription = filled($description) && in_array($context, ['form', 'show'], true);
     $showFormMeta = $isFormContext && filled($entityType);
     $showStandardMeta = $showFormMeta || filled($entityType) || !is_null($active) || $inlineDescription;
-    $formMetaDescription = $isEditForm ? 'Editing ' . $entityType : null;
     $hasMeta = $hasExplicitMeta || $hasBadgeAugment || $showStandardMeta;
     $hasDefaultAction = filled($actionUrl) && filled($resolvedActionLabel) && filled($resolvedActionClass);
-    $hasControls = $hasExplicitControls || $showActive || $hasDefaultAction;
+    $hasControls = $hasExplicitControls || $hasDefaultAction;
 @endphp
 
 <div {{ $attributes->merge(['class' => $resolvedContainerClass]) }}>
@@ -172,14 +166,6 @@
                                 <x-entity-type-badge :label="$entityType" :badge-class="$resolvedEntityTypeBadgeClass" />
                             @endif
                         @endif
-                        @if($isEditForm)
-                            <span class="badge bg-secondary rounded-pill text-uppercase" style="font-size:.7rem;letter-spacing:.05em;">
-                                Editing
-                            </span>
-                        @endif
-                        @if(filled($formMetaDescription))
-                            <span>{{ $formMetaDescription }}</span>
-                        @endif
                         @if(! is_null($active))
                             <x-status-badge :active="$active" :inactive-label="$inactiveLabel" />
                         @endif
@@ -201,28 +187,6 @@
             <div class="{{ $resolvedControlsClass }}">
                 @if($hasExplicitControls)
                     {{ $controls }}
-                @elseif($showActive)
-                    <div class="card shadow-sm" style="min-width: 14rem; max-width: 18rem;">
-                        <div class="card-body py-2 px-3">
-                            <input type="hidden" name="active" value="0">
-                            <div class="form-check form-switch m-0 ps-0 d-flex align-items-center gap-2">
-                                <input type="checkbox"
-                                       class="form-check-input ms-0 @error('active') is-invalid @enderror"
-                                       role="switch"
-                                       id="{{ $activeInputId }}"
-                                       name="active"
-                                       value="1"
-                                       {{ filter_var($activeDefault, FILTER_VALIDATE_BOOLEAN) ? 'checked' : '' }}>
-                                <label class="form-check-label" for="{{ $activeInputId }}">Active</label>
-                            </div>
-                            @if($activeHelp)
-                                <div class="form-text mt-1 mb-0">{{ $activeHelp }}</div>
-                            @endif
-                            @error('active')
-                                <div class="text-danger small mt-1">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
                 @elseif($hasDefaultAction)
                     <a href="{{ $actionUrl }}" class="{{ $resolvedActionClass }}">
                         @if(filled($resolvedActionIconClass))

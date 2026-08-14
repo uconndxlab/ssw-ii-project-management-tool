@@ -219,16 +219,9 @@
     ];
 @endphp
 
-<div class="card mb-4">
-    <div class="card-body">
-        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
-            <div>
-                <h5 class="mb-1">Deliverables</h5>
-                <p class="text-muted small mb-0">Use the table to manage rows. Each deliverable carries classification, counting rules, and assignments.</p>
-            </div>
-        </div>
+<x-section-card title="Deliverables" class="overflow-hidden">
 
-        <div class="table-responsive mb-3">
+        <div class="table-responsive mb-3 mw-100">
             <table class="table table-sm align-middle">
                 <thead>
                     <tr>
@@ -292,31 +285,30 @@
                 </div>
             @endforeach
         </div>
+</x-section-card>
 
-        <div class="modal fade" id="deliverable-editor-modal" tabindex="-1" aria-labelledby="deliverable-editor-modal-label" aria-hidden="true">
-            <div class="modal-dialog modal-xl modal-dialog-scrollable">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <div>
-                            <h5 class="modal-title mb-0" id="deliverable-editor-modal-label">Create Deliverable</h5>
-                            <div class="text-muted small" id="deliverable-editor-modal-description">Create a new deliverable or edit the selected row, then save it into the table.</div>
-                        </div>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <input type="hidden" id="deliverable-editor-key" value="">
-                        <div data-deliverable-editor-fields>
-                            @include('agreements.partials.deliverable-fields', [
-                                'row' => $editorDefaults,
-                                'fieldPrefix' => 'deliverable_editor',
-                            ])
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" id="deliverable-clear-button">Clear</button>
-                        <button type="button" class="btn btn-primary" id="deliverable-save-button">Save Deliverable</button>
-                    </div>
+<div class="modal fade" id="deliverable-editor-modal" tabindex="-1" aria-labelledby="deliverable-editor-modal-label" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title mb-0" id="deliverable-editor-modal-label">Create Deliverable</h5>
+                    <div class="text-muted small" id="deliverable-editor-modal-description">Create a new deliverable or edit the selected row, then save it into the table.</div>
                 </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="deliverable-editor-key" value="">
+                <div data-deliverable-editor-fields>
+                    @include('agreements.partials.deliverable-fields', [
+                        'row' => $editorDefaults,
+                        'fieldPrefix' => 'deliverable_editor',
+                    ])
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" id="deliverable-clear-button">Clear</button>
+                <button type="button" class="btn btn-primary" id="deliverable-save-button">Save Deliverable</button>
             </div>
         </div>
     </div>
@@ -952,7 +944,8 @@
             }
 
             editorFieldset.querySelectorAll('[data-deliverable-target-label], [data-deliverable-target-label-locked]').forEach(function (el) {
-                el.innerHTML = labelText + ' <span class="text-danger">*</span>';
+                el.classList.add('required-label');
+                el.textContent = labelText;
             });
         }
 
@@ -1373,8 +1366,8 @@
                 '<div class="text-muted small">' + escapeHtml(rowData.activity_type_label || 'Any activity type') + '</div>' +
                 (rowData.program_label ? '<div class="text-muted small">Program: ' + escapeHtml(rowData.program_label) + '</div>' : '') + '</td>' +
                 '<td><div class="small">' + escapeHtml(rowData.rules_summary || '—') + '</div></td>' +
-                '<td class="text-wrap align-top" style="min-width:180px;max-width:280px;white-space:normal;">' + assignmentBadges + '</td>' +
-                '<td class="text-wrap" style="min-width:200px;max-width:100%;white-space:normal;">' + (rowData.notes ? escapeHtml(rowData.notes) : '—') + '</td>' +
+                '<td class="text-wrap align-top">' + assignmentBadges + '</td>' +
+                '<td class="text-wrap">' + (rowData.notes ? escapeHtml(rowData.notes) : '—') + '</td>' +
                 '<td class="text-end text-nowrap"><div class="btn-group btn-group-sm" role="group">' +
                 '<button type="button" class="btn btn-outline-secondary" data-deliverable-edit data-bs-toggle="tooltip" data-bs-title="Edit deliverable"><i class="bi bi-pencil-square"></i></button>' +
                 '<button type="button" class="btn btn-outline-secondary" data-deliverable-duplicate data-bs-toggle="tooltip" data-bs-title="Duplicate deliverable"><i class="bi bi-files"></i></button>' +

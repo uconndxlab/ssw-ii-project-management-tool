@@ -15,7 +15,7 @@
     <td>
         <div class="small">{{ $row['rules_summary'] ?: '—' }}</div>
     </td>
-    <td class="text-wrap align-top" style="min-width: 180px; max-width: 280px; white-space: normal;">
+    <td class="text-wrap align-top">
         @if($hasAssignments)
             @foreach($assignmentGroups as $group)
                 <div class="mb-2 w-100">
@@ -43,7 +43,7 @@
             <span class="text-muted small">—</span>
         @endif
     </td>
-    <td class="text-wrap" style="min-width: 200px; max-width: 100%; white-space: normal;">{{ $row['notes'] ?: '—' }}</td>
+    <td class="text-wrap">{{ $row['notes'] ?: '—' }}</td>
     <td class="text-end text-nowrap">
         <div class="btn-group btn-group-sm" role="group" aria-label="Deliverable actions">
             <button type="button" class="btn btn-outline-secondary" data-deliverable-edit data-bs-toggle="tooltip" data-bs-title="Edit deliverable" aria-label="Edit deliverable">

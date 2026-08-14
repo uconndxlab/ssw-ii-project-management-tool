@@ -28,9 +28,8 @@
     $durationUnit ??= 'none';
 @endphp
 
-<x-section-card title="Activity Type Details" subtitle="Define the activity type, scope, and reporting duration." class="mb-4">
-    <div class="mb-3">
-        <label for="contact_family_id" class="form-label">Activity Family <span class="text-danger">*</span></label>
+<x-section-card title="Information">
+    <x-form-field label="Activity Family" for="contact_family_id" name="contact_family_id" :required="true">
         <select class="form-select @error('contact_family_id') is-invalid @enderror"
                 id="contact_family_id"
                 name="contact_family_id"
@@ -42,54 +41,25 @@
                 </option>
             @endforeach
         </select>
-        @error('contact_family_id')
-            <div class="invalid-feedback">{{ $message }}</div>
-        @enderror
-    </div>
+    </x-form-field>
 
-    <div class="mb-3">
-        <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
+    <x-form-field label="Name" for="name" name="name" :required="true">
         <input type="text"
                class="form-control @error('name') is-invalid @enderror"
                id="name"
                name="name"
                value="{{ old('name', $activityType->name ?? '') }}"
                required>
-        @error('name')
-            <div class="invalid-feedback">{{ $message }}</div>
-        @enderror
-    </div>
+    </x-form-field>
 
-    <div class="mb-3">
-        <label for="helper_text" class="form-label">Activity Form Helper Text</label>
+    <x-form-field label="Helper Text" for="helper_text" name="helper_text" help="Shown under this type on the activity form.">
         <textarea class="form-control @error('helper_text') is-invalid @enderror"
                   id="helper_text"
                   name="helper_text"
                   rows="3">{{ old('helper_text', $activityType->helper_text ?? '') }}</textarea>
-        @error('helper_text')
-            <div class="invalid-feedback">{{ $message }}</div>
-        @enderror
-        <div class="form-text">Optional text shown beneath this activity type when selected in activity logging.</div>
-    </div>
+    </x-form-field>
 
-    <div class="mb-3">
-        <x-project-program-scope-picker
-            :scope-id="$scopeId"
-            :projects="$projects"
-            :selected-project-ids="$selectedProjectIds"
-            :selected-program-ids="$selectedProgramIds"
-            :show-scope-mode-selector="true"
-            :selected-scope-mode="old('program_scope_mode', $activityType->program_scope_mode?->value ?? 'all')"
-            project-empty-selection-label="All projects"
-            program-empty-selection-label="All programs"
-            project-help-text="Optional filter for finding programs; projects are inferred and not saved."
-            program-help-text="Programs are the saved scope when Specific is selected."
-            scope-mode-help-text="Choose whether this activity type applies to all programs, only specific programs, or no programs."
-        />
-    </div>
-
-    <div class="mb-3">
-        <label for="duration_value" class="form-label">Duration</label>
+    <x-form-field label="Duration" for="duration_value" name="duration_value" help="Optional reporting duration. Days or hours, not both.">
         <div class="input-group" style="max-width: 20rem;">
             <input type="number"
                    class="form-control @error('duration_value') is-invalid @enderror"
@@ -113,17 +83,34 @@
         @error('duration_unit')
             <div class="text-danger small mt-1">{{ $message }}</div>
         @enderror
-        @error('duration_value')
-            <div class="text-danger small mt-1">{{ $message }}</div>
-        @enderror
-        <div class="form-text">Optional duration for reporting. Specify either days or hours, not both.</div>
-    </div>
+    </x-form-field>
+
+    <x-project-program-scope-picker
+        :scope-id="$scopeId"
+        :projects="$projects"
+        :selected-project-ids="$selectedProjectIds"
+        :selected-program-ids="$selectedProgramIds"
+        :show-scope-mode-selector="true"
+        :selected-scope-mode="old('program_scope_mode', $activityType->program_scope_mode?->value ?? 'all')"
+        project-empty-selection-label="All projects"
+        program-empty-selection-label="All programs"
+    />
+
+    <x-form-options class="mt-4">
+        <x-form-switch
+            name="active"
+            label="Active"
+            help="Only active activity types appear in activity forms."
+            :checked="old('active', $isEditMode ? $activityType->active : true)"
+            class="mb-0"
+        />
+    </x-form-options>
 </x-section-card>
 
-<x-section-card title="Activity Logging Fields" subtitle="These fields appear in the activity log when this activity type is selected." class="mb-4">
-    <div class="d-flex justify-content-end mb-3">
+<x-section-card title="Logging Fields">
+    <x-slot:actions>
         <a href="{{ route('logging-fields.index') }}" class="btn btn-sm btn-outline-secondary">Manage Logging Fields</a>
-    </div>
+    </x-slot:actions>
 
     @if($activityTypeLoggingFields->isEmpty())
         <div class="alert alert-light border mb-0">No activity logging fields have been defined yet.</div>

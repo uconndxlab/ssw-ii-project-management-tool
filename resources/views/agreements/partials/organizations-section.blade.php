@@ -47,35 +47,28 @@
     $organizationEntityBadgeClass = \App\Support\EntityBadge::relationClasses('organization');
 @endphp
 
-<div class="mb-4">
+<div data-agreement-organizations-wrap>
     <div class="row g-4 align-items-start mb-4">
         <div class="col-lg-6">
-            <label class="form-label">Organizations</label>
+            <x-form-field label="Organizations" name="organization_ids" :required="true" help="Must match a selected program and state.">
+                <x-token-picker
+                    picker-id="agreement-organizations"
+                    name="organization_ids[]"
+                    :options="$organizationOptions"
+                    :selected-ids="$selectedOrganizationIds"
+                    label-key="label"
+                    value-key="value"
+                    search-key="search"
+                    placeholder="Search organizations..."
+                    disabled-placeholder="Select at least one program and state first..."
+                    :disabled="empty($selectedProgramIds) || empty($selectedStateIds)"
+                    :open-on-focus="false"
+                    :show-selected="true"
+                    :height="'220px'"
+                    entity="organization"
+                />
+            </x-form-field>
 
-            <x-token-picker
-                picker-id="agreement-organizations"
-                name="organization_ids[]"
-                :options="$organizationOptions"
-                :selected-ids="$selectedOrganizationIds"
-                label-key="label"
-                value-key="value"
-                search-key="search"
-                placeholder="Search organizations..."
-                disabled-placeholder="Select at least one program and state first..."
-                :disabled="empty($selectedProgramIds) || empty($selectedStateIds)"
-                :open-on-focus="false"
-                :show-selected="true"
-                :height="'300px'"
-                entity="organization"
-            />
-
-            <small class="text-muted d-block mt-2">
-                Available organizations must be linked to at least one selected program and one selected state. Attach KFS accounts above, then classify each organization in the ledger below.
-            </small>
-
-            @error('organization_ids')
-                <div class="text-danger small mt-2">{{ $message }}</div>
-            @enderror
             @error('organization_payor_source_ids')
                 <div class="text-danger small mt-1">{{ $message }}</div>
             @enderror

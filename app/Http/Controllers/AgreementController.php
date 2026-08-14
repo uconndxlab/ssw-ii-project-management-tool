@@ -179,11 +179,12 @@ class AgreementController extends Controller
     public function store(AgreementRequest $request)
     {
         $validated = $request->validated();
+        $validated['active'] = $request->boolean('active', true);
 
         $agreement = DB::transaction(function () use ($validated) {
             $agreement = Agreement::create([
                 'name' => $validated['name'],
-                'active' => true,
+                'active' => $validated['active'],
                 'program_scope_mode' => $validated['program_scope_mode'],
                 'abstract' => $validated['abstract'] ?? null,
                 'start_date' => $validated['start_date'],
@@ -303,11 +304,12 @@ class AgreementController extends Controller
     public function update(AgreementRequest $request, Agreement $agreement)
     {
         $validated = $request->validated();
+        $validated['active'] = $request->boolean('active');
 
         DB::transaction(function () use ($agreement, $validated) {
             $agreement->update([
                 'name' => $validated['name'],
-                'active' => array_key_exists('active', $validated) ? (bool) $validated['active'] : $agreement->active,
+                'active' => $validated['active'],
                 'program_scope_mode' => $validated['program_scope_mode'],
                 'abstract' => $validated['abstract'] ?? null,
                 'start_date' => $validated['start_date'],

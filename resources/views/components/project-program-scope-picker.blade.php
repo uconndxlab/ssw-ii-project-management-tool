@@ -14,10 +14,10 @@
     'projectDisabled' => false,
     'projectDisabledPlaceholder' => 'Select the required upstream filters first...',
     'disabledPlaceholder' => 'Select at least one project first...',
-    'projectHelpText' => null,
-    'programHelpText' => null,
-    'projectHeight' => '260px',
-    'programHeight' => '260px',
+    'projectHelpText' => 'Filters the program list. Not saved.',
+    'programHelpText' => 'Saved when Specific is selected.',
+    'projectHeight' => '220px',
+    'programHeight' => '220px',
     'projectEmptySelectionLabel' => null,
     'programEmptySelectionLabel' => null,
     'expandEmptyPrograms' => true,
@@ -28,7 +28,7 @@
     'scopeModeFieldName' => 'program_scope_mode',
     'scopeModeErrorKey' => 'program_scope_mode',
     'scopeModeLabel' => 'Program Scope',
-    'scopeModeHelpText' => null,
+    'scopeModeHelpText' => 'All programs, only selected programs, or none.',
 ])
 
 @php
@@ -88,7 +88,7 @@
         data-project-disabled-placeholder="{{ $projectDisabledPlaceholder }}">
     @if($showScopeModeSelector)
         <div class="mb-3">
-            <label class="form-label fw-semibold">{{ $scopeModeLabel }}</label>
+            <label class="form-label">{{ $scopeModeLabel }}</label>
             <div class="d-flex flex-wrap gap-3">
                 @foreach ($scopeModeOptions as $value => $label)
                     <div class="form-check">
@@ -113,7 +113,7 @@
 
     <div class="row g-3" data-scope-picker-fields>
         <div class="col-md-6">
-            <label class="form-label fw-semibold">{{ $projectLabelText }}@if($projectLabelIsRequired) <span class="text-danger">*</span>@endif</label>
+            <label class="form-label{{ $projectLabelIsRequired ? ' required-label' : '' }}">{{ $projectLabelText }}</label>
             <x-token-picker
                 :picker-id="$scopePicker['projectPickerId']"
                 :name="$projectFieldName"
@@ -135,7 +135,7 @@
         </div>
 
         <div class="col-md-6">
-            <label class="form-label fw-semibold">{{ $programLabelText }}@if($programLabelIsRequired) <span class="text-danger">*</span>@endif</label>
+            <label class="form-label{{ $programLabelIsRequired ? ' required-label' : '' }}">{{ $programLabelText }}</label>
             <x-token-picker
                 :picker-id="$scopePicker['programPickerId']"
                 :name="$programFieldName"

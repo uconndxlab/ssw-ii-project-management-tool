@@ -206,6 +206,16 @@
         ->flatMap(fn ($family) => $family->activityTypes)
         ->filter(fn ($type) => $type->activityTypeLoggingFields->isNotEmpty())
         ->values();
+    $contactFamiliesWithLoggingFields = $contactFamilies
+        ->filter(fn ($family) => $family->contactFamilyLoggingFields->isNotEmpty())
+        ->values();
+    $selectedAgreementIdSet = collect($selectedAgreementIds)->map(fn ($id) => (string) $id);
+    $showLoggingFieldsSection = $contactFamiliesWithLoggingFields
+            ->contains(fn ($family) => (string) $family->id === (string) $currentContactFamilyId)
+        || $activityTypesWithLoggingFields
+            ->contains(fn ($type) => (string) $type->id === (string) $selectedActivityTypeId)
+        || $agreementsWithPerAgreementFields
+            ->contains(fn ($agreement) => $selectedAgreementIdSet->contains((string) $agreement->id));
     $availableProjects = $agreements
         ->flatMap(fn ($agreement) => $agreement->projects)
         ->unique('id')
@@ -341,45 +351,8 @@
     $recordName = $isEditMode ? $selectedActivityTypeLabel . ' · ' . $recordDateLabel : null;
 @endphp
 
-<style>
-    .activity-logging-subsection {
-        border-left: 4px solid var(--bs-border-color);
-        padding-left: 1rem;
-    }
-
-    .activity-logging-subsection + .activity-logging-subsection {
-        margin-top: 1.25rem;
-        padding-top: 1.25rem;
-    }
-
-    .activity-logging-subsection-title {
-        font-size: 1.05rem;
-        font-weight: 600;
-        line-height: 1.3;
-    }
-
-    .activity-logging-subsection-meta {
-        font-size: 0.875rem;
-    }
-
-    .time-tracking-subsection {
-        border-left: 4px solid var(--bs-border-color);
-        padding-left: 1rem;
-    }
-
-    .time-tracking-subsection + .time-tracking-subsection {
-        margin-top: 1.25rem;
-        padding-top: 1.25rem;
-    }
-</style>
-
-<div class="row justify-content-center">
-    <div class="col-lg-10">
-        @if ($errors->any())
-            <div class="alert alert-danger py-2">
-                <strong>Please fix the highlighted fields.</strong>
-            </div>
-        @endif
+<x-form-shell>
+        <x-form-errors />
 
         <form method="POST" action="{{ $formAction }}" id="{{ $formId }}" enctype="multipart/form-data">
             @csrf
@@ -394,10 +367,8 @@
                 mode="{{ $isEditMode ? 'edit' : 'create' }}"
             />
 
-            <div class="d-grid gap-4">
-                    <x-section-card title="Agreements & Coverage">
-                        <div class="mb-4">
-                            <label class="form-label fw-semibold">Agreements <span class="text-danger">*</span></label>
+                    <x-section-card title="Coverage">
+                        <x-form-field label="Agreements" name="agreement_ids" :required="true" help="Remaining coverage options are limited to these agreements.">
                             <x-token-picker
                                 picker-id="activity-agreements-picker"
                                 name="agreement_ids[]"
@@ -408,48 +379,38 @@
                                 :open-on-focus="false"
                                 entity="agreement"
                             />
-                            <div class="form-text">Start by selecting the agreements that apply to this activity. The remaining coverage options are limited to those agreements.</div>
-                            @error('agreement_ids')
-                                <div class="text-danger small mt-1">{{ $message }}</div>
-                            @enderror
-                        </div>
+                        </x-form-field>
 
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold">States <span class="text-danger">*</span></label>
-                                <x-token-picker
-                                    picker-id="activity-states-picker"
-                                    name="state_ids[]"
-                                    :items="$states"
-                                    :selected-ids="$selectedStateIds"
-                                    placeholder="Search states..."
-                                    disabled-placeholder="Select at least one agreement first..."
-                                    :disabled="empty($selectedAgreementIds)"
-                                    :open-on-focus="false"
-                                    entity="state"
-                                />
-                                <div class="form-text">States are limited to the selected agreements and can further narrow organizations.</div>
-                                @error('state_ids')
-                                    <div class="text-danger small mt-1">{{ $message }}</div>
-                                @enderror
+                                <x-form-field label="States" name="state_ids" :required="true" help="Limited to the selected agreements." class="mb-0">
+                                    <x-token-picker
+                                        picker-id="activity-states-picker"
+                                        name="state_ids[]"
+                                        :items="$states"
+                                        :selected-ids="$selectedStateIds"
+                                        placeholder="Search states..."
+                                        disabled-placeholder="Select at least one agreement first..."
+                                        :disabled="empty($selectedAgreementIds)"
+                                        :open-on-focus="false"
+                                        entity="state"
+                                    />
+                                </x-form-field>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold">Organizations <span class="text-danger">*</span></label>
-                                <x-token-picker
-                                    picker-id="activity-organizations-picker"
-                                    name="organization_ids[]"
-                                    :items="$organizations"
-                                    :selected-ids="$selectedOrganizationIds"
-                                    placeholder="Search organizations..."
-                                    disabled-placeholder="Select at least one agreement first..."
-                                    :disabled="empty($selectedAgreementIds)"
-                                    :open-on-focus="false"
-                                    entity="organization"
-                                />
-                                <div class="form-text">Organizations are limited to the selected agreements and optionally narrowed by states.</div>
-                                @error('organization_ids')
-                                    <div class="text-danger small mt-1">{{ $message }}</div>
-                                @enderror
+                                <x-form-field label="Organizations" name="organization_ids" :required="true" help="Limited to the selected agreements, and optionally by states." class="mb-0">
+                                    <x-token-picker
+                                        picker-id="activity-organizations-picker"
+                                        name="organization_ids[]"
+                                        :items="$organizations"
+                                        :selected-ids="$selectedOrganizationIds"
+                                        placeholder="Search organizations..."
+                                        disabled-placeholder="Select at least one agreement first..."
+                                        :disabled="empty($selectedAgreementIds)"
+                                        :open-on-focus="false"
+                                        entity="organization"
+                                    />
+                                </x-form-field>
                             </div>
                         </div>
 
@@ -463,66 +424,65 @@
                                 program-label="Programs *"
                                 :project-disabled="empty($selectedAgreementIds)"
                                 project-disabled-placeholder="Select at least one agreement first..."
-                                project-help-text="Projects are limited to the selected agreements. Projects guide the available programs and are not saved on the activity."
-                                program-help-text="Programs are limited to the selected agreements and selected projects."
+                                project-help-text="Limited to the selected agreements."
+                                program-help-text="Limited to the selected agreements and projects."
                                 :expand-empty-programs="false"
                             />
                         </div>
-
-                        <div class="row g-3 mt-1">
-                            <div class="col-md-4">
-                                <label for="engagement_date" class="form-label fw-semibold">Date <span class="text-danger">*</span></label>
-                                <input type="date"
-                                       class="form-control @error('engagement_date') is-invalid @enderror"
-                                       id="engagement_date"
-                                       name="engagement_date"
-                                       value="{{ $engagementDateValue }}"
-                                       required>
-                                @error('engagement_date')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <div class="col-md-4">
-                                <input type="hidden" name="internal_only" value="0">
-                                <div class="border rounded h-100 p-3">
-                                    <div class="form-check form-switch mb-0">
-                                        <input class="form-check-input"
-                                               type="checkbox"
-                                               id="internal_only"
-                                               name="internal_only"
-                                               value="1"
-                                               {{ $internalOnlyChecked ? 'checked' : '' }}>
-                                        <label class="form-check-label fw-semibold" for="internal_only">Internal only</label>
-                                    </div>
-                                    <div class="form-text mb-0">Exclude this activity from external reports.</div>
-                                </div>
-                            </div>
-
-                            <div class="col-md-4">
-                                <input type="hidden" name="cancelled" value="0">
-                                <div class="border rounded h-100 p-3">
-                                    <div class="form-check form-switch mb-0">
-                                        <input class="form-check-input @error('cancelled') is-invalid @enderror"
-                                               type="checkbox"
-                                               id="cancelled"
-                                               name="cancelled"
-                                               value="1"
-                                               {{ $cancelledChecked ? 'checked' : '' }}>
-                                        <label class="form-check-label fw-semibold" for="cancelled">Cancelled</label>
-                                    </div>
-                                    <div class="form-text mb-0">Keep the activity visible in history, but exclude it from deliverable progress.</div>
-                                    @error('cancelled')
-                                        <div class="text-danger small mt-1">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                        </div>
                     </x-section-card>
 
-                    <x-section-card title="Participants">
-                        <div class="mb-0">
-                            <label class="form-label fw-semibold">Delivered By</label>
+                    <x-section-card title="Details">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <x-form-field label="Date" for="engagement_date" name="engagement_date" :required="true" class="mb-0">
+                                    <input type="date"
+                                           class="form-control @error('engagement_date') is-invalid @enderror"
+                                           id="engagement_date"
+                                           name="engagement_date"
+                                           value="{{ $engagementDateValue }}"
+                                           required>
+                                </x-form-field>
+                            </div>
+                            <div class="col-md-4">
+                                <x-form-field label="Family" for="contact_family_id" name="contact_family_id" :required="true" class="mb-0">
+                                    <select class="form-select @error('contact_family_id') is-invalid @enderror"
+                                            id="contact_family_id"
+                                            name="contact_family_id"
+                                            hx-get="{{ route('activity-types.by-family') }}"
+                                            hx-target="#activity_type_id"
+                                            hx-swap="innerHTML"
+                                            hx-include="#{{ $formId }}, #activity_type_selected"
+                                            hx-trigger="change, load"
+                                            {{ empty($selectedAgreementIds) ? 'disabled' : '' }}
+                                            required>
+                                        <option value="">{{ empty($selectedAgreementIds) ? 'Select at least one agreement first...' : 'Select family...' }}</option>
+                                        @foreach($contactFamilies as $family)
+                                            <option value="{{ $family->id }}"
+                                                    data-helper-text="{{ e($family->helper_text ?? '') }}"
+                                                    {{ (string) $currentContactFamilyId === (string) $family->id ? 'selected' : '' }}>
+                                                {{ $family->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <input type="hidden" id="activity_type_selected" value="{{ $selectedActivityTypeId }}">
+                                    <div class="form-text d-none" id="contact_family_helper_text"></div>
+                                </x-form-field>
+                            </div>
+                            <div class="col-md-4">
+                                <x-form-field label="Type" for="activity_type_id" name="activity_type_id" :required="true" class="mb-0">
+                                    <select class="form-select @error('activity_type_id') is-invalid @enderror"
+                                            id="activity_type_id"
+                                            name="activity_type_id"
+                                            {{ $currentContactFamilyId ? '' : 'disabled' }}
+                                            required>
+                                        <option value="">{{ empty($selectedAgreementIds) ? 'Select at least one agreement first...' : 'Select family first...' }}</option>
+                                    </select>
+                                    <div class="form-text d-none" id="activity_type_helper_text"></div>
+                                </x-form-field>
+                            </div>
+                        </div>
+
+                        <x-form-field label="Delivered By" name="participant_user_ids" class="mt-4" help="Users on the selected programs who helped deliver this activity.">
                             <x-token-picker
                                 picker-id="activity-participants-picker"
                                 name="participant_user_ids[]"
@@ -537,142 +497,187 @@
                                 :open-on-focus="false"
                                 entity="user"
                             />
-                            <div class="form-text">Choose the users assigned to the selected programs who helped deliver this activity.</div>
-                            @error('participant_user_ids')
-                                <div class="text-danger small mt-1">{{ $message }}</div>
-                            @enderror
+                        </x-form-field>
+
+                        <x-form-options class="mt-4">
+                            <x-form-switch
+                                name="internal_only"
+                                label="Internal only"
+                                help="Exclude from external reports."
+                                :checked="$internalOnlyChecked"
+                            />
+                            <x-form-switch
+                                name="cancelled"
+                                label="Cancelled"
+                                help="Keep in history, but exclude from deliverable progress."
+                                :checked="$cancelledChecked"
+                                class="mb-0"
+                            />
+                        </x-form-options>
+                    </x-section-card>
+
+                    <x-section-card title="Time Tracking" id="time-tracking-section">
+                        <div class="form-subsections">
+                            <x-form-subsection title="Duration" meta="Completions multiply allotted totals." id="activity-duration-section">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="allotted_duration_display" class="form-label">Allotted Duration</label>
+                                        <input type="text"
+                                               class="form-control"
+                                               id="allotted_duration_display"
+                                               value=""
+                                               readonly
+                                               disabled
+                                               placeholder="Select an activity type">
+                                        <div class="form-text" id="allotted_duration_help">Set by the selected activity type.</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="completion_count" class="form-label required-label">Completions</label>
+                                        <input type="number"
+                                               class="form-control @error('completion_count') is-invalid @enderror"
+                                               id="completion_count"
+                                               name="completion_count"
+                                               value="{{ old('completion_count', $completionCountValue) }}"
+                                               min="1"
+                                               max="999"
+                                               step="1"
+                                               required>
+                                        @error('completion_count')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                        <div class="form-text">How many completions this log represents. Observed time is not multiplied.</div>
+                                    </div>
+                                </div>
+                            </x-form-subsection>
+
+                            <x-form-subsection
+                                title="Time by Contact"
+                                :meta="$timeTrackingContactRequiredBy"
+                                class="{{ $hasTimeTracking ? '' : 'd-none' }}"
+                                data-time-tracking-subsection="contact"
+                            >
+                                    <div class="row g-3">
+                                        <div class="col-md-4 {{ $selectedContactFamilyTracksAdditionalTime ? '' : 'd-none' }}" data-contact-additional-time-field="prep_hours">
+                                            <label for="contact_time_prep_hours" class="form-label">Prep Time</label>
+                                            <input type="number"
+                                                   step="0.25"
+                                                   min="0"
+                                                   class="form-control @error('contact_time.prep_hours') is-invalid @enderror"
+                                                   id="contact_time_prep_hours"
+                                                   name="contact_time[prep_hours]"
+                                                   value="{{ $normalizedContactTimeData['prep_hours'] }}"
+                                                   data-contact-time-input="prep_hours">
+                                            @error('contact_time.prep_hours')
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="contact_time_activity_hours" class="form-label required-label">
+                                                Activity Time
+                                            </label>
+                                            <input type="number"
+                                                   step="0.25"
+                                                   min="0"
+                                                   class="form-control @error('contact_time.activity_hours') is-invalid @enderror"
+                                                   id="contact_time_activity_hours"
+                                                   name="contact_time[activity_hours]"
+                                                   value="{{ $normalizedContactTimeData['activity_hours'] }}"
+                                                   data-contact-time-input="activity_hours">
+                                            @error('contact_time.activity_hours')
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+                                        <div class="col-md-4 {{ $selectedContactFamilyTracksAdditionalTime ? '' : 'd-none' }}" data-contact-additional-time-field="follow_up_hours">
+                                            <label for="contact_time_follow_up_hours" class="form-label">Follow Up Time</label>
+                                            <input type="number"
+                                                   step="0.25"
+                                                   min="0"
+                                                   class="form-control @error('contact_time.follow_up_hours') is-invalid @enderror"
+                                                   id="contact_time_follow_up_hours"
+                                                   name="contact_time[follow_up_hours]"
+                                                   value="{{ $normalizedContactTimeData['follow_up_hours'] }}"
+                                                   data-contact-time-input="follow_up_hours">
+                                            @error('contact_time.follow_up_hours')
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+                                    </div>
+                            </x-form-subsection>
+
+                            <x-form-subsection
+                                title="Time by User"
+                                :meta="$timeTrackingUserRequiredBy"
+                                class="{{ $timeTrackingUserConfigs->isNotEmpty() ? '' : 'd-none' }}"
+                                data-time-tracking-subsection="user"
+                            >
+                                    <div class="d-flex justify-content-end mb-3">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="copy-contact-time-to-users">
+                                            Sync Contact Time to Users
+                                        </button>
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm align-middle mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th scope="col">Delivered By</th>
+                                                    <th scope="col" class="{{ $selectedContactFamilyTracksAdditionalTime ? '' : 'd-none' }}" data-participant-extra-header="prep">Prep Time</th>
+                                                    <th scope="col" style="width: 180px;">Activity Time</th>
+                                                    <th scope="col" class="{{ $selectedContactFamilyTracksAdditionalTime ? '' : 'd-none' }}" data-participant-extra-header="follow_up">Follow Up Time</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="participant-time-rows"></tbody>
+                                        </table>
+                                    </div>
+                                    <div id="participant-time-empty-state" class="text-muted small mt-2">
+                                        Select Delivered By above to track time for each user.
+                                    </div>
+                                    @if($participantTimeErrorMessage)
+                                        <div class="text-danger small mt-2">{{ $participantTimeErrorMessage }}</div>
+                                    @endif
+                            </x-form-subsection>
                         </div>
                     </x-section-card>
 
-                    <x-section-card title="Activity Classification">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label for="contact_family_id" class="form-label fw-semibold">
-                                    Family <span class="text-danger">*</span>
-                                </label>
-                                <select class="form-select @error('contact_family_id') is-invalid @enderror"
-                                        id="contact_family_id"
-                                        name="contact_family_id"
-                                        hx-get="{{ route('activity-types.by-family') }}"
-                                        hx-target="#activity_type_id"
-                                        hx-swap="innerHTML"
-                                        hx-include="#{{ $formId }}, #activity_type_selected"
-                                        hx-trigger="change, load"
-                                        {{ empty($selectedAgreementIds) ? 'disabled' : '' }}
-                                        required>
-                                    <option value="">{{ empty($selectedAgreementIds) ? 'Select at least one agreement first...' : 'Select family...' }}</option>
-                                    @foreach($contactFamilies as $family)
-                                        <option value="{{ $family->id }}"
-                                                data-helper-text="{{ e($family->helper_text ?? '') }}"
-                                                {{ (string) $currentContactFamilyId === (string) $family->id ? 'selected' : '' }}>
-                                            {{ $family->name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                <input type="hidden" id="activity_type_selected" value="{{ $selectedActivityTypeId }}">
-                                @error('contact_family_id')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                                <div class="form-text d-none" id="contact_family_helper_text"></div>
-                            </div>
-
-                            <div class="col-md-6">
-                                <label for="activity_type_id" class="form-label fw-semibold">
-                                    Type <span class="text-danger">*</span>
-                                </label>
-                                <select class="form-select @error('activity_type_id') is-invalid @enderror"
-                                        id="activity_type_id"
-                                        name="activity_type_id"
-                                        {{ $currentContactFamilyId ? '' : 'disabled' }}
-                                        required>
-                                    <option value="">{{ empty($selectedAgreementIds) ? 'Select at least one agreement first...' : 'Select family first...' }}</option>
-                                </select>
-                                @error('activity_type_id')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                                <div class="form-text d-none" id="activity_type_helper_text"></div>
-                            </div>
-                        </div>
-
-                        <div class="activity-logging-subsection mt-4" id="activity-duration-section">
-                            <div class="d-flex flex-column flex-md-row align-items-md-baseline gap-1 gap-md-3 mb-3">
-                                <div class="activity-logging-subsection-title">Activity Duration/Allotted Time</div>
-                                <div class="text-muted activity-logging-subsection-meta">Allotted duration comes from the activity type. Completions multiply allotted totals.</div>
-                            </div>
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label for="allotted_duration_display" class="form-label fw-semibold">Allotted Duration (per completion)</label>
-                                    <input type="text"
-                                           class="form-control"
-                                           id="allotted_duration_display"
-                                           value=""
-                                           readonly
-                                           disabled
-                                           placeholder="No duration configured for this activity type">
-                                    <div class="form-text">This value is set by the activity type and cannot be edited here.</div>
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="completion_count" class="form-label fw-semibold">Completions <span class="text-danger">*</span></label>
-                                    <input type="number"
-                                           class="form-control @error('completion_count') is-invalid @enderror"
-                                           id="completion_count"
-                                           name="completion_count"
-                                           value="{{ old('completion_count', $completionCountValue) }}"
-                                           min="1"
-                                           max="999"
-                                           step="1"
-                                           required>
-                                    @error('completion_count')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                    <div class="form-text">How many completions this log represents. Observed time is not multiplied.</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mt-4">
-                            @foreach($contactFamilies as $family)
-                                <div class="activity-logging-subsection d-none" data-contact-family-logging-group="{{ $family->id }}">
-                                    <div class="d-flex flex-column flex-md-row align-items-md-baseline gap-1 gap-md-3 mb-3">
-                                        <div class="activity-logging-subsection-title">Family Logging Fields</div>
-                                        <div class="text-muted activity-logging-subsection-meta">{{ $family->name }}</div>
+                    <div id="logging-fields-section" class="{{ $showLoggingFieldsSection ? '' : 'd-none' }}">
+                        <x-section-card title="Logging Fields">
+                            <div class="form-subsections">
+                            @foreach($contactFamiliesWithLoggingFields as $family)
+                                <x-form-subsection
+                                    title="Family"
+                                    :meta="$family->name"
+                                    class="d-none"
+                                    data-contact-family-logging-group="{{ $family->id }}"
+                                >
+                                    <div class="row g-3">
+                                        @foreach($family->contactFamilyLoggingFields as $field)
+                                            <div class="{{ $field->is_full_width ? 'col-12' : 'col-md-6' }}"
+                                                 data-logging-field-item
+                                                 data-field-label="{{ e($field->name) }}"
+                                                 data-scope-program-ids='@json($field->programs->pluck("id")->map(fn ($id) => (string) $id)->values())'>
+                                                @include('activities.partials.logging-field-input', [
+                                                    'field' => $field,
+                                                    'inputName' => "contact_family_logging_values[{$field->id}]",
+                                                    'oldKey' => "contact_family_logging_values.{$field->id}",
+                                                    'value' => data_get($contactFamilyLoggingData, (string) $field->id),
+                                                    'inputId' => "contact_family_field_{$field->id}",
+                                                    'isRequired' => (bool) $field->pivot->is_required,
+                                                ])
+                                            </div>
+                                        @endforeach
                                     </div>
-
-                                    @if($family->contactFamilyLoggingFields->isEmpty())
-                                        <div class="text-muted small">No classification logging fields are assigned to this family.</div>
-                                    @else
-                                        <div class="row g-3">
-                                            @foreach($family->contactFamilyLoggingFields as $field)
-                                                <div class="{{ $field->is_full_width ? 'col-12' : 'col-md-6' }}"
-                                                     data-logging-field-item
-                                                     data-field-label="{{ e($field->name) }}"
-                                                     data-scope-program-ids='@json($field->programs->pluck("id")->map(fn ($id) => (string) $id)->values())'>
-                                                    @include('activities.partials.logging-field-input', [
-                                                        'field' => $field,
-                                                        'inputName' => "contact_family_logging_values[{$field->id}]",
-                                                        'oldKey' => "contact_family_logging_values.{$field->id}",
-                                                        'value' => data_get($contactFamilyLoggingData, (string) $field->id),
-                                                        'inputId' => "contact_family_field_{$field->id}",
-                                                        'isRequired' => (bool) $field->pivot->is_required,
-                                                    ])
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                        <div class="alert alert-warning small mt-3 mb-0 d-none" data-logging-scope-warning>
-                                            <span data-logging-scope-warning-text></span>
-                                        </div>
-                                    @endif
-                                </div>
+                                    <div class="alert alert-warning small mt-3 mb-0 d-none" data-logging-scope-warning>
+                                        <span data-logging-scope-warning-text></span>
+                                    </div>
+                                </x-form-subsection>
                             @endforeach
-                        </div>
 
-                        <div id="activity-logging-section" class="mt-4 d-none">
-                            @forelse($activityTypesWithLoggingFields as $activityType)
-                                <div class="activity-logging-subsection d-none" data-activity-logging-group="{{ $activityType->id }}">
-                                    <div class="d-flex flex-column flex-md-row align-items-md-baseline gap-1 gap-md-3 mb-3">
-                                        <div class="activity-logging-subsection-title">Activity Logging Fields</div>
-                                        <div class="text-muted activity-logging-subsection-meta">{{ $activityType->name }}</div>
-                                    </div>
+                            @foreach($activityTypesWithLoggingFields as $activityType)
+                                <x-form-subsection
+                                    title="Type"
+                                    :meta="$activityType->name"
+                                    class="d-none"
+                                    data-activity-logging-group="{{ $activityType->id }}"
+                                >
                                     <div class="row g-3">
                                         @foreach($activityType->activityTypeLoggingFields as $field)
                                             <div class="{{ $field->is_full_width ? 'col-12' : 'col-md-6' }}"
@@ -694,104 +699,9 @@
                                     <div class="alert alert-warning small mt-3 mb-0 d-none" data-logging-scope-warning>
                                         <span data-logging-scope-warning-text></span>
                                     </div>
-                                </div>
+                                </x-form-subsection>
                             @endforeach
-                        </div>
-                    </x-section-card>
 
-                    <div id="time-tracking-section" class="{{ $hasTimeTracking ? '' : 'd-none' }}">
-                        <x-section-card title="Time Tracking">
-                            <div class="d-grid gap-3">
-                                <div class="time-tracking-subsection {{ $hasTimeTracking ? '' : 'd-none' }}" data-time-tracking-subsection="contact">
-                                    <div class="d-flex flex-column flex-md-row align-items-md-baseline gap-1 gap-md-3 mb-3">
-                                        <div class="activity-logging-subsection-title">Time by Contact</div>
-                                        <div class="text-muted activity-logging-subsection-meta" data-time-tracking-contact-required-by>{{ $timeTrackingContactRequiredBy }}</div>
-                                    </div>
-                                    <div class="row g-3">
-                                        <div class="col-md-4 {{ $selectedContactFamilyTracksAdditionalTime ? '' : 'd-none' }}" data-contact-additional-time-field="prep_hours">
-                                            <label for="contact_time_prep_hours" class="form-label fw-semibold">Prep Time</label>
-                                            <input type="number"
-                                                   step="0.25"
-                                                   min="0"
-                                                   class="form-control @error('contact_time.prep_hours') is-invalid @enderror"
-                                                   id="contact_time_prep_hours"
-                                                   name="contact_time[prep_hours]"
-                                                   value="{{ $normalizedContactTimeData['prep_hours'] }}"
-                                                   data-contact-time-input="prep_hours">
-                                            @error('contact_time.prep_hours')
-                                                <div class="invalid-feedback">{{ $message }}</div>
-                                            @enderror
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label for="contact_time_activity_hours" class="form-label fw-semibold">
-                                                Activity Time <span class="text-danger">*</span>
-                                            </label>
-                                            <input type="number"
-                                                   step="0.25"
-                                                   min="0"
-                                                   class="form-control @error('contact_time.activity_hours') is-invalid @enderror"
-                                                   id="contact_time_activity_hours"
-                                                   name="contact_time[activity_hours]"
-                                                   value="{{ $normalizedContactTimeData['activity_hours'] }}"
-                                                   data-contact-time-input="activity_hours">
-                                            @error('contact_time.activity_hours')
-                                                <div class="invalid-feedback">{{ $message }}</div>
-                                            @enderror
-                                        </div>
-                                        <div class="col-md-4 {{ $selectedContactFamilyTracksAdditionalTime ? '' : 'd-none' }}" data-contact-additional-time-field="follow_up_hours">
-                                            <label for="contact_time_follow_up_hours" class="form-label fw-semibold">Follow Up Time</label>
-                                            <input type="number"
-                                                   step="0.25"
-                                                   min="0"
-                                                   class="form-control @error('contact_time.follow_up_hours') is-invalid @enderror"
-                                                   id="contact_time_follow_up_hours"
-                                                   name="contact_time[follow_up_hours]"
-                                                   value="{{ $normalizedContactTimeData['follow_up_hours'] }}"
-                                                   data-contact-time-input="follow_up_hours">
-                                            @error('contact_time.follow_up_hours')
-                                                <div class="invalid-feedback">{{ $message }}</div>
-                                            @enderror
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="time-tracking-subsection {{ $timeTrackingUserConfigs->isNotEmpty() ? '' : 'd-none' }}" data-time-tracking-subsection="user">
-                                    <div class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-baseline gap-2 mb-3">
-                                        <div class="d-flex flex-column flex-md-row align-items-md-baseline gap-1 gap-md-3">
-                                            <div class="activity-logging-subsection-title">Time by User</div>
-                                            <div class="text-muted activity-logging-subsection-meta" data-time-tracking-user-required-by>{{ $timeTrackingUserRequiredBy }}</div>
-                                        </div>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="copy-contact-time-to-users">
-                                            Sync Contact Time to Users
-                                        </button>
-                                    </div>
-                                    <div class="table-responsive">
-                                        <table class="table table-sm align-middle mb-0">
-                                            <thead>
-                                                <tr>
-                                                    <th scope="col">Delivered By</th>
-                                                    <th scope="col" class="{{ $selectedContactFamilyTracksAdditionalTime ? '' : 'd-none' }}" data-participant-extra-header="prep">Prep Time</th>
-                                                    <th scope="col" style="width: 180px;">Activity Time</th>
-                                                    <th scope="col" class="{{ $selectedContactFamilyTracksAdditionalTime ? '' : 'd-none' }}" data-participant-extra-header="follow_up">Follow Up Time</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="participant-time-rows"></tbody>
-                                        </table>
-                                    </div>
-                                    <div id="participant-time-empty-state" class="text-muted small mt-2">
-                                        Select Participants above to track time for each user.
-                                    </div>
-                                    @if($participantTimeErrorMessage)
-                                        <div class="text-danger small mt-2">{{ $participantTimeErrorMessage }}</div>
-                                    @endif
-                                </div>
-                            </div>
-                        </x-section-card>
-                    </div>
-
-                    <div id="agreement-logging-section" class="{{ $agreementsWithPerAgreementFields->isEmpty() ? 'd-none' : '' }}">
-                        <x-section-card title="Agreement Logging Fields">
-                            <div id="agreement-logging-groups" class="d-grid gap-3">
                             @foreach($agreementsWithPerAgreementFields as $agreement)
                                 @php
                                     $fundingOptions = $fundingSourceOptionsByAgreement[$agreement->id] ?? ['payor' => [], 'payee' => []];
@@ -804,13 +714,12 @@
                                         data_get($fundingSourceData, "{$agreement->id}.payee", [])
                                     );
                                 @endphp
-                                <div class="border rounded p-3 d-none" data-agreement-logging-group="{{ $agreement->id }}">
-                                    <div class="d-flex justify-content-between align-items-center mb-3">
-                                        <div>
-                                            <h5 class="mb-1">{{ $agreement->name }}</h5>
-                                            <p class="small text-muted mb-0">Agreement-level fields for this activity</p>
-                                        </div>
-                                    </div>
+                                <x-form-subsection
+                                    title="Agreement"
+                                    :meta="$agreement->name"
+                                    class="d-none"
+                                    data-agreement-logging-group="{{ $agreement->id }}"
+                                >
 
                                     @if($agreement->agreementLoggingFields->isNotEmpty())
                                         <div class="row g-3 mb-3">
@@ -835,7 +744,7 @@
 
                                     @if($agreement->require_payor)
                                         <div class="mb-3" data-funding-source-picker data-agreement-id="{{ $agreement->id }}" data-funding-role="payor">
-                                            <label class="form-label fw-semibold">Payor Sources</label>
+                                            <label class="form-label">Payor Sources</label>
                                             <p class="text-muted small mb-2">Optional. Select from agreement organizations that are marked as payor sources and linked to one or more KFS accounts on this agreement.</p>
                                             <x-token-picker
                                                 picker-id="activity-funding-payor-{{ $agreement->id }}"
@@ -846,7 +755,7 @@
                                                 search-key="search"
                                                 :selected-ids="$selectedPayorTokens"
                                                 placeholder="Search payor sources..."
-                                                :height="'240px'"
+                                :height="'220px'"
                                             />
                                             <div class="text-muted small mt-2 d-none" data-funding-empty-notice="{{ $agreement->id }}-payor">
                                                 No payor sources available - no payor organizations on this agreement are linked to KFS accounts.
@@ -862,7 +771,7 @@
 
                                     @if($agreement->require_payee)
                                         <div class="mb-0" data-funding-source-picker data-agreement-id="{{ $agreement->id }}" data-funding-role="payee">
-                                            <label class="form-label fw-semibold">Payee Sources</label>
+                                            <label class="form-label">Payee Sources</label>
                                             <p class="text-muted small mb-2">Optional. Select from users and organizations with PO numbers. This payee field is separate from the agreement KFS payor setup.</p>
                                             <x-token-picker
                                                 picker-id="activity-funding-payee-{{ $agreement->id }}"
@@ -873,7 +782,7 @@
                                                 search-key="search"
                                                 :selected-ids="$selectedPayeeTokens"
                                                 placeholder="Search payee sources..."
-                                                :height="'240px'"
+                                :height="'220px'"
                                             />
                                             <div class="text-muted small mt-2 d-none" data-funding-empty-notice="{{ $agreement->id }}-payee">
                                                 No payee sources available - no users or organizations with PO numbers are available on this agreement.
@@ -892,15 +801,13 @@
                                             <span data-logging-scope-warning-text></span>
                                         </div>
                                     @endif
-                                </div>
+                                </x-form-subsection>
                             @endforeach
                             </div>
                         </x-section-card>
                     </div>
-            </div>
         </form>
-    </div>
-</div>
+</x-form-shell>
 
 <x-save-bar
     :form-id="$formId"
@@ -1669,10 +1576,24 @@
         htmx.trigger(family, 'change');
     }
 
+    function updateLoggingFieldsSectionVisibility() {
+        const section = document.getElementById('logging-fields-section');
+
+        if (!section) {
+            return;
+        }
+
+        const visible = Array.from(section.querySelectorAll(
+            '[data-contact-family-logging-group], [data-activity-logging-group], [data-agreement-logging-group]'
+        )).some(function (group) {
+            return !group.classList.contains('d-none');
+        });
+
+        section.classList.toggle('d-none', !visible);
+    }
+
     function updateAgreementLoggingGroups() {
         const selected = new Set(selectedAgreementIds());
-        const section = document.getElementById('agreement-logging-section');
-        let visibleGroups = 0;
 
         document.querySelectorAll('[data-agreement-logging-group]').forEach(function (group) {
             const visible = selected.has(group.dataset.agreementLoggingGroup);
@@ -1688,11 +1609,9 @@
                 });
                 applyLoggingFieldProgramScope(group);
             }
-
-            visibleGroups += visible ? 1 : 0;
         });
 
-        section?.classList.toggle('d-none', visibleGroups === 0);
+        updateLoggingFieldsSectionVisibility();
         restrictFundingSourcePickers();
     }
 
@@ -1709,26 +1628,26 @@
         });
         const hasTimeTracking = contactRequiredBy.length > 0;
 
-        section?.classList.toggle('d-none', !hasTimeTracking);
-
         if (contactGroup) {
             contactGroup.classList.toggle('d-none', !hasTimeTracking);
-            const label = contactGroup.querySelector('[data-time-tracking-contact-required-by]');
+            const label = contactGroup.querySelector('.form-subsection-meta');
             if (label) {
                 label.textContent = hasTimeTracking
                     ? 'Required by: ' + joinNames(contactRequiredBy)
                     : '';
+                label.classList.toggle('d-none', !label.textContent);
             }
         }
 
         if (userGroup) {
             const hasUserTracking = userRequiredBy.length > 0;
             userGroup.classList.toggle('d-none', !hasUserTracking);
-            const label = userGroup.querySelector('[data-time-tracking-user-required-by]');
+            const label = userGroup.querySelector('.form-subsection-meta');
             if (label) {
                 label.textContent = hasUserTracking
                     ? 'Required by: ' + joinNames(userRequiredBy)
                     : '';
+                label.classList.toggle('d-none', !label.textContent);
             }
         }
 
@@ -1754,12 +1673,12 @@
                 applyLoggingFieldProgramScope(group);
             }
         });
+
+        updateLoggingFieldsSectionVisibility();
     }
 
     function updateActivityLoggingGroups() {
         const activityTypeId = document.getElementById('activity_type_id')?.value;
-        const section = document.getElementById('activity-logging-section');
-        let visibleGroups = 0;
 
         document.querySelectorAll('[data-activity-logging-group]').forEach(function (group) {
             const visible = group.dataset.activityLoggingGroup === activityTypeId;
@@ -1775,11 +1694,9 @@
                 });
                 applyLoggingFieldProgramScope(group);
             }
-
-            visibleGroups += visible ? 1 : 0;
         });
 
-        section?.classList.toggle('d-none', !activityTypeId || visibleGroups === 0);
+        updateLoggingFieldsSectionVisibility();
         updateAllottedDurationDisplay();
     }
 
@@ -1833,7 +1750,25 @@
 
         const formatted = formatDurationValue(hours, days);
         displayInput.value = formatted;
+
+        const selectedOption = typeSelect && typeSelect.value ? typeSelect.options[typeSelect.selectedIndex] : null;
+        const typeName = selectedOption && selectedOption.text ? selectedOption.text.trim() : '';
+        const help = document.getElementById('allotted_duration_help');
+
+        if (!typeName) {
+            displayInput.placeholder = 'Select an activity type';
+            if (help) {
+                help.textContent = 'Set by the selected activity type.';
+            }
+            return;
+        }
+
         displayInput.placeholder = formatted ? '' : 'No duration configured for this activity type';
+        if (help) {
+            help.textContent = formatted
+                ? 'Set by ' + typeName + '.'
+                : 'No duration configured for ' + typeName + '.';
+        }
     }
 
     function updateActivityTypeState() {

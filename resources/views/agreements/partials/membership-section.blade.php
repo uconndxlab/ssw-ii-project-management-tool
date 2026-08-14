@@ -36,17 +36,13 @@
     ];
 @endphp
 
-<div class="card mb-4">
-    <div class="card-body">
-        <h5 class="mb-3">Teams & Users</h5>
+<x-section-card title="Teams & Users">
 
         <div class="row g-5 align-items-stretch">
             <div class="col-lg-5 d-flex">
                 <div class="d-flex flex-column w-100 h-100">
                     <div class="d-grid gap-4">
-                        <div>
-                            <label class="form-label">Teams</label>
-
+                        <x-form-field label="Teams" help="Team members inherit access to this agreement." class="mb-0">
                             <x-token-picker
                                 picker-id="agreement-{{ $agreement ? 'edit' : 'create' }}-teams"
                                 name="team_ids[]"
@@ -69,15 +65,9 @@
                                 :height="'220px'"
                                 entity="team"
                             />
+                        </x-form-field>
 
-                            <small class="text-muted d-block mt-2">
-                                Team members inherit access to this agreement.
-                            </small>
-                        </div>
-
-                        <div>
-                            <label class="form-label">Additional users</label>
-
+                        <x-form-field label="Additional users" help="Users who are not covered by a selected team." class="mb-0">
                             <x-token-picker
                                 picker-id="agreement-{{ $agreement ? 'edit' : 'create' }}-users"
                                 name="user_ids[]"
@@ -94,11 +84,7 @@
                                 :height="'220px'"
                                 entity="user"
                             />
-
-                            <small class="text-muted d-block mt-2">
-                                Use this for users who are not covered by a selected team.
-                            </small>
-                        </div>
+                        </x-form-field>
                     </div>
 
                     <div class="border rounded bg-body-tertiary px-3 py-3 mt-3 mt-lg-auto">
@@ -164,8 +150,7 @@
                 </div>
             </div>
         </div>
-    </div>
-</div>
+</x-section-card>
 
 @once
 <script>

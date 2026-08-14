@@ -156,8 +156,8 @@ class ContactFamilyController extends Controller
 
         $validated = $validator->validate();
 
-        $validated['active'] = $request->has('active');
-        $validated['track_additional_time'] = $request->has('track_additional_time');
+        $validated['active'] = $request->boolean('active');
+        $validated['track_additional_time'] = $request->boolean('track_additional_time');
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
         $validated['program_scope_mode'] = ProjectProgramScope::normalizeMode($validated['program_scope_mode'] ?? null, ContactFamily::class)->value;
 
@@ -246,8 +246,8 @@ class ContactFamilyController extends Controller
 
         $validated = $validator->validate();
 
-        $validated['active'] = $request->has('active');
-        $validated['track_additional_time'] = $request->has('track_additional_time');
+        $validated['active'] = $request->boolean('active');
+        $validated['track_additional_time'] = $request->boolean('track_additional_time');
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
         $validated['program_scope_mode'] = ProjectProgramScope::normalizeMode($validated['program_scope_mode'] ?? null, ContactFamily::class)->value;
 

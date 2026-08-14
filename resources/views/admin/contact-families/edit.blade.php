@@ -3,33 +3,20 @@
 @section('title', 'Edit Activity Family')
 
 @section('content')
-<div class="row justify-content-center">
-    <div class="col-lg-10">
-        @if ($errors->any())
-            <div class="alert alert-danger">
-                <ul class="mb-0">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
+<x-form-shell>
+    <x-form-errors />
 
-        <form method="POST" action="{{ route('contact-families.update', $contactFamily) }}" id="contact-families-edit-form">
-            @csrf
-            @method('PUT')
-            <x-page-header
-                context="form"
-                :title="old('name', $contactFamily->name)"
-                entity-type="Activity Family"
-                mode="edit"
-                :show-active="true"
-                :active-default="old('active', $contactFamily->active)"
-                active-help="Only active activity families appear in activity forms."
-            />
-            @include('admin.contact-families.partials.form-fields', ['contactFamily' => $contactFamily])
-        </form>
-    </div>
-</div>
+    <form method="POST" action="{{ route('contact-families.update', $contactFamily) }}" id="contact-families-edit-form">
+        @csrf
+        @method('PUT')
+        <x-page-header
+            context="form"
+            :title="old('name', $contactFamily->name)"
+            entity-type="Activity Family"
+            mode="edit"
+        />
+        @include('admin.contact-families.partials.form-fields', ['contactFamily' => $contactFamily])
+    </form>
+</x-form-shell>
 <x-save-bar form-id="contact-families-edit-form" save-label="Save Activity Family" :last-saved-at="$contactFamily->updated_at" />
 @endsection

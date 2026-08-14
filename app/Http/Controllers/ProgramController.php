@@ -72,7 +72,7 @@ class ProgramController extends Controller
         $program = Program::create([
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
-            'active' => $validated['active'] ?? true,
+            'active' => $request->boolean('active', true),
         ]);
 
         $program->projects()->sync(ProjectProgramScope::normalizeIds($validated['project_ids']));
@@ -149,7 +149,7 @@ class ProgramController extends Controller
         $program->update([
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
-            'active' => $validated['active'] ?? false,
+            'active' => $request->boolean('active'),
         ]);
 
         $program->projects()->sync(ProjectProgramScope::normalizeIds($validated['project_ids']));

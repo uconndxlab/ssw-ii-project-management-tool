@@ -3,10 +3,12 @@
     'name',
     'rows' => [],
     'label' => null,
+    'required' => false,
     'addButtonText' => 'Add Item',
-    'emptyMessage' => 'No items added yet.',
+    'emptyMessage' => 'None added yet.',
     'suggestions' => [],
     'inputPlaceholder' => 'Enter a value...',
+    'valueField' => 'value',
 ])
 
 @php
@@ -17,8 +19,8 @@
 
             return [
                 'row_key' => $rowKey,
-                'id' => $row['id'] ?? '',
-                'value' => (string) ($row['value'] ?? ''),
+                'id' => (string) ($row['id'] ?? ''),
+                'value' => (string) ($row['value'] ?? $row['label'] ?? ''),
                 '_delete' => !empty($row['_delete']) ? '1' : '0',
             ];
         })
@@ -33,98 +35,60 @@
     $errorMessages = collect($errors->get($name))
         ->flatten()
         ->merge(collect($errors->get($name . '.*.value'))->flatten())
+        ->merge(collect($errors->get($name . '.*.label'))->flatten())
         ->unique()
         ->values();
 
     $datalistId = $listId . '-suggestions';
+    $visibleRows = $normalizedRows->where('_delete', '0');
 @endphp
 
 <div id="{{ $listId }}"
      class="inline-string-list"
      data-inline-string-list
      data-name="{{ $name }}"
+     data-value-field="{{ $valueField }}"
      data-input-placeholder="{{ $inputPlaceholder }}"
      data-empty-message="{{ $emptyMessage }}"
-     data-datalist-id="{{ $datalistId }}">
+     data-datalist-id="{{ $suggestions->isNotEmpty() ? $datalistId : '' }}">
     @if($label)
-        <label class="form-label">{{ $label }}</label>
+        <label class="form-label{{ $required ? ' required-label' : '' }}">{{ $label }}</label>
     @endif
 
-    <div class="table-responsive mb-3">
-        <table class="table table-sm align-middle mb-0">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th class="text-end">Actions</th>
-                </tr>
-            </thead>
-            <tbody data-inline-string-list-body>
-                @if($normalizedRows->where('_delete', '0')->isNotEmpty())
-                    @foreach($normalizedRows->where('_delete', '0') as $row)
-                        <tr data-inline-string-row="{{ $row['row_key'] }}">
-                            <td>
-                                <div data-inline-string-display>{{ $row['value'] }}</div>
-                                <div class="d-none" data-inline-string-edit-wrap>
-                                    <input type="text"
-                                           class="form-control form-control-sm"
-                                           value="{{ $row['value'] }}"
-                                           list="{{ $datalistId }}"
-                                           data-inline-string-input
-                                           placeholder="{{ $inputPlaceholder }}">
-                                    <div class="text-danger small mt-1 d-none" data-inline-string-error></div>
-                                </div>
-                            </td>
-                            <td class="text-end text-nowrap">
-                                <div class="btn-group btn-group-sm" role="group" aria-label="String item actions" data-inline-string-actions>
-                                    <button type="button"
-                                            class="btn btn-outline-secondary"
-                                            data-inline-string-edit
-                                            data-bs-toggle="tooltip"
-                                            data-bs-title="Edit item"
-                                            aria-label="Edit item">
-                                        <i class="bi bi-pencil-square"></i>
-                                    </button>
-                                    <button type="button"
-                                            class="btn btn-outline-success d-none"
-                                            data-inline-string-save
-                                            data-bs-toggle="tooltip"
-                                            data-bs-title="Save item"
-                                            aria-label="Save item">
-                                        <i class="bi bi-check-lg"></i>
-                                    </button>
-                                    <button type="button"
-                                            class="btn btn-outline-secondary d-none"
-                                            data-inline-string-cancel
-                                            data-bs-toggle="tooltip"
-                                            data-bs-title="Cancel editing"
-                                            aria-label="Cancel editing">
-                                        <i class="bi bi-x-lg"></i>
-                                    </button>
-                                    <button type="button"
-                                            class="btn btn-outline-danger"
-                                            data-inline-string-remove
-                                            data-bs-toggle="tooltip"
-                                            data-bs-title="Remove item"
-                                            aria-label="Remove item">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    @endforeach
+    <div class="d-grid gap-2" data-inline-string-rows style="max-width: 32rem;">
+        @foreach($normalizedRows as $row)
+            <div class="{{ $row['_delete'] === '1' ? 'd-none' : '' }}" data-inline-string-row="{{ $row['row_key'] }}">
+                @if($row['id'] !== '')
+                    <input type="hidden" name="{{ $name }}[{{ $row['row_key'] }}][id]" value="{{ $row['id'] }}">
                 @endif
-
-                <tr class="{{ $normalizedRows->where('_delete', '0')->isNotEmpty() ? 'd-none' : '' }}" data-inline-string-empty>
-                    <td colspan="2" class="text-center text-muted py-4 small">
-                        {{ $emptyMessage }}
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+                <input type="hidden" name="{{ $name }}[{{ $row['row_key'] }}][_delete]" value="{{ $row['_delete'] }}" data-inline-string-delete>
+                <div class="d-flex align-items-center gap-2">
+                    <input type="text"
+                           class="form-control @if($errorMessages->isNotEmpty()) is-invalid @endif"
+                           name="{{ $name }}[{{ $row['row_key'] }}][{{ $valueField }}]"
+                           value="{{ $row['value'] }}"
+                           placeholder="{{ $inputPlaceholder }}"
+                           @if($suggestions->isNotEmpty()) list="{{ $datalistId }}" @endif
+                           data-inline-string-input>
+                    <button type="button"
+                            class="btn btn-outline-danger flex-shrink-0"
+                            aria-label="Remove"
+                            data-inline-string-remove>
+                        -
+                    </button>
+                </div>
+            </div>
+        @endforeach
     </div>
 
-    <div class="d-flex justify-content-end mt-3">
-        <button type="button" class="btn btn-sm btn-outline-primary" data-inline-string-add>{{ $addButtonText }}</button>
+    <div class="text-muted small mt-2 {{ $visibleRows->isNotEmpty() ? 'd-none' : '' }}" data-inline-string-empty>
+        {{ $emptyMessage }}
+    </div>
+
+    <div class="mt-2" style="max-width: 32rem;">
+        <button type="button" class="btn btn-outline-primary w-100" data-inline-string-add>
+            + {{ $addButtonText }}
+        </button>
     </div>
 
     @if($errorMessages->isNotEmpty())
@@ -132,22 +96,6 @@
             <div class="text-danger small mt-1">{{ $message }}</div>
         @endforeach
     @endif
-
-    <div data-inline-string-hidden-inputs>
-        @foreach($normalizedRows as $row)
-            <div data-inline-string-hidden-row="{{ $row['row_key'] }}">
-                @if($row['id'] !== '')
-                    <input type="hidden" name="{{ $name }}[{{ $row['row_key'] }}][id]" value="{{ $row['id'] }}">
-                @endif
-                <input type="hidden" name="{{ $name }}[{{ $row['row_key'] }}][value]" value="{{ $row['value'] }}">
-                <input type="hidden" name="{{ $name }}[{{ $row['row_key'] }}][_delete]" value="{{ $row['_delete'] }}">
-            </div>
-        @endforeach
-    </div>
-
-    <script type="application/json" data-inline-string-rows>
-        @json($normalizedRows->values())
-    </script>
 
     @if($suggestions->isNotEmpty())
         <datalist id="{{ $datalistId }}">
@@ -161,14 +109,6 @@
 @once
 <script>
 (function () {
-    function parseJson(node, fallback) {
-        try {
-            return JSON.parse(node.textContent || '');
-        } catch (error) {
-            return fallback;
-        }
-    }
-
     function escapeHtml(value) {
         return String(value ?? '')
             .replace(/&/g, '&amp;')
@@ -183,278 +123,127 @@
             return;
         }
 
-        const rowsNode = list.querySelector('[data-inline-string-rows]');
-        const body = list.querySelector('[data-inline-string-list-body]');
-        const hiddenInputs = list.querySelector('[data-inline-string-hidden-inputs]');
+        const rowsContainer = list.querySelector('[data-inline-string-rows]');
         const addButton = list.querySelector('[data-inline-string-add]');
         const emptyState = list.querySelector('[data-inline-string-empty]');
+        const name = list.dataset.name;
+        const valueField = list.dataset.valueField || 'value';
+        const inputPlaceholder = list.dataset.inputPlaceholder || 'Enter a value...';
+        const datalistId = list.dataset.datalistId || '';
 
-        if (!rowsNode || !body || !hiddenInputs || !addButton || !emptyState) {
+        if (!rowsContainer || !addButton || !name) {
             return;
         }
 
-        const name = list.dataset.name;
-        const inputPlaceholder = list.dataset.inputPlaceholder || 'Enter a value...';
-        const datalistId = list.dataset.datalistId || '';
-        const rows = parseJson(rowsNode, []).reduce(function (carry, row) {
-            if (!row || !row.row_key) {
-                return carry;
-            }
-
-            carry[String(row.row_key)] = {
-                row_key: String(row.row_key),
-                id: row.id ?? '',
-                value: String(row.value ?? ''),
-                _delete: String(row._delete ?? '0'),
-                isEditing: false,
-                isNew: String(row.id ?? '') === '',
-                originalValue: String(row.value ?? ''),
-            };
-
-            return carry;
-        }, {});
-
-        let nextTempId = 1;
+        let nextIndex = rowsContainer.querySelectorAll('[data-inline-string-row]').length;
 
         function visibleRows() {
-            return Object.values(rows).filter(function (row) {
-                return row._delete !== '1';
-            });
-        }
-
-        function rowMarkup(row) {
-            const displayValue = escapeHtml(row.value);
-
-            return `
-                <tr data-inline-string-row="${escapeHtml(row.row_key)}">
-                    <td>
-                        <div class="${row.isEditing ? 'd-none' : ''}" data-inline-string-display>${displayValue}</div>
-                        <div class="${row.isEditing ? '' : 'd-none'}" data-inline-string-edit-wrap>
-                            <input type="text"
-                                   class="form-control form-control-sm"
-                                   value="${displayValue}"
-                                   ${datalistId ? `list="${escapeHtml(datalistId)}"` : ''}
-                                   data-inline-string-input
-                                   placeholder="${escapeHtml(inputPlaceholder)}">
-                            <div class="text-danger small mt-1 d-none" data-inline-string-error></div>
-                        </div>
-                    </td>
-                    <td class="text-end text-nowrap">
-                        <div class="btn-group btn-group-sm" role="group" aria-label="String item actions" data-inline-string-actions>
-                            <button type="button" class="btn btn-outline-secondary ${row.isEditing ? 'd-none' : ''}" data-inline-string-edit data-bs-toggle="tooltip" data-bs-title="Edit item" aria-label="Edit item">
-                                <i class="bi bi-pencil-square"></i>
-                            </button>
-                            <button type="button" class="btn btn-outline-success ${row.isEditing ? '' : 'd-none'}" data-inline-string-save data-bs-toggle="tooltip" data-bs-title="Save item" aria-label="Save item">
-                                <i class="bi bi-check-lg"></i>
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary ${row.isEditing ? '' : 'd-none'}" data-inline-string-cancel data-bs-toggle="tooltip" data-bs-title="Cancel editing" aria-label="Cancel editing">
-                                <i class="bi bi-x-lg"></i>
-                            </button>
-                            <button type="button" class="btn btn-outline-danger" data-inline-string-remove data-bs-toggle="tooltip" data-bs-title="Remove item" aria-label="Remove item">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `;
-        }
-
-        function hiddenMarkup(row) {
-            const idInput = row.id !== ''
-                ? `<input type="hidden" name="${escapeHtml(name)}[${escapeHtml(row.row_key)}][id]" value="${escapeHtml(row.id)}">`
-                : '';
-
-            return `
-                <div data-inline-string-hidden-row="${escapeHtml(row.row_key)}">
-                    ${idInput}
-                    <input type="hidden" name="${escapeHtml(name)}[${escapeHtml(row.row_key)}][value]" value="${escapeHtml(row.value)}">
-                    <input type="hidden" name="${escapeHtml(name)}[${escapeHtml(row.row_key)}][_delete]" value="${escapeHtml(row._delete)}">
-                </div>
-            `;
-        }
-
-        function syncHiddenInputs() {
-            hiddenInputs.innerHTML = '';
-
-            Object.values(rows).forEach(function (row) {
-                hiddenInputs.insertAdjacentHTML('beforeend', hiddenMarkup(row));
+            return Array.from(rowsContainer.querySelectorAll('[data-inline-string-row]')).filter(function (row) {
+                return !row.classList.contains('d-none');
             });
         }
 
         function syncEmptyState() {
-            emptyState.classList.toggle('d-none', visibleRows().length > 0);
+            emptyState?.classList.toggle('d-none', visibleRows().length > 0);
         }
 
-        function render() {
-            Array.from(body.querySelectorAll('[data-inline-string-row]')).forEach(function (rowEl) {
-                disposeTooltips(rowEl);
-                rowEl.remove();
-            });
+        function rowMarkup(rowKey) {
+            const listAttr = datalistId ? ` list="${escapeHtml(datalistId)}"` : '';
 
-            visibleRows().forEach(function (row) {
-                emptyState.insertAdjacentHTML('beforebegin', rowMarkup(row));
-            });
+            return `
+                <div data-inline-string-row="${escapeHtml(rowKey)}">
+                    <input type="hidden" name="${escapeHtml(name)}[${escapeHtml(rowKey)}][_delete]" value="0" data-inline-string-delete>
+                    <div class="d-flex align-items-center gap-2">
+                        <input type="text"
+                               class="form-control"
+                               name="${escapeHtml(name)}[${escapeHtml(rowKey)}][${escapeHtml(valueField)}]"
+                               value=""
+                               placeholder="${escapeHtml(inputPlaceholder)}"
+                               ${listAttr}
+                               data-inline-string-input>
+                        <button type="button" class="btn btn-outline-danger flex-shrink-0" aria-label="Remove" data-inline-string-remove>-</button>
+                    </div>
+                </div>
+            `;
+        }
 
+        function addRow() {
+            const rowKey = 'row-new-' + Date.now() + '-' + (nextIndex++);
+            rowsContainer.insertAdjacentHTML('beforeend', rowMarkup(rowKey));
+            const input = rowsContainer.querySelector('[data-inline-string-row="' + CSS.escape(rowKey) + '"] [data-inline-string-input]');
+            input?.focus();
             syncEmptyState();
-            syncHiddenInputs();
-            initTooltips(body);
 
-            visibleRows().forEach(function (row) {
-                if (!row.isEditing) {
-                    return;
-                }
-
-                const rowEl = body.querySelector(`[data-inline-string-row="${CSS.escape(row.row_key)}"]`);
-                const input = rowEl?.querySelector('[data-inline-string-input]');
-
-                if (input) {
-                    input.focus();
-                    input.select();
-                }
-            });
-        }
-
-        function createRowKey() {
-            return 'row-new-' + Date.now() + '-' + (nextTempId++);
-        }
-
-        function saveRow(rowKey) {
-            const rowEl = body.querySelector(`[data-inline-string-row="${CSS.escape(rowKey)}"]`);
-            const input = rowEl?.querySelector('[data-inline-string-input]');
-            const errorEl = rowEl?.querySelector('[data-inline-string-error]');
-
-            if (!rowEl || !input || !rows[rowKey]) {
-                return;
-            }
-
-            const value = input.value.trim();
-
-            if (value === '') {
-                input.classList.add('is-invalid');
-                if (errorEl) {
-                    errorEl.textContent = 'A value is required.';
-                    errorEl.classList.remove('d-none');
-                }
-                return;
-            }
-
-            input.classList.remove('is-invalid');
-            if (errorEl) {
-                errorEl.textContent = '';
-                errorEl.classList.add('d-none');
-            }
-
-            rows[rowKey].value = value;
-            rows[rowKey].originalValue = value;
-            rows[rowKey].isEditing = false;
-            render();
-        }
-
-        function cancelRow(rowKey) {
-            if (!rows[rowKey]) {
-                return;
-            }
-
-            if (rows[rowKey].isNew && rows[rowKey].originalValue === '') {
-                delete rows[rowKey];
-                render();
-                return;
-            }
-
-            rows[rowKey].value = rows[rowKey].originalValue;
-            rows[rowKey].isEditing = false;
-            render();
-        }
-
-        function editRow(rowKey) {
-            if (!rows[rowKey]) {
-                return;
-            }
-
-            rows[rowKey].isEditing = true;
-            render();
-        }
-
-        function removeRow(rowKey) {
-            if (!rows[rowKey]) {
-                return;
-            }
-
-            if (rows[rowKey].id !== '') {
-                rows[rowKey]._delete = '1';
-                rows[rowKey].isEditing = false;
-            } else {
-                delete rows[rowKey];
-            }
-
-            render();
+            return input;
         }
 
         addButton.addEventListener('click', function () {
-            const rowKey = createRowKey();
-            rows[rowKey] = {
-                row_key: rowKey,
-                id: '',
-                value: '',
-                _delete: '0',
-                isEditing: true,
-                isNew: true,
-                originalValue: '',
-            };
-
-            render();
+            addRow();
         });
 
-        body.addEventListener('click', function (event) {
-            const actionButton = event.target.closest('[data-inline-string-edit], [data-inline-string-save], [data-inline-string-cancel], [data-inline-string-remove]');
-
-            if (!actionButton) {
+        rowsContainer.addEventListener('keydown', function (event) {
+            if (event.key !== 'Enter') {
                 return;
             }
 
-            const rowEl = actionButton.closest('[data-inline-string-row]');
-            const rowKey = rowEl?.dataset.inlineStringRow;
+            const input = event.target.closest('[data-inline-string-input]');
 
-            if (!rowKey) {
+            if (!input) {
                 return;
             }
 
-            if (actionButton.hasAttribute('data-inline-string-edit')) {
-                editRow(rowKey);
-            } else if (actionButton.hasAttribute('data-inline-string-save')) {
-                saveRow(rowKey);
-            } else if (actionButton.hasAttribute('data-inline-string-cancel')) {
-                cancelRow(rowKey);
-            } else if (actionButton.hasAttribute('data-inline-string-remove')) {
-                removeRow(rowKey);
+            event.preventDefault();
+
+            const allInputs = visibleRows().map(function (row) {
+                return row.querySelector('[data-inline-string-input]');
+            }).filter(Boolean);
+            const nextInput = allInputs[allInputs.indexOf(input) + 1];
+
+            if (nextInput) {
+                nextInput.focus();
+                nextInput.select();
+
+                return;
             }
+
+            addRow();
         });
 
-        body.addEventListener('keydown', function (event) {
-            if (!event.target.matches('[data-inline-string-input]')) {
+        rowsContainer.addEventListener('click', function (event) {
+            const button = event.target.closest('[data-inline-string-remove]');
+
+            if (!button) {
                 return;
             }
 
-            const rowEl = event.target.closest('[data-inline-string-row]');
-            const rowKey = rowEl?.dataset.inlineStringRow;
+            const row = button.closest('[data-inline-string-row]');
 
-            if (!rowKey) {
+            if (!row) {
                 return;
             }
 
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                saveRow(rowKey);
+            const idInput = row.querySelector('input[name$="[id]"]');
+            const deleteInput = row.querySelector('[data-inline-string-delete]');
+
+            if (idInput && idInput.value) {
+                if (deleteInput) {
+                    deleteInput.value = '1';
+                }
+                row.classList.add('d-none');
+                row.querySelectorAll('input, textarea, select').forEach(function (field) {
+                    if (field !== deleteInput && field !== idInput) {
+                        field.disabled = true;
+                    }
+                });
+            } else {
+                row.remove();
             }
 
-            if (event.key === 'Escape') {
-                event.preventDefault();
-                cancelRow(rowKey);
-            }
+            syncEmptyState();
         });
 
         list.dataset.inlineStringListReady = 'true';
-        render();
+        syncEmptyState();
     }
 
     document.addEventListener('DOMContentLoaded', function () {

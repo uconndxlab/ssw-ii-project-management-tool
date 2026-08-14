@@ -4,84 +4,66 @@
     $selectedProgramIds = old('program_ids', $user->programs?->pluck('id')->toArray() ?? []);
 @endphp
 
-<div class="card mb-4">
-    <div class="card-body">
-        <h5 class="mb-3">User Information</h5>
+<x-section-card title="Information">
+    <x-form-field label="Name" for="name" name="name" :required="true">
+        <input type="text"
+               class="form-control @error('name') is-invalid @enderror"
+               id="name"
+               name="name"
+               value="{{ old('name', $user->name) }}"
+               required>
+    </x-form-field>
 
-        <div class="mb-3">
-            <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
-            <input type="text"
-                   class="form-control @error('name') is-invalid @enderror"
-                   id="name"
-                   name="name"
-                   value="{{ old('name', $user->name) }}"
-                   required>
-            @error('name')
-                <div class="invalid-feedback">{{ $message }}</div>
-            @enderror
-        </div>
+    <x-form-field label="Email" for="email" name="email" :required="true">
+        <input type="email"
+               class="form-control @error('email') is-invalid @enderror"
+               id="email"
+               name="email"
+               value="{{ old('email', $user->email) }}"
+               required>
+    </x-form-field>
 
-        <div class="mb-3">
-            <label for="po_number" class="form-label">PO Number</label>
-            <input type="text"
-                   class="form-control @error('po_number') is-invalid @enderror"
-                   id="po_number"
-                   name="po_number"
-                   value="{{ old('po_number', $user->po_number ?? '') }}"
-                   maxlength="6"
-                   pattern="[0-9]{6}"
-                   autocomplete="off"
-                     placeholder="e.g. 423232">
-                 <small class="text-muted d-block mt-1">Optional. Must be exactly 6 digits.</small>
-            @error('po_number')
-                <div class="invalid-feedback">{{ $message }}</div>
-            @enderror
-        </div>
+    <x-form-field
+        label="Password"
+        for="password"
+        name="password"
+        :required="! $isEdit"
+        :help="$isEdit ? 'Leave blank to keep the current password.' : null"
+    >
+        <input type="password"
+               class="form-control @error('password') is-invalid @enderror"
+               id="password"
+               name="password"
+               {{ $isEdit ? '' : 'required' }}>
+    </x-form-field>
 
-        <div class="mb-3">
-            <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
-            <input type="email"
-                   class="form-control @error('email') is-invalid @enderror"
-                   id="email"
-                   name="email"
-                   value="{{ old('email', $user->email) }}"
-                   required>
-            @error('email')
-                <div class="invalid-feedback">{{ $message }}</div>
-            @enderror
-        </div>
+    <x-form-field label="PO Number" for="po_number" name="po_number" help="Exactly 6 digits.">
+        <input type="text"
+               class="form-control @error('po_number') is-invalid @enderror"
+               id="po_number"
+               name="po_number"
+               value="{{ old('po_number', $user->po_number ?? '') }}"
+               maxlength="6"
+               pattern="[0-9]{6}"
+               autocomplete="off"
+               placeholder="e.g. 423232">
+    </x-form-field>
 
-        <div class="mb-0">
-            <label for="password" class="form-label">
-                Password
-                @if(!$isEdit)
-                    <span class="text-danger">*</span>
-                @else
-                    <span class="text-muted fw-normal">(Optional)</span>
-                @endif
-            </label>
-            <input type="password"
-                   class="form-control @error('password') is-invalid @enderror"
-                   id="password"
-                   name="password"
-                   {{ $isEdit ? '' : 'required' }}>
-            @if($isEdit)
-                <small class="text-muted d-block mt-1">Leave blank to keep the current password.</small>
-            @endif
-            @error('password')
-                <div class="invalid-feedback">{{ $message }}</div>
-            @enderror
-        </div>
-    </div>
-</div>
+    <x-form-options>
+        <x-form-switch
+            name="active"
+            label="Active"
+            help="Inactive users cannot log in and are removed from teams, agreements, and assignment pickers. Activity history is kept."
+            :checked="old('active', $user->exists ? $user->active : true)"
+            class="mb-0"
+        />
+    </x-form-options>
+</x-section-card>
 
-<div class="card mb-4">
-    <div class="card-body">
-        <h5 class="mb-3">Scope Assignments</h5>
-
-        <div class="row g-3 mb-3">
-            <div class="col-md-6">
-                <label for="role" class="form-label">Role <span class="text-danger">*</span></label>
+<x-section-card title="Role">
+    <div class="row g-3">
+        <div class="col-md-6">
+            <x-form-field label="Role" for="role" name="role" :required="true" class="mb-0">
                 <select class="form-select @error('role') is-invalid @enderror"
                         id="role"
                         name="role"
@@ -91,13 +73,11 @@
                     <option value="staff" {{ old('role', $user->role) === 'staff' ? 'selected' : '' }}>Staff</option>
                     <option value="consultant" {{ old('role', $user->role) === 'consultant' ? 'selected' : '' }}>Consultant</option>
                 </select>
-                @error('role')
-                    <div class="invalid-feedback">{{ $message }}</div>
-                @enderror
-            </div>
+            </x-form-field>
+        </div>
 
-            <div class="col-md-6">
-                <label for="supervisor_id" class="form-label">Supervisor (Optional)</label>
+        <div class="col-md-6">
+            <x-form-field label="Supervisor" for="supervisor_id" name="supervisor_id" class="mb-0">
                 <select class="form-select @error('supervisor_id') is-invalid @enderror"
                         id="supervisor_id"
                         name="supervisor_id">
@@ -108,22 +88,18 @@
                         </option>
                     @endforeach
                 </select>
-                @error('supervisor_id')
-                    <div class="invalid-feedback">{{ $message }}</div>
-                @enderror
-            </div>
+            </x-form-field>
         </div>
-
-        <x-project-program-scope-picker
-            scope-id="user-scope"
-            :projects="$projects"
-            :selected-project-ids="$selectedProjectIds"
-            :selected-program-ids="$selectedProgramIds"
-            :show-scope-mode-selector="true"
-            :selected-scope-mode="old('program_scope_mode', $user->program_scope_mode?->value ?? 'specific')"
-            project-help-text="Use projects to filter the program list; project assignments are inferred and not saved."
-            program-help-text="Programs are the saved user scope when Specific is selected."
-            scope-mode-help-text="Choose whether this user applies to all programs, only specific programs, or no programs."
-        />
     </div>
-</div>
+</x-section-card>
+
+<x-section-card title="Scope">
+    <x-project-program-scope-picker
+        scope-id="user-scope"
+        :projects="$projects"
+        :selected-project-ids="$selectedProjectIds"
+        :selected-program-ids="$selectedProgramIds"
+        :show-scope-mode-selector="true"
+        :selected-scope-mode="old('program_scope_mode', $user->program_scope_mode?->value ?? 'specific')"
+    />
+</x-section-card>

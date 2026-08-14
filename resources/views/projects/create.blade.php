@@ -3,70 +3,40 @@
 @section('title', 'Create Project')
 
 @section('content')
-<div class="row justify-content-center">
-    <div class="col-md-6">
+<x-form-shell>
+    <x-form-errors />
+
+    <form method="POST" action="{{ route('projects.store') }}" id="projects-create-form">
+        @csrf
         <x-page-header context="form" entity-type="Project" />
 
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">Project Details</h5>
-            </div>
-            <div class="card-body">
-                @if ($errors->any())
-                    <div class="alert alert-danger">
-                        <ul class="mb-0">
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
+        <x-section-card title="Information">
+            <x-form-field label="Name" for="name" name="name" :required="true">
+                <input type="text"
+                       class="form-control @error('name') is-invalid @enderror"
+                       id="name"
+                       name="name"
+                       value="{{ old('name') }}"
+                       required>
+            </x-form-field>
 
-                <form method="POST" action="{{ route('projects.store') }}" id="projects-create-form">
-                    @csrf
+            <x-form-field label="Description" for="description" name="description">
+                <textarea class="form-control @error('description') is-invalid @enderror"
+                          id="description"
+                          name="description"
+                          rows="4">{{ old('description') }}</textarea>
+            </x-form-field>
 
-                    <div class="mb-3">
-                        <label for="name" class="form-label">Project Name</label>
-                        <input type="text"
-                               class="form-control @error('name') is-invalid @enderror"
-                               id="name"
-                               name="name"
-                               value="{{ old('name') }}"
-                               required>
-                        @error('name')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="description" class="form-label">Description (Optional)</label>
-                        <textarea class="form-control @error('description') is-invalid @enderror"
-                                  id="description"
-                                  name="description"
-                                  rows="4">{{ old('description') }}</textarea>
-                        @error('description')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="active" class="form-label">Status</label>
-                        <select class="form-select @error('active') is-invalid @enderror"
-                                id="active"
-                                name="active"
-                                required>
-                            <option value="1" {{ old('active', '1') === '1' ? 'selected' : '' }}>Active</option>
-                            <option value="0" {{ old('active') === '0' ? 'selected' : '' }}>Inactive</option>
-                        </select>
-                        @error('active')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+            <x-form-options>
+                <x-form-switch
+                    name="active"
+                    label="Active"
+                    :checked="old('active', '1') === '1' || old('active') === null"
+                    class="mb-0"
+                />
+            </x-form-options>
+        </x-section-card>
+    </form>
+</x-form-shell>
 <x-save-bar form-id="projects-create-form" save-label="Create Project" />
 @endsection
