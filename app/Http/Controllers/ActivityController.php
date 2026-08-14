@@ -16,6 +16,7 @@ use App\Services\ActivityDuplicationService;
 use App\Services\DeliverableContributionService;
 use App\Support\ActivityFundingSourceTokens;
 use App\Support\ActivityTypeDuration;
+use App\Support\ProgramParticipantDirectory;
 use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -254,6 +255,7 @@ class ActivityController extends Controller
             'users',
             'teams.users',
             'programs.projects',
+            'programs.users:id,name,email,role,active',
         ]);
 
         // Get pre-selected agreement if provided
@@ -335,7 +337,7 @@ class ActivityController extends Controller
 
         $this->validateAgreementCoverageSelections($baseValidated, $agreements);
         $this->validateAgreementClassificationSelections($baseValidated, $agreements);
-        $this->validateAgreementParticipantSelections($baseValidated, $agreements);
+        $this->validateParticipantSelections($baseValidated);
 
         $this->validateAgreementFundingSources($baseValidated, $agreements);
 
@@ -463,6 +465,7 @@ class ActivityController extends Controller
             'users',
             'teams.users',
             'programs.projects',
+            'programs.users:id,name,email,role,active',
         ]);
         $currentContactFamilyId = old('contact_family_id', $activity->activityType?->contactFamily?->id);
 
@@ -548,7 +551,7 @@ class ActivityController extends Controller
 
         $this->validateAgreementCoverageSelections($baseValidated, $agreements, $activity);
         $this->validateAgreementClassificationSelections($baseValidated, $agreements);
-        $this->validateAgreementParticipantSelections($baseValidated, $agreements, $activity);
+        $this->validateParticipantSelections($baseValidated, $activity);
         $this->validateAgreementFundingSources($baseValidated, $agreements);
         $baseValidated['time_tracking'] = $this->normalizeTimeTrackingPayload($baseValidated, $agreements, $contactFamily);
         $validated = array_merge(
@@ -1045,7 +1048,7 @@ class ActivityController extends Controller
             ->all();
     }
 
-    private function validateAgreementParticipantSelections(array $validated, $agreements, ?Activity $activity = null): void
+    private function validateParticipantSelections(array $validated, ?Activity $activity = null): void
     {
         $selectedParticipantIds = collect($validated['participant_user_ids'] ?? [])->map(fn ($id) => (int) $id);
 
@@ -1053,23 +1056,18 @@ class ActivityController extends Controller
             return;
         }
 
-        if (empty($validated['agreement_ids'])) {
+        $selectedProgramIds = collect($validated['program_ids'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        if ($selectedProgramIds->isEmpty()) {
             throw ValidationException::withMessages([
-                'participant_user_ids' => 'Select at least one agreement before assigning participants.',
+                'participant_user_ids' => 'Select at least one program before assigning participants.',
             ]);
         }
 
-        $agreements->loadMissing(['users:id', 'teams.users:id']);
-
-        $allowedParticipantIds = $agreements
-            ->flatMap(function ($agreement) {
-                return $agreement->users->pluck('id')
-                    ->concat($agreement->teams->flatMap(fn ($team) => $team->users->pluck('id')));
-            })
-            ->map(fn ($id) => (int) $id)
-            ->unique()
-            ->values()
-            ->all();
+        $allowedParticipantIds = ProgramParticipantDirectory::allowedUserIdsForProgramIds($selectedProgramIds->all());
 
         if ($activity) {
             $historicalParticipantIds = $activity->participants()
@@ -1085,7 +1083,7 @@ class ActivityController extends Controller
             $historicalParticipantIds = [];
         }
 
-        $newParticipantIds = $selectedParticipantIds->diff($historicalParticipantIds ?? []);
+        $newParticipantIds = $selectedParticipantIds->diff($historicalParticipantIds);
 
         if ($newParticipantIds->isNotEmpty()) {
             $hasInactiveNewParticipants = User::query()
@@ -1102,7 +1100,7 @@ class ActivityController extends Controller
 
         if ($selectedParticipantIds->diff($allowedParticipantIds)->isNotEmpty()) {
             throw ValidationException::withMessages([
-                'participant_user_ids' => 'Selected participants must belong to at least one chosen agreement.',
+                'participant_user_ids' => 'Selected participants must belong to at least one chosen program.',
             ]);
         }
     }

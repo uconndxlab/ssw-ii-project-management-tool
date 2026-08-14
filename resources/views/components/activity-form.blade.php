@@ -29,6 +29,7 @@
 
 @php
     use App\Support\ActivityFundingSourceTokens;
+    use App\Support\ProgramParticipantDirectory;
     $availableOrganizationIds = collect($organizations)->pluck('id')->map(fn ($id) => (string) $id)->all();
 
     $agreementConfigs = $agreements->mapWithKeys(function ($agreement) use ($availableOrganizationIds) {
@@ -46,13 +47,6 @@
                     ->values()
                     ->all(),
                 'state_ids' => $agreement->states->pluck('id')->map(fn($id) => (string) $id)->values()->all(),
-                'participant_user_ids' => $agreement->users
-                    ->pluck('id')
-                    ->concat($agreement->teams->flatMap(fn ($team) => $team->users->pluck('id')))
-                    ->map(fn ($id) => (string) $id)
-                    ->unique()
-                    ->values()
-                    ->all(),
                 'project_ids' => $agreement->projects->pluck('id')->map(fn($id) => (string) $id)->values()->all(),
                 'program_ids' => $agreement->programs->pluck('id')->map(fn($id) => (string) $id)->values()->all(),
                 'contact_family_ids' => $deliverables
@@ -125,6 +119,10 @@
         ->unique()
         ->values()
         ->all();
+    $programParticipantDirectory = ProgramParticipantDirectory::build(
+        $agreements->flatMap(fn ($agreement) => $agreement->programs)->unique('id')->values()
+    );
+    $programUserIdsByProgramId = $programParticipantDirectory['user_ids_by_program_id'];
     $organizationConfigs = collect($organizations)
         ->mapWithKeys(function ($organization) use ($visibleProjectIds, $visibleProgramIds) {
             $programs = $organization->programs ?? collect();
@@ -213,35 +211,39 @@
         ->unique('id')
         ->sortBy('name')
         ->values();
-    $participantOptions = $agreements
-        ->flatMap(function ($agreement) {
-            return $agreement->users->concat($agreement->teams->flatMap(fn ($team) => $team->users));
-        })
-        ->unique('id')
-        ->sortBy('name')
-        ->values()
-        ->map(function ($user) {
+    $savedParticipantIds = $isEditMode && $activity
+        ? $activity->participants
+            ->pluck('id')
+            ->concat($activity->participantTimes->pluck('user_id')->filter())
+            ->map(fn ($id) => (string) $id)
+            ->unique()
+            ->values()
+        : collect();
+    $participantOptions = $programParticipantDirectory['users']
+        ->map(function ($user) use ($savedParticipantIds) {
             $role = !empty($user->role) ? ' (' . ucfirst($user->role) . ')' : '';
 
             return [
                 'value' => $user->id,
                 'label' => $user->name . $role,
                 'search' => trim($user->name . ' ' . ($user->email ?? '') . ' ' . ($user->role ?? '')),
+                'contextBadgeClass' => $savedParticipantIds->contains((string) $user->id) ? 'bg-secondary' : 'bg-primary-subtle text-primary-emphasis border',
             ];
         });
 
     $currentContactFamily = $contactFamilies->first(fn ($family) => (string) $family->id === (string) $currentContactFamilyId);
     $selectedContactFamilyTracksAdditionalTime = (bool) ($currentContactFamily?->track_additional_time);
 
-    if ($isEditMode && $activity?->relationLoaded('participantTimes')) {
-        $historicalParticipantOptions = $activity->participantTimes
-            ->filter(function ($participantTime) use ($participantOptions) {
-                if (!$participantTime->user_id) {
-                    return false;
-                }
+    if ($isEditMode && $activity) {
+        $directoryOptionIds = $participantOptions->pluck('value')->map(fn ($id) => (string) $id);
+        $historicalFromTimes = $activity->relationLoaded('participantTimes')
+            ? $activity->participantTimes->filter(fn ($participantTime) => $participantTime->user_id)
+            : collect();
+        $historicalFromParticipants = $activity->relationLoaded('participants')
+            ? $activity->participants
+            : collect();
 
-                return !$participantOptions->contains(fn ($option) => (string) $option['value'] === (string) $participantTime->user_id);
-            })
+        $historicalParticipantOptions = $historicalFromTimes
             ->map(function ($participantTime) {
                 $label = $participantTime->user?->name
                     ?? $participantTime->participant_name
@@ -254,7 +256,23 @@
                     'context' => 'Historical',
                     'contextBadgeClass' => 'bg-secondary',
                 ];
-            });
+            })
+            ->concat(
+                $historicalFromParticipants->map(function ($user) {
+                    $role = !empty($user->role) ? ' (' . ucfirst($user->role) . ')' : '';
+
+                    return [
+                        'value' => $user->id,
+                        'label' => $user->name . $role,
+                        'search' => trim($user->name . ' ' . ($user->email ?? '') . ' ' . ($user->role ?? '')),
+                        'context' => 'Historical',
+                        'contextBadgeClass' => 'bg-secondary',
+                    ];
+                })
+            )
+            ->filter(fn ($option) => !$directoryOptionIds->contains((string) $option['value']))
+            ->unique('value')
+            ->values();
 
         $participantOptions = $participantOptions
             ->concat($historicalParticipantOptions)
@@ -303,23 +321,7 @@
         ->flatten()
         ->first();
 
-    $historicalParticipantIds = $isEditMode && $activity
-        ? $activity->participantTimes
-            ->pluck('user_id')
-            ->filter()
-            ->map(fn ($id) => (string) $id)
-            ->unique()
-            ->values()
-            ->all()
-        : [];
-
-    $originalAgreementIds = $isEditMode && $activity
-        ? $activity->agreements
-            ->pluck('id')
-            ->map(fn ($id) => (string) $id)
-            ->values()
-            ->all()
-        : [];
+    $historicalParticipantIds = $savedParticipantIds->all();
 
     $selectedActivityTypeLabel = $contactFamilies
         ->flatMap(fn ($family) => $family->activityTypes)
@@ -530,12 +532,12 @@
                                 value-key="value"
                                 search-key="search"
                                 placeholder="Search covered users..."
-                                disabled-placeholder="Select at least one agreement first..."
-                                :disabled="empty($selectedAgreementIds)"
+                                disabled-placeholder="Select at least one program first..."
+                                :disabled="empty($selectedProgramIds) && empty($historicalParticipantIds)"
                                 :open-on-focus="false"
                                 entity="user"
                             />
-                            <div class="form-text">Choose the covered users who helped deliver this activity.</div>
+                            <div class="form-text">Choose the users assigned to the selected programs who helped deliver this activity.</div>
                             @error('participant_user_ids')
                                 <div class="text-danger small mt-1">{{ $message }}</div>
                             @enderror
@@ -922,7 +924,7 @@
     const visibleOrganizationIds = @json($visibleOrganizationIds);
     const visibleProjectIds = @json($visibleProjectIds);
     const visibleProgramIds = @json($visibleProgramIds);
-    const originalAgreementIds = @json($originalAgreementIds);
+    const programUserIdsByProgramId = @json($programUserIdsByProgramId);
     const initialParticipantTimes = @json($normalizedParticipantTimeData);
     const initialCompletionCount = @json((int) old('completion_count', $completionCountValue));
     let initialAllottedDurationHours = @json($allottedDurationHours !== null ? (float) $allottedDurationHours : null);
@@ -930,6 +932,7 @@
     const form = document.getElementById(@json($formId));
     const isEditMode = @json($isEditMode);
     let agreementsPickerInitialized = false;
+    let programsPickerInitialized = false;
     let preserveInitialCoverageSelections = isEditMode;
     let coverageInteractionDetected = false;
 
@@ -959,16 +962,40 @@
         }).filter(Boolean);
     }
 
-    function shouldPreserveHistoricalParticipants() {
-        if (!isEditMode || originalAgreementIds.length === 0) {
+    function uniqueMergedProgramUserIds() {
+        const merged = new Set();
+
+        resolvedSelectedProgramIds().forEach(function (programId) {
+            (programUserIdsByProgramId[String(programId)] || []).forEach(function (value) {
+                merged.add(String(value));
+            });
+        });
+
+        return Array.from(merged);
+    }
+
+    function resolvedSelectedProgramIds() {
+        const values = selectedProgramIds();
+
+        if (values.length || programsPickerInitialized || initialProgramIds.length === 0) {
+            return values;
+        }
+
+        return initialProgramIds.map(String);
+    }
+
+    function allowedProgramParticipantIds() {
+        return resolvedSelectedProgramIds().length ? uniqueMergedProgramUserIds() : [];
+    }
+
+    function isHistoricalParticipant(userId) {
+        const id = String(userId);
+
+        if (!historicalParticipantIds.includes(id)) {
             return false;
         }
 
-        const selected = new Set(selectedAgreementIds());
-
-        return originalAgreementIds.every(function (agreementId) {
-            return selected.has(String(agreementId));
-        });
+        return allowedProgramParticipantIds().indexOf(id) === -1;
     }
 
     function uniqueMergedIds(key) {
@@ -1199,24 +1226,40 @@
     }
 
     function restrictParticipantPicker() {
-        const agreements = selectedAgreementIds();
+        const programs = resolvedSelectedProgramIds();
         const participantPicker = document.getElementById('activity-participants-picker');
 
         if (!participantPicker) return;
 
-        const allowedParticipantIds = agreements.length ? uniqueMergedIds('participant_user_ids') : [];
-        const preservedHistoricalIds = shouldPreserveHistoricalParticipants() ? historicalParticipantIds : [];
+        const allowedParticipantIds = allowedProgramParticipantIds();
+        const preservedHistoricalIds = historicalParticipantIds.filter(function (id) {
+            return allowedParticipantIds.indexOf(String(id)) === -1;
+        });
         const restrictedIds = Array.from(new Set(allowedParticipantIds.concat(preservedHistoricalIds).map(String)));
-        const disabled = !agreements.length || allowedParticipantIds.length === 0;
-        const placeholder = !agreements.length
-            ? 'Select at least one agreement first...'
-            : 'No covered users for selected agreements...';
+        const disabled = restrictedIds.length === 0;
+        let placeholder = 'Search covered users...';
+
+        if (programs.length === 0) {
+            placeholder = preservedHistoricalIds.length === 0
+                ? 'Select at least one program first...'
+                : 'Search historical participants...';
+        } else if (allowedParticipantIds.length === 0 && preservedHistoricalIds.length === 0) {
+            placeholder = 'No covered users for selected programs...';
+        }
+
+        const historicalContexts = {};
+        restrictedIds.forEach(function (userId) {
+            historicalContexts[String(userId)] = isHistoricalParticipant(userId) ? 'Historical' : '';
+        });
 
         participantPicker.dispatchEvent(new CustomEvent('token-picker:set-disabled', {
             detail: {
                 disabled: disabled,
                 placeholder: placeholder,
             }
+        }));
+        participantPicker.dispatchEvent(new CustomEvent('token-picker:update-option-contexts', {
+            detail: historicalContexts,
         }));
         participantPicker.dispatchEvent(new CustomEvent('token-picker:restrict', { detail: restrictedIds }));
     }
@@ -1399,7 +1442,7 @@
             label.textContent = row.dataset.participantName;
             historicalBadge.className = 'badge bg-secondary';
             historicalBadge.textContent = 'Historical';
-            historicalBadge.classList.toggle('d-none', !participantDirectory[String(userId)]?.historical);
+            historicalBadge.classList.toggle('d-none', !isHistoricalParticipant(userId));
 
             userInput.type = 'hidden';
             userInput.name = 'participant_times[' + userId + '][user_id]';
@@ -1867,7 +1910,9 @@
     form.querySelector('[data-scope-id="activity-coverage-scope"]')?.addEventListener('click', noteCoverageInteraction, true);
     form.querySelector('[data-scope-id="activity-coverage-scope"]')?.addEventListener('input', noteCoverageInteraction, true);
     form.querySelector('[data-scope-id="activity-coverage-scope"]')?.addEventListener('project-program-scope:change', function () {
+        programsPickerInitialized = true;
         stopPreservingInitialCoverageIfNeeded();
+        restrictParticipantPicker();
         updateAgreementLoggingGroups();
         updateContactFamilyLoggingGroups();
         updateActivityLoggingGroups();
