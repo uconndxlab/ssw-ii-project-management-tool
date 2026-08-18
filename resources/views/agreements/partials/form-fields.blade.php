@@ -82,13 +82,6 @@
     $teamProgramScopeModeMap = $teams->mapWithKeys(fn ($team) => [
         (string) $team->id => $team->program_scope_mode?->value ?? 'specific',
     ])->all();
-
-    $loggingFieldProgramMap = $agreementLoggingFields->mapWithKeys(fn ($field) => [
-        (string) $field->id => $field->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all(),
-    ])->all();
-    $loggingFieldProgramScopeModeMap = $agreementLoggingFields->mapWithKeys(fn ($field) => [
-        (string) $field->id => $field->program_scope_mode?->value ?? 'all',
-    ])->all();
 @endphp
 
 <x-section-card title="Information">
@@ -396,24 +389,6 @@
         }));
     }
 
-    function syncLoggingFieldOptions(selectedProgramIds, selectedScopeMode) {
-        const selectedPrograms = new Set((selectedProgramIds || []).map(String));
-
-        document.querySelectorAll('[data-agreement-logging-field-option]').forEach(function (option) {
-            const programIds = JSON.parse(option.dataset.programIds || '[]').map(String);
-            const scopeMode = String(option.dataset.scopeMode || 'specific');
-            const visible = matchesProgramScope(programIds, scopeMode, Array.from(selectedPrograms), selectedScopeMode, true);
-
-            option.classList.toggle('d-none', !visible);
-            option.querySelectorAll('input').forEach(function (input) {
-                if (!visible) {
-                    input.checked = false;
-                }
-                input.disabled = !visible;
-            });
-        });
-    }
-
     document.addEventListener('DOMContentLoaded', function () {
         const programPicker = document.getElementById('agreement-scope-programs');
         const statePicker = document.getElementById('agreement-states');
@@ -499,8 +474,6 @@
                     bubbles: true,
                 }));
             }
-
-            syncLoggingFieldOptions(selectedProgramIds, selectedScopeMode);
 
             document.dispatchEvent(new CustomEvent('agreement-scope:change', {
                 detail: {

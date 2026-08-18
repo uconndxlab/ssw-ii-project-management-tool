@@ -19,6 +19,7 @@
                 'description' => (string) ($field->help_text ?? ''),
                 'full_width' => (bool) $field->is_full_width,
                 'program_ids' => $field->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all(),
+                'scope_mode' => $field->program_scope_mode?->value ?? 'all',
             ];
         })
         ->values()
@@ -141,33 +142,47 @@
         });
     }
 
-    function initialEffectiveProgramIds(root) {
+    function initialScope(root) {
         const scopeSection = scopeSectionFor(root);
 
         if (!scopeSection) {
-            return [];
+            return { mode: 'all', programIds: [] };
         }
 
-        const selectedScopeMode = scopeSection.querySelector('input[name="program_scope_mode"]:checked')?.value || 'all';
+        const mode = scopeSection.querySelector('input[name="program_scope_mode"]:checked')?.value
+            || scopeSection.dataset.defaultScopeMode
+            || 'specific';
 
-        if (selectedScopeMode !== 'specific') {
-            return [];
-        }
-
-        return selectedHiddenValues(scopeSection, 'program_ids');
+        return {
+            mode: String(mode),
+            programIds: selectedHiddenValues(scopeSection, 'program_ids'),
+        };
     }
 
-    function fieldIsVisible(field, effectiveProgramIds) {
-        if (!Array.isArray(effectiveProgramIds) || effectiveProgramIds.length === 0) {
+    function fieldIsVisible(field, effectiveProgramIds, scopeMode) {
+        const agreementMode = String(scopeMode || 'specific');
+        const fieldMode = String(field.scope_mode || 'all');
+        const selectedPrograms = Array.isArray(effectiveProgramIds) ? effectiveProgramIds.map(String) : [];
+        const fieldProgramIds = Array.isArray(field.program_ids) ? field.program_ids.map(String) : [];
+
+        if (agreementMode === 'all') {
+            return fieldMode !== 'none';
+        }
+
+        if (agreementMode === 'none' || selectedPrograms.length === 0) {
+            return false;
+        }
+
+        if (fieldMode === 'all') {
             return true;
         }
 
-        if (!Array.isArray(field.program_ids) || field.program_ids.length === 0) {
-            return true;
+        if (fieldMode === 'none' || fieldProgramIds.length === 0) {
+            return false;
         }
 
-        return field.program_ids.some(function (programId) {
-            return effectiveProgramIds.includes(String(programId));
+        return fieldProgramIds.some(function (programId) {
+            return selectedPrograms.includes(String(programId));
         });
     }
 
@@ -262,7 +277,7 @@
 
     function visibleFields(root) {
         return root._pickerState.fields.filter(function (field) {
-            return fieldIsVisible(field, root._pickerState.effectiveProgramIds);
+            return fieldIsVisible(field, root._pickerState.effectiveProgramIds, root._pickerState.scopeMode);
         });
     }
 
@@ -298,7 +313,7 @@
         const selected = root._pickerState.selectedIds.map(function (fieldId) {
             return fieldsById.get(String(fieldId)) || null;
         }).filter(function (field) {
-            return !!field && fieldIsVisible(field, root._pickerState.effectiveProgramIds);
+            return !!field && fieldIsVisible(field, root._pickerState.effectiveProgramIds, root._pickerState.scopeMode);
         });
 
         availableList.innerHTML = available.map(availableItemMarkup).join('');
@@ -308,6 +323,14 @@
 
         availableEmptyState.classList.toggle('d-none', available.length !== 0);
         selectedEmptyState.classList.toggle('d-none', selected.length !== 0);
+
+        if (available.length === 0) {
+            const needsPrograms = root._pickerState.scopeMode === 'specific'
+                && root._pickerState.effectiveProgramIds.length === 0;
+            availableEmptyState.textContent = needsPrograms
+                ? 'Select at least one program to see logging fields.'
+                : 'No logging fields are available for the current program scope.';
+        }
 
         if (root._sortable) {
             root._sortable.destroy();
@@ -361,16 +384,20 @@
             return;
         }
 
+        const initial = initialScope(root);
+
         root._pickerState = {
             fields: parseJson(root.dataset.fields, []).map(function (field) {
                 return Object.assign({}, field, {
                     id: String(field.id),
                     program_ids: Array.isArray(field.program_ids) ? field.program_ids.map(String) : [],
+                    scope_mode: String(field.scope_mode || 'all'),
                 });
             }),
             selectedIds: parseJson(root.dataset.selectedFieldIds, []).map(String),
             requiredIds: new Set(parseJson(root.dataset.requiredFieldIds, []).map(String)),
-            effectiveProgramIds: initialEffectiveProgramIds(root).map(String),
+            effectiveProgramIds: initial.programIds.map(String),
+            scopeMode: initial.mode,
         };
 
         root.addEventListener('click', function (event) {
@@ -436,6 +463,9 @@
                 return;
             }
 
+            root._pickerState.scopeMode = event.detail?.scopeMode
+                ? String(event.detail.scopeMode)
+                : root._pickerState.scopeMode;
             root._pickerState.effectiveProgramIds = Array.isArray(event.detail?.effectiveProgramIds)
                 ? event.detail.effectiveProgramIds.map(String)
                 : [];
