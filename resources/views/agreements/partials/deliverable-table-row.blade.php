@@ -2,9 +2,14 @@
     $rowKey = $row['row_key'];
     $assignmentGroups = $row['assignment_groups'] ?? [];
     $hasAssignments = !empty($assignmentGroups);
+    $hasRowError = collect($errors->keys())->contains(function ($key) use ($rowKey) {
+        $key = (string) $key;
+
+        return $key === 'deliverables.'.$rowKey || str_starts_with($key, 'deliverables.'.$rowKey.'.');
+    });
 @endphp
 
-<tr data-deliverable-row data-row-key="{{ $rowKey }}" data-deliverable-row-data='@json($row)' @if(!empty($row['_delete']) && $row['_delete'] === '1') class="table-active text-muted" style="display:none" @endif>
+<tr data-deliverable-row data-row-key="{{ $rowKey }}" data-deliverable-row-data='@json($row)' @if(!empty($row['_delete']) && $row['_delete'] === '1') class="table-active text-muted" style="display:none" @elseif($hasRowError) class="table-danger" @endif>
     <td>
         <div class="fw-semibold">{{ $row['contact_family_label'] ?: '—' }}</div>
         <div class="text-muted small">{{ $row['activity_type_label'] ?: 'Any activity type' }}</div>

@@ -249,6 +249,9 @@
             required-input-name="required_agreement_logging_field_ids"
             picker-id="agreement-logging-field-picker"
         />
+        @error('agreement_logging_field_ids')
+            <div class="text-danger small mt-2">{{ $message }}</div>
+        @enderror
     @endif
 
     <x-form-subsection class="mt-4" title="Funding Sources" meta="Optional pickers on the activity log.">

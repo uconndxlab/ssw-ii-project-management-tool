@@ -50,7 +50,7 @@
 <div data-agreement-organizations-wrap>
     <div class="row g-4 align-items-start mb-4">
         <div class="col-lg-6">
-            <x-form-field label="Organizations" name="organization_ids" :required="true" help="Must match a selected program and state.">
+            <x-form-field label="Organizations" name="organization_ids" help="Must match a selected program and state.">
                 <x-token-picker
                     picker-id="agreement-organizations"
                     name="organization_ids[]"

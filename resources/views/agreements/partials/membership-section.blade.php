@@ -42,7 +42,7 @@
             <div class="col-lg-5 d-flex">
                 <div class="d-flex flex-column w-100 h-100">
                     <div class="d-grid gap-4">
-                        <x-form-field label="Teams" help="Team members inherit access to this agreement." class="mb-0">
+                        <x-form-field label="Teams" name="team_ids" help="Team members inherit access to this agreement." class="mb-0">
                             <x-token-picker
                                 picker-id="agreement-{{ $agreement ? 'edit' : 'create' }}-teams"
                                 name="team_ids[]"
@@ -67,7 +67,7 @@
                             />
                         </x-form-field>
 
-                        <x-form-field label="Additional users" help="Users who are not covered by a selected team." class="mb-0">
+                        <x-form-field label="Additional users" name="user_ids" help="Users who are not covered by a selected team." class="mb-0">
                             <x-token-picker
                                 picker-id="agreement-{{ $agreement ? 'edit' : 'create' }}-users"
                                 name="user_ids[]"
@@ -87,7 +87,7 @@
                         </x-form-field>
                     </div>
 
-                    <div class="border rounded bg-body-tertiary px-3 py-3 mt-3 mt-lg-auto">
+                    <div class="border rounded px-3 py-3 mt-3 mt-lg-auto{{ ($errors->has('membership') || $errors->has('principal_investigator_ids')) ? ' border-danger' : ' bg-body-tertiary' }}">
                         <div class="fw-semibold small mb-2">Membership requirements</div>
 
                         <div class="d-grid gap-2 small">
@@ -107,7 +107,7 @@
                             </div>
                         </div>
 
-                        @error('team_ids')
+                        @error('membership')
                             <div class="text-danger small mt-3">{{ $message }}</div>
                         @enderror
 

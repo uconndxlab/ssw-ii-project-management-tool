@@ -7,6 +7,7 @@
 @php
     $href = $showRoute ?? route('organizations.show', $organization);
     $contextBadges = [];
+    $metaLines = [];
 
     if ($organization->pivot->payor_source ?? false) {
         $contextBadges[] = ['label' => 'Payor source', 'kind' => 'payor-source'];

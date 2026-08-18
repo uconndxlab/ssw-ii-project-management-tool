@@ -217,9 +217,24 @@
         'classification_locked' => false,
         'semantic_locked' => false,
     ];
+
+    $deliverableErrorMessages = collect($errors->messages())
+        ->filter(fn ($messages, $key) => $key === 'deliverables' || str_starts_with((string) $key, 'deliverables.'))
+        ->flatten()
+        ->unique()
+        ->values();
 @endphp
 
 <x-section-card title="Deliverables" class="overflow-hidden">
+        @if($deliverableErrorMessages->isNotEmpty())
+            <div class="alert alert-danger small">
+                <ul class="mb-0">
+                    @foreach($deliverableErrorMessages as $message)
+                        <li>{{ $message }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
 
         <div class="table-responsive mb-3 mw-100">
             <table class="table table-sm align-middle">

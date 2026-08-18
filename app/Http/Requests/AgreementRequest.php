@@ -379,7 +379,7 @@ class AgreementRequest extends FormRequest
                 ->values();
 
             if ($effectiveUserIds->isEmpty()) {
-                $validator->errors()->add('team_ids', 'Add at least one user or team to the agreement.');
+                $validator->errors()->add('membership', 'Add at least one user or team to the agreement.');
             }
 
             $principalInvestigatorIds = collect($this->input('principal_investigator_ids', []))
@@ -530,8 +530,8 @@ class AgreementRequest extends FormRequest
                 ->with('programs:id')
                 ->get();
 
-            foreach ($deliverables as $deliverableIndex => $row) {
-                if (!is_array($row)) {
+            foreach ($this->input('deliverables', []) as $deliverableKey => $row) {
+                if (!is_array($row) || !empty($row['_delete'])) {
                     continue;
                 }
 
@@ -541,7 +541,7 @@ class AgreementRequest extends FormRequest
                 }
 
                 if (empty($row['contact_family_id'])) {
-                    $validator->errors()->add("deliverables.{$deliverableIndex}.contact_family_id", 'Deliverables must select an activity family.');
+                    $validator->errors()->add("deliverables.{$deliverableKey}.contact_family_id", 'Deliverables must select an activity family.');
                 }
 
                 $contactFamily = null;
@@ -553,7 +553,7 @@ class AgreementRequest extends FormRequest
                     $activityType = ActivityType::query()->find((int) $row['activity_type_id']);
 
                     if ($activityType && (int) $activityType->contact_family_id !== (int) $contactFamily->id) {
-                        $validator->errors()->add("deliverables.{$deliverableIndex}.activity_type_id", 'Deliverable activity types must belong to the selected activity family.');
+                        $validator->errors()->add("deliverables.{$deliverableKey}.activity_type_id", 'Deliverable activity types must belong to the selected activity family.');
                     }
                 }
 
@@ -578,14 +578,14 @@ class AgreementRequest extends FormRequest
                     ->values();
 
                 if (!$metricType) {
-                    $validator->errors()->add("deliverables.{$deliverableIndex}.metric_type", 'Deliverable metric type is required.');
+                    $validator->errors()->add("deliverables.{$deliverableKey}.metric_type", 'Deliverable metric type is required.');
                 }
 
                 if ($metricType === 'time') {
                     $timeBasis = $timeBasis ?: 'observed';
 
                     if (!in_array($timeBasis, ['observed', 'allotted'], true)) {
-                        $validator->errors()->add("deliverables.{$deliverableIndex}.time_basis", 'Deliverable time basis must be observed or allotted.');
+                        $validator->errors()->add("deliverables.{$deliverableKey}.time_basis", 'Deliverable time basis must be observed or allotted.');
                     }
 
                     $contactFamilyId = !empty($row['contact_family_id']) ? (int) $row['contact_family_id'] : null;
@@ -604,7 +604,7 @@ class AgreementRequest extends FormRequest
                             $activityTypesInScope
                         )) {
                             $validator->errors()->add(
-                                "deliverables.{$deliverableIndex}.time_basis",
+                                "deliverables.{$deliverableKey}.time_basis",
                                 'The selected classification has no allotted time.'
                             );
                         } else {
@@ -625,12 +625,12 @@ class AgreementRequest extends FormRequest
 
                                 if ($units['is_mixed'] && !$requestedUnit) {
                                     $validator->errors()->add(
-                                        "deliverables.{$deliverableIndex}.allotted_time_unit",
+                                        "deliverables.{$deliverableKey}.allotted_time_unit",
                                         'Select days or hours for this deliverable target.'
                                     );
                                 } else {
                                     $validator->errors()->add(
-                                        "deliverables.{$deliverableIndex}.allotted_time_unit",
+                                        "deliverables.{$deliverableKey}.allotted_time_unit",
                                         'Target unit must match the selected activity type duration.'
                                     );
                                 }
@@ -640,52 +640,52 @@ class AgreementRequest extends FormRequest
                 }
 
                 if (!$contributionBasis) {
-                    $validator->errors()->add("deliverables.{$deliverableIndex}.contribution_basis", 'Deliverable contribution basis is required.');
+                    $validator->errors()->add("deliverables.{$deliverableKey}.contribution_basis", 'Deliverable contribution basis is required.');
                 }
 
                 if ($contributionBasis === 'contact') {
                     if ($groupingMode) {
-                        $validator->errors()->add("deliverables.{$deliverableIndex}.user_grouping_mode", 'Contact-based deliverables cannot define a user grouping mode.');
+                        $validator->errors()->add("deliverables.{$deliverableKey}.user_grouping_mode", 'Contact-based deliverables cannot define a user grouping mode.');
                     }
 
                     if ($deliverableUserIds->isNotEmpty() || $deliverableTeamIds->isNotEmpty()) {
-                        $validator->errors()->add("deliverables.{$deliverableIndex}", 'Contact-based deliverables cannot select users or teams.');
+                        $validator->errors()->add("deliverables.{$deliverableKey}", 'Contact-based deliverables cannot select users or teams.');
                     }
                 }
 
                 if ($contributionBasis === 'user' && !$groupingMode) {
-                    $validator->errors()->add("deliverables.{$deliverableIndex}.user_grouping_mode", 'User-based deliverables must choose joint or individual grouping.');
+                    $validator->errors()->add("deliverables.{$deliverableKey}.user_grouping_mode", 'User-based deliverables must choose joint or individual grouping.');
                 }
 
                 if ($contributionBasis === 'user' && $deliverableUserIds->isEmpty() && $deliverableTeamIds->isEmpty()) {
-                    $validator->errors()->add("deliverables.{$deliverableIndex}", 'User-based deliverables must select at least one user or team.');
+                    $validator->errors()->add("deliverables.{$deliverableKey}", 'User-based deliverables must select at least one user or team.');
                 }
 
                 if ($groupingMode === 'individual') {
                     if ($deliverableTeamIds->isNotEmpty()) {
-                        $validator->errors()->add("deliverables.{$deliverableIndex}.team_ids", 'Individual deliverables cannot link teams directly. Assign users instead.');
+                        $validator->errors()->add("deliverables.{$deliverableKey}.team_ids", 'Individual deliverables cannot link teams directly. Assign users instead.');
                     }
 
                     if ($deliverableUserIds->isEmpty()) {
-                        $validator->errors()->add("deliverables.{$deliverableIndex}.user_ids", 'Individual deliverables must select at least one user.');
+                        $validator->errors()->add("deliverables.{$deliverableKey}.user_ids", 'Individual deliverables must select at least one user.');
                     }
                 }
 
                 if (($row['include_additional_time'] ?? false) && $metricType !== 'time') {
-                    $validator->errors()->add("deliverables.{$deliverableIndex}.include_additional_time", 'Only time deliverables can include prep and follow up time.');
+                    $validator->errors()->add("deliverables.{$deliverableKey}.include_additional_time", 'Only time deliverables can include prep and follow up time.');
                 }
 
                 if (($row['include_additional_time'] ?? false) && ($timeBasis ?? 'observed') === 'allotted') {
-                    $validator->errors()->add("deliverables.{$deliverableIndex}.include_additional_time", 'Allotted time deliverables cannot include prep and follow up time.');
+                    $validator->errors()->add("deliverables.{$deliverableKey}.include_additional_time", 'Allotted time deliverables cannot include prep and follow up time.');
                 }
 
                 if (($row['include_additional_time'] ?? false) && $contactFamily && !$contactFamily->track_additional_time) {
-                    $validator->errors()->add("deliverables.{$deliverableIndex}.include_additional_time", 'The selected activity family does not track prep and follow up time.');
+                    $validator->errors()->add("deliverables.{$deliverableKey}.include_additional_time", 'The selected activity family does not track prep and follow up time.');
                 }
 
                 if ($deliverableUserIds->isNotEmpty()) {
                     if (User::query()->whereKey($deliverableUserIds)->where('active', false)->exists()) {
-                        $validator->errors()->add("deliverables.{$deliverableIndex}.user_ids", 'Inactive users cannot be assigned to deliverables.');
+                        $validator->errors()->add("deliverables.{$deliverableKey}.user_ids", 'Inactive users cannot be assigned to deliverables.');
                     }
 
                     $invalidDeliverableUserIds = User::query()
@@ -706,7 +706,7 @@ class AgreementRequest extends FormRequest
                         ->pluck('id');
 
                     if ($invalidDeliverableUserIds->isNotEmpty()) {
-                        $validator->errors()->add("deliverables.{$deliverableIndex}.user_ids", 'Deliverable users must match one of the selected programs.');
+                        $validator->errors()->add("deliverables.{$deliverableKey}.user_ids", 'Deliverable users must match one of the selected programs.');
                     }
                 }
 
@@ -723,21 +723,21 @@ class AgreementRequest extends FormRequest
                         ->pluck('id');
 
                     if ($invalidDeliverableTeamIds->isNotEmpty()) {
-                        $validator->errors()->add("deliverables.{$deliverableIndex}.team_ids", 'Deliverable teams must match one of the selected programs.');
+                        $validator->errors()->add("deliverables.{$deliverableKey}.team_ids", 'Deliverable teams must match one of the selected programs.');
                     }
                 }
 
                 if ($existingDeliverable && $deliverableScopeHasHistory) {
                     if ($deliverableClassificationChanged) {
                         $validator->errors()->add(
-                            "deliverables.{$deliverableIndex}",
+                            "deliverables.{$deliverableKey}",
                             'Deliverable classification cannot change in place after activity history exists. Create a new deliverable instead.'
                         );
                     }
 
                     if ($this->deliverableSemanticFieldsChanged($existingDeliverable, $row)) {
                         $validator->errors()->add(
-                            "deliverables.{$deliverableIndex}",
+                            "deliverables.{$deliverableKey}",
                             'Deliverable counting rules cannot change in place after activity history exists. Create a new deliverable instead.'
                         );
                     }

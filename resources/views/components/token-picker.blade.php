@@ -55,6 +55,11 @@
             'selectedBadgeClass' => data_get($item, 'selectedBadgeClass', $optionBadgeClass ?? $entityBadgeClass),
         ];
     })->filter(fn ($option) => $option['value'] !== '')->values()->all();
+
+    $errorKey = \Illuminate\Support\Str::before($name, '[');
+    $hasError = collect($errors->keys())->contains(
+        fn ($key) => $key === $errorKey || str_starts_with((string) $key, $errorKey . '.')
+    );
 @endphp
 
 <div id="{{ $pickerId }}"
@@ -72,7 +77,7 @@
      data-selected='@json($selectedIds)'>
     <div class="d-flex flex-wrap gap-1 mb-2 {{ $showSelected ? '' : 'd-none' }}" data-token-selected></div>
 
-    <div class="form-control d-flex align-items-center py-1" style="min-height: 42px;" data-token-control>
+    <div class="form-control d-flex align-items-center py-1{{ $hasError ? ' is-invalid' : '' }}" style="min-height: 42px;" data-token-control>
         <input type="text"
                class="border-0 flex-grow-1"
                style="outline: none; min-width: 160px;"
