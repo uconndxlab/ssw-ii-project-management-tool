@@ -31,20 +31,6 @@ return [
 
     'connections' => [
 
-        // prod connection config
-        'prod_pg' => [
-            'driver' => 'pgsql',
-            'host' => env('PROD_DB_HOST'),
-            'port' => env('PROD_DB_PORT', 5432),
-            'database' => env('PROD_DB_DATABASE'),
-            'username' => env('PROD_DB_USERNAME'),
-            'password' => env('PROD_DB_PASSWORD'),
-            'charset' => 'utf8',
-            'prefix' => '',
-            'search_path' => 'public',
-            'sslmode' => 'require',
-        ],
-
         'sqlite' => [
             'driver' => 'sqlite',
             'url' => env('DB_URL'),
