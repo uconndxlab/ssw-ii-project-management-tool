@@ -24,8 +24,9 @@ use App\Support\ActivityTypeDuration;
 use App\Support\DeliverableHistoryScope;
 use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class AgreementController extends Controller
 {
@@ -354,7 +355,7 @@ class AgreementController extends Controller
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
                 $filename = $file->getClientOriginalName();
-                $path = $file->store('agreement-attachments', 'public');
+                $path = $file->store('agreement-attachments');
 
                 $agreement->attachments()->create([
                     'filename' => $filename,
@@ -971,9 +972,9 @@ class AgreementController extends Controller
     {
         $attachment = $agreement->attachments()->findOrFail($attachmentId);
 
-        return response()->download(
-            storage_path('app/public/' . $attachment->file_path),
-            $attachment->filename
+        return Storage::download(
+            $attachment->file_path,
+            $attachment->original_filename ?? basename($attachment->file_path)
         );
     }
 

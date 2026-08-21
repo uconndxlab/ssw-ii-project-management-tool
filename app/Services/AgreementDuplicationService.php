@@ -127,7 +127,7 @@ class AgreementDuplicationService
 
     private function copyAttachment(Agreement $copy, AgreementAttachment $attachment): void
     {
-        $disk = Storage::disk('public');
+        $disk = Storage::disk();
 
         if (!$disk->exists($attachment->file_path)) {
             return;
