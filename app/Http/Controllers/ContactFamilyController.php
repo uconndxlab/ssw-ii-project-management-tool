@@ -27,7 +27,7 @@ class ContactFamilyController extends Controller
             ->with(['programs.projects']);
 
         if ($request->filled('search')) {
-            $query->where('name', 'like', '%'.$request->input('search').'%');
+            $query->whereIlike('name', '%'.$request->input('search').'%');
         }
 
         if ($request->filled('project_id')) {

@@ -22,8 +22,8 @@ class ProjectController extends Controller
         $search = trim((string) $request->input('search', ''));
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
+                $q->whereIlike('name', "%{$search}%")
+                  ->orWhereIlike('description', "%{$search}%");
             });
         }
 

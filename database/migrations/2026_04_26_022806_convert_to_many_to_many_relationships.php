@@ -11,16 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Drop old foreign key columns from agreements table
+        // Drop old foreign key columns from agreements table.
+        // Constraint names may still be from the original `projects` table
+        // (Postgres does not rename FKs on Schema::rename).
         Schema::table('agreements', function (Blueprint $table) {
-            $table->dropForeign(['organization_id']);
-            $table->dropForeign(['state_id']);
+            $this->dropForeignsOnColumns($table, 'agreements', ['organization_id', 'state_id']);
             $table->dropColumn(['organization_id', 'state_id']);
         });
 
-        // Drop old foreign key column from activities table
+        // Drop old foreign key column from activities table.
+        // Constraint name may still be `engagements_project_id_foreign`.
         Schema::table('activities', function (Blueprint $table) {
-            $table->dropForeign(['agreement_id']);
+            $this->dropForeignsOnColumns($table, 'activities', ['agreement_id']);
             $table->dropColumn('agreement_id');
         });
 
@@ -92,5 +94,22 @@ return new class extends Migration
         Schema::table('activities', function (Blueprint $table) {
             $table->foreignId('agreement_id')->nullable()->after('id')->constrained()->cascadeOnDelete();
         });
+    }
+
+    /**
+     * Drop foreign keys by inspecting the live constraint names, which can lag
+     * behind table/column renames on Postgres.
+     *
+     * @param  list<string>  $columns
+     */
+    private function dropForeignsOnColumns(Blueprint $table, string $tableName, array $columns): void
+    {
+        foreach (Schema::getForeignKeys($tableName) as $foreignKey) {
+            if (array_intersect($foreignKey['columns'], $columns) === []) {
+                continue;
+            }
+
+            $table->dropForeign($foreignKey['name']);
+        }
     }
 };

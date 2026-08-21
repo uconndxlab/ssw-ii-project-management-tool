@@ -15,7 +15,7 @@ class ProgramController extends Controller
 
         $search = trim((string) $request->input('search', ''));
         if ($search !== '') {
-            $query->where('name', 'like', "%{$search}%");
+            $query->whereIlike('name', "%{$search}%");
         }
 
         $status = $request->input('status');

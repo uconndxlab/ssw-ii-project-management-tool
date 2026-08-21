@@ -52,25 +52,25 @@ class ActivityController extends Controller
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
                 $q->whereHas('agreements', function ($agreementQuery) use ($search) {
-                    $agreementQuery->where('name', 'like', "%{$search}%")
+                    $agreementQuery->whereIlike('name', "%{$search}%")
                         ->orWhereHas('organizations', function ($orgQuery) use ($search) {
-                            $orgQuery->where('name', 'like', "%{$search}%");
+                            $orgQuery->whereIlike('name', "%{$search}%");
                         })
                         ->orWhereHas('states', function ($stateQuery) use ($search) {
-                            $stateQuery->where('name', 'like', "%{$search}%");
+                            $stateQuery->whereIlike('name', "%{$search}%");
                         });
                 })
                 ->orWhereHas('organizations', function ($orgQuery) use ($search) {
-                    $orgQuery->where('name', 'like', "%{$search}%");
+                    $orgQuery->whereIlike('name', "%{$search}%");
                 })
                 ->orWhereHas('states', function ($stateQuery) use ($search) {
-                    $stateQuery->where('name', 'like', "%{$search}%");
+                    $stateQuery->whereIlike('name', "%{$search}%");
                 })
                 ->orWhereHas('activityType', function ($typeQuery) use ($search) {
-                    $typeQuery->where('name', 'like', "%{$search}%");
+                    $typeQuery->whereIlike('name', "%{$search}%");
                 })
                 ->orWhereHas('user', function ($userQuery) use ($search) {
-                    $userQuery->where('name', 'like', "%{$search}%");
+                    $userQuery->whereIlike('name', "%{$search}%");
                 });
             });
         }

@@ -14,7 +14,7 @@ class StateController extends Controller
         // Search
         $search = trim((string) $request->input('search', ''));
         if ($search !== '') {
-            $query->where('name', 'like', "%{$search}%");
+            $query->whereIlike('name', "%{$search}%");
         }
 
         $sort = $request->input('sort', 'name');

@@ -28,9 +28,9 @@ class SearchController extends Controller
         // Agreements — non-admins only see their assigned ones
         $agreementsQuery = Agreement::with(['organizations', 'states'])
             ->where(function ($q) use ($like) {
-                $q->where('name', 'like', $like)
-                  ->orWhereHas('organizations', fn ($o) => $o->where('name', 'like', $like))
-                  ->orWhereHas('states', fn ($s) => $s->where('name', 'like', $like));
+                $q->whereIlike('name', $like)
+                  ->orWhereHas('organizations', fn ($o) => $o->whereIlike('name', $like))
+                  ->orWhereHas('states', fn ($s) => $s->whereIlike('name', $like));
             });
 
         if (! Auth::user()->isAdmin()) {
@@ -41,7 +41,7 @@ class SearchController extends Controller
 
         // Organizations — visible to all
         $organizations = Organization::with('states')
-            ->where('name', 'like', $like)
+            ->whereIlike('name', $like)
             ->orderBy('name')
             ->limit(10)
             ->get();
@@ -49,8 +49,8 @@ class SearchController extends Controller
         // Users — only admins can search/view user profiles
         $users = collect();
         if (Auth::user()->isAdmin()) {
-            $users = User::where('name', 'like', $like)
-                ->orWhere('email', 'like', $like)
+            $users = User::whereIlike('name', $like)
+                ->orWhereIlike('email', $like)
                 ->orderBy('name')
                 ->limit(10)
                 ->get();

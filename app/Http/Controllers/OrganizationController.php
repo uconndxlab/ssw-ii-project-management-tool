@@ -30,10 +30,10 @@ class OrganizationController extends Controller
         $search = trim((string) $request->input('search', ''));
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('po_number', 'like', "%{$search}%")
+                $q->whereIlike('name', "%{$search}%")
+                    ->orWhereIlike('po_number', "%{$search}%")
                     ->orWhereHas('states', function ($stateQuery) use ($search) {
-                        $stateQuery->where('name', 'like', "%{$search}%");
+                        $stateQuery->whereIlike('name', "%{$search}%");
                     });
             });
         }
