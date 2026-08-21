@@ -1131,9 +1131,9 @@ class ActivityController extends Controller
                 ]);
             }
 
-            if (!is_numeric($activityHours) || (float) $activityHours <= 0) {
+            if (!is_numeric($activityHours) || (float) $activityHours < 0) {
                 throw ValidationException::withMessages([
-                    'contact_time.activity_hours' => 'Activity Time must be greater than 0.',
+                    'contact_time.activity_hours' => 'Activity Time cannot be negative.',
                 ]);
             }
 
@@ -1178,9 +1178,9 @@ class ActivityController extends Controller
                     ]);
                 }
 
-                if (!is_numeric($hours) || (float) $hours <= 0) {
+                if (!is_numeric($hours) || (float) $hours < 0) {
                     throw ValidationException::withMessages([
-                        "participant_times.{$participantId}.hours" => 'Participant Activity Time must be greater than 0.',
+                        "participant_times.{$participantId}.hours" => 'Participant Activity Time cannot be less than 0.',
                     ]);
                 }
 
