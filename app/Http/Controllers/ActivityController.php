@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\File;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -1348,7 +1349,13 @@ class ActivityController extends Controller
                 $inputKey => array_merge($prefix, ['array', 'min:1']),
                 $inputKey.'.*' => ['string', Rule::in($optionValues)],
             ],
-            'document' => [$inputKey => array_merge($required ? ['required'] : ['nullable'], ['file', 'mimes:pdf,doc,docx,xls,xlsx,png,jpg,jpeg', 'max:'.config('uploads.max_file_kb')])],
+            'document' => [$inputKey => array_merge(
+                $required ? ['required'] : ['nullable'],
+                [
+                    File::types((array) config('uploads.activity_document_types'))
+                        ->max(config('uploads.max_file_kb')),
+                ]
+            )],
             'textarea', 'text' => [$inputKey => array_merge($prefix, ['string', 'max:5000'])],
             default => [$inputKey => array_merge($prefix, ['string', 'max:5000'])],
         };

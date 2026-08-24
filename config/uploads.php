@@ -17,4 +17,14 @@ return [
 
     'temporary_url_minutes' => (int) env('UPLOAD_TEMPORARY_URL_MINUTES', 5),
 
+    'agreement_types' => ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt'],
+
+    'activity_document_types' => ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'png', 'jpg', 'jpeg'],
+
+    'inline_mimes' => [
+        'application/pdf',
+        'image/png',
+        'image/jpeg',
+    ],
+
 ];

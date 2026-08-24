@@ -4,22 +4,23 @@ namespace App\Http\Requests;
 
 use App\Enums\AgreementTimeTrackingRequirement;
 use App\Enums\ProgramScopeMode;
+use App\Models\ActivityType;
 use App\Models\Agreement;
 use App\Models\AgreementDeliverable;
-use App\Support\ActivityTypeDuration;
-use App\Support\DeliverableHistoryScope;
-use App\Models\ActivityType;
 use App\Models\ContactFamily;
 use App\Models\LoggingField;
 use App\Models\Organization;
 use App\Models\Program;
-use App\Support\ProjectProgramScope;
 use App\Models\Team;
 use App\Models\User;
+use App\Support\ActivityTypeDuration;
+use App\Support\DeliverableHistoryScope;
+use App\Support\ProjectProgramScope;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\File;
 use Illuminate\Validation\Validator;
 
 class AgreementRequest extends FormRequest
@@ -109,7 +110,10 @@ class AgreementRequest extends FormRequest
             'deliverables.*._delete' => ['nullable', 'boolean'],
 
             'attachments' => ['nullable', 'array'],
-            'attachments.*' => ['file', 'max:'.config('uploads.max_file_kb'), 'mimes:pdf,doc,docx,xls,xlsx,txt'],
+            'attachments.*' => [
+                File::types((array) config('uploads.agreement_types'))
+                    ->max(config('uploads.max_file_kb')),
+            ],
         ];
     }
 
@@ -225,8 +229,8 @@ class AgreementRequest extends FormRequest
                     ->get();
 
                 $inactiveOrganizationIds = $organizations
-                    ->filter(fn (Organization $organization) => !$organization->active
-                        && !$previouslySelectedOrganizationIds->contains((int) $organization->id))
+                    ->filter(fn (Organization $organization) => ! $organization->active
+                        && ! $previouslySelectedOrganizationIds->contains((int) $organization->id))
                     ->pluck('id');
 
                 if ($inactiveOrganizationIds->isNotEmpty()) {
@@ -238,8 +242,8 @@ class AgreementRequest extends FormRequest
                         $organizationProgramIds = $organization->programs->pluck('id')->map(fn ($id) => (int) $id)->values();
                         $organizationStateIds = $organization->states->pluck('id')->map(fn ($id) => (int) $id)->values();
 
-                        return !$matchesSelectedPrograms($organizationProgramIds, $organization->program_scope_mode, Organization::class)
-                            || !$matchesSelectedStates($organizationStateIds, false);
+                        return ! $matchesSelectedPrograms($organizationProgramIds, $organization->program_scope_mode, Organization::class)
+                            || ! $matchesSelectedStates($organizationStateIds, false);
                     })
                     ->pluck('id');
 
@@ -282,13 +286,13 @@ class AgreementRequest extends FormRequest
             $selectedKfsNumbers = $normalizeKfsNumbers($this->input('kfs_numbers', []));
 
             foreach (($this->input('organization_kfs_numbers', []) ?? []) as $organizationId => $numbers) {
-                if (!is_array($numbers)) {
+                if (! is_array($numbers)) {
                     continue;
                 }
 
                 $normalizedOrganizationId = (int) $organizationId;
 
-                if (!in_array($normalizedOrganizationId, $selectedOrganizationIdSet, true)) {
+                if (! in_array($normalizedOrganizationId, $selectedOrganizationIdSet, true)) {
                     if ($normalizeKfsNumbers($numbers)->isNotEmpty()) {
                         $validator->errors()->add('organization_kfs_numbers', 'Organizations with KFS assignments must be selected on the agreement.');
                     }
@@ -301,7 +305,7 @@ class AgreementRequest extends FormRequest
 
                 if ($unknownNumbers->isNotEmpty()) {
                     $validator->errors()->add(
-                        'organization_kfs_numbers.' . $organizationId,
+                        'organization_kfs_numbers.'.$organizationId,
                         'Organization KFS assignments must use KFS numbers attached to this agreement.'
                     );
                 }
@@ -335,7 +339,7 @@ class AgreementRequest extends FormRequest
                     ->whereKey($teamIds)
                     ->with('programs:id')
                     ->get()
-                    ->filter(fn (Team $team) => !$matchesSelectedPrograms(
+                    ->filter(fn (Team $team) => ! $matchesSelectedPrograms(
                         $team->programs->pluck('id')->map(fn ($id) => (int) $id)->values(),
                         $team->program_scope_mode,
                         Team::class
@@ -352,7 +356,7 @@ class AgreementRequest extends FormRequest
                     ->whereKey($directUserIds)
                     ->with('programs:id')
                     ->get()
-                    ->filter(fn (User $user) => !$matchesSelectedPrograms(
+                    ->filter(fn (User $user) => ! $matchesSelectedPrograms(
                         $user->programs->pluck('id')->map(fn ($id) => (int) $id)->values(),
                         $user->program_scope_mode,
                         User::class
@@ -420,7 +424,7 @@ class AgreementRequest extends FormRequest
                     ->whereKey($agreementLoggingFieldIds)
                     ->with('programs:id')
                     ->get()
-                    ->filter(fn (LoggingField $field) => !$matchesSelectedPrograms(
+                    ->filter(fn (LoggingField $field) => ! $matchesSelectedPrograms(
                         $field->programs->pluck('id')->map(fn ($id) => (int) $id)->values(),
                         $field->program_scope_mode,
                         LoggingField::class
@@ -456,7 +460,7 @@ class AgreementRequest extends FormRequest
                     ->whereKey($deliverableContactFamilyIds)
                     ->with('programs:id')
                     ->get()
-                    ->filter(fn (ContactFamily $family) => !$matchesSelectedPrograms(
+                    ->filter(fn (ContactFamily $family) => ! $matchesSelectedPrograms(
                         $family->programs->pluck('id')->map(fn ($id) => (int) $id)->values(),
                         $family->program_scope_mode,
                         ContactFamily::class
@@ -480,7 +484,7 @@ class AgreementRequest extends FormRequest
                     ->whereKey($deliverableActivityTypeIds)
                     ->with('programs:id')
                     ->get()
-                    ->filter(fn (ActivityType $type) => !$matchesSelectedPrograms(
+                    ->filter(fn (ActivityType $type) => ! $matchesSelectedPrograms(
                         $type->programs->pluck('id')->map(fn ($id) => (int) $id)->values(),
                         $type->program_scope_mode,
                         ActivityType::class
@@ -531,12 +535,12 @@ class AgreementRequest extends FormRequest
                 ->get();
 
             foreach ($this->input('deliverables', []) as $deliverableKey => $row) {
-                if (!is_array($row) || !empty($row['_delete'])) {
+                if (! is_array($row) || ! empty($row['_delete'])) {
                     continue;
                 }
 
                 $existingDeliverable = null;
-                if ($existingAgreement instanceof Agreement && !empty($row['id'])) {
+                if ($existingAgreement instanceof Agreement && ! empty($row['id'])) {
                     $existingDeliverable = $existingAgreement->deliverables->firstWhere('id', (int) $row['id']);
                 }
 
@@ -545,11 +549,11 @@ class AgreementRequest extends FormRequest
                 }
 
                 $contactFamily = null;
-                if (!empty($row['contact_family_id'])) {
+                if (! empty($row['contact_family_id'])) {
                     $contactFamily = ContactFamily::query()->find((int) $row['contact_family_id']);
                 }
 
-                if (!empty($row['activity_type_id']) && $contactFamily) {
+                if (! empty($row['activity_type_id']) && $contactFamily) {
                     $activityType = ActivityType::query()->find((int) $row['activity_type_id']);
 
                     if ($activityType && (int) $activityType->contact_family_id !== (int) $contactFamily->id) {
@@ -577,19 +581,19 @@ class AgreementRequest extends FormRequest
                     ->unique()
                     ->values();
 
-                if (!$metricType) {
+                if (! $metricType) {
                     $validator->errors()->add("deliverables.{$deliverableKey}.metric_type", 'Deliverable metric type is required.');
                 }
 
                 if ($metricType === 'time') {
                     $timeBasis = $timeBasis ?: 'observed';
 
-                    if (!in_array($timeBasis, ['observed', 'allotted'], true)) {
+                    if (! in_array($timeBasis, ['observed', 'allotted'], true)) {
                         $validator->errors()->add("deliverables.{$deliverableKey}.time_basis", 'Deliverable time basis must be observed or allotted.');
                     }
 
-                    $contactFamilyId = !empty($row['contact_family_id']) ? (int) $row['contact_family_id'] : null;
-                    $activityTypeId = !empty($row['activity_type_id']) ? (int) $row['activity_type_id'] : null;
+                    $contactFamilyId = ! empty($row['contact_family_id']) ? (int) $row['contact_family_id'] : null;
+                    $activityTypeId = ! empty($row['activity_type_id']) ? (int) $row['activity_type_id'] : null;
                     $activityTypesInScope = ActivityTypeDuration::filterActivityTypesInScope(
                         $scopedActivityTypes,
                         $contactFamilyId,
@@ -598,7 +602,7 @@ class AgreementRequest extends FormRequest
                     );
 
                     if ($timeBasis === 'allotted') {
-                        if (!ActivityTypeDuration::selectionSupportsAllottedTime(
+                        if (! ActivityTypeDuration::selectionSupportsAllottedTime(
                             $contactFamilyId,
                             $activityTypeId,
                             $activityTypesInScope
@@ -616,14 +620,14 @@ class AgreementRequest extends FormRequest
                                 $requestedUnit
                             );
 
-                            if (!$normalizedUnit) {
+                            if (! $normalizedUnit) {
                                 $units = ActivityTypeDuration::resolveAllottedUnitsForSelection(
                                     $contactFamilyId,
                                     $activityTypeId,
                                     $activityTypesInScope
                                 );
 
-                                if ($units['is_mixed'] && !$requestedUnit) {
+                                if ($units['is_mixed'] && ! $requestedUnit) {
                                     $validator->errors()->add(
                                         "deliverables.{$deliverableKey}.allotted_time_unit",
                                         'Select days or hours for this deliverable target.'
@@ -639,7 +643,7 @@ class AgreementRequest extends FormRequest
                     }
                 }
 
-                if (!$contributionBasis) {
+                if (! $contributionBasis) {
                     $validator->errors()->add("deliverables.{$deliverableKey}.contribution_basis", 'Deliverable contribution basis is required.');
                 }
 
@@ -653,7 +657,7 @@ class AgreementRequest extends FormRequest
                     }
                 }
 
-                if ($contributionBasis === 'user' && !$groupingMode) {
+                if ($contributionBasis === 'user' && ! $groupingMode) {
                     $validator->errors()->add("deliverables.{$deliverableKey}.user_grouping_mode", 'User-based deliverables must choose joint or individual grouping.');
                 }
 
@@ -679,7 +683,7 @@ class AgreementRequest extends FormRequest
                     $validator->errors()->add("deliverables.{$deliverableKey}.include_additional_time", 'Allotted time deliverables cannot include prep and follow up time.');
                 }
 
-                if (($row['include_additional_time'] ?? false) && $contactFamily && !$contactFamily->track_additional_time) {
+                if (($row['include_additional_time'] ?? false) && $contactFamily && ! $contactFamily->track_additional_time) {
                     $validator->errors()->add("deliverables.{$deliverableKey}.include_additional_time", 'The selected activity family does not track prep and follow up time.');
                 }
 
@@ -697,7 +701,7 @@ class AgreementRequest extends FormRequest
                                 return false;
                             }
 
-                            return !$matchesSelectedPrograms(
+                            return ! $matchesSelectedPrograms(
                                 $user->programs->pluck('id')->map(fn ($id) => (int) $id)->values(),
                                 $user->program_scope_mode,
                                 User::class
@@ -715,7 +719,7 @@ class AgreementRequest extends FormRequest
                         ->whereKey($deliverableTeamIds)
                         ->with('programs:id')
                         ->get()
-                        ->filter(fn (Team $team) => !$matchesSelectedPrograms(
+                        ->filter(fn (Team $team) => ! $matchesSelectedPrograms(
                             $team->programs->pluck('id')->map(fn ($id) => (int) $id)->values(),
                             $team->program_scope_mode,
                             Team::class

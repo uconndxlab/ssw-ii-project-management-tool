@@ -361,7 +361,7 @@ class AgreementController extends Controller
                 $agreement->attachments()->create([
                     'filename' => $file->getClientOriginalName(),
                     'file_path' => $this->privateFiles->store($file, 'agreement-attachments'),
-                    'mime_type' => $file->getMimeType() ?: $file->getClientMimeType(),
+                    'mime_type' => $file->getMimeType() ?: 'application/octet-stream',
                     'file_size' => $file->getSize(),
                 ]);
             }
