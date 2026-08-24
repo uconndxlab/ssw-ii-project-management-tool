@@ -5,13 +5,13 @@ namespace App\Services;
 use App\Models\Activity;
 use App\Models\ActivityLoggingFieldAnswer;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 class ActivityDuplicationService
 {
-    public function __construct(private DeliverableContributionService $deliverableContributionService)
-    {
-    }
+    public function __construct(
+        private DeliverableContributionService $deliverableContributionService,
+        private PrivateFileService $privateFiles,
+    ) {}
 
     public function duplicate(Activity $source, int $userId): Activity
     {
@@ -100,14 +100,14 @@ class ActivityDuplicationService
         $filePath = $answer->file_path;
 
         if ($filePath !== null) {
-            if (!Storage::exists($filePath)) {
+            if (! $this->privateFiles->exists($filePath)) {
                 return;
             }
 
             $extension = pathinfo($filePath, PATHINFO_EXTENSION);
-            $suffix = $extension !== '' ? '.' . $extension : '';
-            $newPath = 'activity-documents/' . uniqid('copy_', true) . $suffix;
-            Storage::copy($filePath, $newPath);
+            $suffix = $extension !== '' ? '.'.$extension : '';
+            $newPath = 'activity-documents/'.uniqid('copy_', true).$suffix;
+            $this->privateFiles->copy($filePath, $newPath);
             $filePath = $newPath;
         }
 

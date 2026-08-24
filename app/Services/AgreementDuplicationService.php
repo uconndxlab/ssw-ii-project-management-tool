@@ -7,10 +7,11 @@ use App\Models\AgreementAttachment;
 use App\Models\AgreementDeliverable;
 use App\Models\KfsAccount;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 class AgreementDuplicationService
 {
+    public function __construct(private PrivateFileService $privateFiles) {}
+
     public function duplicate(Agreement $source): Agreement
     {
         $source->load([
@@ -114,11 +115,11 @@ class AgreementDuplicationService
     private function buildCopyName(string $name): string
     {
         $baseName = preg_replace('/\s+\(Copy(?:\s+\d+)?\)$/', '', $name) ?: $name;
-        $candidate = $baseName . ' (Copy)';
+        $candidate = $baseName.' (Copy)';
         $counter = 2;
 
         while (Agreement::query()->where('name', $candidate)->exists()) {
-            $candidate = $baseName . ' (Copy ' . $counter . ')';
+            $candidate = $baseName.' (Copy '.$counter.')';
             $counter++;
         }
 
@@ -127,17 +128,15 @@ class AgreementDuplicationService
 
     private function copyAttachment(Agreement $copy, AgreementAttachment $attachment): void
     {
-        $disk = Storage::disk();
-
-        if (!$disk->exists($attachment->file_path)) {
+        if (! $this->privateFiles->exists($attachment->file_path)) {
             return;
         }
 
         $extension = pathinfo($attachment->filename, PATHINFO_EXTENSION);
-        $suffix = $extension !== '' ? '.' . $extension : '';
-        $newPath = 'agreement-attachments/' . uniqid('copy_', true) . $suffix;
+        $suffix = $extension !== '' ? '.'.$extension : '';
+        $newPath = 'agreement-attachments/'.uniqid('copy_', true).$suffix;
 
-        $disk->copy($attachment->file_path, $newPath);
+        $this->privateFiles->copy($attachment->file_path, $newPath);
 
         $copy->attachments()->create([
             'filename' => $attachment->filename,

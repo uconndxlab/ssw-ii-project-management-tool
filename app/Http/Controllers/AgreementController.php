@@ -2,39 +2,43 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\AgreementRequest;
 use App\Enums\ProgramScopeMode;
-use App\Models\Organization;
-use App\Models\Agreement;
-use App\Models\AgreementDeliverable;
-use App\Support\AgreementDeliverableDisplay;
-use App\Models\AgreementCertificationCandidate;
+use App\Http\Requests\AgreementRequest;
 use App\Models\ActivityType;
+use App\Models\Agreement;
+use App\Models\AgreementAttachment;
+use App\Models\AgreementCertificationCandidate;
+use App\Models\AgreementDeliverable;
 use App\Models\ContactFamily;
 use App\Models\KfsAccount;
 use App\Models\LoggingField;
-use App\Models\Project;
+use App\Models\Organization;
 use App\Models\Program;
+use App\Models\Project;
 use App\Models\State;
 use App\Models\Team;
 use App\Models\User;
-use App\Services\DeliverableContributionService;
 use App\Services\AgreementDuplicationService;
+use App\Services\DeliverableContributionService;
+use App\Services\PrivateFileService;
 use App\Support\ActivityTypeDuration;
+use App\Support\AgreementDeliverableDisplay;
 use App\Support\DeliverableHistoryScope;
 use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class AgreementController extends Controller
 {
     public function __construct(
         private DeliverableContributionService $deliverableContributionService,
         private AgreementDuplicationService $agreementDuplicationService,
-    ) {
-    }
+        private PrivateFileService $privateFiles,
+    ) {}
 
     public function index(Request $request)
     {
@@ -48,7 +52,7 @@ class AgreementController extends Controller
             'principalInvestigators:id,name',
         ]);
 
-        if (!Auth::user()->isAdmin()) {
+        if (! Auth::user()->isAdmin()) {
             $query->accessibleBy(Auth::user())
                 ->active();
         } elseif ($request->filled('active')) {
@@ -215,13 +219,7 @@ class AgreementController extends Controller
 
     public function show(Agreement $agreement)
     {
-        if (!$agreement->active && !Auth::user()->isAdmin()) {
-            abort(403, 'Unauthorized access to this agreement.');
-        }
-
-        if (!Auth::user()->isAdmin() && !Auth::user()->hasAccessToAgreement($agreement)) {
-            abort(403, 'Unauthorized access to this agreement.');
-        }
+        $this->authorize('view', $agreement);
 
         $agreement->load([
             'organizations',
@@ -266,7 +264,7 @@ class AgreementController extends Controller
         ];
 
         // YTD totals (current year)
-        $ytdActivities = $activities->filter(fn($e) => $e->engagement_date->year === now()->year);
+        $ytdActivities = $activities->filter(fn ($e) => $e->engagement_date->year === now()->year);
         $ytdTotals = [
             'activities' => $ytdActivities->count(),
         ];
@@ -343,7 +341,7 @@ class AgreementController extends Controller
             ->map(fn ($id) => (int) $id)
             ->all();
 
-        if (!empty($deletedAttachmentIds)) {
+        if (! empty($deletedAttachmentIds)) {
             $agreement->attachments()
                 ->whereIn('id', $deletedAttachmentIds)
                 ->get()
@@ -354,13 +352,16 @@ class AgreementController extends Controller
 
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
-                $filename = $file->getClientOriginalName();
-                $path = $file->store('agreement-attachments');
+                if (! $file instanceof UploadedFile || ! $file->isValid()) {
+                    throw ValidationException::withMessages([
+                        'attachments' => 'One or more attachments failed to upload. Check the file size and try again.',
+                    ]);
+                }
 
                 $agreement->attachments()->create([
-                    'filename' => $filename,
-                    'file_path' => $path,
-                    'mime_type' => $file->getMimeType(),
+                    'filename' => $file->getClientOriginalName(),
+                    'file_path' => $this->privateFiles->store($file, 'agreement-attachments'),
+                    'mime_type' => $file->getMimeType() ?: $file->getClientMimeType(),
                     'file_size' => $file->getSize(),
                 ]);
             }
@@ -413,7 +414,7 @@ class AgreementController extends Controller
         $teamIds = array_values(array_unique($validated['team_ids'] ?? []));
         $teamUserIds = collect();
 
-        if (!empty($teamIds)) {
+        if (! empty($teamIds)) {
             $teamUserIds = Team::query()
                 ->whereKey($teamIds)
                 ->with(['users:id'])
@@ -425,7 +426,7 @@ class AgreementController extends Controller
 
         $directUserIds = collect($validated['user_ids'] ?? [])
             ->map(fn ($id) => (int) $id)
-            ->filter(fn ($id) => !$teamUserIds->contains($id))
+            ->filter(fn ($id) => ! $teamUserIds->contains($id))
             ->unique()
             ->values()
             ->all();
@@ -448,7 +449,7 @@ class AgreementController extends Controller
 
     /**
      * @param  array<int|string, mixed>  $values
-     * @return \Illuminate\Support\Collection<int, KfsAccount>
+     * @return Collection<int, KfsAccount>
      */
     private function resolveKfsAccounts(array $values)
     {
@@ -473,7 +474,7 @@ class AgreementController extends Controller
     /**
      * @param  array<int, int>  $selectedOrganizationIds
      * @param  array<string, mixed>  $organizationKfsNumbers
-     * @param  \Illuminate\Support\Collection<string, KfsAccount>  $agreementKfsByNumber
+     * @param  Collection<string, KfsAccount>  $agreementKfsByNumber
      */
     private function syncAgreementOrganizationKfsAssignments(
         Agreement $agreement,
@@ -489,7 +490,7 @@ class AgreementController extends Controller
         foreach ($organizationKfsNumbers as $organizationId => $numbers) {
             $normalizedOrganizationId = (int) $organizationId;
 
-            if (!$selectedOrganizationIdSet->contains($normalizedOrganizationId) || !is_array($numbers)) {
+            if (! $selectedOrganizationIdSet->contains($normalizedOrganizationId) || ! is_array($numbers)) {
                 continue;
             }
 
@@ -503,7 +504,7 @@ class AgreementController extends Controller
             foreach ($normalizedNumbers as $number) {
                 $account = $agreementKfsByNumber->get($number);
 
-                if (!$account) {
+                if (! $account) {
                     continue;
                 }
 
@@ -567,7 +568,7 @@ class AgreementController extends Controller
         $histories = $agreement->agreementActivityHistories;
 
         foreach ($deliverables as $row) {
-            if (!is_array($row)) {
+            if (! is_array($row)) {
                 continue;
             }
 
@@ -584,7 +585,7 @@ class AgreementController extends Controller
                 continue;
             }
 
-            if (!$rowHasContent) {
+            if (! $rowHasContent) {
                 continue;
             }
 
@@ -593,10 +594,10 @@ class AgreementController extends Controller
                 : 'observed';
             $allottedTimeUnit = null;
 
-            //determine which ats are in scope then determine the allotted time unit
+            // determine which ats are in scope then determine the allotted time unit
             if ($timeBasis === 'allotted') {
-                $contactFamilyId = !empty($row['contact_family_id']) ? (int) $row['contact_family_id'] : null;
-                $activityTypeId = !empty($row['activity_type_id']) ? (int) $row['activity_type_id'] : null;
+                $contactFamilyId = ! empty($row['contact_family_id']) ? (int) $row['contact_family_id'] : null;
+                $activityTypeId = ! empty($row['activity_type_id']) ? (int) $row['activity_type_id'] : null;
                 $activityTypesInScope = ActivityTypeDuration::filterActivityTypesInScope(
                     $scopedActivityTypes,
                     $contactFamilyId,
@@ -631,7 +632,7 @@ class AgreementController extends Controller
                 'retired_at' => null,
             ];
 
-            $isNewDeliverable = !$rowId || !$existingDeliverables->has($rowId);
+            $isNewDeliverable = ! $rowId || ! $existingDeliverables->has($rowId);
 
             if ($rowId && $existingDeliverables->has($rowId)) {
                 $deliverable = $existingDeliverables->get($rowId);
@@ -725,7 +726,7 @@ class AgreementController extends Controller
             $teamMatches = collect($teamMembersByUser->get($userId, []));
             $sourceTeamId = null;
 
-            if (!$directUserIds->contains($userId) && $teamMatches->count() === 1) {
+            if (! $directUserIds->contains($userId) && $teamMatches->count() === 1) {
                 $sourceTeamId = $teamMatches->first()['team_id'] ?? null;
             }
 
@@ -781,6 +782,7 @@ class AgreementController extends Controller
 
         if (DeliverableHistoryScope::hasMatchingHistory($histories, $deliverable)) {
             $deliverable->update(['retired_at' => now()]);
+
             return;
         }
 
@@ -792,7 +794,7 @@ class AgreementController extends Controller
         $existingCandidates = $agreement->certificationCandidates()->get()->keyBy('id');
 
         foreach ($rows as $row) {
-            if (!is_array($row)) {
+            if (! is_array($row)) {
                 continue;
             }
 
@@ -844,7 +846,7 @@ class AgreementController extends Controller
             }
         }
 
-        return !empty($row['user_ids']) || !empty($row['team_ids']) || array_key_exists('include_additional_time', $row);
+        return ! empty($row['user_ids']) || ! empty($row['team_ids']) || array_key_exists('include_additional_time', $row);
     }
 
     private function agreementFormData(?Agreement $agreement = null): array
@@ -968,14 +970,14 @@ class AgreementController extends Controller
     /**
      * Download an agreement attachment.
      */
-    public function downloadAttachment(Agreement $agreement, $attachmentId)
+    public function downloadAttachment(Agreement $agreement, AgreementAttachment $attachment)
     {
-        $attachment = $agreement->attachments()->findOrFail($attachmentId);
+        $this->authorize('view', $agreement);
 
-        return Storage::download(
+        return $this->privateFiles->serve(
             $attachment->file_path,
-            $attachment->original_filename ?? basename($attachment->file_path)
+            $attachment->filename,
+            $attachment->mime_type
         );
     }
-
 }

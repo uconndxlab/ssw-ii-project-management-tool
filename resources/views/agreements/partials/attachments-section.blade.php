@@ -200,6 +200,13 @@
                 initTooltips(attachmentTableBody);
             }
 
+            const form = attachmentInput.closest('form');
+            if (form) {
+                form.addEventListener('submit', function () {
+                    syncFileInput();
+                });
+            }
+
             function removeQueuedAttachment(row) {
                 const rowKey = row.dataset.attachmentRowKey;
                 const index = queuedAttachments.findIndex(function (queuedAttachment) {
@@ -270,8 +277,8 @@
             });
 
             attachmentInput.addEventListener('change', function () {
-                addFiles(attachmentInput.files);
-                attachmentInput.value = '';
+                const selectedFiles = Array.from(attachmentInput.files || []);
+                addFiles(selectedFiles);
             });
 
             initTooltips(document);

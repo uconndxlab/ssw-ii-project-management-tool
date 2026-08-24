@@ -15,4 +15,6 @@ return [
 
     'max_file_kb' => (int) env('UPLOAD_MAX_KB', 51200),
 
+    'temporary_url_minutes' => (int) env('UPLOAD_TEMPORARY_URL_MINUTES', 5),
+
 ];

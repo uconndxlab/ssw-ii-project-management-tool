@@ -1,22 +1,22 @@
 <?php
 
-use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ActivityController;
+use App\Http\Controllers\ActivityTypeController;
 use App\Http\Controllers\AdminUserController;
+use App\Http\Controllers\AgreementController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ContactFamilyController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\LoggingFieldController;
+use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ProgramController;
+use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\StateController;
-use App\Http\Controllers\OrganizationController;
-use App\Http\Controllers\AgreementController;
-use App\Http\Controllers\ActivityController;
-use App\Http\Controllers\ReportController;
-use App\Http\Controllers\ProgramController;
-use App\Http\Controllers\ContactFamilyController;
-use App\Http\Controllers\ActivityTypeController;
-use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TeamController;
-use App\Http\Controllers\ProjectController;
-use App\Http\Controllers\LoggingFieldController;
 use Illuminate\Support\Facades\Route;
 
 // Guest routes
@@ -48,7 +48,9 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::resource('agreements', AgreementController::class);
 
     // Agreement attachment routes
-    Route::get('/agreements/{agreement}/attachments/{attachment}/download', [AgreementController::class, 'downloadAttachment'])->name('agreements.attachments.download');
+    Route::get('/agreements/{agreement}/attachments/{attachment}/download', [AgreementController::class, 'downloadAttachment'])
+        ->scopeBindings()
+        ->name('agreements.attachments.download');
 
     // Activities - visible to all authenticated users (with visibility filtering in controller)
     Route::get('/activities', [ActivityController::class, 'index'])->name('activities.index');
@@ -101,4 +103,3 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::delete('/users/{user}', [AdminUserController::class, 'destroy'])->name('users.destroy');
     });
 });
-

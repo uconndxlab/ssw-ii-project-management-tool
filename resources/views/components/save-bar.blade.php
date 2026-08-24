@@ -106,7 +106,7 @@
             }
             setState('saving');
             submitted = true;
-            form.submit();
+            form.requestSubmit();
         });
 
         // Track dirty state

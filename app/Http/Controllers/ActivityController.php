@@ -4,16 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Models\Activity;
 use App\Models\ActivityAgreementFundingSource;
-use App\Models\Agreement;
 use App\Models\ActivityType;
+use App\Models\Agreement;
 use App\Models\ContactFamily;
 use App\Models\LoggingField;
 use App\Models\Organization;
-use App\Models\Program;
 use App\Models\State;
 use App\Models\User;
 use App\Services\ActivityDuplicationService;
 use App\Services\DeliverableContributionService;
+use App\Services\PrivateFileService;
 use App\Support\ActivityFundingSourceTokens;
 use App\Support\ActivityTypeDuration;
 use App\Support\ProgramParticipantDirectory;
@@ -21,18 +21,18 @@ use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\Response;
 
 class ActivityController extends Controller
 {
     public function __construct(
         private DeliverableContributionService $deliverableContributionService,
         private ActivityDuplicationService $activityDuplicationService,
-    ) {
-    }
+        private PrivateFileService $privateFiles,
+    ) {}
 
     public function index(Request $request)
     {
@@ -60,18 +60,18 @@ class ActivityController extends Controller
                             $stateQuery->whereIlike('name', "%{$search}%");
                         });
                 })
-                ->orWhereHas('organizations', function ($orgQuery) use ($search) {
-                    $orgQuery->whereIlike('name', "%{$search}%");
-                })
-                ->orWhereHas('states', function ($stateQuery) use ($search) {
-                    $stateQuery->whereIlike('name', "%{$search}%");
-                })
-                ->orWhereHas('activityType', function ($typeQuery) use ($search) {
-                    $typeQuery->whereIlike('name', "%{$search}%");
-                })
-                ->orWhereHas('user', function ($userQuery) use ($search) {
-                    $userQuery->whereIlike('name', "%{$search}%");
-                });
+                    ->orWhereHas('organizations', function ($orgQuery) use ($search) {
+                        $orgQuery->whereIlike('name', "%{$search}%");
+                    })
+                    ->orWhereHas('states', function ($stateQuery) use ($search) {
+                        $stateQuery->whereIlike('name', "%{$search}%");
+                    })
+                    ->orWhereHas('activityType', function ($typeQuery) use ($search) {
+                        $typeQuery->whereIlike('name', "%{$search}%");
+                    })
+                    ->orWhereHas('user', function ($userQuery) use ($search) {
+                        $userQuery->whereIlike('name', "%{$search}%");
+                    });
             });
         }
 
@@ -384,18 +384,7 @@ class ActivityController extends Controller
 
     public function show(Activity $activity)
     {
-        // Authorization: admin, agreement access, or activity owner
-        if (!Auth::user()->isAdmin()) {
-            $activity->loadMissing('agreements');
-            $hasAgreementAccess = $activity->agreements->contains(
-                fn (Agreement $agreement) => Auth::user()->hasAccessToAgreement($agreement),
-            );
-            $isOwner = (int) $activity->user_id === (int) Auth::id();
-
-            if (!$hasAgreementAccess || !$isOwner) {
-                abort(403, 'You do not have access to this activity.');
-            }
-        }
+        $this->authorize('view', $activity);
 
         $activity->load([
             'agreements.organizations',
@@ -608,7 +597,7 @@ class ActivityController extends Controller
     public function destroy(Activity $activity)
     {
         // Authorization: admin can delete any, staff/consultant can only delete their own
-        if (!Auth::user()->isAdmin() && $activity->user_id !== Auth::id()) {
+        if (! Auth::user()->isAdmin() && $activity->user_id !== Auth::id()) {
             abort(403, 'You can only delete your own activities.');
         }
 
@@ -687,7 +676,7 @@ class ActivityController extends Controller
 
         $hasAccess = Auth::user()->hasAccessToAgreement($agreementId);
 
-        if (!$hasAccess) {
+        if (! $hasAccess) {
             abort(403, 'You do not have access to this agreement.');
         }
     }
@@ -712,7 +701,7 @@ class ActivityController extends Controller
         $hasAccess = $activity->agreements->contains(
             fn (Agreement $agreement) => Auth::user()->hasAccessToAgreement($agreement),
         );
-        if (!$hasAccess) {
+        if (! $hasAccess) {
             abort(403, 'You do not have access to this activity.');
         }
     }
@@ -725,7 +714,7 @@ class ActivityController extends Controller
             $this->verifyAgreementAccess((int) $agreementId);
         }
 
-        if (!empty($agreementIds)) {
+        if (! empty($agreementIds)) {
             $agreements = Agreement::with([
                 'agreementLoggingFields.programs:id',
                 'organizations',
@@ -806,19 +795,19 @@ class ActivityController extends Controller
 
         foreach ($agreements as $agreement) {
             foreach ($scopedFields['agreements'][(string) $agreement->id] ?? collect() as $field) {
-                $attributes["agreement_logging_values.{$agreement->id}.{$field->id}"] = $agreement->name . ': ' . $field->name;
-                $attributes["agreement_logging_values.{$agreement->id}.{$field->id}.*"] = $agreement->name . ': ' . $field->name;
+                $attributes["agreement_logging_values.{$agreement->id}.{$field->id}"] = $agreement->name.': '.$field->name;
+                $attributes["agreement_logging_values.{$agreement->id}.{$field->id}.*"] = $agreement->name.': '.$field->name;
             }
         }
 
         foreach ($scopedFields['contact_family'] as $field) {
-            $attributes["contact_family_logging_values.{$field->id}"] = $contactFamily->name . ': ' . $field->name;
-            $attributes["contact_family_logging_values.{$field->id}.*"] = $contactFamily->name . ': ' . $field->name;
+            $attributes["contact_family_logging_values.{$field->id}"] = $contactFamily->name.': '.$field->name;
+            $attributes["contact_family_logging_values.{$field->id}.*"] = $contactFamily->name.': '.$field->name;
         }
 
         foreach ($scopedFields['activity_type'] as $field) {
-            $attributes["activity_logging_values.{$field->id}"] = $activityType->name . ': ' . $field->name;
-            $attributes["activity_logging_values.{$field->id}.*"] = $activityType->name . ': ' . $field->name;
+            $attributes["activity_logging_values.{$field->id}"] = $activityType->name.': '.$field->name;
+            $attributes["activity_logging_values.{$field->id}.*"] = $activityType->name.': '.$field->name;
         }
 
         return $attributes;
@@ -929,7 +918,7 @@ class ActivityController extends Controller
         $selectedContactFamilyId = (int) $validated['contact_family_id'];
         $selectedActivityTypeId = (int) $validated['activity_type_id'];
 
-        if (!$allowedContactFamilyIds->contains($selectedContactFamilyId)) {
+        if (! $allowedContactFamilyIds->contains($selectedContactFamilyId)) {
             throw ValidationException::withMessages([
                 'contact_family_id' => 'Selected family must be covered by at least one chosen agreement deliverable.',
             ]);
@@ -939,7 +928,7 @@ class ActivityController extends Controller
             ->flatMap->deliverables
             ->contains(function ($deliverable) use ($selectedContactFamilyId) {
                 return (int) $deliverable->contact_family_id === $selectedContactFamilyId
-                    && !$deliverable->activity_type_id;
+                    && ! $deliverable->activity_type_id;
             });
 
         if ($hasFamilyLevelDeliverable) {
@@ -949,7 +938,7 @@ class ActivityController extends Controller
                 ->where('active', true)
                 ->exists();
 
-            if (!$activityTypeAllowed) {
+            if (! $activityTypeAllowed) {
                 throw ValidationException::withMessages([
                     'activity_type_id' => 'Selected type must belong to the chosen family.',
                 ]);
@@ -973,7 +962,7 @@ class ActivityController extends Controller
             ->where('active', true)
             ->exists();
 
-        if (!$activityTypeAllowed) {
+        if (! $activityTypeAllowed) {
             throw ValidationException::withMessages([
                 'activity_type_id' => 'Selected activity type must be covered by at least one chosen agreement deliverable.',
             ]);
@@ -1131,7 +1120,7 @@ class ActivityController extends Controller
                 ]);
             }
 
-            if (!is_numeric($activityHours) || (float) $activityHours < 0) {
+            if (! is_numeric($activityHours) || (float) $activityHours < 0) {
                 throw ValidationException::withMessages([
                     'contact_time.activity_hours' => 'Activity Time cannot be negative.',
                 ]);
@@ -1164,7 +1153,7 @@ class ActivityController extends Controller
 
             $users = $selectedParticipantIds->isEmpty()
                 ? collect()
-                : \App\Models\User::query()->whereIn('id', $selectedParticipantIds)->get()->keyBy('id');
+                : User::query()->whereIn('id', $selectedParticipantIds)->get()->keyBy('id');
 
             foreach ($selectedParticipantIds as $participantId) {
                 $row = is_array($participantInput[$participantId] ?? null) ? $participantInput[$participantId] : [];
@@ -1178,19 +1167,19 @@ class ActivityController extends Controller
                     ]);
                 }
 
-                if (!is_numeric($hours) || (float) $hours < 0) {
+                if (! is_numeric($hours) || (float) $hours < 0) {
                     throw ValidationException::withMessages([
                         "participant_times.{$participantId}.hours" => 'Participant Activity Time cannot be less than 0.',
                     ]);
                 }
 
-                if (!is_numeric($prepHours) || (float) $prepHours < 0) {
+                if (! is_numeric($prepHours) || (float) $prepHours < 0) {
                     throw ValidationException::withMessages([
                         "participant_times.{$participantId}.prep_hours" => 'Participant Prep Time cannot be negative.',
                     ]);
                 }
 
-                if (!is_numeric($followUpHours) || (float) $followUpHours < 0) {
+                if (! is_numeric($followUpHours) || (float) $followUpHours < 0) {
                     throw ValidationException::withMessages([
                         "participant_times.{$participantId}.follow_up_hours" => 'Participant Follow Up Time cannot be negative.',
                     ]);
@@ -1218,7 +1207,7 @@ class ActivityController extends Controller
 
     private function syncActivityTimeTracking(Activity $activity, array $timeTracking): void
     {
-        if (!($timeTracking['requires_contact_time'] ?? false) || empty($timeTracking['contact_time'])) {
+        if (! ($timeTracking['requires_contact_time'] ?? false) || empty($timeTracking['contact_time'])) {
             $activity->contactTime()->delete();
         } else {
             $activity->contactTime()->updateOrCreate([], $timeTracking['contact_time']);
@@ -1226,7 +1215,7 @@ class ActivityController extends Controller
 
         $activity->participantTimes()->delete();
 
-        if (($timeTracking['requires_participant_time'] ?? false) && !empty($timeTracking['participant_times'])) {
+        if (($timeTracking['requires_participant_time'] ?? false) && ! empty($timeTracking['participant_times'])) {
             $activity->participantTimes()->createMany($timeTracking['participant_times']);
         }
     }
@@ -1234,7 +1223,7 @@ class ActivityController extends Controller
     private function syncActivityDurationSnapshot(Activity $activity, ActivityType $activityType, bool $activityTypeChanged): void
     {
         // only updates if activty changed
-        if (!$activityTypeChanged) {
+        if (! $activityTypeChanged) {
             return;
         }
 
@@ -1261,7 +1250,7 @@ class ActivityController extends Controller
             ];
 
             foreach ($enabledRoles as $role => $enabled) {
-                if (!$enabled) {
+                if (! $enabled) {
                     continue;
                 }
 
@@ -1277,7 +1266,7 @@ class ActivityController extends Controller
                 foreach ($selectedTokens as $index => $token) {
                     $parsed = ActivityFundingSourceTokens::parseToken($token);
 
-                    if (!$parsed || !in_array($token, $eligibleTokens, true)) {
+                    if (! $parsed || ! in_array($token, $eligibleTokens, true)) {
                         throw ValidationException::withMessages([
                             "funding_sources.{$agreementId}.{$role}.{$index}" => 'The selected funding source is not valid for this agreement.',
                         ]);
@@ -1303,7 +1292,7 @@ class ActivityController extends Controller
             ];
 
             foreach ($roleRequirements as $role => $required) {
-                if (!$required) {
+                if (! $required) {
                     continue;
                 }
 
@@ -1315,7 +1304,7 @@ class ActivityController extends Controller
                 foreach ($tokens as $token) {
                     $parsed = ActivityFundingSourceTokens::parseToken($token);
 
-                    if (!$parsed) {
+                    if (! $parsed) {
                         continue;
                     }
 
@@ -1357,7 +1346,7 @@ class ActivityController extends Controller
             LoggingField::FIELD_TYPE_SELECT => [$inputKey => array_merge($prefix, [Rule::in($optionValues)])],
             LoggingField::FIELD_TYPE_MULTISELECT => [
                 $inputKey => array_merge($prefix, ['array', 'min:1']),
-                $inputKey . '.*' => ['string', Rule::in($optionValues)],
+                $inputKey.'.*' => ['string', Rule::in($optionValues)],
             ],
             'document' => [$inputKey => array_merge($required ? ['required'] : ['nullable'], ['file', 'mimes:pdf,doc,docx,xls,xlsx,png,jpg,jpeg', 'max:'.config('uploads.max_file_kb')])],
             'textarea', 'text' => [$inputKey => array_merge($prefix, ['string', 'max:5000'])],
@@ -1424,7 +1413,7 @@ class ActivityController extends Controller
 
         $activity->loggingFieldAnswers()->delete();
 
-        if (!empty($payload)) {
+        if (! empty($payload)) {
             $activity->loggingFieldAnswers()->createMany($payload);
         }
     }
@@ -1443,7 +1432,17 @@ class ActivityController extends Controller
         ];
 
         if ($field->field_type === 'document') {
-            $path = $uploadedFile ? $uploadedFile->store('activity-documents') : $existingValue;
+            if ($uploadedFile) {
+                if (! $uploadedFile->isValid()) {
+                    throw ValidationException::withMessages([
+                        'document' => 'The document failed to upload. Check the file size and try again.',
+                    ]);
+                }
+
+                $path = $this->privateFiles->store($uploadedFile, 'activity-documents');
+            } else {
+                $path = is_string($existingValue) && $existingValue !== '' ? $existingValue : null;
+            }
 
             return $path ? array_merge($payload, ['file_path' => $path]) : null;
         }
@@ -1471,7 +1470,7 @@ class ActivityController extends Controller
 
     private function normalizeLoggingFieldSelections(mixed $value): ?array
     {
-        if (!is_array($value)) {
+        if (! is_array($value)) {
             return null;
         }
 
@@ -1485,8 +1484,12 @@ class ActivityController extends Controller
         return $selections === [] ? null : $selections;
     }
 
-    public function downloadLoggingFieldDocument(Activity $activity, string $context, int $fieldId, ?int $agreementId = null): \Symfony\Component\HttpFoundation\StreamedResponse
+    public function downloadLoggingFieldDocument(Activity $activity, string $context, int $fieldId, ?int $agreementId = null): Response
     {
+        $this->authorize('view', $activity);
+
+        abort_unless(in_array($context, ['agreement', 'activity_type', 'contact_family'], true), 404);
+
         $contextId = match ($context) {
             'agreement' => $agreementId,
             'activity_type' => $activity->activity_type_id,
@@ -1499,8 +1502,8 @@ class ActivityController extends Controller
             ->where('context_id', $contextId)
             ->value('file_path');
 
-        abort_unless($path && Storage::exists($path), 404);
+        $filename = is_string($path) ? basename($path) : 'document';
 
-        return Storage::download($path);
+        return $this->privateFiles->serve((string) $path, $filename);
     }
 }
