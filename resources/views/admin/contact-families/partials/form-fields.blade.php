@@ -25,7 +25,8 @@
         <textarea class="form-control @error('helper_text') is-invalid @enderror"
                   id="helper_text"
                   name="helper_text"
-                  rows="3">{{ old('helper_text', $contactFamily->helper_text ?? '') }}</textarea>
+                  rows="3"
+                  maxlength="1000">{{ old('helper_text', $contactFamily->helper_text ?? '') }}</textarea>
     </x-form-field>
 
     <x-project-program-scope-picker

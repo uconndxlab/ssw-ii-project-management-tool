@@ -353,7 +353,7 @@
             <input type="date" class="form-control" name="{{ $fieldPrefix }}[suggested_due_date]" value="{{ $row['suggested_due_date'] ?? '' }}" data-deliverable-due-date>
         </x-form-field>
         <x-form-field label="Notes" class="mb-0">
-            <textarea class="form-control" name="{{ $fieldPrefix }}[notes]" rows="2" maxlength="500" data-deliverable-notes>{{ $row['notes'] ?? '' }}</textarea>
+            <textarea class="form-control" name="{{ $fieldPrefix }}[notes]" rows="2" maxlength="5000" data-deliverable-notes>{{ $row['notes'] ?? '' }}</textarea>
         </x-form-field>
     </x-form-subsection>
 </div>

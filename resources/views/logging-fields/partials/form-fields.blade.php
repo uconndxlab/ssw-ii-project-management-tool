@@ -78,7 +78,7 @@
     </div>
 
     <x-form-field label="Help Text" for="help_text" name="help_text">
-        <textarea class="form-control @error('help_text') is-invalid @enderror" id="help_text" name="help_text" rows="2">{{ old('help_text', $field->help_text ?? '') }}</textarea>
+        <textarea class="form-control @error('help_text') is-invalid @enderror" id="help_text" name="help_text" rows="2" maxlength="1000">{{ old('help_text', $field->help_text ?? '') }}</textarea>
     </x-form-field>
 
     <x-form-options>

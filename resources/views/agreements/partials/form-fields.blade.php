@@ -98,7 +98,8 @@
         <textarea class="form-control @error('abstract') is-invalid @enderror"
                   id="abstract"
                   name="abstract"
-                  rows="4">{{ old('abstract', $agreement?->abstract ?? '') }}</textarea>
+                  rows="4"
+                  maxlength="2000">{{ old('abstract', $agreement?->abstract ?? '') }}</textarea>
     </x-form-field>
 
     <div class="row">

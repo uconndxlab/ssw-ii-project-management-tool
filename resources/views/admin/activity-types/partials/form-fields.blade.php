@@ -56,7 +56,8 @@
         <textarea class="form-control @error('helper_text') is-invalid @enderror"
                   id="helper_text"
                   name="helper_text"
-                  rows="3">{{ old('helper_text', $activityType->helper_text ?? '') }}</textarea>
+                  rows="3"
+                  maxlength="1000">{{ old('helper_text', $activityType->helper_text ?? '') }}</textarea>
     </x-form-field>
 
     <x-form-field label="Duration" for="duration_value" name="duration_value" help="Optional reporting duration. Days or hours, not both.">

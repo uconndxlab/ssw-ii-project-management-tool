@@ -24,7 +24,8 @@
                 <textarea class="form-control @error('description') is-invalid @enderror"
                           id="description"
                           name="description"
-                          rows="4">{{ old('description') }}</textarea>
+                          rows="4"
+                          maxlength="2000">{{ old('description') }}</textarea>
             </x-form-field>
 
             <x-form-options>

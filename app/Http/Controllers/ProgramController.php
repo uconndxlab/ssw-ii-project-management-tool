@@ -63,7 +63,7 @@ class ProgramController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255', 'unique:programs'],
-            'description' => ['nullable', 'string'],
+            'description' => ['nullable', 'string', 'max:2000'],
             'active' => ['nullable', 'boolean'],
             'project_ids' => ['required', 'array', 'min:1'],
             'project_ids.*' => ['distinct', 'exists:projects,id'],
@@ -140,7 +140,7 @@ class ProgramController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255', 'unique:programs,name,' . $program->id],
-            'description' => ['nullable', 'string'],
+            'description' => ['nullable', 'string', 'max:2000'],
             'active' => ['nullable', 'boolean'],
             'project_ids' => ['required', 'array', 'min:1'],
             'project_ids.*' => ['distinct', 'exists:projects,id'],

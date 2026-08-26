@@ -33,7 +33,8 @@
             <textarea class="form-control"
                       id="{{ $inputId }}"
                       name="{{ $inputName }}"
-                      rows="3">{{ $resolvedValue }}</textarea>
+                      rows="3"
+                      maxlength="5000">{{ $resolvedValue }}</textarea>
         @elseif($field->field_type === 'select')
             <select class="form-select" id="{{ $inputId }}" name="{{ $inputName }}">
                 <option value="">Select…</option>
