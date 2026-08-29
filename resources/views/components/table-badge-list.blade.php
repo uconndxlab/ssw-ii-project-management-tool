@@ -37,6 +37,10 @@
                 ? data_get($item, $hrefKey)
                 : (filled($routeName) && filled($source) ? route($routeName, $source) : null);
 
+            if ($href && is_object($source) && method_exists($source, 'isLinkable') && ! $source->isLinkable()) {
+                $href = null;
+            }
+
             return [
                 'label' => filled($label) ? (string) $label : null,
                 'title' => $title,

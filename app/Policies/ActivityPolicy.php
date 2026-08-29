@@ -3,23 +3,43 @@
 namespace App\Policies;
 
 use App\Models\Activity;
-use App\Models\Agreement;
 use App\Models\User;
 
 class ActivityPolicy
 {
+    // Index: everyone who can sign in (Input included).
+    public function viewAny(User $user): bool
+    {
+        return true;
+    }
+
+    // View: you logged it or are Delivered By (or a supervisee of yours is). Viewers also see logs on agreements they can view.
     public function view(User $user, Activity $activity): bool
     {
-        if ($user->isAdmin()) {
-            return true;
-        }
+        return $user->access()->canViewActivity($activity);
+    }
 
-        $activity->loadMissing('agreements');
+    // Create: everyone who can sign in can log an activity.
+    public function create(User $user): bool
+    {
+        return true;
+    }
 
-        $hasAgreementAccess = $activity->agreements->contains(
-            fn (Agreement $agreement) => $user->hasAccessToAgreement($agreement),
-        );
+    // Edit: you logged it, you are a participant, or the activity itself is on a program/project you admin.
+    public function update(User $user, Activity $activity): bool
+    {
+        return $user->access()->canUpdateActivity($activity);
+    }
 
-        return $hasAgreementAccess && (int) $activity->user_id === (int) $user->id;
+    // Delete: you logged it, or the activity itself is on a program/project you admin.
+    public function delete(User $user, Activity $activity): bool
+    {
+        return $user->access()->canDeleteActivity($activity);
+    }
+
+    // Duplicate: same as edit, plus you can create activities.
+    public function duplicate(User $user, Activity $activity): bool
+    {
+        return $this->update($user, $activity) && $this->create($user);
     }
 }

@@ -2,10 +2,12 @@
 
 namespace App\Providers;
 
+use App\Models\User;
 use App\Services\SessionBackTargetService;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -24,6 +26,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->registerCaseInsensitiveLike();
+        $this->registerAuthorization();
 
         ResetPassword::createUrlUsing(function (object $user, string $token) {
             return route('password.reset', [
@@ -33,9 +36,21 @@ class AppServiceProvider extends ServiceProvider
         });
     }
 
-    /**
-     * Postgres LIKE is case-sensitive; SQLite LIKE is not. Use ilike on pgsql.
-     */
+    private function registerAuthorization(): void
+    {
+        // System admin: allow everything except UserPolicy (self-edit / last-admin still apply).
+        Gate::before(function (User $user, string $ability, array $arguments) {
+            if (! $user->isSystemAdmin()) {
+                return null;
+            }
+
+            if (isset($arguments[0]) && $arguments[0] instanceof User) {
+                return null;
+            }
+
+            return true;
+        });
+    }
     private function registerCaseInsensitiveLike(): void
     {
         $operator = function ($query): string {

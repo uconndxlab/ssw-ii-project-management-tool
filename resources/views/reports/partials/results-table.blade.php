@@ -40,8 +40,8 @@
                 <div class="mt-3">
                     <p class="text-muted mb-0">
                         <small>
-                            @if(!auth()->user()->isAdmin())
-                                Report shows only agreements you are assigned to.
+                            @if(!auth()->user()->access()->hasSystemView())
+                                Report shows only records in your view scope.
                             @else
                                 Report shows all agreements.
                             @endif

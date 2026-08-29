@@ -35,7 +35,8 @@
         :selected-project-ids="$selectedProjectIds"
         :selected-program-ids="$selectedProgramIds"
         :show-scope-mode-selector="true"
-        :selected-scope-mode="old('program_scope_mode', $contactFamily->program_scope_mode?->value ?? 'all')"
+        :selected-scope-mode="old('program_scope_mode', $contactFamily->program_scope_mode?->value ?? ($contactFamily->exists ? 'all' : 'specific'))"
+        :lock-all="$contactFamily->exists && $contactFamily->program_scope_mode?->value === 'all'"
         project-empty-selection-label="All projects"
         program-empty-selection-label="All programs"
     />

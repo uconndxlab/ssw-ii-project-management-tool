@@ -7,6 +7,7 @@ use App\Models\Program;
 use App\Models\Project;
 use App\Models\Team;
 use App\Models\User;
+use App\Support\Authorization\ScopeSync;
 use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,10 +17,10 @@ class TeamController extends Controller
 {
     public function index(Request $request)
     {
-        // Admin-only authorization
-        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can manage teams.');
+        $this->authorize('viewAny', Team::class);
 
         $query = Team::query()
+            ->visibleTo(Auth::user())
             ->withCount('users')
             ->with([
                 'programs.projects:id,name',
@@ -104,10 +105,10 @@ class TeamController extends Controller
     public function create()
     {
         // Admin-only authorization
-        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can create teams.');
+        $this->authorize('create', Team::class);
 
         $users = User::query()->active()->orderBy('name', 'asc')->get();
-        $projects = ProjectProgramScope::activeProjectsWithPrograms();
+        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor(Auth::user());
 
         return view('teams.create', compact('users', 'projects'));
     }
@@ -115,7 +116,7 @@ class TeamController extends Controller
     public function store(Request $request)
     {
         // Admin-only authorization
-        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can create teams.');
+        $this->authorize('create', Team::class);
 
         $validator = Validator::make($request->all(), [
             'name' => ['required', 'string', 'max:255'],
@@ -137,6 +138,17 @@ class TeamController extends Controller
                 ProjectProgramScope::normalizeIds($request->input('project_ids', [])),
                 ProjectProgramScope::normalizeIds($request->input('program_ids', []))
             );
+            ScopeSync::validateSubmittedMode(
+                $validator,
+                Auth::user(),
+                ProgramScopeMode::None,
+                ProgramScopeMode::from($request->input('program_scope_mode', ProgramScopeMode::Specific->value)),
+            );
+            ScopeSync::validateSubmittedProgramsAreInAdminScope(
+                $validator,
+                Auth::user(),
+                ProjectProgramScope::normalizeIds($request->input('program_ids', [])),
+            );
         });
 
         $validated = $validator->validate();
@@ -145,16 +157,16 @@ class TeamController extends Controller
         $team = Team::create([
             'name' => $validated['name'],
             'active' => $validated['active'],
-            'program_scope_mode' => $validated['program_scope_mode'],
+            'program_scope_mode' => ProgramScopeMode::Specific,
         ]);
 
         $team->users()->sync($validated['user_ids'] ?? []);
-        $team->programs()->sync(ProjectProgramScope::modeAwareProgramIds(
-            $validated['program_scope_mode'],
-            Team::class,
-            $validated['project_ids'] ?? [],
-            $validated['program_ids'] ?? []
-        ));
+        ScopeSync::applyTo(
+            Auth::user(),
+            $team,
+            ProgramScopeMode::from($validated['program_scope_mode']),
+            $validated['program_ids'] ?? [],
+        );
 
         return redirect()
             ->route('teams.index')
@@ -164,7 +176,7 @@ class TeamController extends Controller
     public function show(Team $team)
     {
         // Admin-only authorization
-        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can view teams.');
+        $this->authorize('view', $team);
 
         $team->load([
             'users',
@@ -201,10 +213,10 @@ class TeamController extends Controller
     public function edit(Team $team)
     {
         // Admin-only authorization
-        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can edit teams.');
+        $this->authorize('update', $team);
 
         $users = User::query()->active()->orderBy('name', 'asc')->get();
-        $projects = ProjectProgramScope::activeProjectsWithPrograms();
+        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor(Auth::user(), $team);
         $team->load(['users', 'programs.projects']);
 
         return view('teams.edit', compact('team', 'users', 'projects'));
@@ -213,7 +225,7 @@ class TeamController extends Controller
     public function update(Request $request, Team $team)
     {
         // Admin-only authorization
-        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can update teams.');
+        $this->authorize('update', $team);
 
         $validator = Validator::make($request->all(), [
             'name' => ['required', 'string', 'max:255'],
@@ -227,13 +239,25 @@ class TeamController extends Controller
             'program_ids.*' => ['distinct', 'exists:programs,id'],
         ]);
 
-        $validator->after(function ($validator) use ($request) {
+        $validator->after(function ($validator) use ($request, $team) {
             ProjectProgramScope::validateModeSelection(
                 $validator,
                 $request->input('program_scope_mode', ProgramScopeMode::Specific->value),
                 Team::class,
                 ProjectProgramScope::normalizeIds($request->input('project_ids', [])),
                 ProjectProgramScope::normalizeIds($request->input('program_ids', []))
+            );
+            ScopeSync::validateSubmittedMode(
+                $validator,
+                Auth::user(),
+                $team->program_scope_mode,
+                ProgramScopeMode::from($request->input('program_scope_mode', ProgramScopeMode::Specific->value)),
+            );
+            ScopeSync::validateSubmittedProgramsAreInAdminScope(
+                $validator,
+                Auth::user(),
+                ProjectProgramScope::normalizeIds($request->input('program_ids', [])),
+                $team->programs()->pluck('programs.id')->all(),
             );
         });
 
@@ -243,16 +267,15 @@ class TeamController extends Controller
         $team->update([
             'name' => $validated['name'],
             'active' => $validated['active'],
-            'program_scope_mode' => $validated['program_scope_mode'],
         ]);
 
         $team->users()->sync($validated['user_ids'] ?? []);
-        $team->programs()->sync(ProjectProgramScope::modeAwareProgramIds(
-            $validated['program_scope_mode'],
-            Team::class,
-            $validated['project_ids'] ?? [],
-            $validated['program_ids'] ?? []
-        ));
+        ScopeSync::applyTo(
+            Auth::user(),
+            $team,
+            ProgramScopeMode::from($validated['program_scope_mode']),
+            $validated['program_ids'] ?? [],
+        );
 
         return redirect()
             ->route('teams.index')
@@ -262,7 +285,7 @@ class TeamController extends Controller
     public function destroy(Team $team)
     {
         // Admin-only authorization
-        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can delete teams.');
+        $this->authorize('delete', $team);
 
         Team::destroy($team->id);
 

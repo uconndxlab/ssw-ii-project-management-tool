@@ -15,6 +15,8 @@ class UserDeactivationService
             $user->principalInvestigatorAgreements()->detach();
             $user->organizations()->detach();
             $user->programs()->sync([]);
+            $user->privileges()->delete();
+            $user->forceFill(['is_supervisor' => false])->save();
 
             User::query()
                 ->where('supervisor_id', $user->id)

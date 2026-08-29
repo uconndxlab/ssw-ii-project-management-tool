@@ -231,12 +231,12 @@
         : collect();
     $participantOptions = $programParticipantDirectory['users']
         ->map(function ($user) use ($savedParticipantIds) {
-            $role = !empty($user->role) ? ' (' . ucfirst($user->role) . ')' : '';
+            $role = $user->accessLabel() ? ' (' . $user->accessLabel() . ')' : '';
 
             return [
                 'value' => $user->id,
                 'label' => $user->name . $role,
-                'search' => trim($user->name . ' ' . ($user->email ?? '') . ' ' . ($user->role ?? '')),
+                'search' => trim($user->name . ' ' . ($user->email ?? '') . ' ' . $user->accessLabel()),
                 'contextBadgeClass' => $savedParticipantIds->contains((string) $user->id) ? 'bg-secondary' : 'bg-primary-subtle text-primary-emphasis border',
             ];
         });
@@ -269,12 +269,12 @@
             })
             ->concat(
                 $historicalFromParticipants->map(function ($user) {
-                    $role = !empty($user->role) ? ' (' . ucfirst($user->role) . ')' : '';
+                    $role = $user->accessLabel() ? ' (' . $user->accessLabel() . ')' : '';
 
                     return [
                         'value' => $user->id,
                         'label' => $user->name . $role,
-                        'search' => trim($user->name . ' ' . ($user->email ?? '') . ' ' . ($user->role ?? '')),
+                        'search' => trim($user->name . ' ' . ($user->email ?? '') . ' ' . $user->accessLabel()),
                         'context' => 'Historical',
                         'contextBadgeClass' => 'bg-secondary',
                     ];

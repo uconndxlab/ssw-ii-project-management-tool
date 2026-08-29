@@ -2,17 +2,20 @@
 
 namespace App\Services;
 
+use App\Enums\ProgramScopeMode;
 use App\Models\Agreement;
 use App\Models\AgreementAttachment;
 use App\Models\AgreementDeliverable;
 use App\Models\KfsAccount;
+use App\Models\User;
+use App\Support\Authorization\ScopeSync;
 use Illuminate\Support\Facades\DB;
 
 class AgreementDuplicationService
 {
     public function __construct(private PrivateFileService $privateFiles) {}
 
-    public function duplicate(Agreement $source): Agreement
+    public function duplicate(Agreement $source, User $actor): Agreement
     {
         $source->load([
             'organizations',
@@ -31,7 +34,7 @@ class AgreementDuplicationService
                 ->with(['users', 'teams']),
         ]);
 
-        return DB::transaction(function () use ($source) {
+        return DB::transaction(function () use ($source, $actor) {
             $copy = Agreement::create([
                 'name' => $this->buildCopyName($source->name),
                 'active' => $source->active,
@@ -73,7 +76,14 @@ class AgreementDuplicationService
                 DB::table('agreement_organization_kfs_account')->insert($organizationKfsRows);
             }
             $copy->states()->sync($source->states->pluck('id')->all());
-            $copy->programs()->sync($source->programs->pluck('id')->all());
+            $clipped = ScopeSync::clipProgramsForDuplicate(
+                $actor,
+                $source->program_scope_mode,
+                $source->programs->pluck('id')->all(),
+            );
+            $copy->program_scope_mode = $clipped['mode'];
+            $copy->save();
+            $copy->programs()->sync($clipped['programIds']);
             $copy->users()->sync($source->users->pluck('id')->all());
             $copy->teams()->sync($source->teams->pluck('id')->all());
             $copy->principalInvestigators()->sync($source->principalInvestigators->pluck('id')->all());

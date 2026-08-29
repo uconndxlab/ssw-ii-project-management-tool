@@ -5,6 +5,8 @@ namespace App\Support;
 use App\Enums\ProgramScopeMode;
 use App\Models\Program;
 use App\Models\Project;
+use App\Models\User;
+use App\Support\Authorization\UserAccess;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 
@@ -44,6 +46,93 @@ class ProjectProgramScope
             ])
             ->orderBy('name')
             ->get();
+    }
+
+    /**
+     * Projects and programs the actor may assign, plus any already on the entity.
+     *
+     * @param  list<int>  $existingProjectIds
+     * @param  list<int>  $existingProgramIds
+     */
+    public static function assignableProjectsWithPrograms(
+        User $actor,
+        array $existingProjectIds = [],
+        array $existingProgramIds = [],
+    ): Collection {
+        $existingProjectIds = self::normalizeIds($existingProjectIds);
+        $existingProgramIds = self::normalizeIds($existingProgramIds);
+        $access = UserAccess::for($actor);
+
+        $projectQuery = Project::query()
+            ->where(function ($query) use ($existingProjectIds) {
+                $query->where('active', true);
+
+                if ($existingProjectIds !== []) {
+                    $query->orWhereIn('id', $existingProjectIds);
+                }
+            })
+            ->orderBy('name');
+
+        $constrainPrograms = function ($query) use ($existingProgramIds) {
+            $query->where(function ($programQuery) use ($existingProgramIds) {
+                $programQuery->where('programs.active', true);
+
+                if ($existingProgramIds !== []) {
+                    $programQuery->orWhereIn('programs.id', $existingProgramIds);
+                }
+            })->orderBy('programs.name');
+        };
+
+        if (! $access->isSystemAdmin()) {
+            $allowedProgramIds = array_values(array_unique(array_merge(
+                $access->adminProgramIds(),
+                $existingProgramIds,
+            )));
+            $allowedProjectIds = array_values(array_unique(array_merge(
+                $access->adminProjectIds(),
+                $existingProjectIds,
+                self::projectIdsForPrograms($allowedProgramIds),
+            )));
+
+            if ($allowedProjectIds === []) {
+                return collect();
+            }
+
+            $projectQuery->whereIn('id', $allowedProjectIds);
+            $constrainPrograms = function ($query) use ($existingProgramIds, $allowedProgramIds) {
+                $query->where(function ($programQuery) use ($existingProgramIds) {
+                    $programQuery->where('programs.active', true);
+
+                    if ($existingProgramIds !== []) {
+                        $programQuery->orWhereIn('programs.id', $existingProgramIds);
+                    }
+                });
+
+                if ($allowedProgramIds === []) {
+                    $query->whereRaw('1 = 0');
+                } else {
+                    $query->whereIn('programs.id', $allowedProgramIds);
+                }
+
+                $query->orderBy('programs.name');
+            };
+        }
+
+        return $projectQuery
+            ->with(['programs' => $constrainPrograms])
+            ->get();
+    }
+
+    public static function assignableProjectsWithProgramsFor(User $actor, ?Model $entity = null): Collection
+    {
+        $existingProgramIds = $entity?->exists
+            ? $entity->programs()->pluck('programs.id')->all()
+            : [];
+        $existingProjectIds = $entity?->exists && method_exists($entity, 'projects')
+            ? $entity->projects()->pluck('projects.id')->all()
+            : self::projectIdsForPrograms($existingProgramIds);
+
+        return self::assignableProjectsWithPrograms($actor, $existingProjectIds, $existingProgramIds);
     }
 
     public static function normalizeIds(array $ids): array

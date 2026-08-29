@@ -83,12 +83,19 @@
             </thead>
             <tbody>
                 @foreach($activities as $activity)
-                    @php($canManage = auth()->user()->isAdmin() || $activity->user_id === auth()->id())
+                    @php
+                        $canView = $activity->isLinkable();
+                        $canManage = auth()->user()->can('update', $activity);
+                    @endphp
                     <tr>
                         <td class="small">
+                            @if($canView)
                             <a href="{{ route('activities.show', $activity) }}" class="text-decoration-none text-dark d-block text-nowrap">
                                 {{ $activity->engagement_date->format('M d, Y') }}
                             </a>
+                            @else
+                            <span class="d-block text-nowrap">{{ $activity->engagement_date->format('M d, Y') }}</span>
+                            @endif
                             @if($activity->cancelled)
                                 <div class="mt-1">
                                     <x-status-badge :active="false" inactive-label="Cancelled" />
@@ -97,9 +104,13 @@
                         </td>
                         <td>
                             <div class="text-nowrap">
+                                @if($canView)
                                 <a href="{{ route('activities.show', $activity) }}" class="fw-semibold text-decoration-none text-dark">
                                     {{ $activity->activityType?->name ?? 'Activity' }}
                                 </a>
+                                @else
+                                <span class="fw-semibold">{{ $activity->activityType?->name ?? 'Activity' }}</span>
+                                @endif
                             </div>
                             <div class="text-muted small">
                                 {{ $activity->activityType?->contactFamily?->name ?? '—' }}
@@ -124,6 +135,7 @@
                         </td>
                         <td class="text-end text-nowrap">
                             <div class="btn-group btn-group-sm" role="group" aria-label="Recent activity actions">
+                                @if($canView)
                                 <a href="{{ route('activities.show', $activity) }}"
                                    class="btn btn-outline-primary"
                                    data-bs-toggle="tooltip"
@@ -131,6 +143,7 @@
                                    aria-label="View activity">
                                     <i class="bi bi-eye"></i>
                                 </a>
+                                @endif
                                 @if($canManage)
                                     <a href="{{ route('activities.edit', $activity) }}"
                                        class="btn btn-outline-secondary"

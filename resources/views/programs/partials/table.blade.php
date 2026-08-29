@@ -56,6 +56,7 @@
                                aria-label="View program">
                                 <i class="bi bi-eye"></i>
                             </a>
+                            @can('update', $program)
                             <a href="{{ route('programs.edit', $program) }}"
                                class="btn btn-outline-secondary"
                                data-bs-toggle="tooltip"
@@ -63,6 +64,8 @@
                                aria-label="Edit program">
                                 <i class="bi bi-pencil-square"></i>
                             </a>
+                            @endcan
+                            @can('delete', $program)
                             <button type="submit"
                                     form="{{ $actionKey }}-delete"
                                     class="btn btn-outline-danger"
@@ -72,18 +75,23 @@
                                     onclick="return confirm('Delete {{ addslashes($program->name) }}?')">
                                 <i class="bi bi-trash"></i>
                             </button>
+                            @endcan
                         </div>
+                        @can('delete', $program)
                         <form id="{{ $actionKey }}-delete" method="POST" action="{{ route('programs.destroy', $program) }}" class="d-none">
                             @csrf
                             @method('DELETE')
                         </form>
+                        @endcan
                     </td>
                 </tr>
                 @empty
                 <tr>
                     <td colspan="5" class="text-center py-5">
                         <p class="text-muted mb-2">No programs found.</p>
+                        @can('create', App\Models\Program::class)
                         <a href="{{ route('programs.create') }}" class="btn btn-sm btn-primary">Create Program</a>
+                        @endcan
                     </td>
                 </tr>
                 @endforelse

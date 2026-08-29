@@ -8,7 +8,7 @@
     :title="$project->name"
     entity-type="Project"
     :active="$project->active"
-    :action-url="route('projects.edit', $project)"
+    :action-url="auth()->user()->can('update', $project) ? route('projects.edit', $project) : null"
 />
 
 <x-entity-show>
@@ -86,7 +86,9 @@
                     collapsible
                 >
                     <x-slot:headerActions>
+                        @can('create', App\Models\Program::class)
                         <a href="{{ route('programs.create') }}" class="btn btn-sm btn-outline-primary">+ Add Program</a>
+                        @endcan
                     </x-slot:headerActions>
 
                     @forelse($project->programs->sortBy('name') as $program)
@@ -100,6 +102,7 @@
                             <x-slot:actions>
                                 <div class="d-flex align-items-center gap-2 flex-shrink-0">
                                     <x-status-badge :active="$program->active" />
+                                    @can('update', $program)
                                     <a href="{{ route('programs.edit', $program) }}"
                                        class="btn btn-sm btn-outline-secondary"
                                        data-bs-toggle="tooltip"
@@ -108,6 +111,7 @@
                                        aria-label="Edit {{ $program->name }}">
                                         <i class="bi bi-pencil-square"></i>
                                     </a>
+                                    @endcan
                                 </div>
                             </x-slot:actions>
                         </x-relationship-ledger-row>

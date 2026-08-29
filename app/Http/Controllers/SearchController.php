@@ -12,6 +12,12 @@ class SearchController extends Controller
 {
     public function index(Request $request)
     {
+        $user = Auth::user();
+
+        if ($user->access()->isInput()) {
+            abort(403);
+        }
+
         $query = trim((string) $request->input('q', ''));
 
         if ($query === '') {
@@ -25,32 +31,40 @@ class SearchController extends Controller
 
         $like = "%{$query}%";
 
-        // Agreements — non-admins only see their assigned ones
-        $agreementsQuery = Agreement::with(['organizations', 'states'])
+        $agreements = Agreement::query()
+            ->visibleTo($user)
+            ->with(['organizations', 'states'])
             ->where(function ($q) use ($like) {
                 $q->whereIlike('name', $like)
                   ->orWhereHas('organizations', fn ($o) => $o->whereIlike('name', $like))
                   ->orWhereHas('states', fn ($s) => $s->whereIlike('name', $like));
-            });
+            })
+            ->active()
+            ->orderBy('name')
+            ->limit(10)
+            ->get();
 
-        if (! Auth::user()->isAdmin()) {
-            $agreementsQuery->accessibleBy(Auth::user());
-        }
-
-        $agreements = $agreementsQuery->active()->orderBy('name')->limit(10)->get();
-
-        // Organizations — visible to all
-        $organizations = Organization::with('states')
+        $organizations = Organization::query()
+            ->visibleTo($user)
+            ->with('states')
             ->whereIlike('name', $like)
             ->orderBy('name')
             ->limit(10)
             ->get();
 
-        // Users — only admins can search/view user profiles
         $users = collect();
-        if (Auth::user()->isAdmin()) {
-            $users = User::whereIlike('name', $like)
-                ->orWhereIlike('email', $like)
+        if ($user->can('viewAny', User::class)) {
+            $usersQuery = User::query()->visibleTo($user);
+            if ($user->access()->isSupervisor() && ! $user->access()->hasView()) {
+                $usersQuery = User::query();
+                $user->access()->applySuperviseesVisibility($usersQuery);
+            }
+
+            $users = $usersQuery
+                ->where(function ($q) use ($like) {
+                    $q->whereIlike('name', $like)
+                        ->orWhereIlike('email', $like);
+                })
                 ->orderBy('name')
                 ->limit(10)
                 ->get();

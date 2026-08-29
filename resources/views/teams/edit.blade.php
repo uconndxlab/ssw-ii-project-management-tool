@@ -7,12 +7,12 @@
     $selectedProjectIds = old('project_ids', $team->projects->pluck('id')->toArray());
     $selectedProgramIds = old('program_ids', $team->programs->pluck('id')->toArray());
     $teamUserOptions = $users->map(function ($user) {
-        $role = !empty($user->role) ? ' (' . ucfirst($user->role) . ')' : '';
+        $role = $user->accessLabel() ? ' (' . $user->accessLabel() . ')' : '';
 
         return [
             'value' => $user->id,
             'label' => $user->name . $role,
-            'search' => trim($user->name . ' ' . ($user->email ?? '') . ' ' . ($user->role ?? '')),
+            'search' => trim($user->name . ' ' . ($user->email ?? '') . ' ' . $user->accessLabel()),
         ];
     });
 @endphp
@@ -50,6 +50,7 @@
                 :selected-program-ids="$selectedProgramIds"
                 :show-scope-mode-selector="true"
                 :selected-scope-mode="old('program_scope_mode', $team->program_scope_mode?->value ?? 'specific')"
+                :lock-all="$team->program_scope_mode?->value === 'all'"
             />
             <div class="alert alert-warning small mt-3 mb-0 d-none" data-team-none-scope-warning>
                 Teams with None scope save, but cannot be assigned to program-scoped agreements.

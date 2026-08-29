@@ -8,7 +8,7 @@
     :title="$organization->name"
     entity-type="Organization"
     :active="$organization->active"
-    :action-url="auth()->user()->isAdmin() ? route('organizations.edit', $organization) : null"
+    :action-url="auth()->user()->can('update', $organization) ? route('organizations.edit', $organization) : null"
 />
 
 <x-entity-show>
@@ -100,11 +100,11 @@
                     collapsible
                     class="flex-grow-1"
                 >
-                    @if(auth()->user()->isAdmin())
+                    @can('create', App\Models\Agreement::class)
                         <x-slot:headerActions>
                             <a href="{{ route('agreements.create') }}" class="btn btn-sm btn-outline-success">+ New</a>
                         </x-slot:headerActions>
-                    @endif
+                    @endcan
 
                     @forelse($agreements as $agreement)
                         <x-relationship-list-item
@@ -131,8 +131,8 @@
                     <div class="py-2 border-bottom">
                         <div class="d-flex justify-content-between align-items-start">
                             <x-user-link :user="$member" class="text-decoration-none fw-semibold small" />
-                            @if($member->role)
-                                <x-category-badge kind="role" class="ms-2">{{ ucfirst($member->role) }}</x-category-badge>
+                            @if($member->access_profile)
+                                <x-category-badge kind="role" class="ms-2">{{ $member->accessLabel() }}</x-category-badge>
                             @endif
                         </div>
                         @if($member->email)

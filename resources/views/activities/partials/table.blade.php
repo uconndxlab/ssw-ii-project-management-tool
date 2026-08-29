@@ -59,7 +59,9 @@
                     <td class="text-end text-nowrap">
                         @php
                             $actionKey = 'activity-actions-' . $activity->id;
-                            $canManage = auth()->user()->isAdmin() || $activity->user_id === auth()->id();
+                            $canUpdate = auth()->user()->can('update', $activity);
+                            $canDelete = auth()->user()->can('delete', $activity);
+                            $canDuplicate = auth()->user()->can('duplicate', $activity);
                         @endphp
                         <div class="btn-group btn-group-sm" role="group" aria-label="Activity actions for {{ $activity->engagement_date->format('M d, Y') }}">
                             <a href="{{ route('activities.show', $activity) }}"
@@ -69,7 +71,7 @@
                                aria-label="View activity">
                                 <i class="bi bi-eye"></i>
                             </a>
-                            @if($canManage)
+                            @if($canUpdate)
                                 <a href="{{ route('activities.edit', $activity) }}"
                                    class="btn btn-outline-secondary"
                                    data-bs-toggle="tooltip"
@@ -77,6 +79,8 @@
                                    aria-label="Edit activity">
                                     <i class="bi bi-pencil-square"></i>
                                 </a>
+                            @endif
+                            @if($canDuplicate)
                                 <button type="submit"
                                         form="{{ $actionKey }}-duplicate"
                                         class="btn btn-outline-secondary"
@@ -86,6 +90,8 @@
                                         onclick="return confirm('Duplicate this activity? A new activity will be created with the same details.')">
                                     <i class="bi bi-files"></i>
                                 </button>
+                            @endif
+                            @if($canDelete)
                                 <button type="submit"
                                         form="{{ $actionKey }}-delete"
                                         class="btn btn-outline-danger"
@@ -97,10 +103,12 @@
                                 </button>
                             @endif
                         </div>
-                        @if($canManage)
+                        @if($canDuplicate)
                             <form id="{{ $actionKey }}-duplicate" method="POST" action="{{ route('activities.duplicate', $activity) }}" class="d-none">
                                 @csrf
                             </form>
+                        @endif
+                        @if($canDelete)
                             <form id="{{ $actionKey }}-delete" method="POST" action="{{ route('activities.destroy', $activity) }}" class="d-none">
                                 @csrf
                                 @method('DELETE')
@@ -111,13 +119,7 @@
                 @empty
                 <tr>
                     <td colspan="5" class="text-center py-5">
-                        <p class="text-muted mb-2">
-                            @if(auth()->user()->isAdmin())
-                                No activities logged yet.
-                            @else
-                                No activities found for your assigned agreements.
-                            @endif
-                        </p>
+                        <p class="text-muted mb-2">No activities found.</p>
                         <a href="{{ route('activities.create') }}" class="btn btn-sm btn-primary">Log Activity</a>
                     </td>
                 </tr>

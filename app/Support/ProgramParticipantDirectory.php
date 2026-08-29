@@ -31,7 +31,7 @@ class ProgramParticipantDirectory
             ];
         }
 
-        $programs->loadMissing(['users:id,name,email,role,active']);
+        $programs->loadMissing(['users:id,name,email,access_profile,active']);
 
         $programIds = $programs->pluck('id')->map(fn ($id) => (int) $id)->all();
 
@@ -45,7 +45,7 @@ class ProgramParticipantDirectory
                             ->whereHas('programs', fn ($relation) => $relation->whereIn('programs.id', $programIds));
                     });
             })
-            ->with(['users:id,name,email,role,active', 'programs:id'])
+            ->with(['users:id,name,email,access_profile,active', 'programs:id'])
             ->get();
 
         $usersById = $programs

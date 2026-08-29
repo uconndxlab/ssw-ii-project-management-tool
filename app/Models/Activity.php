@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasProgramScope;
+use App\Models\Concerns\VisibleToUser;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,9 +11,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * View: logger or Delivered By (viewers also via a viewable agreement).
+ * Edit: logger, participant, or admin on the activity's programs.
+ * Delete: logger or that admin, if admin covers all programs.
+ */
 class Activity extends Model
 {
-    use HasProgramScope;
+    use HasProgramScope, VisibleToUser;
 
     protected $fillable = [
         'user_id',

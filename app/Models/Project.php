@@ -2,14 +2,19 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\VisibleToUser;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Collection;
 
+/**
+ * View: membership on a child program or privilege on this project.
+ * Create/edit/delete: system admin only.
+ */
 class Project extends Model
 {
-    use HasFactory;
+    use HasFactory, VisibleToUser;
 
     protected $fillable = [
         'name',

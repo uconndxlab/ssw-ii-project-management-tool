@@ -15,7 +15,7 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
         
-        if ($user->isAdmin()) {
+        if ($user->isSystemAdmin()) {
             return $this->adminHome();
         }
         

@@ -7,9 +7,11 @@ use App\Models\ContactFamily;
 use App\Models\LoggingField;
 use App\Models\Program;
 use App\Models\Project;
+use App\Support\Authorization\ScopeSync;
 use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
@@ -25,7 +27,11 @@ class LoggingFieldController extends Controller
      */
     public function index(Request $request)
     {
-        $query = LoggingField::query()->with([
+        $this->authorize('viewAny', LoggingField::class);
+
+        $query = LoggingField::query()
+            ->visibleTo(Auth::user())
+            ->with([
             'programs.projects:id,name',
         ]);
 
@@ -146,9 +152,10 @@ class LoggingFieldController extends Controller
      */
     public function create()
     {
+        $this->authorize('create', LoggingField::class);
         $fieldTypes = LoggingField::fieldTypes();
         $availabilityOptions = LoggingField::availabilityOptions();
-        $projects = ProjectProgramScope::activeProjectsWithPrograms();
+        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor(Auth::user());
 
         return view('logging-fields.create', compact('fieldTypes', 'availabilityOptions', 'projects'));
     }
@@ -158,6 +165,7 @@ class LoggingFieldController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('create', LoggingField::class);
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255|unique:logging_fields,name',
             'field_type' => ['required', Rule::in(array_keys(LoggingField::fieldTypes()))],
@@ -187,6 +195,21 @@ class LoggingFieldController extends Controller
                 LoggingField::class,
                 ProjectProgramScope::normalizeIds($request->input('project_ids', [])),
                 ProjectProgramScope::normalizeIds($request->input('program_ids', []))
+            );
+            $submittedMode = ProgramScopeMode::tryFrom((string) $request->input('program_scope_mode', ProgramScopeMode::All->value))
+                ?? ProgramScopeMode::Specific;
+            $existing = $request->route('logging_field');
+            ScopeSync::validateSubmittedMode(
+                $validator,
+                Auth::user(),
+                $existing instanceof LoggingField ? $existing->program_scope_mode : ProgramScopeMode::None,
+                $submittedMode,
+            );
+            ScopeSync::validateSubmittedProgramsAreInAdminScope(
+                $validator,
+                Auth::user(),
+                ProjectProgramScope::normalizeIds($request->input('program_ids', [])),
+                $existing instanceof LoggingField ? $existing->programs()->pluck('programs.id')->all() : [],
             );
 
             $fieldType = (string) $request->input('field_type');
@@ -232,12 +255,12 @@ class LoggingFieldController extends Controller
         $validated['program_scope_mode'] = ProjectProgramScope::normalizeMode($validated['program_scope_mode'] ?? null, LoggingField::class)->value;
 
         $loggingField = LoggingField::create($validated);
-        $loggingField->programs()->sync(ProjectProgramScope::modeAwareProgramIds(
-            $validated['program_scope_mode'],
-            LoggingField::class,
-            $validated['project_ids'] ?? [],
-            $validated['program_ids'] ?? []
-        ));
+        ScopeSync::applyTo(
+            Auth::user(),
+            $loggingField,
+            ProgramScopeMode::from($validated['program_scope_mode']),
+            $validated['program_ids'] ?? [],
+        );
 
         return redirect()->route('logging-fields.index')
             ->with('success', 'Logging field created successfully.');
@@ -248,6 +271,7 @@ class LoggingFieldController extends Controller
      */
     public function show(LoggingField $loggingField)
     {
+        $this->authorize('view', $loggingField);
         $loggingField->load(['agreements' => function ($query) {
             $query->active()->select('agreements.id', 'agreements.name', 'agreements.active')->orderBy('agreements.name');
         }, 'contactFamilies' => function ($query) {
@@ -262,9 +286,10 @@ class LoggingFieldController extends Controller
      */
     public function edit(LoggingField $loggingField)
     {
+        $this->authorize('update', $loggingField);
         $fieldTypes = LoggingField::fieldTypes();
         $availabilityOptions = LoggingField::availabilityOptions();
-        $projects = ProjectProgramScope::activeProjectsWithPrograms();
+        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor(Auth::user(), $loggingField);
         $loggingField->load(['programs.projects']);
 
         return view('logging-fields.edit', compact('loggingField', 'fieldTypes', 'availabilityOptions', 'projects'));
@@ -275,6 +300,7 @@ class LoggingFieldController extends Controller
      */
     public function update(Request $request, LoggingField $loggingField)
     {
+        $this->authorize('update', $loggingField);
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255|unique:logging_fields,name,' . $loggingField->id,
             'field_type' => ['required', Rule::in(array_keys(LoggingField::fieldTypes()))],
@@ -304,6 +330,21 @@ class LoggingFieldController extends Controller
                 LoggingField::class,
                 ProjectProgramScope::normalizeIds($request->input('project_ids', [])),
                 ProjectProgramScope::normalizeIds($request->input('program_ids', []))
+            );
+            $submittedMode = ProgramScopeMode::tryFrom((string) $request->input('program_scope_mode', ProgramScopeMode::All->value))
+                ?? ProgramScopeMode::Specific;
+            $existing = $request->route('logging_field');
+            ScopeSync::validateSubmittedMode(
+                $validator,
+                Auth::user(),
+                $existing instanceof LoggingField ? $existing->program_scope_mode : ProgramScopeMode::None,
+                $submittedMode,
+            );
+            ScopeSync::validateSubmittedProgramsAreInAdminScope(
+                $validator,
+                Auth::user(),
+                ProjectProgramScope::normalizeIds($request->input('program_ids', [])),
+                $existing instanceof LoggingField ? $existing->programs()->pluck('programs.id')->all() : [],
             );
 
             $fieldType = (string) $request->input('field_type');
@@ -353,13 +394,14 @@ class LoggingFieldController extends Controller
             $validated['slug'] = Str::slug($validated['name']);
         }
 
+        unset($validated['program_scope_mode'], $validated['project_ids'], $validated['program_ids']);
         $loggingField->update($validated);
-        $loggingField->programs()->sync(ProjectProgramScope::modeAwareProgramIds(
-            $validated['program_scope_mode'],
-            LoggingField::class,
-            $validated['project_ids'] ?? [],
-            $validated['program_ids'] ?? []
-        ));
+        ScopeSync::applyTo(
+            Auth::user(),
+            $loggingField,
+            ProgramScopeMode::from(ProjectProgramScope::normalizeMode($request->input('program_scope_mode'), LoggingField::class)->value),
+            $request->input('program_ids', []),
+        );
 
         return redirect()->route('logging-fields.index')
             ->with('success', 'Logging field updated successfully.');
@@ -449,6 +491,7 @@ class LoggingFieldController extends Controller
      */
     public function destroy(LoggingField $loggingField)
     {
+        $this->authorize('delete', $loggingField);
         // Check if field is in use
         $agreementCount = $loggingField->agreements()->count();
         $contactFamilyCount = $loggingField->contactFamilies()->count();

@@ -56,6 +56,7 @@
                                aria-label="View project">
                                 <i class="bi bi-eye"></i>
                             </a>
+                            @can('update', $project)
                             <a href="{{ route('projects.edit', $project) }}"
                                class="btn btn-outline-secondary"
                                data-bs-toggle="tooltip"
@@ -63,6 +64,8 @@
                                aria-label="Edit project">
                                 <i class="bi bi-pencil-square"></i>
                             </a>
+                            @endcan
+                            @can('delete', $project)
                             <button type="submit"
                                     form="{{ $actionKey }}-delete"
                                     class="btn btn-outline-danger"
@@ -72,18 +75,23 @@
                                     onclick="return confirm('Delete {{ addslashes($project->name) }}? This will also delete all {{ $project->programs_count }} associated programs.')">
                                 <i class="bi bi-trash"></i>
                             </button>
+                            @endcan
                         </div>
+                        @can('delete', $project)
                         <form id="{{ $actionKey }}-delete" method="POST" action="{{ route('projects.destroy', $project) }}" class="d-none">
                             @csrf
                             @method('DELETE')
                         </form>
+                        @endcan
                     </td>
                 </tr>
                 @empty
                 <tr>
                     <td colspan="5" class="text-center py-5">
                         <p class="text-muted mb-2">No projects found.</p>
+                        @can('create', App\Models\Project::class)
                         <a href="{{ route('projects.create') }}" class="btn btn-sm btn-primary">Create Project</a>
+                        @endcan
                     </td>
                 </tr>
                 @endforelse

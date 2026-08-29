@@ -46,7 +46,7 @@
                 <h6 class="mb-3">Recent Activity</h6>
                 <div class="list-group list-group-sm">
                     @foreach($myActivities->take(5) as $activity)
-                        @php($canManage = auth()->user()->isAdmin() || $activity->user_id === auth()->id())
+                        @php($canManage = auth()->user()->can('update', $activity))
                         <div class="list-group-item">
                             <div class="d-flex justify-content-between align-items-start gap-3">
                                 <div class="flex-grow-1 min-w-0">

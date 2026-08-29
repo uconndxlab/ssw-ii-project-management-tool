@@ -8,7 +8,7 @@
     :title="$program->name"
     entity-type="Program"
     :active="$program->active"
-    :action-url="auth()->user()->isAdmin() ? route('programs.edit', $program) : null"
+    :action-url="auth()->user()->can('update', $program) ? route('programs.edit', $program) : null"
 />
 
 <x-entity-show>

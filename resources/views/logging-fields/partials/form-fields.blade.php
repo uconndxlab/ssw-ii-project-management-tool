@@ -99,7 +99,8 @@
         :selected-project-ids="$selectedProjectIds"
         :selected-program-ids="$selectedProgramIds"
         :show-scope-mode-selector="true"
-        :selected-scope-mode="old('program_scope_mode', $field->program_scope_mode?->value ?? 'all')"
+        :selected-scope-mode="old('program_scope_mode', $field->program_scope_mode?->value ?? ($field->exists ? 'all' : 'specific'))"
+        :lock-all="$field->exists && $field->program_scope_mode?->value === 'all'"
         project-empty-selection-label="All projects"
         program-empty-selection-label="All programs"
     />

@@ -26,7 +26,7 @@
                 @endforeach
             </select>
         </div>
-        @if(auth()->user()->isAdmin())
+        @if(auth()->user()->access()->hasView())
             <div class="col-md-2">
                 <select name="active" class="form-select form-select-sm"
                         hx-get="{{ route('agreements.index') }}" hx-trigger="change"
@@ -66,7 +66,7 @@
         </div>
         @php
             $agreementFilterKeys = ['search', 'state_id', 'project_id', 'program_id'];
-            if (auth()->user()->isAdmin()) {
+            if (auth()->user()->access()->hasView()) {
                 $agreementFilterKeys[] = 'active';
             }
         @endphp

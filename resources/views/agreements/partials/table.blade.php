@@ -35,7 +35,7 @@
                     <th style="min-width: 120px;">
                         <x-table-sort-link column="principal_investigators" label="PI" :sort="$s" :direction="$d" :url="$url('principal_investigators')" target="#agreements-table" />
                     </th>
-                    <th class="text-end text-nowrap" style="width:{{ auth()->user()->isAdmin() ? '130px' : '52px' }};">Actions</th>
+                    <th class="text-end text-nowrap" style="width:{{ auth()->user()->can('create', App\Models\Agreement::class) ? '130px' : '52px' }};">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -100,7 +100,7 @@
                                aria-label="View agreement">
                                 <i class="bi bi-eye"></i>
                             </a>
-                            @if(auth()->user()->isAdmin())
+                            @can('update', $agreement)
                                 <a href="{{ route('agreements.edit', $agreement) }}"
                                    class="btn btn-outline-secondary"
                                    data-bs-toggle="tooltip"
@@ -108,6 +108,8 @@
                                    aria-label="Edit agreement">
                                     <i class="bi bi-pencil-square"></i>
                                 </a>
+                            @endcan
+                            @can('duplicate', $agreement)
                                 <button type="submit"
                                         form="{{ $actionKey }}-duplicate"
                                         class="btn btn-outline-secondary"
@@ -117,6 +119,8 @@
                                         onclick="return confirm('Duplicate {{ addslashes($agreement->name) }}? Activities and logged progress will not be copied.')">
                                     <i class="bi bi-files"></i>
                                 </button>
+                            @endcan
+                            @can('delete', $agreement)
                                 <button type="submit"
                                         form="{{ $actionKey }}-delete"
                                         class="btn btn-outline-danger"
@@ -126,30 +130,32 @@
                                         onclick="return confirm('Delete {{ addslashes($agreement->name) }}?')">
                                     <i class="bi bi-trash"></i>
                                 </button>
-                            @endif
+                            @endcan
                         </div>
-                        @if(auth()->user()->isAdmin())
+                        @can('duplicate', $agreement)
                             <form id="{{ $actionKey }}-duplicate" method="POST" action="{{ route('agreements.duplicate', $agreement) }}" class="d-none">
                                 @csrf
                             </form>
+                        @endcan
+                        @can('delete', $agreement)
                             <form id="{{ $actionKey }}-delete" method="POST" action="{{ route('agreements.destroy', $agreement) }}" class="d-none">
                                 @csrf
                                 @method('DELETE')
                             </form>
-                        @endif
+                        @endcan
                     </td>
                 </tr>
                 @empty
                 <tr>
                     <td colspan="9" class="text-center py-5">
                         <p class="text-muted mb-2">
-                            @if(auth()->user()->isAdmin()) No agreements found.
+                            @can('create', App\Models\Agreement::class) No agreements found.
                             @else You are not assigned to any agreements.
-                            @endif
+                            @endcan
                         </p>
-                        @if(auth()->user()->isAdmin())
+                        @can('create', App\Models\Agreement::class)
                             <a href="{{ route('agreements.create') }}" class="btn btn-sm btn-primary">Create Agreement</a>
-                        @endif
+                        @endcan
                     </td>
                 </tr>
                 @endforelse

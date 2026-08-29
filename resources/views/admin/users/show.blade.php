@@ -12,10 +12,10 @@
 <x-page-header
     context="show"
     :title="$user->name"
-    :entity-type="ucfirst($user->role)"
+    :entity-type="$user->accessLabel()"
     badge-kind="role"
     :active="$user->active"
-    :action-url="$isProfile ? route('profile.edit') : route('admin.users.edit', $user)"
+    :action-url="$isProfile ? route('profile.edit') : (($canEditUser ?? false) ? route('admin.users.edit', $user) : null)"
     :action-label="$isProfile ? 'Edit profile' : 'Edit'"
 />
 

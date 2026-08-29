@@ -24,6 +24,7 @@ use App\Services\PrivateFileService;
 use App\Support\ActivityTypeDuration;
 use App\Support\AgreementDeliverableDisplay;
 use App\Support\DeliverableHistoryScope;
+use App\Support\Authorization\ScopeSync;
 use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -42,19 +43,23 @@ class AgreementController extends Controller
 
     public function index(Request $request)
     {
+        $this->authorize('viewAny', Agreement::class);
+
+        $user = Auth::user();
         $states = State::query()->get(['id', 'name'])->sortBy('name')->values();
         $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
         $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
 
-        $query = Agreement::query()->with([
+        $query = Agreement::query()
+            ->visibleTo($user)
+            ->with([
             'states',
             'programs.projects:id,name',
             'principalInvestigators:id,name',
         ]);
 
-        if (! Auth::user()->isAdmin()) {
-            $query->accessibleBy(Auth::user())
-                ->active();
+        if (! $user->access()->hasView()) {
+            $query->active();
         } elseif ($request->filled('active')) {
             $query->where('agreements.active', $request->input('active') === '1');
         }
@@ -176,7 +181,7 @@ class AgreementController extends Controller
     public function create()
     {
         // Admin-only authorization
-        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can create agreements.');
+        $this->authorize('create', Agreement::class);
 
         return view('agreements.create', $this->agreementFormData());
     }
@@ -240,33 +245,28 @@ class AgreementController extends Controller
             'principalInvestigators',
         ]);
 
-        // Get activities for this agreement
-        $activities = $agreement->activities()
-            ->with(['activityType.contactFamily', 'user', 'participants'])
+        $recentActivities = $agreement->activities()
+            ->with(['activityType.contactFamily', 'user', 'participants', 'agreements'])
             ->orderByRecentDisplay()
+            ->limit(10)
             ->get();
 
-        // Recent activities (last 10)
-        $recentActivities = $activities->take(10);
+        $programs = Program::query()
+            ->whereHas('activities', fn ($activityQuery) => $activityQuery->whereHas(
+                'agreements',
+                fn ($agreementQuery) => $agreementQuery->where('agreements.id', $agreement->id),
+            ))
+            ->orderBy('name')
+            ->get();
 
-        // Programs represented in activities
-        $programs = $agreement->activities()
-            ->with('programs')
-            ->get()
-            ->pluck('programs')
-            ->flatten()
-            ->unique('id')
-            ->sortBy('name');
-
-        // Lifetime totals
         $lifetimeTotals = [
-            'activities' => $activities->count(),
+            'activities' => $agreement->activities()->count(),
         ];
 
-        // YTD totals (current year)
-        $ytdActivities = $activities->filter(fn ($e) => $e->engagement_date->year === now()->year);
         $ytdTotals = [
-            'activities' => $ytdActivities->count(),
+            'activities' => $agreement->activities()
+                ->whereYear('engagement_date', now()->year)
+                ->count(),
         ];
 
         $deliverableGroups = AgreementDeliverableDisplay::buildGroupedProgress($agreement);
@@ -284,16 +284,16 @@ class AgreementController extends Controller
     public function edit(Agreement $agreement)
     {
         // Admin-only authorization
-        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can edit agreements.');
+        $this->authorize('update', $agreement);
 
         return view('agreements.edit', $this->agreementFormData($agreement));
     }
 
     public function duplicate(Agreement $agreement)
     {
-        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can duplicate agreements.');
+        $this->authorize('duplicate', $agreement);
 
-        $copy = $this->agreementDuplicationService->duplicate($agreement);
+        $copy = $this->agreementDuplicationService->duplicate($agreement, Auth::user());
 
         return redirect()
             ->route('agreements.edit', $copy)
@@ -370,11 +370,11 @@ class AgreementController extends Controller
 
     private function syncAgreementRelations(Agreement $agreement, array $validated): void
     {
-        $selectedProgramIds = ProjectProgramScope::modeAwareProgramIds(
-            $validated['program_scope_mode'] ?? ProgramScopeMode::Specific->value,
-            Agreement::class,
-            $validated['project_ids'] ?? [],
-            $validated['program_ids'] ?? []
+        ScopeSync::applyTo(
+            Auth::user(),
+            $agreement,
+            ProgramScopeMode::from($validated['program_scope_mode'] ?? ProgramScopeMode::Specific->value),
+            $validated['program_ids'] ?? [],
         );
 
         $organizationIds = collect($validated['organization_ids'] ?? [])
@@ -409,7 +409,6 @@ class AgreementController extends Controller
             $agreementKfsByNumber
         );
         $agreement->states()->sync($validated['state_ids'] ?? []);
-        $agreement->programs()->sync($selectedProgramIds);
 
         $teamIds = array_values(array_unique($validated['team_ids'] ?? []));
         $teamUserIds = collect();
@@ -889,7 +888,7 @@ class AgreementController extends Controller
             ->get()
             ->sortBy(fn ($item) => [$item->sort_order, $item->name])
             ->values();
-        $projects = ProjectProgramScope::activeProjectsWithPrograms()->sortBy('name')->values();
+        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor(Auth::user(), $agreement)->sortBy('name')->values();
         $agreementLoggingFields = LoggingField::active()
             ->ordered()
             ->where('available_in_agreements', true)
@@ -927,7 +926,7 @@ class AgreementController extends Controller
         $teams = Team::query()
             ->where('active', true)
             ->with([
-                'users' => fn ($query) => $query->select('users.id', 'users.name', 'users.role'),
+                'users' => fn ($query) => $query->select('users.id', 'users.name', 'users.access_profile'),
                 'programs.projects',
             ])
             ->get();
@@ -958,7 +957,7 @@ class AgreementController extends Controller
     public function destroy(Agreement $agreement)
     {
         // Admin-only authorization
-        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can delete agreements.');
+        $this->authorize('delete', $agreement);
 
         Agreement::destroy($agreement->id);
 

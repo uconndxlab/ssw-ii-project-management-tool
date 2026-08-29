@@ -1,8 +1,10 @@
 @php
     $s    = $sort ?? 'name';
     $d    = $direction ?? 'asc';
+    $superviseesIndex = $superviseesIndex ?? false;
+    $usersIndexRoute = $superviseesIndex ? 'supervisees.index' : 'admin.users.index';
     $flip = fn($col) => ($s === $col && $d === 'asc') ? 'desc' : 'asc';
-    $url  = fn($col) => route('admin.users.index', array_merge(request()->query(), ['sort' => $col, 'direction' => $flip($col), 'page' => 1]));
+    $url  = fn($col) => route($usersIndexRoute, array_merge(request()->query(), ['sort' => $col, 'direction' => $flip($col), 'page' => 1]));
     $scopeEmptyLabel = fn ($mode, string $allLabel, string $noneLabel) => ($mode?->value ?? $mode) === 'none' ? $noneLabel : $allLabel;
 @endphp
 
@@ -21,7 +23,7 @@
                         <x-table-sort-link column="po" label="PO" :sort="$s" :direction="$d" :url="$url('po')" target="#users-table" />
                     </th>
                     <th>
-                        <x-table-sort-link column="role" label="Role" :sort="$s" :direction="$d" :url="$url('role')" target="#users-table" />
+                        <x-table-sort-link column="access_profile" label="Access" :sort="$s" :direction="$d" :url="$url('access_profile')" target="#users-table" />
                     </th>
                     <th style="min-width: 140px;">
                         <x-table-sort-link column="supervisor" label="Supervisor" :sort="$s" :direction="$d" :url="$url('supervisor')" target="#users-table" />
@@ -48,7 +50,7 @@
                     <td class="text-muted small">{{ $user->email }}</td>
                     <td class="text-muted small">{{ $user->po_number ?: '—' }}</td>
                     <td>
-                        <x-category-badge kind="role">{{ ucfirst($user->role) }}</x-category-badge>
+                        <x-category-badge kind="role">{{ $user->accessLabel() }}</x-category-badge>
                     </td>
                     <td class="small">
                         @if($user->supervisor)
@@ -67,7 +69,7 @@
                                 ? collect()
                                 : collect($scope['index']['projects'])->map(fn ($entry) => [
                                 'name' => $entry['model']->name,
-                                'href' => route('projects.show', $entry['model']),
+                                'href' => $entry['model']->isLinkable() ? route('projects.show', $entry['model']) : null,
                                 'title' => $entry['viaTeam'] && $entry['teamNames'] ? 'Via team: ' . $entry['teamNames'] : null,
                             ])"
                             href-key="href"
@@ -82,7 +84,7 @@
                                 ? collect()
                                 : collect($scope['index']['programs'])->map(fn ($entry) => [
                                 'name' => $entry['model']->name,
-                                'href' => route('programs.show', $entry['model']),
+                                'href' => $entry['model']->isLinkable() ? route('programs.show', $entry['model']) : null,
                                 'title' => $entry['viaTeam'] && $entry['teamNames'] ? 'Via team: ' . $entry['teamNames'] : null,
                             ])"
                             href-key="href"
@@ -103,6 +105,7 @@
                                 <i class="bi bi-eye"></i>
                             </a>
                             @endif
+                            @can('update', $user)
                             <a href="{{ route('admin.users.edit', $user) }}"
                                class="btn btn-outline-secondary"
                                data-bs-toggle="tooltip"
@@ -110,6 +113,8 @@
                                aria-label="Edit user">
                                 <i class="bi bi-pencil-square"></i>
                             </a>
+                            @endcan
+                            @can('delete', $user)
                             <button type="submit"
                                     form="{{ $actionKey }}-delete"
                                     class="btn btn-outline-danger"
@@ -119,18 +124,25 @@
                                     onclick="return confirm('Delete {{ addslashes($user->name) }}?')">
                                 <i class="bi bi-trash"></i>
                             </button>
+                            @endcan
                         </div>
+                        @can('delete', $user)
                         <form id="{{ $actionKey }}-delete" method="POST" action="{{ route('admin.users.destroy', $user) }}" class="d-none">
                             @csrf
                             @method('DELETE')
                         </form>
+                        @endcan
                     </td>
                 </tr>
                 @empty
                 <tr>
                     <td colspan="9" class="text-center py-5">
                         <p class="text-muted mb-2">No users found.</p>
+                        @can('create', App\Models\User::class)
+                            @unless($superviseesIndex)
                         <a href="{{ route('admin.users.create') }}" class="btn btn-sm btn-primary">Create User</a>
+                            @endunless
+                        @endcan
                     </td>
                 </tr>
                 @endforelse

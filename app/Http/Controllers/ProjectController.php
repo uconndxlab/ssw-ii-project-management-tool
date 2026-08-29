@@ -11,9 +11,9 @@ class ProjectController extends Controller
 {
     public function index(Request $request)
     {
-        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can manage projects.');
+        $this->authorize('viewAny', Project::class);
 
-        $query = Project::with('programs')->withCount('programs');
+        $query = Project::query()->visibleTo(Auth::user())->with('programs')->withCount('programs');
 
         if ($request->filled('active')) {
             $query->where('active', $request->input('active') === '1');
@@ -56,13 +56,13 @@ class ProjectController extends Controller
 
     public function create()
     {
-        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can create projects.');
+        $this->authorize('create', Project::class);
         return view('projects.create');
     }
 
     public function store(Request $request)
     {
-        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can create projects.');
+        $this->authorize('create', Project::class);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -79,7 +79,7 @@ class ProjectController extends Controller
 
     public function show(Project $project)
     {
-        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can view projects.');
+        $this->authorize('view', $project);
         $project->load([
             'programs.activities.activityType.contactFamily',
             'programs.activities.user',
@@ -115,13 +115,13 @@ class ProjectController extends Controller
 
     public function edit(Project $project)
     {
-        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can edit projects.');
+        $this->authorize('update', $project);
         return view('projects.edit', compact('project'));
     }
 
     public function update(Request $request, Project $project)
     {
-        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can update projects.');
+        $this->authorize('update', $project);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -138,7 +138,7 @@ class ProjectController extends Controller
 
     public function destroy(Project $project)
     {
-        abort_unless(Auth::user()->isAdmin(), 403, 'Only administrators can delete projects.');
+        $this->authorize('delete', $project);
 
         $orphanedPrograms = ProjectProgramScope::programsOrphanedByDeletingProject($project);
 

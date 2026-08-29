@@ -177,6 +177,7 @@
             :show-scope-mode-selector="true"
             :selected-scope-mode="$selectedProgramScopeMode"
             :scope-mode-options="['all' => 'All', 'specific' => 'Specific']"
+            :lock-all="$agreement?->exists && $agreement->program_scope_mode?->value === 'all'"
             project-label="Projects *"
             program-label="Programs *"
             program-help-text="Saved programs control teams, users, logging fields, families, and types below."

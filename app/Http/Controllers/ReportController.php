@@ -56,18 +56,10 @@ class ReportController extends Controller
             ->orderBy('name')
             ->get();
 
-        // Build base query with visibility enforcement
         $query = Activity::query()
+            ->visibleTo(Auth::user())
             ->with(['agreements.organizations', 'agreements.states', 'user', 'activityType.contactFamily'])
             ->whereBetween('activity_date', [$startDate, $endDate]);
-
-        // Visibility enforcement: non-admins only see their assigned agreements
-        if (!Auth::user()->isAdmin()) {
-            $agreementIds = Auth::user()->accessibleAgreementsQuery()->pluck('agreements.id');
-            $query->whereHas('agreements', function ($q) use ($agreementIds) {
-                $q->whereIn('agreements.id', $agreementIds);
-            });
-        }
 
         // Agreement filter
         if ($agreementId) {
@@ -148,12 +140,9 @@ class ReportController extends Controller
 
     private function getVisibleAgreements()
     {
-        if (Auth::user()->isAdmin()) {
-            return Agreement::query()->active()->with('organizations')->orderBy('name')->get();
-        }
-
-        return Auth::user()->accessibleAgreementsQuery()
-            ->where('agreements.active', true)
+        return Agreement::query()
+            ->visibleTo(Auth::user())
+            ->active()
             ->with('organizations')
             ->orderBy('name')
             ->get();
@@ -161,11 +150,9 @@ class ReportController extends Controller
 
     private function verifyAgreementAccess(int $agreementId): void
     {
-        if (Auth::user()->isAdmin()) {
-            return;
-        }
+        $agreement = Agreement::query()->findOrFail($agreementId);
 
-        if (!Auth::user()->hasAccessToAgreement($agreementId)) {
+        if (! Auth::user()->can('view', $agreement)) {
             abort(403, 'You do not have access to this agreement.');
         }
     }

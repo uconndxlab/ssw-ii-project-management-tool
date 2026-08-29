@@ -21,7 +21,9 @@
     @include('home.partials.my-work')
 
     <!-- Quick Search -->
-    @include('home.partials.search')
+    @unless(auth()->user()->isInput())
+        @include('home.partials.search')
+    @endunless
 
     <!-- Recent System Activity -->
     @include('home.partials.recent-activity', ['recentActivities' => $recentActivities ?? collect()])

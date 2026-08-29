@@ -10,7 +10,7 @@
             :title="$loggingField->name"
             entity-type="Logging Field"
             :active="$loggingField->is_active"
-            :action-url="route('logging-fields.edit', $loggingField)"
+            :action-url="auth()->user()->can('update', $loggingField) ? route('logging-fields.edit', $loggingField) : null"
         >
             <x-slot:badges>
                 @if($loggingField->is_full_width)
@@ -160,6 +160,7 @@
             </div>
         </div>
 
+        @can('delete', $loggingField)
         @if($loggingField->agreements->isEmpty() && $loggingField->contactFamilies->isEmpty())
         <div class="card border-danger">
             <div class="card-body">
@@ -175,6 +176,7 @@
             </div>
         </div>
         @endif
+        @endcan
     </div>
 </div>
 

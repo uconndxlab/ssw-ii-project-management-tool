@@ -8,8 +8,10 @@ use App\Models\Program;
 use App\Models\Project;
 use App\Models\State;
 use App\Models\User;
+use App\Support\Authorization\ScopeSync;
 use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
@@ -17,9 +19,12 @@ class OrganizationController extends Controller
 {
     public function index(Request $request)
     {
+        $this->authorize('viewAny', Organization::class);
+
         $states = State::orderBy('name', 'asc')->get(['id', 'name']);
 
         $query = Organization::query()
+            ->visibleTo(Auth::user())
             ->with([
                 'states:id,name',
                 'programs.projects:id,name',
@@ -98,6 +103,7 @@ class OrganizationController extends Controller
 
     public function show(Organization $organization)
     {
+        $this->authorize('view', $organization);
         $organization->load(['states', 'programs.projects', 'users']);
 
         // Load agreements with relationships
@@ -154,8 +160,9 @@ class OrganizationController extends Controller
 
     public function create()
     {
+        $this->authorize('create', Organization::class);
         $states = State::orderBy('name', 'asc')->get();
-        $projects = ProjectProgramScope::activeProjectsWithPrograms();
+        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor(Auth::user());
         $users = User::query()->active()->orderBy('name', 'asc')->get();
 
         return view('organizations.create', compact('states', 'projects', 'users'));
@@ -163,21 +170,23 @@ class OrganizationController extends Controller
 
     public function store(Request $request)
     {
+        $this->authorize('create', Organization::class);
+
         $validated = $this->validateOrganization($request);
 
         $organization = Organization::create([
             'name' => $validated['name'],
             'po_number' => $validated['po_number'] ?? null,
             'active' => $request->boolean('active'),
-            'program_scope_mode' => $validated['program_scope_mode'],
+            'program_scope_mode' => ProgramScopeMode::Specific,
         ]);
         $organization->states()->sync($validated['state_ids']);
-        $organization->programs()->sync(ProjectProgramScope::modeAwareProgramIds(
-            $validated['program_scope_mode'],
-            Organization::class,
-            $validated['project_ids'] ?? [],
-            $validated['program_ids'] ?? []
-        ));
+        ScopeSync::applyTo(
+            Auth::user(),
+            $organization,
+            ProgramScopeMode::from($validated['program_scope_mode']),
+            $validated['program_ids'] ?? [],
+        );
         $organization->users()->sync($validated['user_ids'] ?? []);
 
         return redirect()
@@ -187,9 +196,10 @@ class OrganizationController extends Controller
 
     public function edit(Organization $organization)
     {
+        $this->authorize('update', $organization);
         $organization->load(['states', 'programs.projects', 'users']);
         $states = State::orderBy('name', 'asc')->get();
-        $projects = ProjectProgramScope::activeProjectsWithPrograms();
+        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor(Auth::user(), $organization);
         $users = User::query()->active()->orderBy('name', 'asc')->get();
 
         return view('organizations.edit', compact('organization', 'states', 'projects', 'users'));
@@ -197,21 +207,22 @@ class OrganizationController extends Controller
 
     public function update(Request $request, Organization $organization)
     {
+        $this->authorize('update', $organization);
+
         $validated = $this->validateOrganization($request, $organization);
 
         $organization->update([
             'name' => $validated['name'],
             'po_number' => $validated['po_number'] ?? null,
             'active' => $request->boolean('active'),
-            'program_scope_mode' => $validated['program_scope_mode'],
         ]);
         $organization->states()->sync($validated['state_ids']);
-        $organization->programs()->sync(ProjectProgramScope::modeAwareProgramIds(
-            $validated['program_scope_mode'],
-            Organization::class,
-            $validated['project_ids'] ?? [],
-            $validated['program_ids'] ?? []
-        ));
+        ScopeSync::applyTo(
+            Auth::user(),
+            $organization,
+            ProgramScopeMode::from($validated['program_scope_mode']),
+            $validated['program_ids'] ?? [],
+        );
         $organization->users()->sync($validated['user_ids'] ?? []);
 
         return redirect()
@@ -221,6 +232,7 @@ class OrganizationController extends Controller
 
     public function destroy(Organization $organization)
     {
+        $this->authorize('delete', $organization);
         Organization::destroy($organization->id);
 
         return redirect()
@@ -255,13 +267,27 @@ class OrganizationController extends Controller
             'po_number.unique' => 'This PO number is already assigned to another organization.',
         ]);
 
-        $validator->after(function ($validator) use ($request) {
+        $validator->after(function ($validator) use ($request, $organization) {
             ProjectProgramScope::validateModeSelection(
                 $validator,
                 $request->input('program_scope_mode', ProgramScopeMode::Specific->value),
                 Organization::class,
                 ProjectProgramScope::normalizeIds($request->input('project_ids', [])),
                 ProjectProgramScope::normalizeIds($request->input('program_ids', []))
+            );
+            $submittedMode = ProgramScopeMode::tryFrom((string) $request->input('program_scope_mode', ProgramScopeMode::Specific->value))
+                ?? ProgramScopeMode::Specific;
+            ScopeSync::validateSubmittedMode(
+                $validator,
+                Auth::user(),
+                $organization?->program_scope_mode ?? ProgramScopeMode::None,
+                $submittedMode,
+            );
+            ScopeSync::validateSubmittedProgramsAreInAdminScope(
+                $validator,
+                Auth::user(),
+                ProjectProgramScope::normalizeIds($request->input('program_ids', [])),
+                $organization?->programs()->pluck('programs.id')->all() ?? [],
             );
         });
 

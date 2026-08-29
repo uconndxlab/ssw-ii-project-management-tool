@@ -3,19 +3,27 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\AccessProfile;
 use App\Enums\ProgramScopeMode;
 use App\Models\Concerns\HasProgramScope;
+use App\Models\Concerns\VisibleToUser;
+use App\Support\Authorization\UserAccess;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
+/**
+ * View others: viewer/admin with overlapping membership, or they report to you.
+ * Members cannot browse users. You cannot edit your own permissions.
+ */
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, HasProgramScope, Notifiable;
+    use HasFactory, HasProgramScope, Notifiable, VisibleToUser;
 
     /**
      * The attributes that are mass assignable.
@@ -26,7 +34,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'role',
+        'access_profile',
+        'is_supervisor',
         'active',
         'supervisor_id',
         'program_scope_mode',
@@ -54,8 +63,20 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'active' => 'boolean',
+            'is_supervisor' => 'boolean',
+            'access_profile' => AccessProfile::class,
             'program_scope_mode' => ProgramScopeMode::class,
         ];
+    }
+
+    public function access(): UserAccess
+    {
+        return UserAccess::for($this);
+    }
+
+    public function privileges(): HasMany
+    {
+        return $this->hasMany(UserPrivilege::class);
     }
 
     public function isActive(): bool
@@ -72,28 +93,38 @@ class User extends Authenticatable
         return $query->where('active', true);
     }
 
-    /**
-     * Check if user is an admin.
-     */
+    public function isSystemAdmin(): bool
+    {
+        return $this->access()->isSystemAdmin();
+    }
+
     public function isAdmin(): bool
     {
-        return $this->role === 'admin';
+        return $this->access()->hasAdmin();
     }
 
-    /**
-     * Check if user is staff.
-     */
-    public function isStaff(): bool
+    public function isInput(): bool
     {
-        return $this->role === 'staff';
+        return $this->access()->isInput();
     }
 
-    /**
-     * Check if user is a consultant.
-     */
-    public function isConsultant(): bool
+    public function isSupervisor(): bool
     {
-        return $this->role === 'consultant';
+        return $this->access()->isSupervisor();
+    }
+
+    public function accessLabel(): string
+    {
+        return match ($this->access_profile) {
+            AccessProfile::AdminViewer => $this->access()->hasAdmin() ? 'Admin' : 'Viewer',
+            AccessProfile::Input => 'Input',
+            default => 'User',
+        };
+    }
+
+    public function supervisees(): HasMany
+    {
+        return $this->hasMany(User::class, 'supervisor_id');
     }
 
     /**

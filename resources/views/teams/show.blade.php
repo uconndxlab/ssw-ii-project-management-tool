@@ -5,7 +5,7 @@
 @section('content')
 <div class="row mb-4">
     <div class="col-12">
-        <x-page-header context="show" :title="$team->name" entity-type="Team" :active="$team->active" :action-url="route('teams.edit', $team)" />
+        <x-page-header context="show" :title="$team->name" entity-type="Team" :active="$team->active" :action-url="auth()->user()->can('update', $team) ? route('teams.edit', $team) : null" />
     </div>
 </div>
 
@@ -59,13 +59,7 @@
                                     <x-user-link :user="$user" class="d-block fw-semibold" />
                                     <small class="text-muted">{{ $user->email }}</small>
                                 </div>
-                                <span class="badge
-                                    @if($user->role === 'admin') bg-danger
-                                    @elseif($user->role === 'consultant') bg-info
-                                    @else bg-secondary
-                                    @endif">
-                                    {{ ucfirst($user->role) }}
-                                </span>
+                                <x-category-badge kind="role">{{ $user->accessLabel() }}</x-category-badge>
                             </div>
                         </div>
                         @endforeach
@@ -168,13 +162,7 @@
                         <div class="mb-4">
                             <div class="d-flex align-items-center mb-2">
                                 <x-user-link :user="$member" class="fw-semibold" />
-                                <span class="badge ms-2
-                                    @if($member->role === 'admin') bg-danger
-                                    @elseif($member->role === 'consultant') bg-info
-                                    @else bg-secondary
-                                    @endif">
-                                    {{ ucfirst($member->role) }}
-                                </span>
+                                <x-category-badge kind="role" class="ms-2">{{ $member->accessLabel() }}</x-category-badge>
                             </div>
                             @if(!empty($memberDeliverables[$member->id]))
                                 <div class="table-responsive">

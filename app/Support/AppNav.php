@@ -2,16 +2,39 @@
 
 namespace App\Support;
 
+use App\Models\User;
+use App\Support\Authorization\UserAccess;
+
 class AppNav
 {
     /**
-     * Primary workflow links shown to all authenticated users.
-     *
      * @return list<array{label: string, route: string, active: list<string>}>
      */
-    public static function primaryLinks(): array
+    public static function primaryLinks(?User $user = null): array
     {
-        return [
+        $user = $user ?? auth()->user();
+        if ($user === null) {
+            return [];
+        }
+
+        $access = UserAccess::for($user);
+
+        if ($access->isInput()) {
+            return [
+                [
+                    'label' => 'Home',
+                    'route' => 'dashboard',
+                    'active' => ['dashboard'],
+                ],
+                [
+                    'label' => 'Activities',
+                    'route' => 'activities.index',
+                    'active' => ['activities.*'],
+                ],
+            ];
+        }
+
+        $links = [
             [
                 'label' => 'Home',
                 'route' => 'dashboard',
@@ -27,25 +50,72 @@ class AppNav
                 'route' => 'activities.index',
                 'active' => ['activities.*'],
             ],
-            [
-                'label' => 'Organizations',
-                'route' => 'organizations.index',
-                'active' => ['organizations.*'],
-            ],
         ];
+
+        if (! $access->hasAdmin()) {
+            $links = array_merge($links, [
+                [
+                    'label' => 'Organizations',
+                    'route' => 'organizations.index',
+                    'active' => ['organizations.*'],
+                ],
+                [
+                    'label' => 'States',
+                    'route' => 'states.index',
+                    'active' => ['states.*'],
+                ],
+                [
+                    'label' => 'Projects',
+                    'route' => 'projects.index',
+                    'active' => ['projects.*'],
+                ],
+                [
+                    'label' => 'Programs',
+                    'route' => 'programs.index',
+                    'active' => ['programs.*'],
+                ],
+                [
+                    'label' => 'Teams',
+                    'route' => 'teams.index',
+                    'active' => ['teams.*'],
+                ],
+            ]);
+        }
+
+        if ($access->hasView() && ! $access->hasAdmin()) {
+            $links[] = [
+                'label' => 'Users',
+                'route' => 'admin.users.index',
+                'active' => ['admin.users.*', 'users.show'],
+            ];
+        }
+
+        if ($access->isSupervisor()) {
+            $links[] = [
+                'label' => 'Supervisees',
+                'route' => 'supervisees.index',
+                'active' => ['supervisees.*'],
+            ];
+        }
+
+        return $links;
     }
 
     /**
-     * Admin configuration menu grouped by section.
-     *
      * @return list<array{header: string, items: list<array{label: string, route: string, active: list<string>}>}>
      */
-    public static function adminSections(): array
+    public static function adminSections(?User $user = null): array
     {
+        $user = $user ?? auth()->user();
+        if ($user === null || ! UserAccess::for($user)->hasAdmin()) {
+            return [];
+        }
+
         return [
             [
                 'header' => 'Reference Data',
                 'items' => [
+                    ['label' => 'Organizations', 'route' => 'organizations.index', 'active' => ['organizations.*']],
                     ['label' => 'States', 'route' => 'states.index', 'active' => ['states.*']],
                 ],
             ],
@@ -96,5 +166,12 @@ class AppNav
         }
 
         return false;
+    }
+
+    public static function showSearch(?User $user = null): bool
+    {
+        $user = $user ?? auth()->user();
+
+        return $user !== null && ! UserAccess::for($user)->isInput();
     }
 }

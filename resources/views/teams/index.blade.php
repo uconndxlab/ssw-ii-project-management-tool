@@ -4,7 +4,7 @@
 
 @section('content')
 
-<x-page-header context="index" title="Teams" description="{{ $teams->total() }} total" :action-url="route('teams.create')" />
+<x-page-header context="index" title="Teams" description="{{ $teams->total() }} total" :action-url="auth()->user()->can('create', App\Models\Team::class) ? route('teams.create') : null" />
 
 <div class="card shadow-sm mb-3">
     <div class="card-body py-2">

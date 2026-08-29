@@ -1,12 +1,12 @@
 @php
     $organization = $organization ?? null;
     $userOptions = collect($users ?? [])->map(function ($user) {
-        $role = !empty($user->role) ? ' (' . ucfirst($user->role) . ')' : '';
+        $role = $user->accessLabel() ? ' (' . $user->accessLabel() . ')' : '';
 
         return [
             'value' => $user->id,
             'label' => $user->name . $role,
-            'search' => trim($user->name . ' ' . ($user->email ?? '') . ' ' . ($user->role ?? '')),
+            'search' => trim($user->name . ' ' . ($user->email ?? '') . ' ' . $user->accessLabel()),
         ];
     });
 @endphp
@@ -67,6 +67,7 @@
         :selected-program-ids="old('program_ids', $organization?->programs?->pluck('id')->toArray() ?? [])"
         :show-scope-mode-selector="true"
         :selected-scope-mode="old('program_scope_mode', $organization?->program_scope_mode?->value ?? 'specific')"
+        :lock-all="$organization?->exists && $organization->program_scope_mode?->value === 'all'"
         project-empty-selection-label=""
         program-empty-selection-label=""
     />

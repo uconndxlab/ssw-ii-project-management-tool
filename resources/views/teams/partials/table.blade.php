@@ -73,6 +73,7 @@
                                aria-label="View team">
                                 <i class="bi bi-eye"></i>
                             </a>
+                            @can('update', $team)
                             <a href="{{ route('teams.edit', $team) }}"
                                class="btn btn-outline-secondary"
                                data-bs-toggle="tooltip"
@@ -80,6 +81,8 @@
                                aria-label="Edit team">
                                 <i class="bi bi-pencil-square"></i>
                             </a>
+                            @endcan
+                            @can('delete', $team)
                             <button type="submit"
                                     form="{{ $actionKey }}-delete"
                                     class="btn btn-outline-danger"
@@ -89,18 +92,23 @@
                                     onclick="return confirm('Delete team {{ addslashes($team->name) }}?')">
                                 <i class="bi bi-trash"></i>
                             </button>
+                            @endcan
                         </div>
+                        @can('delete', $team)
                         <form id="{{ $actionKey }}-delete" method="POST" action="{{ route('teams.destroy', $team) }}" class="d-none">
                             @csrf
                             @method('DELETE')
                         </form>
+                        @endcan
                     </td>
                 </tr>
                 @empty
                 <tr>
                     <td colspan="6" class="text-center py-5">
                         <p class="text-muted mb-2">No teams found.</p>
+                        @can('create', App\Models\Team::class)
                         <a href="{{ route('teams.create') }}" class="btn btn-sm btn-primary">Create Team</a>
+                        @endcan
                     </td>
                 </tr>
                 @endforelse

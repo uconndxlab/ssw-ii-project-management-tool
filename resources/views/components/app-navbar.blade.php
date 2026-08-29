@@ -20,18 +20,23 @@
 
             <ul class="navbar-nav align-items-lg-center ms-lg-2">
                 <li class="nav-item app-navbar-tools">
-                    <input type="search"
-                           class="app-navbar-search-input"
-                           placeholder="Search agreements, organizations, people…"
-                           disabled
-                           aria-label="Search (coming soon)">
+                    @if (App\Support\AppNav::showSearch())
+                        <form action="{{ route('search') }}" method="get" class="d-flex flex-grow-1" style="min-width: 0; max-width: 15rem;">
+                            <input type="search"
+                                   name="q"
+                                   class="app-navbar-search-input"
+                                   placeholder="Search agreements, organizations, people…"
+                                   value="{{ request('q') }}"
+                                   aria-label="Search">
+                        </form>
+                    @endif
                     <a href="{{ route('activities.create') }}"
                        @class(['app-navbar-cta', 'is-active' => request()->routeIs('activities.create')])>
                         Log Activity
                     </a>
                 </li>
 
-                @if (auth()->user()->isAdmin())
+                @if (count(App\Support\AppNav::adminSections()) > 0)
                     @php($adminIsActive = App\Support\AppNav::adminIsActive())
                     <li class="nav-item dropdown">
                         <a @class(['nav-link dropdown-toggle', 'active' => $adminIsActive])
@@ -71,7 +76,7 @@
                        role="button"
                        data-bs-toggle="dropdown"
                        aria-expanded="false">
-                        {{ auth()->user()->name }} ({{ ucfirst(auth()->user()->role) }})
+                        {{ auth()->user()->name }}
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li>

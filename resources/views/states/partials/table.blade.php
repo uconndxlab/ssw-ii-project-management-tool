@@ -50,6 +50,7 @@
                                aria-label="View state">
                                 <i class="bi bi-eye"></i>
                             </a>
+                            @can('update', $state)
                             <a href="{{ route('states.edit', $state) }}"
                                class="btn btn-outline-secondary"
                                data-bs-toggle="tooltip"
@@ -57,6 +58,8 @@
                                aria-label="Edit state">
                                 <i class="bi bi-pencil-square"></i>
                             </a>
+                            @endcan
+                            @can('delete', $state)
                             <button type="submit"
                                     form="{{ $actionKey }}-delete"
                                     class="btn btn-outline-danger"
@@ -66,18 +69,23 @@
                                     onclick="return confirm('Delete state {{ addslashes($state->name) }}?')">
                                 <i class="bi bi-trash"></i>
                             </button>
+                            @endcan
                         </div>
+                        @can('delete', $state)
                         <form id="{{ $actionKey }}-delete" method="POST" action="{{ route('states.destroy', $state) }}" class="d-none">
                             @csrf
                             @method('DELETE')
                         </form>
+                        @endcan
                     </td>
                 </tr>
                 @empty
                 <tr>
                     <td colspan="5" class="text-center py-5">
                         <p class="text-muted mb-2">No states found.</p>
+                        @can('create', App\Models\State::class)
                         <a href="{{ route('states.create') }}" class="btn btn-sm btn-primary">Create State</a>
+                        @endcan
                     </td>
                 </tr>
                 @endforelse

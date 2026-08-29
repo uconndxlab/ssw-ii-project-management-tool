@@ -316,34 +316,11 @@ class SessionBackTargetService
             return false;
         }
 
-        if (!$this->passesRoleMiddleware($user, $route)) {
-            return false;
-        }
-
         return match ($route->getName()) {
             'agreements.show' => $this->canViewAgreement($user, $route->parameter('agreement')),
             'activities.show' => $this->canViewActivity($user, $route->parameter('activity')),
             default => true,
         };
-    }
-
-    private function passesRoleMiddleware(User $user, RoutingRoute $route): bool
-    {
-        foreach ($route->gatherMiddleware() as $middleware) {
-            if (!str_starts_with($middleware, 'role:')) {
-                continue;
-            }
-
-            $roles = array_filter(explode(',', substr($middleware, 5)));
-
-            if ($user->isAdmin()) {
-                return true;
-            }
-
-            return in_array($user->role, $roles, true);
-        }
-
-        return true;
     }
 
     private function canViewAgreement(User $user, mixed $agreement): bool
@@ -354,11 +331,7 @@ class SessionBackTargetService
             return false;
         }
 
-        if ($user->isAdmin()) {
-            return true;
-        }
-
-        return $agreement->active && $user->hasAccessToAgreement($agreement);
+        return $user->can('view', $agreement);
     }
 
     private function canViewActivity(User $user, mixed $activity): bool
@@ -369,16 +342,7 @@ class SessionBackTargetService
             return false;
         }
 
-        if ($user->isAdmin()) {
-            return true;
-        }
-
-        $activity->loadMissing('agreements');
-        $hasAgreementAccess = $activity->agreements->contains(
-            fn (Agreement $agreement) => $user->hasAccessToAgreement($agreement),
-        );
-
-        return $hasAgreementAccess && (int) $activity->user_id === (int) $user->id;
+        return $user->can('view', $activity);
     }
 
     private function backLabelForEntry(array $entry): string

@@ -4,13 +4,18 @@ namespace App\Models;
 
 use App\Enums\ProgramScopeMode;
 use App\Models\Concerns\HasProgramScope;
+use App\Models\Concerns\VisibleToUser;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
+/**
+ * Index/view: admins only, and a listed program is in your privilege.
+ * Edit: you admin a listed program. Delete: every listed program is in your admin scope. No programs: system admin only.
+ */
 class ContactFamily extends Model
 {
-    use HasProgramScope;
+    use HasProgramScope, VisibleToUser;
 
     protected $fillable = [
         'name',

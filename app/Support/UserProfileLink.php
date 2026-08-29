@@ -18,10 +18,6 @@ class UserProfileLink
             return null;
         }
 
-        if ($auth->isAdmin()) {
-            return route('users.show', $user);
-        }
-
-        return null;
+        return $auth->can('view', $user) ? route('users.show', $user) : null;
     }
 }

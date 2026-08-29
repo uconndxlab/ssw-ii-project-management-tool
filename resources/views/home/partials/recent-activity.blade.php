@@ -6,7 +6,7 @@
     <div class="card-body p-0">
         <div class="list-group list-group-flush">
             @foreach($recentActivities as $activity)
-                @php($canManage = auth()->user()->isAdmin() || $activity->user_id === auth()->id())
+                @php($canManage = auth()->user()->can('update', $activity))
                 <div class="list-group-item px-3 py-2 d-flex justify-content-between align-items-start gap-3">
                     <div class="flex-grow-1 min-w-0">
                         <div class="d-flex flex-wrap align-items-center gap-2 mb-1">

@@ -4,13 +4,18 @@ namespace App\Models;
 
 use App\Enums\ProgramScopeMode;
 use App\Models\Concerns\HasProgramScope;
+use App\Models\Concerns\VisibleToUser;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
+/**
+ * View: you are on the team, or a listed program is in your privilege.
+ * Edit: you admin a listed program. Delete: every listed program is in your admin scope. No programs: system admin only.
+ */
 class Team extends Model
 {
-    use HasFactory, HasProgramScope;
+    use HasFactory, HasProgramScope, VisibleToUser;
 
     protected $fillable = [
         'name',

@@ -68,6 +68,7 @@
                     <td class="text-end text-nowrap">
                         @php $actionKey = 'activity-type-actions-' . $type->id; @endphp
                         <div class="btn-group btn-group-sm" role="group" aria-label="Activity type actions for {{ $type->name }}">
+                            @can('update', $type)
                             <a href="{{ route('activity-types.edit', $type) }}"
                                class="btn btn-outline-secondary"
                                data-bs-toggle="tooltip"
@@ -75,6 +76,8 @@
                                aria-label="Edit activity type">
                                 <i class="bi bi-pencil-square"></i>
                             </a>
+                            @endcan
+                            @can('delete', $type)
                             <button type="submit"
                                     form="{{ $actionKey }}-delete"
                                     class="btn btn-outline-danger"
@@ -84,18 +87,23 @@
                                     onclick="return confirm('Delete {{ addslashes($type->name) }}?')">
                                 <i class="bi bi-trash"></i>
                             </button>
+                            @endcan
                         </div>
+                        @can('delete', $type)
                         <form id="{{ $actionKey }}-delete" method="POST" action="{{ route('activity-types.destroy', $type) }}" class="d-none">
                             @csrf
                             @method('DELETE')
                         </form>
+                        @endcan
                     </td>
                 </tr>
                 @empty
                 <tr>
                     <td colspan="8" class="text-center py-5">
                         <p class="text-muted mb-2">No activity types found.</p>
+                        @can('create', App\Models\ActivityType::class)
                         <a href="{{ route('activity-types.create') }}" class="btn btn-sm btn-primary">Add Activity Type</a>
+                        @endcan
                     </td>
                 </tr>
                 @endforelse

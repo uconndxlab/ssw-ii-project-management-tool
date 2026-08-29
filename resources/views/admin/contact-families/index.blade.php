@@ -4,7 +4,7 @@
 
 @section('content')
 
-<x-page-header context="index" title="Activity Families" description="{{ $contactFamilies->count() }} total" :action-url="route('contact-families.create')" />
+<x-page-header context="index" title="Activity Families" description="{{ $contactFamilies->count() }} total" :action-url="auth()->user()->can('create', App\Models\ContactFamily::class) ? route('contact-families.create') : null" />
 
 <div class="card shadow-sm mb-3">
     <div class="card-body py-2">

@@ -7,6 +7,7 @@ use App\Models\ContactFamily;
 use App\Models\LoggingField;
 use App\Models\Program;
 use App\Models\Project;
+use App\Support\Authorization\ScopeSync;
 use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,15 +15,12 @@ use Illuminate\Support\Facades\Validator;
 
 class ContactFamilyController extends Controller
 {
-    public function __construct()
-    {
-        // Ensure only admins can access
-        abort_unless(Auth::user()?->isAdmin(), 403);
-    }
-
     public function index(Request $request)
     {
+        $this->authorize('viewAny', ContactFamily::class);
+
         $query = ContactFamily::query()
+            ->visibleTo(Auth::user())
             ->withCount('activityTypes')
             ->with(['programs.projects']);
 
@@ -104,18 +102,20 @@ class ContactFamilyController extends Controller
 
     public function create()
     {
+        $this->authorize('create', ContactFamily::class);
         $contactFamilyLoggingFields = LoggingField::active()
             ->ordered()
             ->where('available_in_contact_families', true)
             ->with('programs')
             ->get();
-        $projects = ProjectProgramScope::activeProjectsWithPrograms();
+        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor(Auth::user());
 
         return view('admin.contact-families.create', compact('contactFamilyLoggingFields', 'projects'));
     }
 
     public function store(Request $request)
     {
+        $this->authorize('create', ContactFamily::class);
         $validator = Validator::make($request->all(), [
             'name' => ['required', 'string', 'max:255', 'unique:contact_families,name'],
             'helper_text' => ['nullable', 'string', 'max:1000'],
@@ -167,15 +167,15 @@ class ContactFamilyController extends Controller
             'active' => $validated['active'],
             'track_additional_time' => $validated['track_additional_time'],
             'sort_order' => $validated['sort_order'],
-            'program_scope_mode' => $validated['program_scope_mode'],
+            'program_scope_mode' => ProgramScopeMode::Specific,
         ]);
 
-        $contactFamily->programs()->sync(ProjectProgramScope::modeAwareProgramIds(
-            $validated['program_scope_mode'],
-            ContactFamily::class,
-            $validated['project_ids'] ?? [],
-            $validated['program_ids'] ?? []
-        ));
+        ScopeSync::applyTo(
+            Auth::user(),
+            $contactFamily,
+            ProgramScopeMode::from($validated['program_scope_mode']),
+            $validated['program_ids'] ?? [],
+        );
 
         $syncData = [];
         foreach (array_values(array_unique($validated['contact_family_logging_field_ids'] ?? [])) as $index => $fieldId) {
@@ -193,12 +193,13 @@ class ContactFamilyController extends Controller
 
     public function edit(ContactFamily $contactFamily)
     {
+        $this->authorize('update', $contactFamily);
         $contactFamilyLoggingFields = LoggingField::active()
             ->ordered()
             ->where('available_in_contact_families', true)
             ->with('programs')
             ->get();
-        $projects = ProjectProgramScope::activeProjectsWithPrograms();
+        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor(Auth::user(), $contactFamily);
         $contactFamily->load(['contactFamilyLoggingFields', 'programs.projects']);
 
         return view('admin.contact-families.edit', compact('contactFamily', 'contactFamilyLoggingFields', 'projects'));
@@ -206,6 +207,7 @@ class ContactFamilyController extends Controller
 
     public function update(Request $request, ContactFamily $contactFamily)
     {
+        $this->authorize('update', $contactFamily);
         $validator = Validator::make($request->all(), [
             'name' => ['required', 'string', 'max:255', 'unique:contact_families,name,'.$contactFamily->id],
             'helper_text' => ['nullable', 'string', 'max:1000'],
@@ -257,14 +259,13 @@ class ContactFamilyController extends Controller
             'active' => $validated['active'],
             'track_additional_time' => $validated['track_additional_time'],
             'sort_order' => $validated['sort_order'],
-            'program_scope_mode' => $validated['program_scope_mode'],
         ]);
-        $contactFamily->programs()->sync(ProjectProgramScope::modeAwareProgramIds(
-            $validated['program_scope_mode'],
-            ContactFamily::class,
-            $validated['project_ids'] ?? [],
-            $validated['program_ids'] ?? []
-        ));
+        ScopeSync::applyTo(
+            Auth::user(),
+            $contactFamily,
+            ProgramScopeMode::from($validated['program_scope_mode']),
+            $validated['program_ids'] ?? [],
+        );
 
         $syncData = [];
         foreach (array_values(array_unique($validated['contact_family_logging_field_ids'] ?? [])) as $index => $fieldId) {
@@ -282,6 +283,7 @@ class ContactFamilyController extends Controller
 
     public function destroy(ContactFamily $contactFamily)
     {
+        $this->authorize('delete', $contactFamily);
         if ($contactFamily->activityTypes()->count() > 0) {
             return redirect()
                 ->route('contact-families.index')

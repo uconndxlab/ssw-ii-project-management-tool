@@ -37,16 +37,14 @@ class ActivityController extends Controller
 
     public function index(Request $request)
     {
-        $visibleAgreements = $this->getVisibleAgreements()->load(['organizations', 'states']);
+        $this->authorize('viewAny', Activity::class);
 
+        $visibleAgreements = $this->getVisibleAgreements()->load(['organizations', 'states']);
         $visibleAgreementIds = $visibleAgreements->pluck('id');
-        $indexAgreementIds = $this->getActivityIndexAgreementIds();
 
         $query = Activity::query()
-            ->with(['agreements.organizations', 'agreements.states', 'user', 'activityType', 'organizations', 'states'])
-            ->whereHas('agreements', function ($q) use ($indexAgreementIds) {
-                $q->whereIn('agreements.id', $indexAgreementIds);
-            });
+            ->visibleTo(Auth::user())
+            ->with(['agreements.organizations', 'agreements.states', 'user', 'activityType', 'organizations', 'states']);
 
         // Search
         $search = trim((string) $request->input('search', ''));
@@ -231,7 +229,9 @@ class ActivityController extends Controller
 
     public function create(Request $request)
     {
-        $agreements = $this->getVisibleAgreements()->load('agreementLoggingFields.programs:id');
+        $this->authorize('create', Activity::class);
+
+        $agreements = $this->getPickerAgreements()->load('agreementLoggingFields.programs:id');
         $states = State::orderBy('name')->get();
         $organizations = Organization::active()->orderBy('name')->get();
         $organizations->load(['states:id', 'programs.projects:id']);
@@ -256,7 +256,7 @@ class ActivityController extends Controller
             'users',
             'teams.users',
             'programs.projects',
-            'programs.users:id,name,email,role,active',
+            'programs.users:id,name,email,access_profile,active',
         ]);
 
         // Get pre-selected agreement if provided
@@ -275,6 +275,7 @@ class ActivityController extends Controller
 
     public function store(Request $request)
     {
+        $this->authorize('create', Activity::class);
         $validator = Validator::make($request->all(), [
             'agreement_ids' => ['required', 'array', 'min:1'],
             'agreement_ids.*' => ['exists:agreements,id'],
@@ -417,9 +418,9 @@ class ActivityController extends Controller
 
     public function edit(Activity $activity)
     {
-        $this->verifyActivityEditAccess($activity);
+        $this->authorize('update', $activity);
 
-        $agreements = $this->getVisibleAgreements()->load('agreementLoggingFields.programs:id');
+        $agreements = $this->getPickerAgreements()->load('agreementLoggingFields.programs:id');
         $states = State::orderBy('name')->get();
         $activity->loadMissing('organizations');
         $organizations = Organization::active()
@@ -455,7 +456,7 @@ class ActivityController extends Controller
             'users',
             'teams.users',
             'programs.projects',
-            'programs.users:id,name,email,role,active',
+            'programs.users:id,name,email,access_profile,active',
         ]);
         $currentContactFamilyId = old('contact_family_id', $activity->activityType?->contactFamily?->id);
 
@@ -471,7 +472,7 @@ class ActivityController extends Controller
 
     public function update(Request $request, Activity $activity)
     {
-        $this->verifyActivityEditAccess($activity);
+        $this->authorize('update', $activity);
 
         $validator = Validator::make($request->all(), [
             'agreement_ids' => ['required', 'array', 'min:1'],
@@ -586,7 +587,7 @@ class ActivityController extends Controller
 
     public function duplicate(Activity $activity)
     {
-        $this->verifyActivityEditAccess($activity);
+        $this->authorize('duplicate', $activity);
 
         $copy = $this->activityDuplicationService->duplicate($activity, (int) Auth::id());
 
@@ -597,10 +598,7 @@ class ActivityController extends Controller
 
     public function destroy(Activity $activity)
     {
-        // Authorization: admin can delete any, staff/consultant can only delete their own
-        if (! Auth::user()->isAdmin() && $activity->user_id !== Auth::id()) {
-            abort(403, 'You can only delete your own activities.');
-        }
+        $this->authorize('delete', $activity);
 
         $activity->delete();
 
@@ -610,15 +608,12 @@ class ActivityController extends Controller
     }
 
     /**
-     * Get agreements visible to current user based on role
+     * Agreements shown as activity index filters.
      */
     private function getVisibleAgreements()
     {
-        if (Auth::user()->isAdmin()) {
-            return Agreement::query()->active()->with('organizations')->orderBy('name')->get();
-        }
-
-        return Auth::user()->accessibleAgreementsQuery()
+        return Agreement::query()
+            ->visibleTo(Auth::user())
             ->where('agreements.active', true)
             ->with('organizations')
             ->orderBy('name')
@@ -626,15 +621,11 @@ class ActivityController extends Controller
     }
 
     /**
-     * Agreement IDs whose activities appear on the activity index (includes inactive assignments for history).
+     * Activity form pickers are global (not membership-scoped).
      */
-    private function getActivityIndexAgreementIds()
+    private function getPickerAgreements()
     {
-        if (Auth::user()->isAdmin()) {
-            return Agreement::query()->pluck('id');
-        }
-
-        return Auth::user()->accessibleAgreementsQuery()->pluck('agreements.id');
+        return Agreement::query()->active()->with('organizations')->orderBy('name')->get();
     }
 
     private function assertAgreementIdsAreActive(array $agreementIds, array $allowedInactiveIds = []): void
@@ -666,45 +657,14 @@ class ActivityController extends Controller
         ));
     }
 
-    /**
-     * Verify current user has access to given agreement
-     */
     private function verifyAgreementAccess(int $agreementId): void
     {
-        if (Auth::user()->isAdmin()) {
-            return;
-        }
-
-        $hasAccess = Auth::user()->hasAccessToAgreement($agreementId);
-
-        if (! $hasAccess) {
-            abort(403, 'You do not have access to this agreement.');
-        }
+        // Activity logging pickers are global.
     }
 
-    /**
-     * Verify current user can edit this activity
-     * Admins can edit any, non-admins can only edit their own
-     */
     private function verifyActivityEditAccess(Activity $activity): void
     {
-        if (Auth::user()->isAdmin()) {
-            return;
-        }
-
-        if ($activity->user_id !== Auth::id()) {
-            abort(403, 'You can only edit your own activities.');
-        }
-
-        $activity->loadMissing('agreements');
-
-        // Also verify they still have access to a linked agreement
-        $hasAccess = $activity->agreements->contains(
-            fn (Agreement $agreement) => Auth::user()->hasAccessToAgreement($agreement),
-        );
-        if (! $hasAccess) {
-            abort(403, 'You do not have access to this activity.');
-        }
+        $this->authorize('update', $activity);
     }
 
     private function resolveSelectedAgreements(array $agreementIds)

@@ -24,7 +24,7 @@
         return [
             'value' => $user->id,
             'label' => $user->name,
-            'search' => trim($user->name . ' ' . ($user->email ?? '') . ' ' . ($user->role ?? '')),
+            'search' => trim($user->name . ' ' . ($user->email ?? '') . ' ' . $user->accessLabel()),
             'meta' => filled($user->po_number) ? 'PO: ' . $user->po_number : null,
             'contextLabels' => ['User'],
         ];
@@ -133,7 +133,7 @@
                              data-selected-principal-investigator-ids='@json($selectedPrincipalInvestigatorIds)'
                              data-user-names='@json($users->mapWithKeys(fn ($user) => [(string) $user->id => $user->name]))'
                              data-user-po-numbers='@json($users->mapWithKeys(fn ($user) => [(string) $user->id => $user->po_number]))'
-                             data-user-roles='@json($users->mapWithKeys(fn ($user) => [(string) $user->id => $user->role ?? '']))'
+                             data-user-roles='@json($users->mapWithKeys(fn ($user) => [(string) $user->id => $user->accessLabel()]))'
                              data-entity-badge-classes='@json($membershipEntityBadgeClasses)'
                              data-team-labels='@json($teams->pluck("name", "id"))'
                              data-team-members='@json($teams->mapWithKeys(function ($team) {

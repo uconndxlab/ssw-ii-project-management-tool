@@ -2,13 +2,19 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\VisibleToUser;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 
+/**
+ * View: you/your team assigned, or privilege on this program or a parent project.
+ * Edit/delete: you admin this program or its parent projects.
+ */
 class Program extends Model
 {
+    use VisibleToUser;
     protected $fillable = [
         'name',
         'description',
@@ -50,6 +56,11 @@ class Program extends Model
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'user_program')->withTimestamps();
+    }
+
+    public function teams(): BelongsToMany
+    {
+        return $this->belongsToMany(Team::class, 'team_program')->withTimestamps();
     }
 
     /**

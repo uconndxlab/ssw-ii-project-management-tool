@@ -2,11 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\VisibleToUser;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
+/**
+ * View: you can view an agreement in this state.
+ * Create/edit/delete: system admin only.
+ */
 class State extends Model
 {
+    use VisibleToUser;
     protected $fillable = [
         'name',
         'code',

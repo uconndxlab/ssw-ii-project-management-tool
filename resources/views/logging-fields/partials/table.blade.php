@@ -93,6 +93,7 @@
                                aria-label="View logging field">
                                 <i class="bi bi-eye"></i>
                             </a>
+                            @can('update', $field)
                             <a href="{{ route('logging-fields.edit', $field) }}"
                                class="btn btn-outline-secondary"
                                data-bs-toggle="tooltip"
@@ -100,6 +101,8 @@
                                aria-label="Edit logging field">
                                 <i class="bi bi-pencil-square"></i>
                             </a>
+                            @endcan
+                            @can('delete', $field)
                             <button type="submit"
                                     form="{{ $actionKey }}-delete"
                                     class="btn btn-outline-danger"
@@ -109,18 +112,23 @@
                                     onclick="return confirm('Delete field {{ addslashes($field->name) }}?')">
                                 <i class="bi bi-trash"></i>
                             </button>
+                            @endcan
                         </div>
+                        @can('delete', $field)
                         <form id="{{ $actionKey }}-delete" method="POST" action="{{ route('logging-fields.destroy', $field) }}" class="d-none">
                             @csrf
                             @method('DELETE')
                         </form>
+                        @endcan
                     </td>
                 </tr>
                 @empty
                 <tr>
                     <td colspan="7" class="text-center py-5">
                         <p class="text-muted mb-2">No logging fields found.</p>
+                        @can('create', App\Models\LoggingField::class)
                         <a href="{{ route('logging-fields.create') }}" class="btn btn-sm btn-primary">Create Logging Field</a>
+                        @endcan
                     </td>
                 </tr>
                 @endforelse

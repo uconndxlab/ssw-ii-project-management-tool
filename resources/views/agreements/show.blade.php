@@ -23,7 +23,7 @@
     :title="$agreement->name"
     entity-type="Agreement"
     :active="$agreement->active"
-    :action-url="auth()->user()->isAdmin() ? route('agreements.edit', $agreement) : null"
+    :action-url="auth()->user()->can('update', $agreement) ? route('agreements.edit', $agreement) : null"
 />
 
 <x-entity-show mainCardTitle="Deliverables" :activityFirst="true">
@@ -179,7 +179,7 @@
                                     :href="$userProfileRoute($user)"
                                     kind="user"
                                     :context-badges="array_values(array_filter([
-                                        filled($user->role) ? ['label' => ucfirst($user->role), 'kind' => 'role'] : null,
+                                        filled($user->access_profile) ? ['label' => $user->accessLabel(), 'kind' => 'role'] : null,
                                         $agreement->principalInvestigators->contains('id', $user->id) ? ['label' => 'PI', 'kind' => 'pi'] : null,
                                     ]))"
                                 />
@@ -201,7 +201,7 @@
                                 :href="$userProfileRoute($user)"
                                 kind="user"
                                 :context-badges="array_values(array_filter([
-                                    filled($user->role) ? ['label' => ucfirst($user->role), 'kind' => 'role'] : null,
+                                    filled($user->access_profile) ? ['label' => $user->accessLabel(), 'kind' => 'role'] : null,
                                     !empty($user->is_principal_investigator) ? ['label' => 'PI', 'kind' => 'pi'] : null,
                                 ]))">
                                 <x-slot:footer>

@@ -4,7 +4,7 @@
 
 @section('content')
 @php
-    $canManageActivity = auth()->user()->isAdmin() || $activity->user_id === auth()->id();
+    $canManageActivity = auth()->user()->can('update', $activity);
 @endphp
 <div class="row mb-4">
     <div class="col-12">

@@ -13,13 +13,11 @@ use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProgramController;
 use App\Http\Controllers\ProjectController;
-use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\StateController;
 use App\Http\Controllers\TeamController;
 use Illuminate\Support\Facades\Route;
 
-// Guest routes
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login']);
@@ -32,7 +30,6 @@ Route::middleware('guest')->group(function () {
     });
 });
 
-// Authenticated routes
 Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/search', [SearchController::class, 'index'])->name('search');
@@ -43,16 +40,13 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
 
-    // Agreements - visible to all authenticated users (with visibility filtering in controller)
     Route::post('/agreements/{agreement}/duplicate', [AgreementController::class, 'duplicate'])->name('agreements.duplicate');
     Route::resource('agreements', AgreementController::class);
 
-    // Agreement attachment routes
     Route::get('/agreements/{agreement}/attachments/{attachment}/download', [AgreementController::class, 'downloadAttachment'])
         ->scopeBindings()
         ->name('agreements.attachments.download');
 
-    // Activities - visible to all authenticated users (with visibility filtering in controller)
     Route::get('/activities', [ActivityController::class, 'index'])->name('activities.index');
     Route::get('/activities/create', [ActivityController::class, 'create'])->name('activities.create');
     Route::post('/activities', [ActivityController::class, 'store'])->name('activities.store');
@@ -62,39 +56,26 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::post('/activities/{activity}/duplicate', [ActivityController::class, 'duplicate'])->name('activities.duplicate');
     Route::delete('/activities/{activity}', [ActivityController::class, 'destroy'])->name('activities.destroy');
 
-    // Document download for activity logging field uploads
     Route::get('/activities/{activity}/logging-field-document/{context}/{fieldId}/{agreementId?}', [ActivityController::class, 'downloadLoggingFieldDocument'])
         ->name('activities.logging-field-document.download');
 
-    // HTMX endpoint for filtering activity types by contact family
     Route::get('/activity-types/by-family', [ActivityTypeController::class, 'getByFamily'])->name('activity-types.by-family');
 
-    // Reports
-    // Route::get('/reports/activities', [ReportController::class, 'activities'])->name('reports.activities');
+    Route::resource('organizations', OrganizationController::class);
+    Route::resource('states', StateController::class);
+    Route::resource('projects', ProjectController::class);
+    Route::resource('programs', ProgramController::class);
+    Route::resource('teams', TeamController::class);
 
-    // Organizations - viewable by all, admin-only for create/edit/delete
-    Route::get('/organizations', [OrganizationController::class, 'index'])->name('organizations.index');
-    // Register /create before the {organization} wildcard to prevent route swallowing
-    Route::get('/organizations/create', [OrganizationController::class, 'create'])->name('organizations.create')->middleware('role:admin');
-    Route::get('/organizations/{organization}', [OrganizationController::class, 'show'])->name('organizations.show');
+    // admin protected in policy instead
+    Route::resource('logging-fields', LoggingFieldController::class);
+    Route::resource('contact-families', ContactFamilyController::class)->except(['show']);
+    Route::resource('activity-types', ActivityTypeController::class)->except(['show']);
 
-    // Admin routes
-    Route::middleware('role:admin')->group(function () {
-        Route::resource('logging-fields', LoggingFieldController::class);
-        Route::resource('contact-families', ContactFamilyController::class)->except(['show']);
-        Route::resource('activity-types', ActivityTypeController::class)->except(['show']);
-        Route::resource('states', StateController::class);
-        Route::resource('organizations', OrganizationController::class)->except(['index', 'show', 'create']);
-        Route::resource('projects', ProjectController::class);
-        Route::resource('programs', ProgramController::class);
-        Route::resource('teams', TeamController::class);
+    Route::get('/supervisees', [AdminUserController::class, 'supervisees'])->name('supervisees.index');
+    Route::get('/users/{user}', [AdminUserController::class, 'show'])->name('users.show');
 
-        // User show page (admin-only)
-        Route::get('/users/{user}', [AdminUserController::class, 'show'])->name('users.show');
-    });
-
-    // Admin user management
-    Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
+    Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
         Route::get('/users/create', [AdminUserController::class, 'create'])->name('users.create');
         Route::post('/users', [AdminUserController::class, 'store'])->name('users.store');

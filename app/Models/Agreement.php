@@ -5,15 +5,21 @@ namespace App\Models;
 use App\Enums\AgreementTimeTrackingRequirement;
 use App\Enums\ProgramScopeMode;
 use App\Models\Concerns\HasProgramScope;
+use App\Models\Concerns\VisibleToUser;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Builder;
 
+/**
+ * View: belong (you or your team) or a listed program is in your privilege.
+ * Edit: you admin a listed program/project.
+ * Delete: every listed program is in your admin scope. No programs: system admin only.
+ */
 class Agreement extends Model
 {
-    use HasProgramScope;
+    use HasProgramScope, VisibleToUser;
 
     protected $fillable = [
         'name',
@@ -188,42 +194,15 @@ class Agreement extends Model
         ];
     }
 
-    public function isLinkable(?User $user = null): bool
-    {
-        if (!$this->active) {
-            return false;
-        }
-
-        $user = $user ?? auth()->user();
-
-        if ($user === null) {
-            return false;
-        }
-
-        if ($user->isAdmin()) {
-            return true;
-        }
-
-        return $user->hasAccessToAgreement($this);
-    }
-
     /**
-     * Agreements the user may access (direct assignment, team membership, or PI role).
+     * Agreements the user may access via direct assignment or team membership.
      *
      * @param  Builder<Agreement>  $query
      * @return Builder<Agreement>
      */
     public function scopeAccessibleBy(Builder $query, User $user): Builder
     {
-        return $query->where(function (Builder $builder) use ($user) {
-            $builder
-                ->whereHas('users', fn (Builder $relation) => $relation->where('users.id', $user->id))
-                ->orWhereHas('teams.users', fn (Builder $relation) => $relation->where('users.id', $user->id))
-                ->orWhereHas(
-                    'principalInvestigators',
-                    fn (Builder $relation) => $relation->where('users.id', $user->id),
-                );
-        });
+        return $query->visibleTo($user);
     }
 
     public function scopeActive(Builder $query): Builder

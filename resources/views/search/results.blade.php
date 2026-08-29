@@ -116,7 +116,7 @@
                                     @if(!$person->active)
                                         <span class="badge bg-secondary" style="font-size:.7rem;">Inactive</span>
                                     @endif
-                                    <x-category-badge kind="role" style="font-size:.7rem;">{{ ucfirst($person->role) }}</x-category-badge>
+                                    <x-category-badge kind="role" style="font-size:.7rem;">{{ $person->accessLabel() }}</x-category-badge>
                                 </div>
                             </div>
                             <div class="small text-muted">{{ $person->email }}</div>

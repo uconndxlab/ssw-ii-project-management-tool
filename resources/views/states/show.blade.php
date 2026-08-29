@@ -7,7 +7,7 @@
     context="show"
     :title="$state->name"
     entity-type="State"
-    :action-url="auth()->user()->isAdmin() ? route('states.edit', $state) : null"
+    :action-url="auth()->user()->can('update', $state) ? route('states.edit', $state) : null"
 />
 
 <x-entity-show>
@@ -36,8 +36,8 @@
         @forelse($staffMembers as $member)
             <div class="small py-1 {{ $loop->last ? '' : 'border-bottom' }}">
                 <x-user-link :user="$member" class="fw-semibold" />
-                @if($member->role)
-                    <span class="text-muted">· {{ ucfirst($member->role) }}</span>
+                @if($member->access_profile)
+                    <span class="text-muted">· {{ $member->accessLabel() }}</span>
                 @endif
                 @if($member->email)
                     <div class="text-muted">{{ $member->email }}</div>

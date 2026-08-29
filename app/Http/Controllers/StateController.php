@@ -9,7 +9,9 @@ class StateController extends Controller
 {
     public function index(Request $request)
     {
-        $query = State::query()->withCount(['organizations', 'agreements']);
+        $this->authorize('viewAny', State::class);
+
+        $query = State::query()->visibleTo($request->user())->withCount(['organizations', 'agreements']);
 
         // Search
         $search = trim((string) $request->input('search', ''));
@@ -51,11 +53,14 @@ class StateController extends Controller
 
     public function create()
     {
+        $this->authorize('create', State::class);
+
         return view('states.create');
     }
 
     public function store(Request $request)
     {
+        $this->authorize('create', State::class);
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255', 'unique:states'],
         ]);
@@ -69,6 +74,7 @@ class StateController extends Controller
 
     public function show(State $state)
     {
+        $this->authorize('view', $state);
         $state->load(['organizations.agreements', 'agreements.organizations', 'agreements.users']);
 
         $state->setRelation(
@@ -100,11 +106,13 @@ class StateController extends Controller
 
     public function edit(State $state)
     {
+        $this->authorize('update', $state);
         return view('states.edit', compact('state'));
     }
 
     public function update(Request $request, State $state)
     {
+        $this->authorize('update', $state);
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255', 'unique:states,name,' . $state->id],
         ]);
@@ -118,6 +126,7 @@ class StateController extends Controller
 
     public function destroy(State $state)
     {
+        $this->authorize('delete', $state);
         $state->delete();
 
         return redirect()

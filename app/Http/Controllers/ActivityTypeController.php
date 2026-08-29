@@ -10,6 +10,7 @@ use App\Models\ContactFamily;
 use App\Models\LoggingField;
 use App\Models\Program;
 use App\Models\Project;
+use App\Support\Authorization\ScopeSync;
 use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -17,18 +18,16 @@ use Illuminate\Support\Facades\Validator;
 
 class ActivityTypeController extends Controller
 {
-    public function __construct()
-    {
-        abort_unless(Auth::user()?->isAdmin(), 403);
-    }
-
     public function index(Request $request)
     {
+        $this->authorize('viewAny', ActivityType::class);
         $contactFamilies = ContactFamily::query()->orderBy('sort_order', 'asc')
             ->orderBy('name', 'asc')
             ->get(['id', 'name']);
 
-        $query = ActivityType::query()->with(['contactFamily', 'programs.projects']);
+        $query = ActivityType::query()
+            ->visibleTo(Auth::user())
+            ->with(['contactFamily', 'programs.projects']);
 
         // Search
         $search = trim((string) $request->input('search', ''));
@@ -167,19 +166,21 @@ class ActivityTypeController extends Controller
 
     public function create()
     {
+        $this->authorize('create', ActivityType::class);
         $contactFamilies = ContactFamily::query()->orderBy('sort_order', 'asc')->orderBy('name', 'asc')->get();
         $activityTypeLoggingFields = LoggingField::active()
             ->ordered()
             ->where('available_in_activities', true)
             ->with('programs')
             ->get();
-        $projects = ProjectProgramScope::activeProjectsWithPrograms();
+        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor(Auth::user());
 
         return view('admin.activity-types.create', compact('contactFamilies', 'activityTypeLoggingFields', 'projects'));
     }
 
     public function store(Request $request)
     {
+        $this->authorize('create', ActivityType::class);
         $validator = Validator::make($request->all(), $this->activityTypeValidationRules());
 
         $this->addActivityTypeValidatorAfter($validator, $request);
@@ -204,12 +205,12 @@ class ActivityTypeController extends Controller
         $validated['program_scope_mode'] = ProjectProgramScope::normalizeMode($validated['program_scope_mode'] ?? null, ActivityType::class)->value;
 
         $activityType = ActivityType::create($validated);
-        $activityType->programs()->sync(ProjectProgramScope::modeAwareProgramIds(
-            $validated['program_scope_mode'],
-            ActivityType::class,
-            $validated['project_ids'] ?? [],
-            $validated['program_ids'] ?? []
-        ));
+        ScopeSync::applyTo(
+            Auth::user(),
+            $activityType,
+            ProgramScopeMode::from($validated['program_scope_mode']),
+            $validated['program_ids'] ?? [],
+        );
 
         $syncData = [];
         foreach (array_values(array_unique($validated['activity_type_logging_field_ids'] ?? [])) as $index => $fieldId) {
@@ -227,13 +228,14 @@ class ActivityTypeController extends Controller
 
     public function edit(ActivityType $activityType)
     {
+        $this->authorize('update', $activityType);
         $contactFamilies = ContactFamily::query()->orderBy('sort_order', 'asc')->orderBy('name', 'asc')->get();
         $activityTypeLoggingFields = LoggingField::active()
             ->ordered()
             ->where('available_in_activities', true)
             ->with('programs')
             ->get();
-        $projects = ProjectProgramScope::activeProjectsWithPrograms();
+        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor(Auth::user(), $activityType);
         $activityType->load(['activityTypeLoggingFields', 'programs.projects']);
 
         return view('admin.activity-types.edit', compact('activityType', 'contactFamilies', 'activityTypeLoggingFields', 'projects'));
@@ -241,6 +243,7 @@ class ActivityTypeController extends Controller
 
     public function update(Request $request, ActivityType $activityType)
     {
+        $this->authorize('update', $activityType);
         $validator = Validator::make($request->all(), $this->activityTypeValidationRules());
 
         $this->addActivityTypeValidatorAfter($validator, $request);
@@ -265,13 +268,14 @@ class ActivityTypeController extends Controller
         $validated = $this->normalizeValidatedDuration($validated);
         $validated['program_scope_mode'] = ProjectProgramScope::normalizeMode($validated['program_scope_mode'] ?? null, ActivityType::class)->value;
 
+        unset($validated['program_scope_mode'], $validated['project_ids'], $validated['program_ids']);
         $activityType->update($validated);
-        $activityType->programs()->sync(ProjectProgramScope::modeAwareProgramIds(
-            $validated['program_scope_mode'],
-            ActivityType::class,
-            $validated['project_ids'] ?? [],
-            $validated['program_ids'] ?? []
-        ));
+        ScopeSync::applyTo(
+            Auth::user(),
+            $activityType,
+            ProgramScopeMode::from(ProjectProgramScope::normalizeMode($request->input('program_scope_mode'), ActivityType::class)->value),
+            $request->input('program_ids', []),
+        );
 
         $syncData = [];
         foreach (array_values(array_unique($validated['activity_type_logging_field_ids'] ?? [])) as $index => $fieldId) {
@@ -289,6 +293,7 @@ class ActivityTypeController extends Controller
 
     public function destroy(ActivityType $activityType)
     {
+        $this->authorize('delete', $activityType);
         $isUsedInActivities = Activity::query()
             ->where('activity_type_id', $activityType->getKey())
             ->exists();
@@ -308,6 +313,7 @@ class ActivityTypeController extends Controller
 
     public function getByFamily(Request $request)
     {
+        $this->authorize('create', \App\Models\Activity::class);
         $contactFamilyId = $request->input('contact_family_id');
         $selectedActivityTypeId = (int) $request->input('activity_type_id');
         $agreementIds = collect($request->input('agreement_ids', []))
@@ -401,6 +407,20 @@ class ActivityTypeController extends Controller
             $programIds = ProjectProgramScope::normalizeIds($request->input('program_ids', []));
 
             ProjectProgramScope::validateModeSelection($validator, $mode, ActivityType::class, $projectIds, $programIds);
+            $submittedMode = ProgramScopeMode::tryFrom((string) $mode) ?? ProgramScopeMode::Specific;
+            $existing = $request->route('activity_type');
+            ScopeSync::validateSubmittedMode(
+                $validator,
+                Auth::user(),
+                $existing instanceof ActivityType ? $existing->program_scope_mode : ProgramScopeMode::None,
+                $submittedMode,
+            );
+            ScopeSync::validateSubmittedProgramsAreInAdminScope(
+                $validator,
+                Auth::user(),
+                $programIds,
+                $existing instanceof ActivityType ? $existing->programs()->pluck('programs.id')->all() : [],
+            );
 
             if (ProjectProgramScope::normalizeMode($mode, ActivityType::class) !== ProgramScopeMode::Specific) {
                 return;

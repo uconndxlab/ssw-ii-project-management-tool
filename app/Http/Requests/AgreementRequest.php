@@ -15,6 +15,7 @@ use App\Models\Team;
 use App\Models\User;
 use App\Support\ActivityTypeDuration;
 use App\Support\DeliverableHistoryScope;
+use App\Support\Authorization\ScopeSync;
 use App\Support\ProjectProgramScope;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Collection;
@@ -29,7 +30,17 @@ class AgreementRequest extends FormRequest
     {
         $user = Auth::user();
 
-        return $user !== null && $user->isAdmin();
+        if ($user === null) {
+            return false;
+        }
+
+        $agreement = $this->route('agreement');
+
+        if ($agreement instanceof Agreement) {
+            return $user->can('update', $agreement);
+        }
+
+        return $user->can('create', Agreement::class);
     }
 
     public function messages(): array
@@ -148,6 +159,26 @@ class AgreementRequest extends FormRequest
                 Agreement::class,
                 $projectIds->all(),
                 $programIds->all()
+            );
+
+            $agreement = $this->route('agreement');
+            $existingMode = $agreement instanceof Agreement ? $agreement->program_scope_mode : ProgramScopeMode::None;
+            $existingProgramIds = $agreement instanceof Agreement
+                ? $agreement->programs()->pluck('programs.id')->all()
+                : [];
+            ScopeSync::validateSubmittedMode(
+                $validator,
+                Auth::user(),
+                $existingMode,
+                $programScopeMode instanceof ProgramScopeMode
+                    ? $programScopeMode
+                    : ProgramScopeMode::from((string) $this->input('program_scope_mode', ProgramScopeMode::Specific->value)),
+            );
+            ScopeSync::validateSubmittedProgramsAreInAdminScope(
+                $validator,
+                Auth::user(),
+                $programIds->all(),
+                $existingProgramIds,
             );
 
             if ($stateIds->isEmpty()) {

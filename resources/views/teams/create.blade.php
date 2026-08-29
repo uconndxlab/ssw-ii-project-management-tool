@@ -7,12 +7,12 @@
     $selectedProjectIds = old('project_ids', []);
     $selectedProgramIds = old('program_ids', []);
     $teamUserOptions = $users->map(function ($user) {
-        $role = !empty($user->role) ? ' (' . ucfirst($user->role) . ')' : '';
+        $role = $user->accessLabel() ? ' (' . $user->accessLabel() . ')' : '';
 
         return [
             'value' => $user->id,
             'label' => $user->name . $role,
-            'search' => trim($user->name . ' ' . ($user->email ?? '') . ' ' . ($user->role ?? '')),
+            'search' => trim($user->name . ' ' . ($user->email ?? '') . ' ' . $user->accessLabel()),
         ];
     });
 @endphp

@@ -35,7 +35,7 @@
                     <th>
                         <x-table-sort-link column="created" label="Created" :sort="$s" :direction="$d" :url="$url('created')" target="#organizations-table" />
                     </th>
-                    <th class="text-end" style="width:{{ auth()->user()->isAdmin() ? '130px' : '60px' }};">Actions</th>
+                    <th class="text-end" style="width:{{ auth()->user()->can('create', App\Models\Organization::class) ? '130px' : '60px' }};">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -91,7 +91,7 @@
                                aria-label="View organization">
                                 <i class="bi bi-eye"></i>
                             </a>
-                            @if(auth()->user()->isAdmin())
+                            @can('update', $organization)
                                 <a href="{{ route('organizations.edit', $organization) }}"
                                    class="btn btn-outline-secondary"
                                    data-bs-toggle="tooltip"
@@ -99,6 +99,8 @@
                                    aria-label="Edit organization">
                                     <i class="bi bi-pencil-square"></i>
                                 </a>
+                            @endcan
+                            @can('delete', $organization)
                                 <button type="submit"
                                         form="{{ $actionKey }}-delete"
                                         class="btn btn-outline-danger"
@@ -108,23 +110,23 @@
                                         onclick="return confirm('Delete {{ addslashes($organization->name) }}?')">
                                     <i class="bi bi-trash"></i>
                                 </button>
-                            @endif
+                            @endcan
                         </div>
-                        @if(auth()->user()->isAdmin())
+                        @can('delete', $organization)
                             <form id="{{ $actionKey }}-delete" method="POST" action="{{ route('organizations.destroy', $organization) }}" class="d-none">
                                 @csrf
                                 @method('DELETE')
                             </form>
-                        @endif
+                        @endcan
                     </td>
                 </tr>
                 @empty
                 <tr>
                     <td colspan="9" class="text-center py-5">
                         <p class="text-muted mb-2">No organizations found.</p>
-                        @if(auth()->user()->isAdmin())
+                        @can('create', App\Models\Organization::class)
                             <a href="{{ route('organizations.create') }}" class="btn btn-sm btn-primary">Create Organization</a>
-                        @endif
+                        @endcan
                     </td>
                 </tr>
                 @endforelse

@@ -5,6 +5,9 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use App\Enums\AccessProfile;
+use App\Enums\PrivilegeCapability;
+use App\Enums\PrivilegeScopeType;
 use App\Models\User;
 use App\Models\State;
 use App\Models\Organization;
@@ -83,16 +86,22 @@ class DemoSeeder extends Seeder
             [
                 'name' => 'Sarah Johnson',
                 'password' => Hash::make('password'),
-                'role' => 'admin',
+                'access_profile' => AccessProfile::AdminViewer,
+                'is_supervisor' => true,
             ]
         );
+        $users[0]->privileges()->firstOrCreate([
+            'capability' => PrivilegeCapability::Admin,
+            'scope_type' => PrivilegeScopeType::System,
+            'scope_id' => null,
+        ]);
 
         $users[] = User::firstOrCreate(
             ['email' => 'staff1@example.com'],
             [
                 'name' => 'Michael Chen',
                 'password' => Hash::make('password'),
-                'role' => 'staff',
+                'access_profile' => AccessProfile::Member,
             ]
         );
 
@@ -101,7 +110,7 @@ class DemoSeeder extends Seeder
             [
                 'name' => 'Jennifer Martinez',
                 'password' => Hash::make('password'),
-                'role' => 'staff',
+                'access_profile' => AccessProfile::Member,
             ]
         );
 
@@ -110,7 +119,7 @@ class DemoSeeder extends Seeder
             [
                 'name' => 'David Thompson',
                 'password' => Hash::make('password'),
-                'role' => 'consultant',
+                'access_profile' => AccessProfile::Member,
             ]
         );
 
@@ -119,7 +128,7 @@ class DemoSeeder extends Seeder
             [
                 'name' => 'Emily Rodriguez',
                 'password' => Hash::make('password'),
-                'role' => 'consultant',
+                'access_profile' => AccessProfile::Input,
             ]
         );
 
@@ -358,7 +367,7 @@ class DemoSeeder extends Seeder
             $agreement->states()->syncWithoutDetaching([$state->id]);
 
             // Assign 2-3 users to each agreement
-            $nonAdminUsers = collect($users)->where('role', '!=', 'admin');
+            $nonAdminUsers = collect($users)->reject(fn (User $user) => $user->isSystemAdmin());
             if ($nonAdminUsers->isNotEmpty()) {
                 $userCount = min(rand(2, 3), $nonAdminUsers->count());
                 $agreementUsers = $nonAdminUsers->random($userCount)->pluck('id');

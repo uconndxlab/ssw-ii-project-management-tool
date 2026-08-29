@@ -29,6 +29,7 @@
     'scopeModeErrorKey' => 'program_scope_mode',
     'scopeModeLabel' => 'Program Scope',
     'scopeModeHelpText' => 'All programs, only selected programs, or none.',
+    'lockAll' => false,
 ])
 
 @php
@@ -38,6 +39,40 @@
     $scopeModeOptions = collect($scopeModeOptions)->mapWithKeys(function ($label, $value) {
         return [(string) $value => $label];
     })->all();
+
+    $canAssignAll = auth()->user()?->access()->isSystemAdmin() ?? false;
+    $lockAll = filter_var($lockAll, FILTER_VALIDATE_BOOLEAN);
+
+    if (! $canAssignAll) {
+        if ($lockAll && array_key_exists('all', $scopeModeOptions)) {
+            $scopeModeOptions = ['all' => $scopeModeOptions['all']];
+            $defaultScopeMode = 'all';
+            $selectedScopeMode = $selectedScopeMode ?? 'all';
+        } else {
+            unset($scopeModeOptions['all']);
+            if ((string) $defaultScopeMode === 'all') {
+                $defaultScopeMode = array_key_exists('specific', $scopeModeOptions)
+                    ? 'specific'
+                    : (array_key_first($scopeModeOptions) ?? 'specific');
+            }
+        }
+    }
+
+    if ($scopeModeHelpText === 'All programs, only selected programs, or none.') {
+        $hasAll = array_key_exists('all', $scopeModeOptions);
+        $hasSpecific = array_key_exists('specific', $scopeModeOptions);
+        $hasNone = array_key_exists('none', $scopeModeOptions);
+        $scopeModeHelpText = match (true) {
+            $hasAll && $hasSpecific && $hasNone => 'All programs, only selected programs, or none.',
+            $hasAll && $hasSpecific => 'All programs, or only selected programs.',
+            $hasSpecific && $hasNone => 'Only selected programs, or none.',
+            $hasAll => 'All programs.',
+            $hasSpecific => 'Only selected programs.',
+            $hasNone => 'No programs.',
+            default => $scopeModeHelpText,
+        };
+    }
+
     $allowedScopeModes = array_keys($scopeModeOptions);
     $defaultProjectEmptySelectionLabel = $projectEmptySelectionLabel ?? '';
     $defaultProgramEmptySelectionLabel = $programEmptySelectionLabel ?? '';
