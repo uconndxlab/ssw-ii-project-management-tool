@@ -120,6 +120,7 @@ class ActivityDuplicationService
             'value_number' => $answer->value_number,
             'value_boolean' => $answer->value_boolean,
             'file_path' => $filePath,
+            'file_name' => $answer->file_name,
         ]);
     }
 }

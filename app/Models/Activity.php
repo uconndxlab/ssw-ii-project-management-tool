@@ -189,6 +189,24 @@ class Activity extends Model
         return $this->buildLoggingFieldValueMap('activity_type');
     }
 
+    public function loggingFieldAnswer(string $contextType, int $fieldId, ?int $contextId = null): ?ActivityLoggingFieldAnswer
+    {
+        $this->loadMissing('loggingFieldAnswers');
+
+        return $this->loggingFieldAnswers->first(function (ActivityLoggingFieldAnswer $answer) use ($contextType, $fieldId, $contextId) {
+            if ((int) $answer->logging_field_id !== $fieldId || $answer->context_type !== $contextType) {
+                return false;
+            }
+
+            return $contextId === null || (int) $answer->context_id === $contextId;
+        });
+    }
+
+    public function loggingFieldFileName(string $contextType, int $fieldId, ?int $contextId = null): ?string
+    {
+        return $this->loggingFieldAnswer($contextType, $fieldId, $contextId)?->originalFileName();
+    }
+
     /**
      * File inputs are not flashed, so merge stored document paths back into submitted logging values.
      */

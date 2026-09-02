@@ -17,6 +17,7 @@ class ActivityLoggingFieldAnswer extends Model
         'value_number',
         'value_boolean',
         'file_path',
+        'file_name',
     ];
 
     protected function casts(): array
@@ -60,5 +61,18 @@ class ActivityLoggingFieldAnswer extends Model
         }
 
         return $this->value_text;
+    }
+
+    public function originalFileName(): ?string
+    {
+        if (! is_string($this->file_path) || $this->file_path === '') {
+            return null;
+        }
+
+        if (is_string($this->file_name) && $this->file_name !== '') {
+            return $this->file_name;
+        }
+
+        return basename($this->file_path);
     }
 }

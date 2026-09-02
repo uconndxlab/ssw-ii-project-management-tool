@@ -377,7 +377,7 @@
                                                     <div>
                                                         @if($field->field_type === 'document' && $hasRenderableValue($value))
                                                                 <a href="{{ route('activities.logging-field-document.download', ['activity' => $activity, 'context' => 'agreement', 'fieldId' => $field->id, 'agreementId' => $agreement->id]) }}" class="text-decoration-none" target="_blank">
-                                                                    <i class="bi bi-file-earmark-arrow-down me-1"></i>{{ basename($value) }}
+                                                                    <i class="bi bi-file-earmark-arrow-down me-1"></i>{{ $activity->loggingFieldFileName('agreement', (int) $field->id, (int) $agreement->id) ?: basename($value) }}
                                                                 </a>
                                                             @elseif($field->isMultiselect() && is_array($value) && !empty($value))
                                                                 <div class="d-flex flex-wrap gap-1">
@@ -422,7 +422,7 @@
                                     <div>
                                         @if($field->field_type === 'document' && $hasRenderableValue($value))
                                                 <a href="{{ route('activities.logging-field-document.download', ['activity' => $activity, 'context' => 'contact_family', 'fieldId' => $field->id]) }}" class="text-decoration-none" target="_blank">
-                                                    <i class="bi bi-file-earmark-arrow-down me-1"></i>{{ basename($value) }}
+                                                    <i class="bi bi-file-earmark-arrow-down me-1"></i>{{ $activity->loggingFieldFileName('contact_family', (int) $field->id) ?: basename($value) }}
                                                 </a>
                                             @elseif($field->isMultiselect() && is_array($value) && !empty($value))
                                                 <div class="d-flex flex-wrap gap-1">
@@ -459,7 +459,7 @@
                                         <div>
                                             @if($field->field_type === 'document' && $hasRenderableValue($value))
                                                 <a href="{{ route('activities.logging-field-document.download', ['activity' => $activity, 'context' => 'activity_type', 'fieldId' => $field->id]) }}" class="text-decoration-none" target="_blank">
-                                                    <i class="bi bi-file-earmark-arrow-down me-1"></i>{{ basename($value) }}
+                                                    <i class="bi bi-file-earmark-arrow-down me-1"></i>{{ $activity->loggingFieldFileName('activity_type', (int) $field->id) ?: basename($value) }}
                                                 </a>
                                             @elseif($field->isMultiselect() && is_array($value) && !empty($value))
                                                 <div class="d-flex flex-wrap gap-1">

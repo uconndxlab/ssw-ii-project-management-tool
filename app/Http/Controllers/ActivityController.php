@@ -1386,13 +1386,15 @@ class ActivityController extends Controller
 
         foreach ($agreements as $agreement) {
             foreach ($scopedFields['agreements'][(string) $agreement->id] ?? collect() as $field) {
+                $existingAnswer = $activity->loggingFieldAnswer('agreement', (int) $field->id, (int) $agreement->id);
                 $answer = $this->buildLoggingFieldAnswerPayload(
                     $field,
                     'agreement',
                     (int) $agreement->id,
                     data_get($validated, "agreement_logging_values.{$agreement->id}.{$field->id}"),
                     request()->file("agreement_logging_values.{$agreement->id}.{$field->id}"),
-                    data_get($existingAgreementValues, "{$agreement->id}.{$field->id}")
+                    $existingAnswer?->file_path ?? data_get($existingAgreementValues, "{$agreement->id}.{$field->id}"),
+                    $existingAnswer?->originalFileName()
                 );
 
                 if ($answer !== null) {
@@ -1402,13 +1404,15 @@ class ActivityController extends Controller
         }
 
         foreach ($scopedFields['contact_family'] as $field) {
+            $existingAnswer = $activity->loggingFieldAnswer('contact_family', (int) $field->id, (int) $contactFamily->id);
             $answer = $this->buildLoggingFieldAnswerPayload(
                 $field,
                 'contact_family',
                 (int) $contactFamily->id,
                 data_get($validated, "contact_family_logging_values.{$field->id}"),
                 request()->file("contact_family_logging_values.{$field->id}"),
-                data_get($existingContactFamilyValues, (string) $field->id)
+                $existingAnswer?->file_path ?? data_get($existingContactFamilyValues, (string) $field->id),
+                $existingAnswer?->originalFileName()
             );
 
             if ($answer !== null) {
@@ -1417,13 +1421,15 @@ class ActivityController extends Controller
         }
 
         foreach ($scopedFields['activity_type'] as $field) {
+            $existingAnswer = $activity->loggingFieldAnswer('activity_type', (int) $field->id, (int) $activityType->id);
             $answer = $this->buildLoggingFieldAnswerPayload(
                 $field,
                 'activity_type',
                 (int) $activityType->id,
                 data_get($validated, "activity_logging_values.{$field->id}"),
                 request()->file("activity_logging_values.{$field->id}"),
-                data_get($existingActivityValues, (string) $field->id)
+                $existingAnswer?->file_path ?? data_get($existingActivityValues, (string) $field->id),
+                $existingAnswer?->originalFileName()
             );
 
             if ($answer !== null) {
@@ -1438,7 +1444,7 @@ class ActivityController extends Controller
         }
     }
 
-    private function buildLoggingFieldAnswerPayload(LoggingField $field, string $contextType, int $contextId, mixed $rawValue, mixed $uploadedFile = null, mixed $existingValue = null): ?array
+    private function buildLoggingFieldAnswerPayload(LoggingField $field, string $contextType, int $contextId, mixed $rawValue, mixed $uploadedFile = null, mixed $existingValue = null, ?string $existingFileName = null): ?array
     {
         $payload = [
             'logging_field_id' => $field->id,
@@ -1449,6 +1455,7 @@ class ActivityController extends Controller
             'value_number' => null,
             'value_boolean' => null,
             'file_path' => null,
+            'file_name' => null,
         ];
 
         if ($field->field_type === 'document') {
@@ -1460,11 +1467,18 @@ class ActivityController extends Controller
                 }
 
                 $path = $this->privateFiles->store($uploadedFile, 'activity-documents');
+                $fileName = basename((string) $uploadedFile->getClientOriginalName());
             } else {
                 $path = is_string($existingValue) && $existingValue !== '' ? $existingValue : null;
+                $fileName = is_string($existingFileName) && $existingFileName !== ''
+                    ? $existingFileName
+                    : (is_string($path) ? basename($path) : null);
             }
 
-            return $path ? array_merge($payload, ['file_path' => $path]) : null;
+            return $path ? array_merge($payload, [
+                'file_path' => $path,
+                'file_name' => $fileName !== '' ? $fileName : null,
+            ]) : null;
         }
 
         $value = $this->normalizeLoggingFieldValue($field->field_type, $rawValue);
@@ -1516,13 +1530,9 @@ class ActivityController extends Controller
             default => $activity->activityType()->value('contact_family_id'),
         };
 
-        $path = $activity->loggingFieldAnswers()
-            ->where('logging_field_id', $fieldId)
-            ->where('context_type', $context)
-            ->where('context_id', $contextId)
-            ->value('file_path');
-
-        $filename = is_string($path) ? basename($path) : 'document';
+        $answer = $activity->loggingFieldAnswer($context, $fieldId, $contextId ? (int) $contextId : null);
+        $path = $answer?->file_path;
+        $filename = $answer?->originalFileName() ?? (is_string($path) ? basename($path) : 'document');
 
         return $this->privateFiles->serve((string) $path, $filename);
     }
