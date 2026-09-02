@@ -289,12 +289,61 @@ class OrganizationController extends Controller
                 ProjectProgramScope::normalizeIds($request->input('program_ids', [])),
                 $organization?->programs()->pluck('programs.id')->all() ?? [],
             );
+            $this->validateUniqueNameAndStates($validator, $request, $organization);
         });
 
         $validated = $validator->validate();
         $validated['program_scope_mode'] = ProjectProgramScope::normalizeMode($validated['program_scope_mode'] ?? null, Organization::class)->value;
 
         return $validated;
+    }
+
+    /**
+     * Same name may exist in different states, but not in an overlapping state.
+     */
+    private function validateUniqueNameAndStates($validator, Request $request, ?Organization $organization): void
+    {
+        $name = trim((string) $request->input('name', ''));
+        $stateIds = collect($request->input('state_ids', []))
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($name === '' || $stateIds === []) {
+            return;
+        }
+
+        $overlappingStates = State::query()
+            ->whereIn('id', $stateIds)
+            ->whereHas('organizations', function ($query) use ($name, $organization) {
+                $query->whereRaw('LOWER(organizations.name) = LOWER(?)', [$name]);
+
+                if ($organization !== null) {
+                    $query->where('organizations.id', '!=', $organization->id);
+                }
+            })
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        if ($overlappingStates->isEmpty()) {
+            return;
+        }
+
+        $message = $this->overlappingOrganizationStateMessage($name, $overlappingStates);
+
+        $validator->errors()->add('name', $message);
+        $validator->errors()->add('state_ids', $message);
+    }
+
+    private function overlappingOrganizationStateMessage(string $name, Collection $overlappingStates): string
+    {
+        return sprintf(
+            'An organization named %s already exists in %s.',
+            $name,
+            $overlappingStates->pluck('name')->join(', ')
+        );
     }
 
     private function applyOrganizationIndexSort($query, string $sort, string $direction): void
