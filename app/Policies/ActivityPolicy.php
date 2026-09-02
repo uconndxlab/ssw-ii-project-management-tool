@@ -42,4 +42,10 @@ class ActivityPolicy
     {
         return $this->update($user, $activity) && $this->create($user);
     }
+
+    // Action log: owner, supervisor of owner, or admin/enhanced viewer on a program in view scope.
+    public function viewActionLog(User $user, Activity $activity): bool
+    {
+        return $user->access()->canViewActivityActionLog($activity);
+    }
 }

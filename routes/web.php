@@ -54,6 +54,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/activities/{activity}/edit', [ActivityController::class, 'edit'])->name('activities.edit');
     Route::put('/activities/{activity}', [ActivityController::class, 'update'])->name('activities.update');
     Route::post('/activities/{activity}/duplicate', [ActivityController::class, 'duplicate'])->name('activities.duplicate');
+    Route::get('/activities/{activity}/action-logs', [ActivityController::class, 'actionLogs'])->name('activities.action-logs');
     Route::delete('/activities/{activity}', [ActivityController::class, 'destroy'])->name('activities.destroy');
 
     Route::get('/activities/{activity}/logging-field-document/{context}/{fieldId}/{agreementId?}', [ActivityController::class, 'downloadLoggingFieldDocument'])

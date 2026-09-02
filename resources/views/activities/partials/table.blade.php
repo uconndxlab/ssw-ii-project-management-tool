@@ -28,7 +28,7 @@
                     <th style="min-width: 120px;">
                         <x-table-sort-link column="logged_by" label="Logged By" :sort="$s" :direction="$d" :url="$url('logged_by')" target="#activities-table" />
                     </th>
-                    <th class="text-end" style="width:130px;">Actions</th>
+                    <th class="text-end" style="width:160px;">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -71,6 +71,7 @@
                                aria-label="View activity">
                                 <i class="bi bi-eye"></i>
                             </a>
+                            <x-activity-action-log-button :activity="$activity" />
                             @if($canUpdate)
                                 <a href="{{ route('activities.edit', $activity) }}"
                                    class="btn btn-outline-secondary"

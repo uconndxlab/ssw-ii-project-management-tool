@@ -8,8 +8,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * View: logger or Delivered By (viewers also via a viewable agreement).
@@ -66,6 +66,11 @@ class Activity extends Model
     public function agreementActivityHistories(): HasMany
     {
         return $this->hasMany(AgreementActivityHistory::class);
+    }
+
+    public function actionLogs(): HasMany
+    {
+        return $this->hasMany(ActivityActionLog::class);
     }
 
     public function agreements(): BelongsToMany
@@ -213,5 +218,4 @@ class Activity extends Model
             })
             ->all();
     }
-
 }

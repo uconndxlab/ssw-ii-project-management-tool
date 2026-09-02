@@ -669,6 +669,34 @@ class UserAccess
         return $this->applyActivityVisibility(Activity::query()->whereKey($activity->id))->exists();
     }
 
+    // Owner, supervisor of owner, or enhanced viewer/admin whose view scope covers the activity
+    // (program visibility — not merely Delivered By).
+    public function canViewActivityActionLog(Activity $activity): bool
+    {
+        if ((int) $activity->user_id === (int) $this->user->id) {
+            return true;
+        }
+
+        if ($this->isSupervisorOfActivityOwner($activity)) {
+            return true;
+        }
+
+        if (! $this->hasView() || $this->isInput()) {
+            return false;
+        }
+
+        if ($this->hasSystemView()) {
+            return true;
+        }
+
+        return Activity::query()
+            ->whereKey($activity->id)
+            ->whereHas('programs', function (Builder $programQuery) {
+                $this->applyProgramVisibility($programQuery);
+            })
+            ->exists();
+    }
+
     // Logged it, participant, or the activity's own programs/projects are in your admin scope.
     public function canUpdateActivity(Activity $activity): bool
     {
@@ -700,6 +728,18 @@ class UserAccess
         $activity->loadMissing('participants');
 
         return $activity->participants->contains(fn (User $participant) => in_array((int) $participant->id, $ids, true));
+    }
+
+    private function isSupervisorOfActivityOwner(Activity $activity): bool
+    {
+        if (! $this->isSupervisor()) {
+            return false;
+        }
+
+        $activity->loadMissing('user');
+
+        return $activity->user !== null
+            && (int) $activity->user->supervisor_id === (int) $this->user->id;
     }
 
     private function loggedActivity(Activity $activity): bool

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ActivityAction;
 use App\Models\Activity;
 use App\Models\ActivityAgreementFundingSource;
 use App\Models\ActivityType;
@@ -11,6 +12,7 @@ use App\Models\LoggingField;
 use App\Models\Organization;
 use App\Models\State;
 use App\Models\User;
+use App\Services\ActivityActionLogService;
 use App\Services\ActivityDuplicationService;
 use App\Services\DeliverableContributionService;
 use App\Services\PrivateFileService;
@@ -32,6 +34,7 @@ class ActivityController extends Controller
     public function __construct(
         private DeliverableContributionService $deliverableContributionService,
         private ActivityDuplicationService $activityDuplicationService,
+        private ActivityActionLogService $activityActionLogService,
         private PrivateFileService $privateFiles,
     ) {}
 
@@ -377,6 +380,7 @@ class ActivityController extends Controller
             $this->syncAgreementFundingSources($activity, $validated, $agreements);
             $this->syncActivityTimeTracking($activity, $validated['time_tracking']);
             $this->deliverableContributionService->syncForActivity($activity);
+            $this->activityActionLogService->record($activity, ActivityAction::Create);
         });
 
         return redirect()
@@ -578,6 +582,7 @@ class ActivityController extends Controller
             $this->syncAgreementFundingSources($activity, $validated, $agreements);
             $this->syncActivityTimeTracking($activity, $validated['time_tracking']);
             $this->deliverableContributionService->syncForActivity($activity);
+            $this->activityActionLogService->record($activity, ActivityAction::Update);
         });
 
         return redirect()
@@ -591,6 +596,11 @@ class ActivityController extends Controller
 
         $copy = $this->activityDuplicationService->duplicate($activity, (int) Auth::id());
 
+        DB::transaction(function () use ($activity, $copy) {
+            $this->activityActionLogService->record($activity, ActivityAction::Duplicate, $copy);
+            $this->activityActionLogService->record($copy, ActivityAction::Create, $activity);
+        });
+
         return redirect()
             ->route('activities.edit', $copy)
             ->with('success', 'Activity duplicated. Review the copy and save any changes.');
@@ -600,11 +610,30 @@ class ActivityController extends Controller
     {
         $this->authorize('delete', $activity);
 
-        $activity->delete();
+        DB::transaction(function () use ($activity) {
+            $this->activityActionLogService->record($activity, ActivityAction::Delete);
+            $activity->delete();
+        });
 
         return redirect()
             ->route('activities.index')
             ->with('success', 'Activity deleted successfully.');
+    }
+
+    public function actionLogs(Activity $activity)
+    {
+        $this->authorize('viewActionLog', $activity);
+
+        $actionLogs = $activity->actionLogs()
+            ->with(['user', 'relatedActivity.activityType'])
+            ->where('action', '!=', ActivityAction::Delete->value)
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->get();
+
+        return view('activities.partials.action-log-list', [
+            'actionLogs' => $actionLogs,
+        ]);
     }
 
     /**

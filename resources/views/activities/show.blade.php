@@ -5,6 +5,7 @@
 @section('content')
 @php
     $canManageActivity = auth()->user()->can('update', $activity);
+    $canViewActionLog = auth()->user()->can('viewActionLog', $activity);
 @endphp
 <div class="row mb-4">
     <div class="col-12">
@@ -13,7 +14,6 @@
             :title="$activity->activityType->name"
             entity-type="Activity"
             :description="$activity->engagement_date->format('F d, Y') . ' · ' . $activity->activityType->contactFamily->name . ' · Logged by ' . $activity->user->name"
-            :action-url="$canManageActivity ? route('activities.edit', $activity) : null"
         >
             <x-slot:badges>
                 @if($activity->internal_only)
@@ -23,6 +23,19 @@
                     <x-status-badge :active="false" inactive-label="Cancelled" />
                 @endif
             </x-slot:badges>
+            @if($canViewActionLog || $canManageActivity)
+                <x-slot:controls>
+                    <div class="d-flex gap-2">
+                        <x-activity-action-log-button :activity="$activity" :labeled="true" />
+                        @if($canManageActivity)
+                            <a href="{{ route('activities.edit', $activity) }}" class="btn btn-outline-primary">
+                                <i class="bi bi-pencil-square me-1"></i>
+                                Edit
+                            </a>
+                        @endif
+                    </div>
+                </x-slot:controls>
+            @endif
         </x-page-header>
     </div>
 </div>
@@ -473,4 +486,6 @@
         @endif
     </div>
 </div>
+
+<x-activity-action-log-modal />
 @endsection

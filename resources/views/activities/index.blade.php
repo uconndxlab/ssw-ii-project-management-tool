@@ -33,4 +33,6 @@
     ])
 </div>
 
+<x-activity-action-log-modal />
+
 @endsection
