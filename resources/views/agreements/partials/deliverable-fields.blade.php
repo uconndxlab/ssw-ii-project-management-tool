@@ -84,11 +84,11 @@
 @endphp
 
 <div class="deliverable-fields form-subsections" data-deliverable-fields>
-    <x-form-subsection title="Activity">
-        <div class="alert alert-warning small py-2 {{ $classificationLocked ? '' : 'd-none' }}" data-deliverable-classification-lock-notice>
-            Family, type, and program are locked. Duplicate this deliverable to change them.
-        </div>
+    <div class="alert alert-warning small py-1 {{ ($classificationLocked || $semanticLocked) ? '' : 'd-none' }}" data-deliverable-lock-notice>
+        Family, type, program, and counting rules are locked because they change the meaning of the deliverable. Duplicate this deliverable to change them.
+    </div>
 
+    <x-form-subsection title="Activity">
         <div class="{{ $classificationLocked ? 'd-none' : '' }}" data-deliverable-classification-editor>
             <x-form-field label="Activity Family" required>
                 <select class="form-select" name="{{ $fieldPrefix }}[contact_family_id]" data-deliverable-contact-family>
@@ -289,9 +289,6 @@
 
     <div class="{{ $semanticLocked ? '' : 'd-none' }}" data-deliverable-requirement-readonly>
         <x-form-subsection title="Metric">
-            <div class="alert alert-warning small py-2 {{ $semanticLocked ? '' : 'd-none' }}" data-deliverable-semantic-lock-notice>
-                Counting rules are locked. Target, due date, notes, and members can still change.
-            </div>
             <dl class="mb-3 small">
                 <dt class="text-muted fw-normal">Metric</dt>
                 <dd class="mb-2" data-readonly-metric>

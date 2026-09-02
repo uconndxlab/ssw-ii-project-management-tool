@@ -1183,8 +1183,7 @@
             const classificationLocked = !!rowData.classification_locked;
             const semanticLocked = !!rowData.semantic_locked;
 
-            editorFieldset.querySelector('[data-deliverable-classification-lock-notice]')?.classList.toggle('d-none', !classificationLocked);
-            editorFieldset.querySelector('[data-deliverable-semantic-lock-notice]')?.classList.toggle('d-none', !semanticLocked);
+            editorFieldset.querySelector('[data-deliverable-lock-notice]')?.classList.toggle('d-none', !classificationLocked && !semanticLocked);
             editorFieldset.querySelector('[data-deliverable-classification-editor]')?.classList.toggle('d-none', classificationLocked);
             editorFieldset.querySelector('[data-deliverable-classification-readonly]')?.classList.toggle('d-none', !classificationLocked);
             editorFieldset.querySelector('[data-deliverable-requirement-editor]')?.classList.toggle('d-none', semanticLocked);

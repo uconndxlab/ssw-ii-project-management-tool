@@ -348,7 +348,6 @@ class DeliverableContributionService
             $basis,
             $deliverable->user_grouping_mode,
             $includeAdditional ? '1' : '0',
-            (string) $deliverable->target_quantity,
         ]));
 
         $matchingHistory = $agreementHistory->filter(function (AgreementActivityHistory $history) use ($deliverable) {

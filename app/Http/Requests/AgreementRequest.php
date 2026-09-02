@@ -795,12 +795,32 @@ class AgreementRequest extends FormRequest
 
     private function deliverableSemanticFieldsChanged(AgreementDeliverable $deliverable, array $row): bool
     {
-        return ($deliverable->metric_type ?? null) !== ($row['metric_type'] ?? null)
-            || ($deliverable->time_basis ?? 'observed') !== ($row['time_basis'] ?? 'observed')
-            || ($deliverable->allotted_time_unit ?? null) !== ($row['allotted_time_unit'] ?? null)
-            || ($deliverable->contribution_basis ?? null) !== ($row['contribution_basis'] ?? null)
-            || ($deliverable->user_grouping_mode ?? null) !== ($row['user_grouping_mode'] ?? null)
+        $existingMetric = $this->nullableString($deliverable->metric_type);
+        $rowMetric = $this->nullableString($row['metric_type'] ?? null);
+        $existingTimeBasis = $existingMetric === 'time' ? ($this->nullableString($deliverable->time_basis) ?? 'observed') : null;
+        $rowTimeBasis = $rowMetric === 'time' ? ($this->nullableString($row['time_basis'] ?? null) ?? 'observed') : null;
+        $existingUnit = $existingTimeBasis === 'allotted' ? $this->nullableString($deliverable->allotted_time_unit) : null;
+        $rowUnit = $rowTimeBasis === 'allotted' ? $this->nullableString($row['allotted_time_unit'] ?? null) : null;
+        $existingBasis = $this->nullableString($deliverable->contribution_basis);
+        $rowBasis = $this->nullableString($row['contribution_basis'] ?? null);
+        $existingGrouping = $existingBasis === 'user' ? $this->nullableString($deliverable->user_grouping_mode) : null;
+        $rowGrouping = $rowBasis === 'user' ? $this->nullableString($row['user_grouping_mode'] ?? null) : null;
+
+        return $existingMetric !== $rowMetric
+            || $existingTimeBasis !== $rowTimeBasis
+            || $existingUnit !== $rowUnit
+            || $existingBasis !== $rowBasis
+            || $existingGrouping !== $rowGrouping
             || (bool) $deliverable->include_additional_time !== filter_var($row['include_additional_time'] ?? false, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    private function nullableString(mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return (string) $value;
     }
 
     private function isDeletedRow(array $row): bool
