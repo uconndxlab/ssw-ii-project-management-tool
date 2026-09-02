@@ -1,7 +1,7 @@
 @php
     $field = $agreementLoggingField ?? $contactFamilyLoggingField ?? $loggingField ?? null;
     $availabilityOptions = $availabilityOptions ?? \App\Models\LoggingField::availabilityOptions();
-    $selectedFieldType = old('field_type', $field->field_type ?? '');
+    $selectedFieldType = old('field_type', $field?->field_type ?? '');
 
     if ($selectedFieldType === \App\Models\LoggingField::FIELD_TYPE_CHECKBOX_GROUP) {
         $selectedFieldType = \App\Models\LoggingField::FIELD_TYPE_MULTISELECT;
@@ -50,7 +50,7 @@
                class="form-control @error('name') is-invalid @enderror"
                id="name"
                name="name"
-               value="{{ old('name', $field->name ?? '') }}"
+               value="{{ old('name', $field?->name ?? '') }}"
                required>
     </x-form-field>
 
@@ -78,7 +78,7 @@
     </div>
 
     <x-form-field label="Help Text" for="help_text" name="help_text">
-        <textarea class="form-control @error('help_text') is-invalid @enderror" id="help_text" name="help_text" rows="2" maxlength="1000">{{ old('help_text', $field->help_text ?? '') }}</textarea>
+        <textarea class="form-control @error('help_text') is-invalid @enderror" id="help_text" name="help_text" rows="2" maxlength="1000">{{ old('help_text', $field?->help_text ?? '') }}</textarea>
     </x-form-field>
 
     <x-form-options>
@@ -86,7 +86,7 @@
             name="is_active"
             id="is_active"
             label="Active"
-            :checked="old('is_active', $field->is_active ?? true)"
+            :checked="old('is_active', $field?->is_active ?? true)"
             class="mb-0"
         />
     </x-form-options>
@@ -99,8 +99,8 @@
         :selected-project-ids="$selectedProjectIds"
         :selected-program-ids="$selectedProgramIds"
         :show-scope-mode-selector="true"
-        :selected-scope-mode="old('program_scope_mode', $field->program_scope_mode?->value ?? ($field->exists ? 'all' : 'specific'))"
-        :lock-all="$field->exists && $field->program_scope_mode?->value === 'all'"
+        :selected-scope-mode="old('program_scope_mode', $field?->program_scope_mode?->value ?? ($field?->exists ? 'all' : 'specific'))"
+        :lock-all="$field?->exists && $field?->program_scope_mode?->value === 'all'"
         project-empty-selection-label="All projects"
         program-empty-selection-label="All programs"
     />
@@ -114,7 +114,7 @@
                            id="{{ $key }}"
                            name="{{ $key }}"
                            value="1"
-                           {{ old($key, $field->{$key} ?? false) ? 'checked' : '' }}>
+                           {{ old($key, $field?->{$key} ?? false) ? 'checked' : '' }}>
                     <label class="form-check-label" for="{{ $key }}">{{ $label }}</label>
                 </div>
             @endforeach
@@ -127,7 +127,7 @@
             id="is_full_width"
             label="Full width"
             help="Use a full row when this field is shown on an activity form."
-            :checked="old('is_full_width', $field->is_full_width ?? false)"
+            :checked="old('is_full_width', $field?->is_full_width ?? false)"
             class="mb-0"
         />
     </x-form-options>
