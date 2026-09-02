@@ -552,7 +552,7 @@ class ActivityController extends Controller
         $validated = array_merge(
             $baseValidated,
             $request->validate(
-                $this->dynamicLoggingFieldValidationRules($agreements, $contactFamily, $activityType, $baseValidated['program_ids'] ?? []),
+                $this->dynamicLoggingFieldValidationRules($agreements, $contactFamily, $activityType, $baseValidated['program_ids'] ?? [], $activity),
                 [],
                 $this->dynamicLoggingFieldValidationAttributes($agreements, $contactFamily, $activityType, $baseValidated['program_ids'] ?? [])
             )
@@ -751,16 +751,25 @@ class ActivityController extends Controller
         ];
     }
 
-    private function dynamicLoggingFieldValidationRules($agreements, ContactFamily $contactFamily, ActivityType $activityType, array $selectedProgramIds): array
+    private function dynamicLoggingFieldValidationRules($agreements, ContactFamily $contactFamily, ActivityType $activityType, array $selectedProgramIds, ?Activity $activity = null): array
     {
         $rules = [];
         $scopedFields = $this->scopedLoggingFields($agreements, $contactFamily, $activityType, $selectedProgramIds);
+        $activity?->loadMissing('loggingFieldAnswers');
+        $existingAgreementValues = $activity?->agreement_logging_values ?? [];
+        $existingContactFamilyValues = $activity?->contact_family_logging_values ?? [];
+        $existingActivityValues = $activity?->activity_type_logging_values ?? [];
 
         foreach ($agreements as $agreement) {
             foreach ($scopedFields['agreements'][(string) $agreement->id] ?? collect() as $field) {
                 $rules = array_merge(
                     $rules,
-                    $this->rulesForField($field, (bool) $field->pivot->is_required, "agreement_logging_values.{$agreement->id}.{$field->id}")
+                    $this->rulesForField(
+                        $field,
+                        (bool) $field->pivot->is_required,
+                        "agreement_logging_values.{$agreement->id}.{$field->id}",
+                        data_get($existingAgreementValues, "{$agreement->id}.{$field->id}")
+                    )
                 );
             }
         }
@@ -768,14 +777,24 @@ class ActivityController extends Controller
         foreach ($scopedFields['contact_family'] as $field) {
             $rules = array_merge(
                 $rules,
-                $this->rulesForField($field, (bool) $field->pivot->is_required, "contact_family_logging_values.{$field->id}")
+                $this->rulesForField(
+                    $field,
+                    (bool) $field->pivot->is_required,
+                    "contact_family_logging_values.{$field->id}",
+                    data_get($existingContactFamilyValues, (string) $field->id)
+                )
             );
         }
 
         foreach ($scopedFields['activity_type'] as $field) {
             $rules = array_merge(
                 $rules,
-                $this->rulesForField($field, (bool) $field->pivot->is_required, "activity_logging_values.{$field->id}")
+                $this->rulesForField(
+                    $field,
+                    (bool) $field->pivot->is_required,
+                    "activity_logging_values.{$field->id}",
+                    data_get($existingActivityValues, (string) $field->id)
+                )
             );
         }
 
@@ -1327,11 +1346,12 @@ class ActivityController extends Controller
         }
     }
 
-    private function rulesForField(LoggingField $field, bool $required, string $inputKey): array
+    private function rulesForField(LoggingField $field, bool $required, string $inputKey, mixed $existingValue = null): array
     {
         $prefix = $required ? ['required'] : ['nullable'];
         $fieldType = $field->field_type;
         $optionValues = $field->optionValues();
+        $hasExistingDocument = is_string($existingValue) && $existingValue !== '';
 
         return match ($fieldType) {
             'number' => [$inputKey => array_merge($prefix, ['integer'])],
@@ -1343,7 +1363,7 @@ class ActivityController extends Controller
                 $inputKey.'.*' => ['string', Rule::in($optionValues)],
             ],
             'document' => [$inputKey => array_merge(
-                $required ? ['required'] : ['nullable'],
+                $required && ! $hasExistingDocument ? ['required'] : ['nullable'],
                 [
                     File::types((array) config('uploads.activity_document_types'))
                         ->max(config('uploads.max_file_kb')),

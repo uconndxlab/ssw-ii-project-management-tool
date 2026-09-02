@@ -20,9 +20,18 @@
             ->toArray()
     );
     $selectedActivityTypeId = old('activity_type_id', $activity->activity_type_id);
-    $agreementLoggingData = old('agreement_logging_values', $activity->agreement_logging_values ?? []);
-    $contactFamilyLoggingData = old('contact_family_logging_values', $activity->contact_family_logging_values ?? []);
-    $activityLoggingData = old('activity_logging_values', $activity->activity_type_logging_values ?? []);
+    $agreementLoggingData = \App\Models\Activity::mergePreservedLoggingValues(
+        old('agreement_logging_values', $activity->agreement_logging_values ?? []),
+        $activity->agreement_logging_values ?? []
+    );
+    $contactFamilyLoggingData = \App\Models\Activity::mergePreservedLoggingValues(
+        old('contact_family_logging_values', $activity->contact_family_logging_values ?? []),
+        $activity->contact_family_logging_values ?? []
+    );
+    $activityLoggingData = \App\Models\Activity::mergePreservedLoggingValues(
+        old('activity_logging_values', $activity->activity_type_logging_values ?? []),
+        $activity->activity_type_logging_values ?? []
+    );
     $contactTimeData = old('contact_time', [
         'activity_hours' => $activity->contactTime?->activity_hours,
         'prep_hours' => $activity->contactTime?->prep_hours ?? 0,

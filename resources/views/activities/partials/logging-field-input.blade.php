@@ -77,7 +77,7 @@
                     ]) }}" class="text-decoration-none" target="_blank">
                         {{ basename($value) }}
                     </a>
-                    <span class="text-muted">(upload a new file to replace)</span>
+                    <span class="text-muted">— leave empty to keep this file</span>
                 </div>
             @endif
         @elseif(in_array($field->field_type, ['number', 'decimal'], true))

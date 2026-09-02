@@ -189,6 +189,33 @@ class Activity extends Model
         return $this->buildLoggingFieldValueMap('activity_type');
     }
 
+    /**
+     * File inputs are not flashed, so merge stored document paths back into submitted logging values.
+     */
+    public static function mergePreservedLoggingValues(array $submitted, array $stored): array
+    {
+        $merged = $submitted;
+
+        foreach ($stored as $key => $value) {
+            if (is_array($value)) {
+                $merged[$key] = self::mergePreservedLoggingValues(
+                    is_array($submitted[$key] ?? null) ? $submitted[$key] : [],
+                    $value
+                );
+
+                continue;
+            }
+
+            $submittedValue = $submitted[$key] ?? null;
+
+            if (($submittedValue === null || $submittedValue === '') && is_string($value) && $value !== '') {
+                $merged[$key] = $value;
+            }
+        }
+
+        return $merged;
+    }
+
     private function buildLoggingFieldValueMap(string $contextType): array
     {
         $answers = $this->relationLoaded('loggingFieldAnswers')
