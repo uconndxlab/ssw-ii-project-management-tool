@@ -13,7 +13,7 @@
             context="show"
             :title="$activity->activityType->name"
             entity-type="Activity"
-            :description="$activity->engagement_date->format('F d, Y') . ' · ' . $activity->activityType->contactFamily->name . ' · Logged by ' . $activity->user->name"
+            :description="$activity->identityLabel(includeType: false)"
         >
             <x-slot:badges>
                 @if($activity->internal_only)
@@ -26,7 +26,7 @@
             @if($canViewActionLog || $canManageActivity)
                 <x-slot:controls>
                     <div class="d-flex gap-2">
-                        <x-activity-action-log-button :activity="$activity" :labeled="true" />
+                        <x-activity-action-log-button :activity="$activity" :labeled="true" :link-activity="false" />
                         @if($canManageActivity)
                             <a href="{{ route('activities.edit', $activity) }}" class="btn btn-outline-primary">
                                 <i class="bi bi-pencil-square me-1"></i>

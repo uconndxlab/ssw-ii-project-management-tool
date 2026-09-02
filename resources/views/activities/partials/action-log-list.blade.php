@@ -1,5 +1,13 @@
 <span id="activity-action-log-modal-count" class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis border" hx-swap-oob="true">{{ $actionLogs->count() }}</span>
 
+<div id="activity-action-log-modal-subtitle" class="small text-muted text-break" hx-swap-oob="true">
+    @if($linkActivity)
+        <a href="{{ route('activities.show', $activity) }}" class="text-muted text-decoration-underline">{{ $activity->identityLabel() }}</a>
+    @else
+        {{ $activity->identityLabel() }}
+    @endif
+</div>
+
 <x-relationship-scroll-panel title="Actions" :show-header="false" height="360px">
     @forelse($actionLogs as $log)
         <div class="border rounded overflow-hidden bg-body px-3 py-2">

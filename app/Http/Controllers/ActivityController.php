@@ -620,19 +620,23 @@ class ActivityController extends Controller
             ->with('success', 'Activity deleted successfully.');
     }
 
-    public function actionLogs(Activity $activity)
+    public function actionLogs(Request $request, Activity $activity)
     {
         $this->authorize('viewActionLog', $activity);
 
         $actionLogs = $activity->actionLogs()
-            ->with(['user', 'relatedActivity.activityType'])
+            ->with(['user', 'relatedActivity.activityType.contactFamily', 'relatedActivity.user'])
             ->where('action', '!=', ActivityAction::Delete->value)
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->get();
 
+        $activity->loadMissing(['activityType.contactFamily', 'user']);
+
         return view('activities.partials.action-log-list', [
+            'activity' => $activity,
             'actionLogs' => $actionLogs,
+            'linkActivity' => $activity->isLinkable() && ! $request->boolean('current'),
         ]);
     }
 

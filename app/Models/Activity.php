@@ -106,6 +106,28 @@ class Activity extends Model
         return $this->activityType?->contactFamily;
     }
 
+    public function identityLabel(bool $includeType = true): string
+    {
+        $this->loadMissing(['activityType.contactFamily', 'user']);
+
+        $parts = [];
+
+        if ($includeType) {
+            $parts[] = $this->activityType?->name;
+        }
+
+        $parts[] = $this->activityType?->contactFamily?->name;
+        $parts[] = $this->engagement_date?->format('M j, Y');
+
+        if (filled($this->user?->name)) {
+            $parts[] = 'Logged by '.$this->user->name;
+        }
+
+        return collect($parts)
+            ->filter(fn ($value) => is_string($value) && $value !== '')
+            ->implode(' · ') ?: 'Activity';
+    }
+
     public function programs(): BelongsToMany
     {
         return $this->belongsToMany(Program::class, 'activity_program')->withTimestamps();

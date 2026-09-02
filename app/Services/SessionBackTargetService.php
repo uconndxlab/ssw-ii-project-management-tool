@@ -438,12 +438,13 @@ class SessionBackTargetService
             return 'Activity';
         }
 
-        $typeName = $activity->relationLoaded('activityType')
-            ? $activity->activityType?->name
-            : $activity->activityType()->value('name');
+        $activity->loadMissing(['activityType.contactFamily']);
+
+        $name = $activity->activityType?->name
+            ?: $activity->activityType?->contactFamily?->name;
         $dateLabel = $activity->engagement_date?->format('M j, Y');
 
-        return collect([$typeName, $dateLabel])
+        return collect([$name, $dateLabel])
             ->filter(fn ($value) => is_string($value) && $value !== '')
             ->implode(' · ') ?: 'Activity';
     }
@@ -470,7 +471,7 @@ class SessionBackTargetService
         $activityId = (int) $activity;
 
         return $activityId > 0
-            ? Activity::query()->with('agreements')->find($activityId)
+            ? Activity::query()->with(['agreements', 'activityType.contactFamily'])->find($activityId)
             : null;
     }
 

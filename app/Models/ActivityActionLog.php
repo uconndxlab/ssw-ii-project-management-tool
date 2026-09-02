@@ -52,10 +52,7 @@ class ActivityActionLog extends Model
         $related = $this->relatedActivity;
 
         if ($related) {
-            $date = $related->engagement_date?->format('M j, Y');
-            $type = $related->activityType?->name;
-
-            return collect([$date, $type])->filter()->implode(' · ') ?: 'Activity';
+            return $related->identityLabel();
         }
 
         return 'Deleted activity';
