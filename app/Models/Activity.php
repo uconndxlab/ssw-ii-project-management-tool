@@ -207,6 +207,20 @@ class Activity extends Model
         return $this->loggingFieldAnswer($contextType, $fieldId, $contextId)?->originalFileName();
     }
 
+    public function loggingFieldDocumentUrl(string $contextType, int $fieldId, ?int $contextId = null): ?string
+    {
+        if (! $this->loggingFieldFileName($contextType, $fieldId, $contextId)) {
+            return null;
+        }
+
+        return route('activities.logging-field-document.download', [
+            'activity' => $this,
+            'context' => $contextType,
+            'fieldId' => $fieldId,
+            'agreementId' => $contextType === 'agreement' ? $contextId : null,
+        ]);
+    }
+
     /**
      * File inputs are not flashed, so merge stored document paths back into submitted logging values.
      */

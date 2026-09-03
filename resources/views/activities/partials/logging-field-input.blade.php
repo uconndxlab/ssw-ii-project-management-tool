@@ -60,37 +60,16 @@
                 @endforeach
             </div>
         @elseif($field->field_type === 'document')
-            <input type="file"
-                   class="form-control"
-                   id="{{ $inputId }}"
-                   name="{{ $inputName }}"
-                   accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg">
-            <div class="form-text">PDF, Word, Excel, or image files. Max {{ (int) round(config('uploads.max_file_kb') / 1024) }}MB.</div>
-            @if(!empty($value))
-                @php
-                    $currentFileContextId = match ($downloadContext) {
-                        'agreement' => $agreementId ?? null,
-                        'activity_type' => $activity?->activity_type_id,
-                        default => $activity?->activityType?->contact_family_id ?? $activity?->contactFamily()?->id,
-                    };
-                    $currentFileName = $activity?->loggingFieldFileName(
-                        $downloadContext,
-                        (int) $field->id,
-                        $currentFileContextId !== null ? (int) $currentFileContextId : null
-                    ) ?: basename((string) $value);
-                @endphp
-                <div class="mt-1 small">
-                    <span class="text-muted">Leave empty to keep current file:</span>
-                    <a href="{{ route('activities.logging-field-document.download', [
-                        'activity' => $activity ?? 0,
-                        'context'  => $downloadContext,
-                        'fieldId'  => $field->id,
-                        'agreementId' => $agreementId ?? null,
-                    ]) }}" class="text-decoration-none" target="_blank">
-                        {{ $currentFileName }}
-                    </a>
-                </div>
-            @endif
+            <x-logging-document-field
+                :id="$inputId"
+                :name="$inputName"
+                :label="$field->name"
+                :activity="$activity ?? null"
+                :field="$field"
+                :context="$downloadContext"
+                :agreement-id="$agreementId ?? null"
+                :value="$value"
+            />
         @elseif(in_array($field->field_type, ['number', 'decimal'], true))
             <input type="number"
                    class="form-control"
