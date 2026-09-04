@@ -2,18 +2,23 @@
 
 namespace App\Support;
 
+use App\Enums\DeliverableStatus;
 use App\Models\Agreement;
 use App\Models\AgreementDeliverable;
 use App\Models\DeliverableContribution;
 use App\Models\Team;
 use App\Models\User;
 use App\Support\ActivityTypeDuration;
+use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
 class AgreementDeliverableDisplay
 {
-    public static function buildGroupedProgress(Agreement $agreement): Collection
-    {
+    public static function buildGroupedProgress(
+        Agreement $agreement,
+        ?Carbon $from = null,
+        ?Carbon $to = null
+    ): Collection {
         $teamLookup = $agreement->teams->keyBy(fn (Team $team) => (int) $team->id);
         $agreementTeamIds = $teamLookup->keys();
         $agreementMemberUserIds = self::buildAgreementMemberUserIds($agreement);
@@ -24,7 +29,10 @@ class AgreementDeliverableDisplay
                 $deliverable,
                 $teamLookup,
                 $agreementTeamIds,
-                $agreementMemberUserIds
+                $agreementMemberUserIds,
+                $agreement,
+                $from,
+                $to
             ))
             ->values();
 
@@ -50,7 +58,8 @@ class AgreementDeliverableDisplay
                     $deliverable,
                     $teamLookup,
                     $agreementTeamIds,
-                    $agreementMemberUserIds
+                    $agreementMemberUserIds,
+                    $agreement
                 );
 
                 return self::focusProgressOnUser($progress, $userId);
@@ -180,10 +189,14 @@ class AgreementDeliverableDisplay
         AgreementDeliverable $deliverable,
         Collection $teamLookup,
         Collection $agreementTeamIds,
-        Collection $agreementMemberUserIds
+        Collection $agreementMemberUserIds,
+        Agreement $agreement,
+        ?Carbon $from = null,
+        ?Carbon $to = null
     ): array {
         $contributions = $deliverable->contributions
             ->where('cancelled', false)
+            ->filter(fn (DeliverableContribution $contribution) => self::contributionIsInWindow($contribution, $from, $to))
             ->values();
         $target = (float) ($deliverable->target_quantity ?? 0);
         $isTime = $deliverable->metric_type === 'time';
@@ -218,6 +231,10 @@ class AgreementDeliverableDisplay
         );
         $contributorByUserId = $contributorSummaries->keyBy('user_id');
 
+        $status = $isIndividual
+            ? null
+            : self::statusForAssignment($deliverable, $agreement, $completedValue, $contributions, $from, $to);
+
         $pastContributions = self::buildPastAssignees(
             $deliverable,
             $currentlyAssignedUserIds,
@@ -249,11 +266,29 @@ class AgreementDeliverableDisplay
                 ))
                 ->values();
 
-            $individualProgress = $assignedUsers->map(function (User $user) use ($contributorByUserId, $target) {
+            $individualProgress = $assignedUsers->map(function (User $user) use (
+                $contributorByUserId,
+                $target,
+                $deliverable,
+                $agreement,
+                $contributions,
+                $from,
+                $to
+            ) {
                 $summary = $contributorByUserId->get((int) $user->id);
                 $completed = (float) ($summary['completed_value'] ?? 0);
+                $userContributions = $contributions
+                    ->where('contributor_user_id', (int) $user->id)
+                    ->values();
 
-                return self::memberRow($user, $summary, $completed, $target);
+                return self::memberRow(
+                    $user,
+                    $summary,
+                    $completed,
+                    $target,
+                    true,
+                    self::statusForAssignment($deliverable, $agreement, $completed, $userContributions, $from, $to)
+                );
             })->values();
 
             $pastIndividualProgress = self::buildPastAssignees(
@@ -262,7 +297,11 @@ class AgreementDeliverableDisplay
                 $contributorByUserId,
                 $teamLookup,
                 $target,
-                true
+                true,
+                $agreement,
+                $contributions,
+                $from,
+                $to
             );
         }
 
@@ -297,6 +336,7 @@ class AgreementDeliverableDisplay
             'has_target' => $target > 0,
             'completed_value' => $completedValue,
             'percent' => $target > 0 ? min(100, ($completedValue / $target) * 100) : 0,
+            'status' => $status,
             'unit_label' => $unitLabel,
             'metric_summary' => implode(' · ', $metricParts),
             'is_individual' => $isIndividual,
@@ -469,7 +509,8 @@ class AgreementDeliverableDisplay
         ?array $summary,
         float $completed,
         float $target,
-        bool $isLive = true
+        bool $isLive = true,
+        ?DeliverableStatus $status = null
     ): array {
         return [
             'user' => $user,
@@ -479,6 +520,7 @@ class AgreementDeliverableDisplay
             'has_target' => $target > 0,
             'percent' => $target > 0 ? min(100, ($completed / $target) * 100) : 0,
             'is_currently_assigned' => $isLive,
+            'status' => $status,
         ];
     }
 
@@ -534,7 +576,11 @@ class AgreementDeliverableDisplay
         Collection $contributorByUserId,
         Collection $teamLookup,
         float $target,
-        bool $asIndividualRows
+        bool $asIndividualRows,
+        ?Agreement $agreement = null,
+        ?Collection $contributions = null,
+        ?Carbon $from = null,
+        ?Carbon $to = null
     ): Collection {
         $candidateUserIds = $deliverable->users
             ->pluck('id')
@@ -550,7 +596,11 @@ class AgreementDeliverableDisplay
                 $contributorByUserId,
                 $teamLookup,
                 $target,
-                $asIndividualRows
+                $asIndividualRows,
+                $agreement,
+                $contributions,
+                $from,
+                $to
             ) {
                 $assignedUser = $deliverable->users->firstWhere('id', $userId);
                 $summary = $contributorByUserId->get($userId);
@@ -565,12 +615,19 @@ class AgreementDeliverableDisplay
                     ?? self::resolveFormerAssigneeTeamName($assignedUser, $teamLookup);
 
                 if ($asIndividualRows) {
+                    $userContributions = $contributions
+                        ? $contributions->where('contributor_user_id', $userId)->values()
+                        : collect();
+
                     return self::memberRow(
                         $user,
                         array_merge($summary ?? [], ['team_name' => $teamName]),
                         $completed,
                         $target,
-                        false
+                        false,
+                        $agreement
+                            ? self::statusForAssignment($deliverable, $agreement, $completed, $userContributions, $from, $to)
+                            : null
                     );
                 }
 
@@ -737,5 +794,122 @@ class AgreementDeliverableDisplay
         }
 
         return null;
+    }
+
+    private static function contributionIsInWindow(
+        DeliverableContribution $contribution,
+        ?Carbon $from,
+        ?Carbon $to
+    ): bool {
+        if ($from === null && $to === null) {
+            return true;
+        }
+
+        $activityDate = $contribution->activityHistory?->activity_date;
+        if (!$activityDate) {
+            return false;
+        }
+
+        $date = Carbon::parse($activityDate)->startOfDay();
+
+        if ($from && $date->lt($from->copy()->startOfDay())) {
+            return false;
+        }
+
+        if ($to && $date->gt($to->copy()->startOfDay())) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static function statusForAssignment(
+        AgreementDeliverable $deliverable,
+        Agreement $agreement,
+        float $completed,
+        Collection $contributions,
+        ?Carbon $from,
+        ?Carbon $to
+    ): ?DeliverableStatus {
+        $target = (float) ($deliverable->target_quantity ?? 0);
+        if ($target <= 0) {
+            return null;
+        }
+
+        $agreementEnd = $agreement->extension_end_date ?? $agreement->end_date;
+        if (!$agreement->start_date || !$agreementEnd) {
+            return DeliverableStatus::NotApplicable;
+        }
+
+        $today = now()->toDateString();
+        if ($agreement->start_date->toDateString() > $today) {
+            return DeliverableStatus::NotApplicable;
+        }
+
+        if ($deliverable->metric_type === 'completion' && $target == 1) {
+            if ($completed >= 1) {
+                return DeliverableStatus::Complete;
+            }
+
+            if ($contributions->contains(fn (DeliverableContribution $contribution) => $contribution->not_yet_complete)) {
+                return DeliverableStatus::ProgressMade;
+            }
+
+            return DeliverableStatus::NoProgressMade;
+        }
+
+        $expected = self::expectedQuantity($deliverable, $agreement, $from, $to);
+        if ($completed >= $expected) {
+            return DeliverableStatus::OnTrack;
+        }
+
+        if ($completed >= 0.5 * $expected) {
+            return DeliverableStatus::NeedsAttention;
+        }
+
+        return DeliverableStatus::OffTrack;
+    }
+
+    private static function expectedQuantity(
+        AgreementDeliverable $deliverable,
+        Agreement $agreement,
+        ?Carbon $from,
+        ?Carbon $to
+    ): float {
+        $target = (float) ($deliverable->target_quantity ?? 0);
+        $agreementStart = $agreement->start_date->copy()->startOfDay();
+        $agreementEnd = ($agreement->extension_end_date ?? $agreement->end_date)->copy()->startOfDay();
+        $durationDays = self::inclusiveDayCount($agreementStart, $agreementEnd);
+        if ($durationDays <= 0) {
+            return 0;
+        }
+
+        $windowStart = $from?->copy()->startOfDay() ?? $agreementStart;
+        $windowEnd = $to?->copy()->startOfDay() ?? $agreementEnd;
+        $clipStart = $windowStart->greaterThan($agreementStart) ? $windowStart : $agreementStart;
+        $clipEnd = $windowEnd->lessThan($agreementEnd) ? $windowEnd : $agreementEnd;
+        $today = now()->startOfDay();
+        $elapsedEnd = $today->lessThan($clipEnd) ? $today : $clipEnd;
+
+        $overlapDays = $elapsedEnd->lt($clipStart)
+            ? 0
+            : self::inclusiveDayCount($clipStart, $elapsedEnd);
+
+        $raw = $target * ($overlapDays / $durationDays);
+        $decimals = $deliverable->metric_type === 'time' ? 1 : 0;
+
+        return round($raw, $decimals);
+    }
+
+    private static function inclusiveDayCount(Carbon $start, Carbon $end): int
+    {
+        $start = $start->copy()->startOfDay();
+        $end = $end->copy()->startOfDay();
+
+        if ($end->lt($start)) {
+            return 0;
+        }
+
+        return (int) $start->diffInDays($end) + 1;
     }
 }

@@ -29,6 +29,7 @@ class Activity extends Model
         'allotted_duration_days',
         'internal_only',
         'cancelled',
+        'not_yet_complete',
     ];
 
     protected function casts(): array
@@ -40,6 +41,7 @@ class Activity extends Model
             'allotted_duration_days' => 'decimal:1',
             'internal_only' => 'boolean',
             'cancelled' => 'boolean',
+            'not_yet_complete' => 'boolean',
         ];
     }
 

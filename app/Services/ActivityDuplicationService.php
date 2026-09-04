@@ -37,6 +37,7 @@ class ActivityDuplicationService
                 'allotted_duration_days' => $source->allotted_duration_days,
                 'internal_only' => $source->internal_only,
                 'cancelled' => $source->cancelled,
+                'not_yet_complete' => $source->not_yet_complete,
             ]);
 
             $copy->agreements()->sync($source->agreements->pluck('id')->all());

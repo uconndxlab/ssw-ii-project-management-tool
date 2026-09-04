@@ -12,6 +12,50 @@
 @if($deliverableGroups->isEmpty())
     <p class="text-muted small mb-0">No deliverables defined for this agreement.</p>
 @else
+    <form method="GET" action="{{ route('agreements.show', $agreement) }}" class="mb-3">
+        <div class="d-flex flex-wrap align-items-end gap-3">
+            <div>
+                <label for="deliverable-from" class="form-label small mb-1">From</label>
+                <input type="date"
+                       class="form-control form-control-sm"
+                       id="deliverable-from"
+                       name="from"
+                       value="{{ $deliverableFrom?->format('Y-m-d') }}">
+            </div>
+            <div>
+                <label for="deliverable-to" class="form-label small mb-1">To</label>
+                <input type="date"
+                       class="form-control form-control-sm"
+                       id="deliverable-to"
+                       name="to"
+                       value="{{ $deliverableTo?->format('Y-m-d') }}">
+                @if(!empty($usingExtendedEnd))
+                    <div class="form-text">Extended end</div>
+                @endif
+            </div>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-sm btn-outline-primary">Apply</button>
+                <a href="{{ route('agreements.show', $agreement) }}" class="btn btn-sm btn-outline-secondary">Reset</a>
+            </div>
+        </div>
+        <p class="form-text mb-0 mt-2">
+            Status is computed from the agreement start and end dates{{ $agreement->extension_end_date ? ' (extended end when set)' : '' }}.
+        </p>
+    </form>
+
+    @if(!empty($missingAgreementDates))
+        <div class="alert alert-warning alert-dismissible fade show py-2 small d-flex align-items-center" role="alert">
+            <span class="flex-grow-1 pe-2">No start and end dates set on the agreement. Deliverable statuses not computed.</span>
+            <button type="button" class="btn-close position-static p-0" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+    @if(!empty($startDateAfterToday))
+        <div class="alert alert-warning alert-dismissible fade show py-2 small d-flex align-items-center" role="alert">
+            <span class="flex-grow-1 pe-2">The current start date is after today. Status cannot be computed.</span>
+            <button type="button" class="btn-close position-static p-0" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
     @foreach($deliverableGroups as $familyGroup)
         <div class="mb-4 {{ !$loop->last ? 'pb-4 border-bottom' : '' }}">
             <h5 class="fw-semibold mb-3">{{ $familyGroup['contact_family_label'] }}</h5>
@@ -54,6 +98,7 @@
                                                     <span class="text-muted">/ {{ number_format($target, 1) }}</span>
                                                 @endif
                                                 <div class="text-muted">{{ $unitLabel }}</div>
+                                                <x-deliverable-status :status="$progress['status'] ?? null" class="mt-1" />
                                             @endif
                                         </div>
                                     </div>
@@ -96,12 +141,15 @@
                                                     $userHasTarget = $individual['has_target'];
                                                 @endphp
                                                 <div class="mb-3">
-                                                    <div class="d-flex justify-content-between align-items-center gap-2 small mb-1">
+                                                    <div class="d-flex justify-content-between align-items-start gap-2 small mb-1">
                                                         <span>
                                                             <x-user-link :user="$individual['user']" :label="$renderContributorLabel($individual)" class="fw-semibold" />
                                                         </span>
-                                                        <span class="text-muted text-nowrap">
-                                                            {{ number_format($userCompleted, 1) }}@if($userHasTarget) / {{ number_format($userTarget, 1) }}@endif {{ strtolower($unitLabel) }}
+                                                        <span class="text-end text-nowrap">
+                                                            <span class="text-muted">
+                                                                {{ number_format($userCompleted, 1) }}@if($userHasTarget) / {{ number_format($userTarget, 1) }}@endif {{ strtolower($unitLabel) }}
+                                                            </span>
+                                                            <x-deliverable-status :status="$individual['status'] ?? null" class="mt-1" />
                                                         </span>
                                                     </div>
                                                     @if($userHasTarget)
@@ -133,10 +181,13 @@
                                                     $userHasTarget = $individual['has_target'];
                                                 @endphp
                                                 <div class="mb-3">
-                                                    <div class="d-flex justify-content-between align-items-center gap-2 small mb-1">
+                                                    <div class="d-flex justify-content-between align-items-start gap-2 small mb-1">
                                                         <span class="text-muted">{{ $renderContributorLabel($individual) }}</span>
-                                                        <span class="text-muted text-nowrap">
-                                                            {{ number_format($userCompleted, 1) }}@if($userHasTarget) / {{ number_format($userTarget, 1) }}@endif {{ strtolower($unitLabel) }}
+                                                        <span class="text-end text-nowrap">
+                                                            <span class="text-muted">
+                                                                {{ number_format($userCompleted, 1) }}@if($userHasTarget) / {{ number_format($userTarget, 1) }}@endif {{ strtolower($unitLabel) }}
+                                                            </span>
+                                                            <x-deliverable-status :status="$individual['status'] ?? null" class="mt-1" />
                                                         </span>
                                                     </div>
                                                     @if($userHasTarget)

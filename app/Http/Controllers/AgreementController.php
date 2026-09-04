@@ -26,6 +26,7 @@ use App\Support\AgreementDeliverableDisplay;
 use App\Support\DeliverableHistoryScope;
 use App\Support\Authorization\ScopeSync;
 use App\Support\ProjectProgramScope;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
@@ -222,7 +223,7 @@ class AgreementController extends Controller
             ->with('success', 'Agreement created. You can now add deliverables below.');
     }
 
-    public function show(Agreement $agreement)
+    public function show(Request $request, Agreement $agreement)
     {
         $this->authorize('view', $agreement);
 
@@ -269,7 +270,16 @@ class AgreementController extends Controller
                 ->count(),
         ];
 
-        $deliverableGroups = AgreementDeliverableDisplay::buildGroupedProgress($agreement);
+        [$deliverableFrom, $deliverableTo] = $this->deliverableWindow($request, $agreement);
+        $deliverableGroups = AgreementDeliverableDisplay::buildGroupedProgress(
+            $agreement,
+            $deliverableFrom,
+            $deliverableTo
+        );
+        $effectiveEnd = $agreement->extension_end_date ?? $agreement->end_date;
+        $usingExtendedEnd = $agreement->extension_end_date
+            && $deliverableTo
+            && $deliverableTo->toDateString() === $agreement->extension_end_date->toDateString();
 
         return view('agreements.show', compact(
             'agreement',
@@ -277,8 +287,15 @@ class AgreementController extends Controller
             'programs',
             'lifetimeTotals',
             'ytdTotals',
-            'deliverableGroups'
-        ));
+            'deliverableGroups',
+            'deliverableFrom',
+            'deliverableTo',
+            'usingExtendedEnd',
+        ) + [
+            'missingAgreementDates' => !$agreement->start_date || !$effectiveEnd,
+            'startDateAfterToday' => $agreement->start_date
+                && $agreement->start_date->toDateString() > now()->toDateString(),
+        ]);
     }
 
     public function edit(Agreement $agreement)
@@ -978,5 +995,40 @@ class AgreementController extends Controller
             $attachment->filename,
             $attachment->mime_type
         );
+    }
+
+    /**
+     * @return array{0: ?Carbon, 1: ?Carbon}
+     */
+    private function deliverableWindow(Request $request, Agreement $agreement): array
+    {
+        $filterSubmitted = $request->query->has('from') || $request->query->has('to');
+
+        if ($filterSubmitted) {
+            return [
+                $this->parseQueryDate($request->query('from')),
+                $this->parseQueryDate($request->query('to')),
+            ];
+        }
+
+        $end = $agreement->extension_end_date ?? $agreement->end_date;
+
+        return [
+            $agreement->start_date?->copy()->startOfDay(),
+            $end?->copy()->startOfDay(),
+        ];
+    }
+
+    private function parseQueryDate(mixed $value): ?Carbon
+    {
+        if (! is_string($value) || ! filled($value)) {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value)->startOfDay();
+        } catch (\Throwable) {
+            return null;
+        }
     }
 }

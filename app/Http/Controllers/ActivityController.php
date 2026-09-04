@@ -297,6 +297,7 @@ class ActivityController extends Controller
             'activity_type_id' => ['required', 'exists:activity_types,id'],
             'internal_only' => ['nullable', 'boolean'],
             'cancelled' => ['nullable', 'boolean'],
+            'not_yet_complete' => ['nullable', 'boolean'],
             'agreement_logging_values' => ['nullable', 'array'],
             'funding_sources' => ['nullable', 'array'],
             'contact_family_logging_values' => ['nullable', 'array'],
@@ -365,6 +366,7 @@ class ActivityController extends Controller
                 'completion_count' => (int) $validated['completion_count'],
                 'internal_only' => $validated['internal_only'] ?? false,
                 'cancelled' => $validated['cancelled'] ?? false,
+                'not_yet_complete' => $validated['not_yet_complete'] ?? false,
             ]);
 
             $this->syncActivityDurationSnapshot($activity, $activityType, true);
@@ -496,6 +498,7 @@ class ActivityController extends Controller
             'activity_type_id' => ['required', 'exists:activity_types,id'],
             'internal_only' => ['nullable', 'boolean'],
             'cancelled' => ['nullable', 'boolean'],
+            'not_yet_complete' => ['nullable', 'boolean'],
             'agreement_logging_values' => ['nullable', 'array'],
             'funding_sources' => ['nullable', 'array'],
             'contact_family_logging_values' => ['nullable', 'array'],
@@ -567,6 +570,7 @@ class ActivityController extends Controller
                 'completion_count' => (int) $validated['completion_count'],
                 'internal_only' => $validated['internal_only'] ?? false,
                 'cancelled' => $validated['cancelled'] ?? false,
+                'not_yet_complete' => $validated['not_yet_complete'] ?? false,
             ]);
 
             $this->syncActivityDurationSnapshot($activity, $activityType, $activityTypeChanged);

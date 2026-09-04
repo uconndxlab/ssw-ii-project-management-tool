@@ -26,6 +26,7 @@ class DeliverableContribution extends Model
         'follow_up_hours',
         'rules_fingerprint',
         'cancelled',
+        'not_yet_complete',
     ];
 
     protected function casts(): array
@@ -38,6 +39,7 @@ class DeliverableContribution extends Model
             'prep_hours' => 'decimal:2',
             'follow_up_hours' => 'decimal:2',
             'cancelled' => 'boolean',
+            'not_yet_complete' => 'boolean',
         ];
     }
 

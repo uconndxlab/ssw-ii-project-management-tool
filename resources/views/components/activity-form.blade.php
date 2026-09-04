@@ -21,6 +21,7 @@
     'engagementDateValue' => null,
     'internalOnlyChecked' => false,
     'cancelledChecked' => false,
+    'notYetCompleteChecked' => false,
     'completionCountValue' => 1,
     'allottedDurationHours' => null,
     'allottedDurationDays' => null,
@@ -511,6 +512,12 @@
                                 label="Cancelled"
                                 help="Keep in history, but exclude from deliverable progress."
                                 :checked="$cancelledChecked"
+                            />
+                            <x-form-switch
+                                name="not_yet_complete"
+                                label="Not yet complete"
+                                help="Keep in history, count time, and mark as moving forward; but exclude from deliverable progress."
+                                :checked="$notYetCompleteChecked"
                                 class="mb-0"
                             />
                         </x-form-options>

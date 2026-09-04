@@ -25,6 +25,7 @@ class AgreementActivityHistory extends Model
         'program_ids_snapshot',
         'team_ids_snapshot',
         'cancelled',
+        'not_yet_complete',
     ];
 
     protected function casts(): array
@@ -40,6 +41,7 @@ class AgreementActivityHistory extends Model
             'program_ids_snapshot' => 'array',
             'team_ids_snapshot' => 'array',
             'cancelled' => 'boolean',
+            'not_yet_complete' => 'boolean',
         ];
     }
 

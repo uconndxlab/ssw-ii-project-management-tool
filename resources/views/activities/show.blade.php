@@ -21,6 +21,8 @@
                 @endif
                 @if($activity->cancelled)
                     <x-status-badge :active="false" inactive-label="Cancelled" />
+                @elseif($activity->not_yet_complete)
+                    <span class="badge bg-info">Not yet complete</span>
                 @endif
             </x-slot:badges>
             @if($canViewActionLog || $canManageActivity)
@@ -50,6 +52,10 @@
                 @if($activity->cancelled)
                     <div class="alert alert-warning py-2">
                         This activity is marked cancelled. It remains visible in history and reports, but it does not count toward deliverable progress.
+                    </div>
+                @elseif($activity->not_yet_complete)
+                    <div class="alert alert-info py-2">
+                        This activity is marked not yet complete. Time still counts toward deliverable progress; completions do not.
                     </div>
                 @endif
 
@@ -312,6 +318,20 @@
                         @if($activity->cancelled)
                             <x-status-badge :active="false" inactive-label="Cancelled" />
                             <span class="text-muted small ms-2">Visible historically, excluded from deliverable progress.</span>
+                        @else
+                            <span class="text-muted">No</span>
+                        @endif
+                    </div>
+                </div>
+
+                <div class="row mb-2">
+                    <div class="col-md-4">
+                        <strong>Not yet complete:</strong>
+                    </div>
+                    <div class="col-md-8">
+                        @if($activity->not_yet_complete)
+                            <span class="badge bg-info">Yes</span>
+                            <span class="text-muted small ms-2">Time counts; completions are excluded from deliverable progress.</span>
                         @else
                             <span class="text-muted">No</span>
                         @endif

@@ -55,6 +55,7 @@
     $engagementDateValue = old('engagement_date', $activity->engagement_date?->format('Y-m-d'));
     $internalOnlyChecked = (bool) old('internal_only', $activity->internal_only);
     $cancelledChecked = (bool) old('cancelled', $activity->cancelled);
+    $notYetCompleteChecked = (bool) old('not_yet_complete', $activity->not_yet_complete);
     $completionCountValue = (int) old('completion_count', $activity->completion_count ?? 1);
     $allottedDurationHours = old('allotted_duration_hours', $activity->allotted_duration_hours);
     $allottedDurationDays = old('allotted_duration_days', $activity->allotted_duration_days);
@@ -84,6 +85,7 @@
     :engagement-date-value="$engagementDateValue"
     :internal-only-checked="$internalOnlyChecked"
     :cancelled-checked="$cancelledChecked"
+    :not-yet-complete-checked="$notYetCompleteChecked"
     :completion-count-value="$completionCountValue"
     :allotted-duration-hours="$allottedDurationHours"
     :allotted-duration-days="$allottedDurationDays"

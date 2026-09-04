@@ -323,6 +323,7 @@ class DeliverableContributionService
             'program_ids_snapshot' => $programIds,
             'team_ids_snapshot' => $teamIdsSnapshot,
             'cancelled' => (bool) $activity->cancelled,
+            'not_yet_complete' => (bool) $activity->not_yet_complete,
             'created_at' => now(),
             'updated_at' => now(),
         ];
@@ -418,7 +419,7 @@ class DeliverableContributionService
                     'contribution_kind' => 'completion',
                     'source_assignment_type' => 'contact',
                     'counted_attribution_basis' => 'contact',
-                    'credited_units' => (float) ($history->completion_units ?? 0),
+                    'credited_units' => $this->creditedCompletionUnits($history),
                     'credited_hours' => null,
                     'credited_allotted_hours' => null,
                     'credited_allotted_days' => null,
@@ -426,6 +427,7 @@ class DeliverableContributionService
                     'follow_up_hours' => 0,
                     'rules_fingerprint' => $fingerprint,
                     'cancelled' => (bool) $history->cancelled,
+                    'not_yet_complete' => (bool) $history->not_yet_complete,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ];
@@ -456,6 +458,7 @@ class DeliverableContributionService
                     'follow_up_hours' => 0,
                     'rules_fingerprint' => $fingerprint,
                     'cancelled' => (bool) $history->cancelled,
+                    'not_yet_complete' => (bool) $history->not_yet_complete,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ];
@@ -486,6 +489,7 @@ class DeliverableContributionService
                 'follow_up_hours' => $includeAdditional ? (float) $history->follow_up_hours : 0,
                 'rules_fingerprint' => $fingerprint,
                 'cancelled' => (bool) $history->cancelled,
+                'not_yet_complete' => (bool) $history->not_yet_complete,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
@@ -556,7 +560,7 @@ class DeliverableContributionService
                     'contribution_kind' => 'completion',
                     'source_assignment_type' => $sourceAssignmentType,
                     'counted_attribution_basis' => 'user',
-                    'credited_units' => (float) ($history->completion_units ?? 0),
+                    'credited_units' => $this->creditedCompletionUnits($history),
                     'credited_hours' => null,
                     'credited_allotted_hours' => null,
                     'credited_allotted_days' => null,
@@ -564,6 +568,7 @@ class DeliverableContributionService
                     'follow_up_hours' => 0,
                     'rules_fingerprint' => $fingerprint,
                     'cancelled' => (bool) $history->cancelled,
+                    'not_yet_complete' => (bool) $history->not_yet_complete,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ];
@@ -587,6 +592,7 @@ class DeliverableContributionService
                     'follow_up_hours' => 0,
                     'rules_fingerprint' => $fingerprint,
                     'cancelled' => (bool) $history->cancelled,
+                    'not_yet_complete' => (bool) $history->not_yet_complete,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ];
@@ -610,10 +616,20 @@ class DeliverableContributionService
                 'follow_up_hours' => $includeAdditional ? (float) $history->follow_up_hours : 0,
                 'rules_fingerprint' => $fingerprint,
                 'cancelled' => (bool) $history->cancelled,
+                'not_yet_complete' => (bool) $history->not_yet_complete,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
         })->all();
+    }
+
+    private function creditedCompletionUnits(AgreementActivityHistory $history): float
+    {
+        if ($history->not_yet_complete) {
+            return 0;
+        }
+
+        return (float) ($history->completion_units ?? 0);
     }
 
     private function resolveUserHistoryMatch(
