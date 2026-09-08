@@ -403,8 +403,7 @@ class LoggingFieldController extends Controller
             $request->input('program_ids', []),
         );
 
-        return redirect()->route('logging-fields.index')
-            ->with('success', 'Logging field updated successfully.');
+        return $this->redirectAfterSave($loggingField, 'Logging field updated successfully.');
     }
 
     private function optionPayloadForFieldType(string $fieldType, mixed $optionRows, ?string $fallbackJson): ?array

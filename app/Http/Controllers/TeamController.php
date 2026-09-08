@@ -277,9 +277,7 @@ class TeamController extends Controller
             $validated['program_ids'] ?? [],
         );
 
-        return redirect()
-            ->route('teams.index')
-            ->with('success', 'Team updated successfully.');
+        return $this->redirectAfterSave($team, 'Team updated successfully.');
     }
 
     public function destroy(Team $team)

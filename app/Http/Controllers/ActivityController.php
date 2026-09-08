@@ -589,9 +589,7 @@ class ActivityController extends Controller
             $this->activityActionLogService->record($activity, ActivityAction::Update);
         });
 
-        return redirect()
-            ->route('activities.index')
-            ->with('success', 'Activity updated successfully.');
+        return $this->redirectAfterSave($activity, 'Activity updated successfully.');
     }
 
     public function duplicate(Activity $activity)

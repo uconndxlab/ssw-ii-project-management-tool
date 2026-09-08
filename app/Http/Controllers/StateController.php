@@ -119,9 +119,7 @@ class StateController extends Controller
 
         $state->update($validated);
 
-        return redirect()
-            ->route('states.index')
-            ->with('success', 'State updated successfully.');
+        return $this->redirectAfterSave($state, 'State updated successfully.');
     }
 
     public function destroy(State $state)

@@ -276,9 +276,7 @@ class ContactFamilyController extends Controller
         }
         $contactFamily->contactFamilyLoggingFields()->sync($syncData);
 
-        return redirect()
-            ->route('contact-families.index')
-            ->with('success', 'Activity family updated successfully.');
+        return $this->redirectAfterSave($contactFamily, 'Activity family updated successfully.');
     }
 
     public function destroy(ContactFamily $contactFamily)

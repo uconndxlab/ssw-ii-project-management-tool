@@ -263,9 +263,7 @@ class AdminUserController extends Controller
 
         $this->syncPrivileges($user, $validated, $request);
 
-        return redirect()
-            ->route('admin.users.index')
-            ->with('success', 'User updated successfully.');
+        return $this->redirectAfterSave($user, 'User updated successfully.');
     }
 
     public function show(User $user)

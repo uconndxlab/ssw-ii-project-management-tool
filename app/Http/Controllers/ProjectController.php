@@ -131,9 +131,7 @@ class ProjectController extends Controller
 
         $project->update($validated);
 
-        return redirect()
-            ->route('projects.index')
-            ->with('success', 'Project updated successfully.');
+        return $this->redirectAfterSave($project, 'Project updated successfully.');
     }
 
     public function destroy(Project $project)

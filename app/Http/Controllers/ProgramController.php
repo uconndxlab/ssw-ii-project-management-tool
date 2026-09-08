@@ -183,9 +183,7 @@ class ProgramController extends Controller
 
         $program->projects()->sync($projectIds);
 
-        return redirect()
-            ->route('programs.index')
-            ->with('success', 'Program updated successfully.');
+        return $this->redirectAfterSave($program, 'Program updated successfully.');
     }
 
     public function destroy(Program $program)

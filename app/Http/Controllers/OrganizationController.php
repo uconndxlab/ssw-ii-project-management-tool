@@ -225,9 +225,7 @@ class OrganizationController extends Controller
         );
         $organization->users()->sync($validated['user_ids'] ?? []);
 
-        return redirect()
-            ->route('organizations.index')
-            ->with('success', 'Organization updated successfully.');
+        return $this->redirectAfterSave($organization, 'Organization updated successfully.');
     }
 
     public function destroy(Organization $organization)

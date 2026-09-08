@@ -346,9 +346,7 @@ class AgreementController extends Controller
 
         $this->syncAgreementAttachments($agreement, $request);
 
-        return redirect()
-            ->route('agreements.index')
-            ->with('success', 'Agreement updated successfully.');
+        return $this->redirectAfterSave($agreement, 'Agreement updated successfully.');
     }
 
     private function syncAgreementAttachments(Agreement $agreement, Request $request): void

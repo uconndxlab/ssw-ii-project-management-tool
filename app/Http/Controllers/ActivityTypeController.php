@@ -286,9 +286,7 @@ class ActivityTypeController extends Controller
         }
         $activityType->activityTypeLoggingFields()->sync($syncData);
 
-        return redirect()
-            ->route('activity-types.index')
-            ->with('success', 'Activity type updated successfully.');
+        return $this->redirectAfterSave($activityType, 'Activity type updated successfully.');
     }
 
     public function destroy(ActivityType $activityType)
