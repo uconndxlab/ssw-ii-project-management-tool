@@ -116,8 +116,12 @@ class AgreementRequest extends FormRequest
             'deliverables.*.notes' => ['nullable', 'string', 'max:5000'],
             'deliverables.*.user_ids' => ['nullable', 'array'],
             'deliverables.*.user_ids.*' => ['exists:users,id'],
+            'deliverables.*.user_assigned_at' => ['nullable', 'array'],
+            'deliverables.*.user_assigned_at.*' => ['nullable', 'date'],
             'deliverables.*.team_ids' => ['nullable', 'array'],
             'deliverables.*.team_ids.*' => ['exists:teams,id'],
+            'deliverables.*.team_assigned_at' => ['nullable', 'array'],
+            'deliverables.*.team_assigned_at.*' => ['nullable', 'date'],
             'deliverables.*._delete' => ['nullable', 'boolean'],
 
             'attachments' => ['nullable', 'array'],

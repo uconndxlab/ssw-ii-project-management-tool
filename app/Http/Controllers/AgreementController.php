@@ -746,13 +746,20 @@ class AgreementController extends Controller
                 $sourceTeamId = $teamMatches->first()['team_id'] ?? null;
             }
 
+            $existingUser = $existingUsersById->get($userId);
+            $submittedUserAssignedAt = $row['user_assigned_at'] ?? [];
             $attributes = [
-                'assigned_at' => $existingUsersById->get($userId)?->pivot->assigned_at ?? ($isNewDeliverable ? null : now()),
+                'assigned_at' => $this->resolveDeliverableAssignmentTimestamp(
+                    $existingUser !== null,
+                    $existingUser?->pivot->assigned_at,
+                    $submittedUserAssignedAt[$userId] ?? $submittedUserAssignedAt[(string) $userId] ?? null,
+                    $isNewDeliverable
+                ),
                 'unassigned_at' => null,
                 'source_team_id' => $sourceTeamId,
             ];
 
-            if ($existingUsersById->has($userId)) {
+            if ($existingUser) {
                 $deliverable->users()->updateExistingPivot($userId, $attributes);
             } else {
                 $deliverable->users()->attach($userId, $attributes);
@@ -768,12 +775,19 @@ class AgreementController extends Controller
         }
 
         foreach ($teamIds as $teamId) {
+            $existingTeam = $existingTeamsById->get($teamId);
+            $submittedTeamAssignedAt = $row['team_assigned_at'] ?? [];
             $attributes = [
-                'assigned_at' => $existingTeamsById->get($teamId)?->pivot->assigned_at ?? ($isNewDeliverable ? null : now()),
+                'assigned_at' => $this->resolveDeliverableAssignmentTimestamp(
+                    $existingTeam !== null,
+                    $existingTeam?->pivot->assigned_at,
+                    $submittedTeamAssignedAt[$teamId] ?? $submittedTeamAssignedAt[(string) $teamId] ?? null,
+                    $isNewDeliverable
+                ),
                 'unassigned_at' => null,
             ];
 
-            if ($existingTeamsById->has($teamId)) {
+            if ($existingTeam) {
                 $deliverable->teams()->updateExistingPivot($teamId, $attributes);
             } else {
                 $deliverable->teams()->attach($teamId, $attributes);
@@ -787,6 +801,23 @@ class AgreementController extends Controller
                 'unassigned_at' => $team->pivot->unassigned_at ?? now(),
             ]);
         }
+    }
+
+    private function resolveDeliverableAssignmentTimestamp(
+        bool $alreadyAssigned,
+        mixed $existingAssignedAt,
+        mixed $submittedAssignedAt,
+        bool $isNewDeliverable
+    ): mixed {
+        if ($alreadyAssigned) {
+            return $existingAssignedAt;
+        }
+
+        if ($submittedAssignedAt !== null && $submittedAssignedAt !== '') {
+            return $submittedAssignedAt;
+        }
+
+        return $isNewDeliverable ? null : now();
     }
 
     private function retireOrDeleteDeliverable(AgreementDeliverable $deliverable, $histories = null): void

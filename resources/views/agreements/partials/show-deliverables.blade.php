@@ -1,7 +1,7 @@
 @php
-    $renderContributorLabel = function (array $row): string {
+    $renderContributorLabel = function (array $row, bool $includeTeam = true): string {
         $label = $row['user']->name;
-        if (!empty($row['team_name'])) {
+        if ($includeTeam && !empty($row['team_name'])) {
             $label .= ' from ' . $row['team_name'];
         }
 
@@ -143,7 +143,7 @@
                                                 <div class="mb-3">
                                                     <div class="d-flex justify-content-between align-items-start gap-2 small mb-1">
                                                         <span>
-                                                            <x-user-link :user="$individual['user']" :label="$renderContributorLabel($individual)" class="fw-semibold" />
+                                                            <x-user-link :user="$individual['user']" :label="$renderContributorLabel($individual, false)" class="fw-semibold" />
                                                         </span>
                                                         <span class="text-end text-nowrap">
                                                             <span class="text-muted">
@@ -182,7 +182,7 @@
                                                 @endphp
                                                 <div class="mb-3">
                                                     <div class="d-flex justify-content-between align-items-start gap-2 small mb-1">
-                                                        <span class="text-muted">{{ $renderContributorLabel($individual) }}</span>
+                                                        <span class="text-muted">{{ $renderContributorLabel($individual, false) }}</span>
                                                         <span class="text-end text-nowrap">
                                                             <span class="text-muted">
                                                                 {{ number_format($userCompleted, 1) }}@if($userHasTarget) / {{ number_format($userTarget, 1) }}@endif {{ strtolower($unitLabel) }}

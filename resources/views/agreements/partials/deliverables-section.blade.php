@@ -154,6 +154,12 @@
             'notes' => $row['notes'] ?? '',
             'user_ids' => collect($row['user_ids'] ?? [])->map(fn ($id) => (int) $id)->values()->all(),
             'team_ids' => collect($row['team_ids'] ?? [])->map(fn ($id) => (int) $id)->values()->all(),
+            'user_assigned_at' => collect($row['user_assigned_at'] ?? [])
+                ->mapWithKeys(fn ($value, $id) => [(string) $id => $value ?: ''])
+                ->all(),
+            'team_assigned_at' => collect($row['team_assigned_at'] ?? [])
+                ->mapWithKeys(fn ($value, $id) => [(string) $id => $value ?: ''])
+                ->all(),
             'classification_locked' => !empty($row['classification_locked']) || ($existingLockMap[(int) ($row['id'] ?? 0)] ?? false),
             'semantic_locked' => !empty($row['semantic_locked']) || ($existingLockMap[(int) ($row['id'] ?? 0)] ?? false),
         ];
@@ -190,6 +196,14 @@
                 'notes' => $deliverable->notes ?? '',
                 'user_ids' => $deliverable->users->filter(fn ($user) => !$user->pivot->unassigned_at)->pluck('id')->all(),
                 'team_ids' => $deliverable->teams->filter(fn ($team) => !$team->pivot->unassigned_at)->pluck('id')->all(),
+                'user_assigned_at' => $deliverable->users
+                    ->filter(fn ($user) => !$user->pivot->unassigned_at)
+                    ->mapWithKeys(fn ($user) => [(string) $user->id => $user->pivot->assigned_at ?? ''])
+                    ->all(),
+                'team_assigned_at' => $deliverable->teams
+                    ->filter(fn ($team) => !$team->pivot->unassigned_at)
+                    ->mapWithKeys(fn ($team) => [(string) $team->id => $team->pivot->assigned_at ?? ''])
+                    ->all(),
             ], 'existing-' . $deliverable->id);
             $deliverableRows[] = $enrichRow($row, $row['row_key']);
         }
@@ -214,6 +228,8 @@
         'notes' => '',
         'user_ids' => [],
         'team_ids' => [],
+        'user_assigned_at' => [],
+        'team_assigned_at' => [],
         'classification_locked' => false,
         'semantic_locked' => false,
     ];
@@ -296,6 +312,12 @@
                     @endforeach
                     @foreach($row['team_ids'] ?? [] as $teamId)
                         <input type="hidden" name="deliverables[{{ $rowKey }}][team_ids][]" value="{{ $teamId }}">
+                    @endforeach
+                    @foreach($row['user_assigned_at'] ?? [] as $userId => $assignedAt)
+                        <input type="hidden" name="deliverables[{{ $rowKey }}][user_assigned_at][{{ $userId }}]" value="{{ $assignedAt }}">
+                    @endforeach
+                    @foreach($row['team_assigned_at'] ?? [] as $teamId => $assignedAt)
+                        <input type="hidden" name="deliverables[{{ $rowKey }}][team_assigned_at][{{ $teamId }}]" value="{{ $assignedAt }}">
                     @endforeach
                 </div>
             @endforeach
@@ -1214,6 +1236,18 @@
             editorFieldset.querySelector('[data-deliverable-target-locked]')?.toggleAttribute('required', semanticLocked);
         }
 
+        function pickAssignmentDates(existingMap, ids) {
+            const next = {};
+            const source = existingMap || {};
+            (ids || []).forEach(function (id) {
+                const value = source[id] ?? source[String(id)];
+                if (value != null && value !== '') {
+                    next[String(id)] = value;
+                }
+            });
+            return next;
+        }
+
         function collectEditorData() {
             const fieldPrefix = 'deliverable_editor';
             const basis = editorFieldset.querySelector('[data-deliverable-basis]:checked')?.value || '';
@@ -1248,6 +1282,11 @@
                 notes: fieldValue('[data-deliverable-notes]', ''),
                 user_ids: basis === 'user' ? assignment.user_ids : [],
                 team_ids: basis === 'user' && editorFieldset.querySelector('[data-deliverable-grouping]:checked')?.value === 'joint' ? assignment.team_ids : [],
+                user_assigned_at: pickAssignmentDates(rowStore[currentKey]?.user_assigned_at, basis === 'user' ? assignment.user_ids : []),
+                team_assigned_at: pickAssignmentDates(
+                    rowStore[currentKey]?.team_assigned_at,
+                    basis === 'user' && editorFieldset.querySelector('[data-deliverable-grouping]:checked')?.value === 'joint' ? assignment.team_ids : []
+                ),
                 classification_locked: !!rowStore[currentKey]?.classification_locked,
                 semantic_locked: !!rowStore[currentKey]?.semantic_locked,
             };
@@ -1351,6 +1390,17 @@
                     return input.value;
                 });
             }
+            function findKeyedMap(field) {
+                const prefix = 'deliverables[' + rowKey + '][' + field + ']';
+                const map = {};
+                hiddenRow.querySelectorAll('input[name^="' + prefix + '["]').forEach(function (input) {
+                    const match = input.name.match(/\[([^\]]+)\]$/);
+                    if (match) {
+                        map[match[1]] = input.value;
+                    }
+                });
+                return map;
+            }
 
             const stored = rowStore[rowKey] || {};
             return enrichRowData({
@@ -1372,6 +1422,8 @@
                 notes: findValue('notes'),
                 user_ids: findCheckedArray('user_ids'),
                 team_ids: findCheckedArray('team_ids'),
+                user_assigned_at: findKeyedMap('user_assigned_at'),
+                team_assigned_at: findKeyedMap('team_assigned_at'),
                 classification_locked: !!stored.classification_locked,
                 semantic_locked: !!stored.semantic_locked,
             });
@@ -1455,6 +1507,12 @@
             const teamInputs = (rowData.team_ids || []).map(function (id) {
                 return '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][team_ids][]" value="' + escapeHtml(id) + '">';
             }).join('');
+            const userAssignedInputs = Object.keys(rowData.user_assigned_at || {}).map(function (id) {
+                return '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][user_assigned_at][' + escapeHtml(id) + ']" value="' + escapeHtml(rowData.user_assigned_at[id] || '') + '">';
+            }).join('');
+            const teamAssignedInputs = Object.keys(rowData.team_assigned_at || {}).map(function (id) {
+                return '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][team_assigned_at][' + escapeHtml(id) + ']" value="' + escapeHtml(rowData.team_assigned_at[id] || '') + '">';
+            }).join('');
 
             return '<div data-deliverable-hidden-row="' + escapeHtml(rowKey) + '">' +
                 (rowData.id ? '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][id]" value="' + escapeHtml(rowData.id) + '">' : '') +
@@ -1472,7 +1530,7 @@
                 '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][suggested_due_date]" value="' + escapeHtml(rowData.suggested_due_date || '') + '">' +
                 '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][sort_order]" value="' + escapeHtml(rowData.sort_order || '0') + '">' +
                 '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][notes]" value="' + escapeHtml(rowData.notes || '') + '">' +
-                userInputs + teamInputs + '</div>';
+                userInputs + teamInputs + userAssignedInputs + teamAssignedInputs + '</div>';
         }
 
         function syncHiddenRow(rowKey, rowData) {

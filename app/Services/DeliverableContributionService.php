@@ -638,6 +638,12 @@ class DeliverableContributionService
         Collection $deliverableTeamsById
     ): ?string {
         $activityDate = CarbonImmutable::parse($history->activity_date)->startOfDay();
+        $contributor = $eligibleUsersById->get((int) $history->contributor_user_id);
+
+        if ($this->activityIsAfterUnassignment($activityDate, $contributor?->pivot?->unassigned_at)) {
+            return null;
+        }
+
         $historyTeamIds = collect($history->team_ids_snapshot ?? [])
             ->map(fn ($id) => (int) $id)
             ->values();
@@ -646,38 +652,27 @@ class DeliverableContributionService
             foreach ($historyTeamIds as $teamId) {
                 $team = $deliverableTeamsById->get($teamId);
 
-                if (!$team) {
+                if (!$team || $this->activityIsAfterUnassignment($activityDate, $team->pivot->unassigned_at)) {
                     continue;
                 }
 
-                $assignedAt = $team->pivot->assigned_at
-                    ? CarbonImmutable::parse($team->pivot->assigned_at)->startOfDay()
-                    : null;
-                $unassignedAt = $team->pivot->unassigned_at
-                    ? CarbonImmutable::parse($team->pivot->unassigned_at)->startOfDay()
-                    : null;
-
-                if ((!$assignedAt || !$activityDate->lt($assignedAt)) && (!$unassignedAt || !$activityDate->gt($unassignedAt))) {
-                    return 'team';
-                }
+                return 'team';
             }
         }
 
-        $user = $eligibleUsersById->get((int) $history->contributor_user_id);
-
-        if ($user) {
-            $assignedAt = $user->pivot->assigned_at
-                ? CarbonImmutable::parse($user->pivot->assigned_at)->startOfDay()
-                : null;
-            $unassignedAt = $user->pivot->unassigned_at
-                ? CarbonImmutable::parse($user->pivot->unassigned_at)->startOfDay()
-                : null;
-
-            if ((!$assignedAt || !$activityDate->lt($assignedAt)) && (!$unassignedAt || !$activityDate->gt($unassignedAt))) {
-                return $user->pivot->source_team_id ? 'team' : 'user';
-            }
+        if ($contributor) {
+            return $contributor->pivot->source_team_id ? 'team' : 'user';
         }
 
         return null;
+    }
+
+    private function activityIsAfterUnassignment(CarbonImmutable $activityDate, mixed $unassignedAt): bool
+    {
+        if (!$unassignedAt) {
+            return false;
+        }
+
+        return $activityDate->gt(CarbonImmutable::parse($unassignedAt)->startOfDay());
     }
 }
