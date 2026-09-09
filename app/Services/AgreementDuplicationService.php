@@ -183,6 +183,7 @@ class AgreementDuplicationService
             $newDeliverable->teams()->attach($team->id, [
                 'assigned_at' => null,
                 'unassigned_at' => null,
+                'target_quantity' => $team->pivot->target_quantity,
             ]);
         }
 
@@ -195,6 +196,7 @@ class AgreementDuplicationService
                 'assigned_at' => null,
                 'unassigned_at' => null,
                 'source_team_id' => $user->pivot->source_team_id,
+                'target_quantity' => $user->pivot->target_quantity,
             ]);
         }
     }

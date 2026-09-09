@@ -31,6 +31,18 @@
                 </div>
             @endif
 
+            @if(session('allocation_warnings') && count(session('allocation_warnings')) > 0)
+                <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                    <div class="fw-semibold mb-1">Deliverable allocation needs attention</div>
+                    <ul class="mb-0 small">
+                        @foreach(session('allocation_warnings') as $warning)
+                            <li>{{ $warning }}</li>
+                        @endforeach
+                    </ul>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            @endif
+
             @if(session('error'))
                 <div class="alert alert-danger alert-dismissible fade show" role="alert">
                     {{ session('error') }}

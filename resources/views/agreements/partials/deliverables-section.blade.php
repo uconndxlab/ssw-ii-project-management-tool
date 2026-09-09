@@ -55,6 +55,8 @@
         $groups = [];
         $groupedUserIds = collect();
         $isJoint = ($row['user_grouping_mode'] ?? '') === 'joint';
+        $isContact = ($row['contribution_basis'] ?? '') === 'contact';
+        $usesTeamExpansion = $isJoint || $isContact;
         $assignedUserIds = collect($row['user_ids'] ?? [])->map(fn ($id) => (int) $id);
 
         foreach ($row['team_ids'] ?? [] as $teamId) {
@@ -63,7 +65,7 @@
                 continue;
             }
 
-            if ($isJoint) {
+            if ($usesTeamExpansion) {
                 $teamUserNames = $team->users->sortBy('name')->pluck('name')->values()->all();
                 $groupedUserIds = $groupedUserIds->merge($team->users->pluck('id')->map(fn ($id) => (int) $id));
             } else {
@@ -160,6 +162,12 @@
             'team_assigned_at' => collect($row['team_assigned_at'] ?? [])
                 ->mapWithKeys(fn ($value, $id) => [(string) $id => $value ?: ''])
                 ->all(),
+            'user_targets' => collect($row['user_targets'] ?? [])
+                ->mapWithKeys(fn ($value, $id) => [(string) $id => $value])
+                ->all(),
+            'team_targets' => collect($row['team_targets'] ?? [])
+                ->mapWithKeys(fn ($value, $id) => [(string) $id => $value])
+                ->all(),
             'classification_locked' => !empty($row['classification_locked']) || ($existingLockMap[(int) ($row['id'] ?? 0)] ?? false),
             'semantic_locked' => !empty($row['semantic_locked']) || ($existingLockMap[(int) ($row['id'] ?? 0)] ?? false),
         ];
@@ -204,6 +212,12 @@
                     ->filter(fn ($team) => !$team->pivot->unassigned_at)
                     ->mapWithKeys(fn ($team) => [(string) $team->id => $team->pivot->assigned_at ?? ''])
                     ->all(),
+                'user_targets' => $deliverable->users
+                    ->mapWithKeys(fn ($user) => [(string) $user->id => $user->pivot->target_quantity ?? ''])
+                    ->all(),
+                'team_targets' => $deliverable->teams
+                    ->mapWithKeys(fn ($team) => [(string) $team->id => $team->pivot->target_quantity ?? ''])
+                    ->all(),
             ], 'existing-' . $deliverable->id);
             $deliverableRows[] = $enrichRow($row, $row['row_key']);
         }
@@ -230,6 +244,8 @@
         'team_ids' => [],
         'user_assigned_at' => [],
         'team_assigned_at' => [],
+        'user_targets' => [],
+        'team_targets' => [],
         'classification_locked' => false,
         'semantic_locked' => false,
     ];
@@ -318,6 +334,12 @@
                     @endforeach
                     @foreach($row['team_assigned_at'] ?? [] as $teamId => $assignedAt)
                         <input type="hidden" name="deliverables[{{ $rowKey }}][team_assigned_at][{{ $teamId }}]" value="{{ $assignedAt }}">
+                    @endforeach
+                    @foreach($row['user_targets'] ?? [] as $userId => $targetQuantity)
+                        <input type="hidden" name="deliverables[{{ $rowKey }}][user_targets][{{ $userId }}]" value="{{ $targetQuantity }}">
+                    @endforeach
+                    @foreach($row['team_targets'] ?? [] as $teamId => $targetQuantity)
+                        <input type="hidden" name="deliverables[{{ $rowKey }}][team_targets][{{ $teamId }}]" value="{{ $targetQuantity }}">
                     @endforeach
                 </div>
             @endforeach
@@ -668,6 +690,8 @@
             const groups = [];
             const groupedUserIds = new Set();
             const isJoint = rowData.user_grouping_mode === 'joint';
+            const isContact = rowData.contribution_basis === 'contact';
+            const usesTeamExpansion = isJoint || isContact;
             const assignedUserIds = (rowData.user_ids || []).map(String);
 
             (rowData.team_ids || []).forEach(function (teamId) {
@@ -676,7 +700,7 @@
                 if (!teamName) return;
 
                 let teamUserNames = [];
-                if (isJoint) {
+                if (usesTeamExpansion) {
                     teamUserNames = memberIds.map(function (memberId) {
                         groupedUserIds.add(String(memberId));
 
@@ -795,9 +819,130 @@
             return { user_ids: userIds, team_ids: teamIds };
         }
 
-        function renderAssignmentLedger(selectedUserIds, selectedTeamIds) {
+        function assignmentUsesTeams(basis, grouping) {
+            return basis === 'contact' || grouping === 'joint';
+        }
+
+        function assignmentShowsLedger(basis) {
+            return basis === 'user' || basis === 'contact';
+        }
+
+        function collectTargetMapsFromLedger() {
+            const user_targets = {};
+            const team_targets = {};
+
+            editorFieldset.querySelectorAll('[data-deliverable-user-target][data-canonical-user-target]').forEach(function (input) {
+                const userId = input.dataset.userId;
+                if (!userId) return;
+                const checkbox = editorFieldset.querySelector('[data-deliverable-user-checkbox][value="' + CSS.escape(userId) + '"]');
+                if (!checkbox || !checkbox.checked) return;
+                if (input.value !== '') user_targets[userId] = input.value;
+            });
+
+            editorFieldset.querySelectorAll('[data-deliverable-team-target]').forEach(function (input) {
+                const teamId = input.dataset.teamId;
+                if (!teamId) return;
+                const checkbox = editorFieldset.querySelector('[data-deliverable-team-checkbox][value="' + CSS.escape(teamId) + '"]');
+                if (!checkbox || !checkbox.checked) return;
+                if (input.value !== '') team_targets[teamId] = input.value;
+            });
+
+            return { user_targets, team_targets };
+        }
+
+        function computeAllocationSummaryFromLedger() {
+            const basis = editorFieldset.querySelector('[data-deliverable-basis]:checked')?.value || '';
+            const grouping = editorFieldset.querySelector('[data-deliverable-grouping]:checked')?.value || '';
+            const metric = editorFieldset.querySelector('[data-deliverable-metric]:checked')?.value || 'completion';
+            const total = parseFloat(getTargetInput()?.value || '0') || 0;
+            const assignment = getSelectedAssignmentState();
+            const targets = collectTargetMapsFromLedger();
+            let allocated = 0;
+
+            assignment.user_ids.forEach(function (userId) {
+                const value = targets.user_targets[userId];
+                if (value !== undefined && value !== '') {
+                    allocated += parseFloat(value) || 0;
+                }
+            });
+
+            allocated = Math.round(allocated * 100) / 100;
+            const remainder = Math.round((total - allocated) * 100) / 100;
+            const teamWarnings = [];
+
+            if (assignmentUsesTeams(basis, grouping)) {
+                assignment.team_ids.forEach(function (teamId) {
+                    const teamTarget = targets.team_targets[teamId];
+                    if (teamTarget === undefined || teamTarget === '') return;
+                    const memberIds = teamMembersMap[teamId] || [];
+                    let memberSum = 0;
+                    memberIds.forEach(function (memberId) {
+                        if (!assignment.user_ids.includes(String(memberId))) return;
+                        const value = targets.user_targets[memberId];
+                        if (value !== undefined && value !== '') memberSum += parseFloat(value) || 0;
+                    });
+                    memberSum = Math.round(memberSum * 100) / 100;
+                    const parsedTeamTarget = parseFloat(teamTarget) || 0;
+                    if (Math.abs(parsedTeamTarget - memberSum) > 0.009) {
+                        teamWarnings.push({
+                            team_id: teamId,
+                            team_name: teamLookup[teamId] || ('Team ' + teamId),
+                        });
+                    }
+                });
+            }
+
+            return {
+                basis,
+                grouping,
+                metric,
+                total,
+                allocated,
+                remainder,
+                is_balanced: total <= 0 || Math.abs(remainder) <= 0.009,
+                is_over_assigned: remainder < -0.009,
+                team_warnings: teamWarnings,
+                is_individual: basis === 'user' && grouping === 'individual',
+            };
+        }
+
+        function updateAllocationSummaryDisplay() {
+            const summary = computeAllocationSummaryFromLedger();
+            const allocatedEl = editorFieldset.querySelector('[data-deliverable-allocation-allocated]');
+            const totalEl = editorFieldset.querySelector('[data-deliverable-allocation-total]');
+            const statusEl = editorFieldset.querySelector('[data-deliverable-allocation-status]');
+            const toolbar = editorFieldset.querySelector('[data-deliverable-allocation-summary]')?.closest('.d-flex');
+
+            if (allocatedEl) allocatedEl.textContent = summary.allocated.toFixed(1);
+            if (totalEl) totalEl.textContent = summary.total.toFixed(1);
+
+            if (statusEl) {
+                let statusHtml = '';
+                if (summary.total > 0) {
+                    if (summary.is_balanced) {
+                        statusHtml = '<i class="bi bi-check-circle-fill text-success" title="Allocated total matches"></i>';
+                    } else if (summary.is_over_assigned) {
+                        statusHtml = '<span class="text-warning">Over-assigned by ' + Math.abs(summary.remainder).toFixed(1) + '</span>';
+                    } else {
+                        statusHtml = '<span class="text-warning">Unassigned ' + summary.remainder.toFixed(1) + '</span>';
+                    }
+                    summary.team_warnings.forEach(function (warning) {
+                        statusHtml += ' <span class="text-warning small">(' + escapeHtml(warning.team_name) + ' mismatch)</span>';
+                    });
+                }
+                statusEl.innerHTML = statusHtml;
+            }
+
+            if (toolbar) {
+                toolbar.classList.toggle('d-none', !assignmentShowsLedger(summary.basis));
+            }
+        }
+
+        function renderAssignmentLedger(selectedUserIds, selectedTeamIds, targetMaps) {
             const ledger = editorFieldset.querySelector('[data-deliverable-assignment-ledger]');
             const selectAllBtn = editorFieldset.querySelector('[data-deliverable-select-all]');
+            const helpEl = editorFieldset.querySelector('[data-deliverable-assignment-help]');
+            const disclaimerEl = editorFieldset.querySelector('[data-deliverable-contact-disclaimer]');
             if (!ledger) return;
 
             const pool = getAgreementMembershipPool();
@@ -805,17 +950,38 @@
             const selectedTeams = new Set((selectedTeamIds || []).map(String));
             const grouping = editorFieldset.querySelector('[data-deliverable-grouping]:checked')?.value || '';
             const basis = editorFieldset.querySelector('[data-deliverable-basis]:checked')?.value || '';
-            const isIndividual = grouping === 'individual';
+            const isIndividual = basis === 'user' && grouping === 'individual';
+            const usesTeams = assignmentUsesTeams(basis, grouping);
+            const userTargets = (targetMaps && targetMaps.user_targets) || {};
+            const teamTargets = (targetMaps && targetMaps.team_targets) || {};
+            const renderedUserTargetIds = new Set();
 
             ledger.innerHTML = '';
 
-            if (basis !== 'user' || (pool.selectedTeamIds.length === 0 && pool.directUserIds.length === 0)) {
+            if (helpEl) {
+                if (basis === 'contact') {
+                    helpEl.textContent = 'Tag responsible staff. Recommended shares are optional and do not limit contact-level contributions.';
+                } else if (isIndividual) {
+                    helpEl.textContent = 'Assign users and split the deliverable total across them.';
+                } else if (basis === 'user') {
+                    helpEl.textContent = 'Select assignees. Recommended shares are optional and do not limit contributions.';
+                } else {
+                    helpEl.textContent = 'Select from agreement members.';
+                }
+            }
+
+            if (disclaimerEl) {
+                disclaimerEl.classList.toggle('d-none', basis !== 'contact');
+            }
+
+            if (!assignmentShowsLedger(basis) || (pool.selectedTeamIds.length === 0 && pool.directUserIds.length === 0)) {
                 const empty = document.createElement('div');
                 empty.className = 'text-muted small py-2';
                 empty.setAttribute('data-deliverable-assignment-empty', '');
                 empty.textContent = 'Add teams or users in Teams & Users on the agreement form.';
                 ledger.appendChild(empty);
                 if (selectAllBtn) selectAllBtn.classList.add('d-none');
+                updateAllocationSummaryDisplay();
                 return;
             }
 
@@ -829,6 +995,39 @@
                 input.checked = checked;
                 if (type === 'team') input.setAttribute('data-deliverable-team-checkbox', '');
                 if (type === 'user') input.setAttribute('data-deliverable-user-checkbox', '');
+                input.addEventListener('change', function () {
+                    updateAllocationSummaryDisplay();
+                    updateEditorSummary();
+                });
+                return input;
+            }
+
+            function createTargetInput(kind, id, value, isCanonicalUser) {
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.className = 'form-control form-control-sm';
+                input.style.width = '5rem';
+                input.min = '0';
+                input.step = editorFieldset.querySelector('[data-deliverable-metric]:checked')?.value === 'completion' ? '1' : '0.1';
+                input.placeholder = isIndividual ? 'Req' : 'Rec';
+                input.value = value ?? '';
+                if (kind === 'user') {
+                    input.setAttribute('data-deliverable-user-target', '');
+                    input.dataset.userId = String(id);
+                    if (isCanonicalUser) input.setAttribute('data-canonical-user-target', '');
+                    else input.disabled = true;
+                } else {
+                    input.setAttribute('data-deliverable-team-target', '');
+                    input.dataset.teamId = String(id);
+                }
+                input.addEventListener('input', function () {
+                    if (isCanonicalUser) {
+                        ledger.querySelectorAll('[data-deliverable-user-target][data-user-id="' + CSS.escape(String(id)) + '"]:not([data-canonical-user-target])').forEach(function (mirror) {
+                            mirror.value = input.value;
+                        });
+                    }
+                    updateAllocationSummaryDisplay();
+                });
                 return input;
             }
 
@@ -842,16 +1041,27 @@
 
             function createMemberLabelElement(userId) {
                 const name = document.createElement('span');
-                name.className = 'small fw-semibold text-dark';
+                name.className = 'small fw-semibold text-dark flex-grow-1';
                 name.textContent = userName(userId);
-
                 return name;
+            }
+
+            function appendUserTargetRow(container, memberId) {
+                const row = document.createElement('div');
+                row.className = 'd-flex align-items-center gap-2 py-1 px-2 border-top ps-3';
+                const userCheckbox = createCheckbox('user', memberId, selectedUsers.has(String(memberId)));
+                row.appendChild(userCheckbox);
+                row.appendChild(createMemberLabelElement(memberId));
+                const isCanonical = !renderedUserTargetIds.has(String(memberId));
+                if (isCanonical) renderedUserTargetIds.add(String(memberId));
+                row.appendChild(createTargetInput('user', memberId, userTargets[memberId] ?? userTargets[String(memberId)] ?? '', isCanonical));
+                container.appendChild(row);
+                return userCheckbox;
             }
 
             function renderTeamCard(teamId, memberIds) {
                 const card = document.createElement('div');
                 card.className = 'border rounded overflow-hidden bg-body mb-2';
-
                 const header = document.createElement('div');
                 header.className = 'd-flex align-items-center gap-2 px-2 py-1 bg-light';
 
@@ -860,38 +1070,33 @@
                 teamBadge.textContent = teamLookup[teamId] || ('Team ' + teamId);
 
                 let teamCheckbox = null;
-                if (!isIndividual) {
+                if (usesTeams) {
                     teamCheckbox = createCheckbox('team', teamId, selectedTeams.has(String(teamId)));
                     header.appendChild(teamCheckbox);
                 }
                 header.appendChild(teamBadge);
+                if (usesTeams) {
+                    header.appendChild(createTargetInput('team', teamId, teamTargets[teamId] ?? teamTargets[String(teamId)] ?? '', false));
+                }
                 card.appendChild(header);
 
                 const memberCheckboxes = [];
                 memberIds.forEach(function (memberId) {
-                    const row = document.createElement('div');
-                    row.className = 'd-flex align-items-center gap-2 py-1 px-2 border-top ps-3';
-                    const userCheckbox = createCheckbox('user', memberId, selectedUsers.has(String(memberId)));
-                    row.appendChild(userCheckbox);
-                    row.appendChild(createMemberLabelElement(memberId));
-                    card.appendChild(row);
+                    const userCheckbox = appendUserTargetRow(card, memberId);
                     memberCheckboxes.push(userCheckbox);
                     bindMemberCheckbox(teamCheckbox, userCheckbox);
                 });
 
                 if (teamCheckbox) {
-                    bindTeamCheckbox(teamCheckbox, memberCheckboxes);
+                    teamCheckbox.addEventListener('change', function () {
+                        if (teamCheckbox.checked) {
+                            memberCheckboxes.forEach(function (cb) { cb.checked = true; });
+                        }
+                        updateAllocationSummaryDisplay();
+                    });
                 }
 
                 ledger.appendChild(card);
-            }
-
-            function bindTeamCheckbox(teamCheckbox, memberCheckboxes) {
-                teamCheckbox.addEventListener('change', function () {
-                    if (teamCheckbox.checked) {
-                        memberCheckboxes.forEach(function (cb) { cb.checked = true; });
-                    }
-                });
             }
 
             pool.selectedTeamIds.forEach(function (teamId) {
@@ -907,15 +1112,12 @@
                 card.appendChild(header);
 
                 pool.directUserIds.forEach(function (userId) {
-                    const row = document.createElement('div');
-                    row.className = 'd-flex align-items-center gap-2 py-1 px-2 border-top';
-                    const userCheckbox = createCheckbox('user', userId, selectedUsers.has(String(userId)));
-                    row.appendChild(userCheckbox);
-                    row.appendChild(createMemberLabelElement(userId));
-                    card.appendChild(row);
+                    appendUserTargetRow(card, userId);
                 });
                 ledger.appendChild(card);
             }
+
+            updateAllocationSummaryDisplay();
         }
 
         function syncProgramFilterOptions() {
@@ -1120,9 +1322,9 @@
             syncTargetLabels();
 
             if (groupingWrapper) groupingWrapper.classList.toggle('d-none', basis !== 'user');
-            if (assignmentWrapper) assignmentWrapper.classList.toggle('d-none', basis !== 'user');
+            if (assignmentWrapper) assignmentWrapper.classList.toggle('d-none', !assignmentShowsLedger(basis));
 
-            if (basis !== 'user') {
+            if (basis === 'contact') {
                 editorFieldset.querySelectorAll('[data-deliverable-grouping]').forEach(function (radio) {
                     radio.checked = false;
                 });
@@ -1144,7 +1346,10 @@
             syncSelectableCardStates();
 
             const assignment = getSelectedAssignmentState();
-            renderAssignmentLedger(assignment.user_ids, assignment.team_ids);
+            const storedTargets = currentKey && rowStore[currentKey]
+                ? { user_targets: rowStore[currentKey].user_targets || {}, team_targets: rowStore[currentKey].team_targets || {} }
+                : { user_targets: {}, team_targets: {} };
+            renderAssignmentLedger(assignment.user_ids, assignment.team_ids, storedTargets);
             updateEditorSummary();
         }
 
@@ -1261,6 +1466,12 @@
             }
 
             const targetInput = getTargetInput();
+            const grouping = basis === 'user'
+                ? (editorFieldset.querySelector('[data-deliverable-grouping]:checked')?.value || '')
+                : '';
+            const usesTeams = assignmentUsesTeams(basis, grouping);
+            const targets = collectTargetMapsFromLedger();
+            const showsLedger = assignmentShowsLedger(basis);
 
             const rowData = {
                 id: editorFieldset.querySelector('[name="deliverable_editor[id]"]')?.value || '',
@@ -1272,20 +1483,20 @@
                 time_basis: editorFieldset.querySelector('[data-deliverable-time-basis]:checked')?.value || 'observed',
                 allotted_time_unit: editorFieldset.querySelector('[data-deliverable-target-unit]:checked')?.value || 'hours',
                 contribution_basis: basis,
-                user_grouping_mode: basis === 'user'
-                    ? (editorFieldset.querySelector('[data-deliverable-grouping]:checked')?.value || '')
-                    : '',
+                user_grouping_mode: grouping,
                 include_additional_time: !!editorFieldset.querySelector('[data-deliverable-additional-time]')?.checked,
                 target_quantity: targetInput ? targetInput.value : '',
                 suggested_due_date: fieldValue('[data-deliverable-due-date]', ''),
                 sort_order: 0,
                 notes: fieldValue('[data-deliverable-notes]', ''),
-                user_ids: basis === 'user' ? assignment.user_ids : [],
-                team_ids: basis === 'user' && editorFieldset.querySelector('[data-deliverable-grouping]:checked')?.value === 'joint' ? assignment.team_ids : [],
-                user_assigned_at: pickAssignmentDates(rowStore[currentKey]?.user_assigned_at, basis === 'user' ? assignment.user_ids : []),
+                user_ids: showsLedger ? assignment.user_ids : [],
+                team_ids: showsLedger && usesTeams ? assignment.team_ids : [],
+                user_targets: showsLedger ? targets.user_targets : {},
+                team_targets: showsLedger ? targets.team_targets : {},
+                user_assigned_at: pickAssignmentDates(rowStore[currentKey]?.user_assigned_at, showsLedger ? assignment.user_ids : []),
                 team_assigned_at: pickAssignmentDates(
                     rowStore[currentKey]?.team_assigned_at,
-                    basis === 'user' && editorFieldset.querySelector('[data-deliverable-grouping]:checked')?.value === 'joint' ? assignment.team_ids : []
+                    showsLedger && usesTeams ? assignment.team_ids : []
                 ),
                 classification_locked: !!rowStore[currentKey]?.classification_locked,
                 semantic_locked: !!rowStore[currentKey]?.semantic_locked,
@@ -1352,7 +1563,11 @@
 
             applyLockState(rowData);
             syncEditorVisibility();
-            renderAssignmentLedger(rowData.user_ids || [], rowData.team_ids || []);
+            renderAssignmentLedger(
+                rowData.user_ids || [],
+                rowData.team_ids || [],
+                { user_targets: rowData.user_targets || {}, team_targets: rowData.team_targets || {} }
+            );
 
             if (editorDrawerEl) openEditor();
         }
@@ -1424,6 +1639,8 @@
                 team_ids: findCheckedArray('team_ids'),
                 user_assigned_at: findKeyedMap('user_assigned_at'),
                 team_assigned_at: findKeyedMap('team_assigned_at'),
+                user_targets: findKeyedMap('user_targets'),
+                team_targets: findKeyedMap('team_targets'),
                 classification_locked: !!stored.classification_locked,
                 semantic_locked: !!stored.semantic_locked,
             });
@@ -1473,6 +1690,16 @@
                 if (filteredUserIds.length !== (rowData.user_ids || []).length || filteredTeamIds.length !== (rowData.team_ids || []).length) {
                     rowData.user_ids = filteredUserIds;
                     rowData.team_ids = filteredTeamIds;
+                    rowData.user_targets = Object.fromEntries(
+                        Object.entries(rowData.user_targets || {}).filter(function (entry) {
+                            return filteredUserIds.map(String).includes(String(entry[0]));
+                        })
+                    );
+                    rowData.team_targets = Object.fromEntries(
+                        Object.entries(rowData.team_targets || {}).filter(function (entry) {
+                            return filteredTeamIds.map(String).includes(String(entry[0]));
+                        })
+                    );
                     const enriched = enrichRowData(rowData);
                     syncTableRow(rowKey, enriched);
                     syncHiddenRow(rowKey, enriched);
@@ -1483,14 +1710,42 @@
             });
         }
 
+        function computeRowAllocationMismatch(rowData) {
+            const total = parseFloat(rowData.target_quantity || '0') || 0;
+            if (total <= 0) return false;
+            let allocated = 0;
+            (rowData.user_ids || []).forEach(function (userId) {
+                const value = (rowData.user_targets || {})[userId] ?? (rowData.user_targets || {})[String(userId)];
+                if (value !== undefined && value !== '') allocated += parseFloat(value) || 0;
+            });
+            if (Math.abs(total - Math.round(allocated * 100) / 100) > 0.009) return true;
+            const usesTeams = rowData.contribution_basis === 'contact' || rowData.user_grouping_mode === 'joint';
+            if (!usesTeams) return false;
+            return (rowData.team_ids || []).some(function (teamId) {
+                const teamTarget = (rowData.team_targets || {})[teamId] ?? (rowData.team_targets || {})[String(teamId)];
+                if (teamTarget === undefined || teamTarget === '') return false;
+                const memberIds = teamMembersMap[teamId] || [];
+                let memberSum = 0;
+                memberIds.forEach(function (memberId) {
+                    if (!(rowData.user_ids || []).map(String).includes(String(memberId))) return;
+                    const value = (rowData.user_targets || {})[memberId] ?? (rowData.user_targets || {})[String(memberId)];
+                    if (value !== undefined && value !== '') memberSum += parseFloat(value) || 0;
+                });
+                return Math.abs((parseFloat(teamTarget) || 0) - Math.round(memberSum * 100) / 100) > 0.009;
+            });
+        }
+
         function rowMarkup(rowKey, rowData) {
             const assignmentBadges = renderAssignmentGroups(rowData.assignment_groups || buildAssignmentGroups(rowData));
+            const allocationWarning = computeRowAllocationMismatch(rowData)
+                ? '<div class="text-warning small mt-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>Allocation mismatch</div>'
+                : '';
 
             return '<tr data-deliverable-row data-row-key="' + escapeHtml(rowKey) + '" data-deliverable-row-data=\'' + JSON.stringify(rowData).replace(/'/g, '&#39;') + '\'>' +
                 '<td><div class="fw-semibold">' + escapeHtml(rowData.contact_family_label || '—') + '</div>' +
                 '<div class="text-muted small">' + escapeHtml(rowData.activity_type_label || 'Any activity type') + '</div>' +
                 (rowData.program_label ? '<div class="text-muted small">Program: ' + escapeHtml(rowData.program_label) + '</div>' : '') + '</td>' +
-                '<td><div class="small">' + escapeHtml(rowData.rules_summary || '—') + '</div></td>' +
+                '<td><div class="small">' + escapeHtml(rowData.rules_summary || '—') + allocationWarning + '</div></td>' +
                 '<td class="text-wrap align-top">' + assignmentBadges + '</td>' +
                 '<td class="text-wrap">' + (rowData.notes ? escapeHtml(rowData.notes) : '—') + '</td>' +
                 '<td class="text-end text-nowrap"><div class="btn-group btn-group-sm" role="group">' +
@@ -1513,6 +1768,12 @@
             const teamAssignedInputs = Object.keys(rowData.team_assigned_at || {}).map(function (id) {
                 return '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][team_assigned_at][' + escapeHtml(id) + ']" value="' + escapeHtml(rowData.team_assigned_at[id] || '') + '">';
             }).join('');
+            const userTargetInputs = Object.keys(rowData.user_targets || {}).map(function (id) {
+                return '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][user_targets][' + escapeHtml(id) + ']" value="' + escapeHtml(rowData.user_targets[id] || '') + '">';
+            }).join('');
+            const teamTargetInputs = Object.keys(rowData.team_targets || {}).map(function (id) {
+                return '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][team_targets][' + escapeHtml(id) + ']" value="' + escapeHtml(rowData.team_targets[id] || '') + '">';
+            }).join('');
 
             return '<div data-deliverable-hidden-row="' + escapeHtml(rowKey) + '">' +
                 (rowData.id ? '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][id]" value="' + escapeHtml(rowData.id) + '">' : '') +
@@ -1530,7 +1791,7 @@
                 '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][suggested_due_date]" value="' + escapeHtml(rowData.suggested_due_date || '') + '">' +
                 '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][sort_order]" value="' + escapeHtml(rowData.sort_order || '0') + '">' +
                 '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][notes]" value="' + escapeHtml(rowData.notes || '') + '">' +
-                userInputs + teamInputs + userAssignedInputs + teamAssignedInputs + '</div>';
+                userInputs + teamInputs + userAssignedInputs + teamAssignedInputs + userTargetInputs + teamTargetInputs + '</div>';
         }
 
         function syncHiddenRow(rowKey, rowData) {
@@ -1682,9 +1943,47 @@
         });
 
         editorFieldset.querySelectorAll('[data-deliverable-target], [data-deliverable-target-locked]').forEach(function (input) {
-            input.addEventListener('input', updateEditorSummary);
+            input.addEventListener('input', function () {
+                updateEditorSummary();
+                updateAllocationSummaryDisplay();
+            });
         });
-        editorFieldset.querySelector('[data-deliverable-assignment-ledger]')?.addEventListener('change', updateEditorSummary);
+        editorFieldset.querySelector('[data-deliverable-assignment-ledger]')?.addEventListener('change', function () {
+            updateEditorSummary();
+            updateAllocationSummaryDisplay();
+        });
+
+        editorFieldset.querySelector('[data-deliverable-split-evenly]')?.addEventListener('click', function () {
+            const summary = computeAllocationSummaryFromLedger();
+            const assignment = getSelectedAssignmentState();
+            if (!summary.total || assignment.user_ids.length === 0) return;
+            const step = summary.metric === 'completion' ? 1 : 0.1;
+            const totalSteps = Math.round(summary.total / step);
+            const count = assignment.user_ids.length;
+            const baseSteps = Math.floor(totalSteps / count);
+            let remainderSteps = totalSteps % count;
+            assignment.user_ids.forEach(function (userId, index) {
+                const steps = baseSteps + (index < remainderSteps ? 1 : 0);
+                const value = (steps * step).toFixed(summary.metric === 'completion' ? 0 : 1);
+                const input = editorFieldset.querySelector('[data-deliverable-user-target][data-canonical-user-target][data-user-id="' + CSS.escape(String(userId)) + '"]');
+                if (input) {
+                    input.value = value;
+                    input.dispatchEvent(new Event('input'));
+                }
+            });
+        });
+
+        editorFieldset.querySelector('[data-deliverable-fill-empty]')?.addEventListener('click', function () {
+            const defaultValue = editorFieldset.querySelector('[data-deliverable-default-target]')?.value;
+            if (defaultValue === '' || defaultValue === null || defaultValue === undefined) return;
+            editorFieldset.querySelectorAll('[data-deliverable-user-target][data-canonical-user-target]').forEach(function (input) {
+                const userId = input.dataset.userId;
+                const checkbox = editorFieldset.querySelector('[data-deliverable-user-checkbox][value="' + CSS.escape(userId) + '"]');
+                if (!checkbox || !checkbox.checked || input.value !== '') return;
+                input.value = defaultValue;
+                input.dispatchEvent(new Event('input'));
+            });
+        });
 
         editorDrawerEl.querySelectorAll('[data-form-drawer-close]').forEach(function (el) {
             el.addEventListener('click', closeEditor);

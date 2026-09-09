@@ -122,6 +122,10 @@ class AgreementRequest extends FormRequest
             'deliverables.*.team_ids.*' => ['exists:teams,id'],
             'deliverables.*.team_assigned_at' => ['nullable', 'array'],
             'deliverables.*.team_assigned_at.*' => ['nullable', 'date'],
+            'deliverables.*.user_targets' => ['nullable', 'array'],
+            'deliverables.*.user_targets.*' => ['nullable', 'numeric', 'min:0', 'max:99999'],
+            'deliverables.*.team_targets' => ['nullable', 'array'],
+            'deliverables.*.team_targets.*' => ['nullable', 'numeric', 'min:0', 'max:99999'],
             'deliverables.*._delete' => ['nullable', 'boolean'],
 
             'attachments' => ['nullable', 'array'],
@@ -682,31 +686,29 @@ class AgreementRequest extends FormRequest
                     $validator->errors()->add("deliverables.{$deliverableKey}.contribution_basis", 'Deliverable contribution basis is required.');
                 }
 
-                if ($contributionBasis === 'contact') {
-                    if ($groupingMode) {
-                        $validator->errors()->add("deliverables.{$deliverableKey}.user_grouping_mode", 'Contact-based deliverables cannot define a user grouping mode.');
-                    }
-
-                    if ($deliverableUserIds->isNotEmpty() || $deliverableTeamIds->isNotEmpty()) {
-                        $validator->errors()->add("deliverables.{$deliverableKey}", 'Contact-based deliverables cannot select users or teams.');
-                    }
+                if ($contributionBasis === 'contact' && $groupingMode) {
+                    $validator->errors()->add("deliverables.{$deliverableKey}.user_grouping_mode", 'Contact-based deliverables cannot define a user grouping mode.');
                 }
 
                 if ($contributionBasis === 'user' && ! $groupingMode) {
                     $validator->errors()->add("deliverables.{$deliverableKey}.user_grouping_mode", 'User-based deliverables must choose joint or individual grouping.');
                 }
 
-                if ($contributionBasis === 'user' && $deliverableUserIds->isEmpty() && $deliverableTeamIds->isEmpty()) {
-                    $validator->errors()->add("deliverables.{$deliverableKey}", 'User-based deliverables must select at least one user or team.');
+                if ($groupingMode === 'individual' && $deliverableTeamIds->isNotEmpty()) {
+                    $validator->errors()->add("deliverables.{$deliverableKey}.team_ids", 'Individual deliverables cannot link teams directly. Assign users instead.');
                 }
 
-                if ($groupingMode === 'individual') {
-                    if ($deliverableTeamIds->isNotEmpty()) {
-                        $validator->errors()->add("deliverables.{$deliverableKey}.team_ids", 'Individual deliverables cannot link teams directly. Assign users instead.');
+                foreach (array_keys($row['user_targets'] ?? []) as $targetUserId) {
+                    if (! $deliverableUserIds->contains((int) $targetUserId)) {
+                        $validator->errors()->add("deliverables.{$deliverableKey}.user_targets", 'User targets must match selected users.');
+                        break;
                     }
+                }
 
-                    if ($deliverableUserIds->isEmpty()) {
-                        $validator->errors()->add("deliverables.{$deliverableKey}.user_ids", 'Individual deliverables must select at least one user.');
+                foreach (array_keys($row['team_targets'] ?? []) as $targetTeamId) {
+                    if (! $deliverableTeamIds->contains((int) $targetTeamId)) {
+                        $validator->errors()->add("deliverables.{$deliverableKey}.team_targets", 'Team targets must match selected teams.');
+                        break;
                     }
                 }
 

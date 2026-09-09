@@ -200,7 +200,7 @@ class User extends Authenticatable
             'user_id',
             'agreement_deliverable_id'
         )
-            ->withPivot(['assigned_at', 'unassigned_at', 'source_team_id'])
+            ->withPivot(['assigned_at', 'unassigned_at', 'source_team_id', 'target_quantity'])
             ->withTimestamps();
     }
 

@@ -61,14 +61,14 @@ class AgreementDeliverable extends Model
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'deliverable_user')
-            ->withPivot(['assigned_at', 'unassigned_at', 'source_team_id'])
+            ->withPivot(['assigned_at', 'unassigned_at', 'source_team_id', 'target_quantity'])
             ->withTimestamps();
     }
 
     public function teams(): BelongsToMany
     {
         return $this->belongsToMany(Team::class, 'deliverable_team')
-            ->withPivot(['assigned_at', 'unassigned_at'])
+            ->withPivot(['assigned_at', 'unassigned_at', 'target_quantity'])
             ->withTimestamps();
     }
 

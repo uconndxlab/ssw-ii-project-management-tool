@@ -23,6 +23,7 @@ use App\Services\DeliverableContributionService;
 use App\Services\PrivateFileService;
 use App\Support\ActivityTypeDuration;
 use App\Support\AgreementDeliverableDisplay;
+use App\Support\DeliverableAssignmentTargets;
 use App\Support\DeliverableHistoryScope;
 use App\Support\Authorization\ScopeSync;
 use App\Support\ProjectProgramScope;
@@ -192,7 +193,7 @@ class AgreementController extends Controller
         $validated = $request->validated();
         $validated['active'] = $request->boolean('active', true);
 
-        $agreement = DB::transaction(function () use ($validated) {
+        [$agreement, $allocationWarnings] = DB::transaction(function () use ($validated) {
             $agreement = Agreement::create([
                 'name' => $validated['name'],
                 'active' => $validated['active'],
@@ -210,17 +211,18 @@ class AgreementController extends Controller
             $this->syncAgreementRelations($agreement, $validated);
             $this->softUnassignDeliverableUsersOutsideAgreementMembership($agreement);
             $this->syncAgreementCertificationCandidates($agreement, $validated['certification_candidates'] ?? []);
-            $this->syncAgreementDeliverables($agreement, $validated['deliverables'] ?? []);
+            $allocationWarnings = $this->syncAgreementDeliverables($agreement, $validated['deliverables'] ?? []);
             $this->deliverableContributionService->syncForAgreement($agreement->fresh());
 
-            return $agreement;
+            return [$agreement, $allocationWarnings];
         });
 
         $this->syncAgreementAttachments($agreement, $request);
 
         return redirect()
             ->route('agreements.edit', $agreement)
-            ->with('success', 'Agreement created. You can now add deliverables below.');
+            ->with('success', 'Agreement created. You can now add deliverables below.')
+            ->with('allocation_warnings', $allocationWarnings ?? []);
     }
 
     public function show(Request $request, Agreement $agreement)
@@ -322,7 +324,7 @@ class AgreementController extends Controller
         $validated = $request->validated();
         $validated['active'] = $request->boolean('active');
 
-        DB::transaction(function () use ($agreement, $validated) {
+        $allocationWarnings = DB::transaction(function () use ($agreement, $validated) {
             $agreement->update([
                 'name' => $validated['name'],
                 'active' => $validated['active'],
@@ -340,13 +342,19 @@ class AgreementController extends Controller
             $this->syncAgreementRelations($agreement, $validated);
             $this->softUnassignDeliverableUsersOutsideAgreementMembership($agreement);
             $this->syncAgreementCertificationCandidates($agreement, $validated['certification_candidates'] ?? []);
-            $this->syncAgreementDeliverables($agreement, $validated['deliverables'] ?? []);
-            $this->deliverableContributionService->syncForAgreement($agreement->fresh());
+            return $this->syncAgreementDeliverables($agreement, $validated['deliverables'] ?? []);
         });
 
+        $this->deliverableContributionService->syncForAgreement($agreement->fresh());
         $this->syncAgreementAttachments($agreement, $request);
 
-        return $this->redirectAfterSave($agreement, 'Agreement updated successfully.');
+        $redirect = $this->redirectAfterSave($agreement, 'Agreement updated successfully.');
+
+        if (! empty($allocationWarnings)) {
+            $redirect->with('allocation_warnings', $allocationWarnings);
+        }
+
+        return $redirect;
     }
 
     private function syncAgreementAttachments(Agreement $agreement, Request $request): void
@@ -568,7 +576,10 @@ class AgreementController extends Controller
         }
     }
 
-    private function syncAgreementDeliverables(Agreement $agreement, array $deliverables): void
+    /**
+     * @return list<string>
+     */
+    private function syncAgreementDeliverables(Agreement $agreement, array $deliverables): array
     {
         $agreement->loadMissing(['agreementActivityHistories', 'programs:id']);
         $selectedProgramIds = $agreement->programs->pluck('id')->map(fn ($id) => (int) $id)->all();
@@ -580,6 +591,7 @@ class AgreementController extends Controller
             ->keyBy('id');
         $retainedDeliverableIds = collect();
         $histories = $agreement->agreementActivityHistories;
+        $allocationWarnings = [];
 
         foreach ($deliverables as $row) {
             if (! is_array($row)) {
@@ -671,6 +683,11 @@ class AgreementController extends Controller
             }
 
             $this->syncDeliverableParticipants($deliverable, $row, $isNewDeliverable);
+            $deliverable->load(['users', 'teams']);
+            $warning = $this->describeDeliverableAllocationWarning($deliverable, $agreement);
+            if ($warning !== null) {
+                $allocationWarnings[] = $warning;
+            }
             $retainedDeliverableIds->push($deliverable->id);
         }
 
@@ -680,6 +697,8 @@ class AgreementController extends Controller
                 ->only($staleDeliverableIds->all())
                 ->each(fn (AgreementDeliverable $deliverable) => $this->retireOrDeleteDeliverable($deliverable, $histories));
         }
+
+        return $allocationWarnings;
     }
 
     private function syncDeliverableParticipants(AgreementDeliverable $deliverable, array $row, bool $isNewDeliverable): void
@@ -688,22 +707,8 @@ class AgreementController extends Controller
         $groupingMode = $row['user_grouping_mode'] ?? null;
         $existingUsersById = $deliverable->users->keyBy(fn ($user) => (int) $user->id);
         $existingTeamsById = $deliverable->teams->keyBy(fn ($team) => (int) $team->id);
-
-        if ($contributionBasis !== 'user') {
-            foreach ($existingUsersById as $userId => $user) {
-                $deliverable->users()->updateExistingPivot($userId, [
-                    'unassigned_at' => $user->pivot->unassigned_at ?? now(),
-                ]);
-            }
-
-            foreach ($existingTeamsById as $teamId => $team) {
-                $deliverable->teams()->updateExistingPivot($teamId, [
-                    'unassigned_at' => $team->pivot->unassigned_at ?? now(),
-                ]);
-            }
-
-            return;
-        }
+        $userTargets = $row['user_targets'] ?? [];
+        $teamTargets = $row['team_targets'] ?? [];
 
         $directUserIds = collect($row['user_ids'] ?? [])
             ->filter(fn ($id) => $id !== null && $id !== '')
@@ -711,7 +716,8 @@ class AgreementController extends Controller
             ->unique()
             ->values();
 
-        $teamIds = $groupingMode === 'joint'
+        $usesTeamExpansion = $contributionBasis === 'contact' || $groupingMode === 'joint';
+        $teamIds = $usesTeamExpansion
             ? collect($row['team_ids'] ?? [])
                 ->filter(fn ($id) => $id !== null && $id !== '')
                 ->map(fn ($id) => (int) $id)
@@ -745,16 +751,23 @@ class AgreementController extends Controller
             }
 
             $existingUser = $existingUsersById->get($userId);
+            $wasUnassigned = $existingUser?->pivot?->unassigned_at !== null;
             $submittedUserAssignedAt = $row['user_assigned_at'] ?? [];
             $attributes = [
                 'assigned_at' => $this->resolveDeliverableAssignmentTimestamp(
-                    $existingUser !== null,
+                    $existingUser !== null && ! $wasUnassigned,
                     $existingUser?->pivot->assigned_at,
                     $submittedUserAssignedAt[$userId] ?? $submittedUserAssignedAt[(string) $userId] ?? null,
                     $isNewDeliverable
                 ),
                 'unassigned_at' => null,
                 'source_team_id' => $sourceTeamId,
+                'target_quantity' => $this->resolveUserPivotTargetQuantity(
+                    $existingUser?->pivot?->target_quantity,
+                    $userTargets[$userId] ?? $userTargets[(string) $userId] ?? null,
+                    $existingUser === null,
+                    $wasUnassigned
+                ),
             ];
 
             if ($existingUser) {
@@ -774,15 +787,22 @@ class AgreementController extends Controller
 
         foreach ($teamIds as $teamId) {
             $existingTeam = $existingTeamsById->get($teamId);
+            $wasUnassigned = $existingTeam?->pivot?->unassigned_at !== null;
             $submittedTeamAssignedAt = $row['team_assigned_at'] ?? [];
             $attributes = [
                 'assigned_at' => $this->resolveDeliverableAssignmentTimestamp(
-                    $existingTeam !== null,
+                    $existingTeam !== null && ! $wasUnassigned,
                     $existingTeam?->pivot->assigned_at,
                     $submittedTeamAssignedAt[$teamId] ?? $submittedTeamAssignedAt[(string) $teamId] ?? null,
                     $isNewDeliverable
                 ),
                 'unassigned_at' => null,
+                'target_quantity' => $this->resolveTeamPivotTargetQuantity(
+                    $existingTeam?->pivot?->target_quantity,
+                    $teamTargets[$teamId] ?? $teamTargets[(string) $teamId] ?? null,
+                    $existingTeam === null,
+                    $wasUnassigned
+                ),
             ];
 
             if ($existingTeam) {
@@ -799,6 +819,75 @@ class AgreementController extends Controller
                 'unassigned_at' => $team->pivot->unassigned_at ?? now(),
             ]);
         }
+    }
+
+    private function resolveUserPivotTargetQuantity(
+        mixed $existingTarget,
+        mixed $submittedTarget,
+        bool $isNewPivotRow,
+        bool $wasUnassigned
+    ): ?float {
+        $normalized = DeliverableAssignmentTargets::normalizeQuantity($submittedTarget);
+
+        if ($normalized !== null) {
+            return $normalized;
+        }
+
+        if (! $isNewPivotRow && ($wasUnassigned || $existingTarget !== null)) {
+            return DeliverableAssignmentTargets::normalizeQuantity($existingTarget);
+        }
+
+        return null;
+    }
+
+    private function resolveTeamPivotTargetQuantity(
+        mixed $existingTarget,
+        mixed $submittedTarget,
+        bool $isNewPivotRow,
+        bool $wasUnassigned
+    ): ?float {
+        return $this->resolveUserPivotTargetQuantity($existingTarget, $submittedTarget, $isNewPivotRow, $wasUnassigned);
+    }
+
+    private function describeDeliverableAllocationWarning(AgreementDeliverable $deliverable, Agreement $agreement): ?string
+    {
+        $teamLookup = $agreement->teams->keyBy(fn (Team $team) => (int) $team->id);
+        $memberIds = AgreementDeliverableDisplay::buildAgreementMemberUserIdsPublic($agreement);
+
+        $liveUsers = $deliverable->users
+            ->filter(fn (User $user) => AgreementDeliverableDisplay::isActivelyAssignedUserPublic(
+                $user,
+                $deliverable,
+                $teamLookup,
+                $memberIds
+            ))
+            ->values();
+        $liveTeams = $deliverable->teams->filter(fn (Team $team) => ! $team->pivot->unassigned_at)->values();
+
+        $summary = DeliverableAssignmentTargets::summarizeFromDeliverable($deliverable, $liveUsers, $liveTeams, $teamLookup);
+
+        if (! DeliverableAssignmentTargets::hasAllocationMismatch($deliverable, $summary)) {
+            return null;
+        }
+
+        $label = $deliverable->activityType?->name
+            ?? $deliverable->contactFamily?->name
+            ?? 'Deliverable';
+
+        $parts = [];
+        if (! $summary['is_balanced']) {
+            if ($summary['is_over_assigned']) {
+                $parts[] = 'over-assigned by '.number_format(abs($summary['remainder']), 1);
+            } else {
+                $parts[] = number_format($summary['remainder'], 1).' unassigned';
+            }
+        }
+
+        foreach ($summary['team_warnings'] as $teamWarning) {
+            $parts[] = $teamWarning['team_name'].' team members do not match the team target';
+        }
+
+        return $label.': '.implode('; ', $parts);
     }
 
     private function resolveDeliverableAssignmentTimestamp(
@@ -891,7 +980,15 @@ class AgreementController extends Controller
             }
         }
 
-        return ! empty($row['user_ids']) || ! empty($row['team_ids']) || array_key_exists('include_additional_time', $row);
+        if (! empty($row['user_ids']) || ! empty($row['team_ids'])) {
+            return true;
+        }
+
+        if (! empty($row['user_targets']) || ! empty($row['team_targets'])) {
+            return true;
+        }
+
+        return array_key_exists('include_additional_time', $row);
     }
 
     private function agreementFormData(?Agreement $agreement = null): array

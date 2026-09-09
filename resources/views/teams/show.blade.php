@@ -113,7 +113,7 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @foreach($agreement->deliverables as $deliverable)
+                                        @foreach($agreement->deliverables->reject(fn ($deliverable) => $deliverable->retired_at) as $deliverable)
                                         @php
                                             $activeAssignedUsers = $deliverable->users
                                                 ->filter(fn ($assignedUser) => !$assignedUser->pivot->unassigned_at)
@@ -195,7 +195,17 @@
                                                         {{ $entry['deliverable']->metric_type ? ucfirst($entry['deliverable']->metric_type) : '—' }}
                                                     @endif
                                                 </td>
-                                                <td class="text-center">{{ $entry['deliverable']->target_quantity !== null ? number_format((float) $entry['deliverable']->target_quantity, 1) : '—' }}</td>
+                                                <td class="text-center">
+                                                    @php
+                                                        $personalTarget = $entry['personal_target'] ?? null;
+                                                        $displayTarget = $personalTarget !== null && $personalTarget !== ''
+                                                            ? (float) $personalTarget
+                                                            : (($entry['deliverable']->contribution_basis === 'user' && $entry['deliverable']->user_grouping_mode === 'individual')
+                                                                ? null
+                                                                : ($entry['deliverable']->target_quantity !== null ? (float) $entry['deliverable']->target_quantity : null));
+                                                    @endphp
+                                                    {{ $displayTarget !== null ? number_format($displayTarget, 1) : '—' }}
+                                                </td>
                                             </tr>
                                             @endforeach
                                         </tbody>

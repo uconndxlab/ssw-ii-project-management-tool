@@ -48,7 +48,7 @@ class AgreementDeliverableDisplay
 
         $items = $agreement->deliverables
             ->reject(fn (AgreementDeliverable $deliverable) => $deliverable->retired_at)
-            ->filter(fn (AgreementDeliverable $deliverable) => self::userCanContributeToDeliverable($agreement, $deliverable, $user))
+            ->filter(fn (AgreementDeliverable $deliverable) => self::userIsTaggedOrAssigned($agreement, $deliverable, $user))
             ->map(function (AgreementDeliverable $deliverable) use ($agreement, $userId) {
                 $teamLookup = $agreement->teams->keyBy(fn (Team $team) => (int) $team->id);
                 $agreementTeamIds = $teamLookup->keys();
@@ -89,6 +89,36 @@ class AgreementDeliverableDisplay
         return self::currentlyAssignedUserIds($deliverable, $teamLookup, $memberIds)->contains($userId);
     }
 
+    public static function userIsTaggedOrAssigned(
+        Agreement $agreement,
+        AgreementDeliverable $deliverable,
+        User $user
+    ): bool {
+        $teamLookup = $agreement->teams->keyBy(fn (Team $team) => (int) $team->id);
+        $memberIds = self::buildAgreementMemberUserIds($agreement);
+        $assignedUser = $deliverable->users->firstWhere('id', (int) $user->id);
+
+        if (! $assignedUser) {
+            return false;
+        }
+
+        return self::isActivelyAssignedUser($assignedUser, $deliverable, $teamLookup, $memberIds);
+    }
+
+    public static function buildAgreementMemberUserIdsPublic(Agreement $agreement): Collection
+    {
+        return self::buildAgreementMemberUserIds($agreement);
+    }
+
+    public static function isActivelyAssignedUserPublic(
+        User $user,
+        AgreementDeliverable $deliverable,
+        Collection $teamLookup,
+        Collection $agreementMemberUserIds
+    ): bool {
+        return self::isActivelyAssignedUser($user, $deliverable, $teamLookup, $agreementMemberUserIds);
+    }
+
     private static function focusProgressOnUser(array $progress, int $userId): array
     {
         if ($progress['is_individual']) {
@@ -108,10 +138,12 @@ class AgreementDeliverableDisplay
 
         if ($progress['is_joint']) {
             $completed = 0.0;
+            $recommended = null;
             foreach ($progress['live_assignment_groups'] as $group) {
                 foreach ($group['users'] as $row) {
                     if ((int) $row['user_id'] === $userId) {
                         $completed = (float) $row['completed_value'];
+                        $recommended = $row['recommended_target'] ?? null;
                         break 2;
                     }
                 }
@@ -119,10 +151,25 @@ class AgreementDeliverableDisplay
 
             $progress['user_focus'] = [
                 'completed' => $completed,
-                'target' => null,
-                'has_target' => false,
+                'target' => $recommended,
+                'has_target' => $recommended !== null && (float) $recommended > 0,
+                'percent' => $recommended > 0 ? min(100, ($completed / (float) $recommended) * 100) : null,
+                'shared' => true,
+            ];
+
+            return $progress;
+        }
+
+        if ($progress['is_contact']) {
+            $recommended = self::resolveUserPivotTarget($progress['deliverable'], $userId);
+
+            $progress['user_focus'] = [
+                'completed' => 0.0,
+                'target' => $recommended,
+                'has_target' => $recommended !== null && (float) $recommended > 0,
                 'percent' => null,
                 'shared' => true,
+                'is_contact_tag' => true,
             ];
 
             return $progress;
@@ -202,10 +249,9 @@ class AgreementDeliverableDisplay
         $isTime = $deliverable->metric_type === 'time';
         $isAllottedTime = $isTime && ($deliverable->time_basis ?? 'observed') === 'allotted';
         $allottedTimeUnit = ActivityTypeDuration::resolveAllottedTimeUnitForDeliverable($deliverable);
-        $isIndividual = $deliverable->contribution_basis === 'user'
-            && $deliverable->user_grouping_mode === 'individual';
-        $isJoint = $deliverable->contribution_basis === 'user'
-            && $deliverable->user_grouping_mode === 'joint';
+        $isIndividual = DeliverableAssignmentTargets::isIndividual($deliverable);
+        $isJoint = DeliverableAssignmentTargets::isJoint($deliverable);
+        $isContact = DeliverableAssignmentTargets::isContact($deliverable);
 
         $completedValue = $isTime
             ? ($isAllottedTime
@@ -247,6 +293,7 @@ class AgreementDeliverableDisplay
         $liveAssignmentGroups = collect();
         $individualProgress = collect();
         $pastIndividualProgress = collect();
+        $rollupCounts = null;
 
         if ($isJoint) {
             $liveAssignmentGroups = self::buildLiveAssignmentGroups(
@@ -268,7 +315,6 @@ class AgreementDeliverableDisplay
 
             $individualProgress = $assignedUsers->map(function (User $user) use (
                 $contributorByUserId,
-                $target,
                 $deliverable,
                 $agreement,
                 $contributions,
@@ -277,6 +323,7 @@ class AgreementDeliverableDisplay
             ) {
                 $summary = $contributorByUserId->get((int) $user->id);
                 $completed = (float) ($summary['completed_value'] ?? 0);
+                $userTarget = (float) (self::resolveUserPivotTarget($deliverable, (int) $user->id) ?? 0);
                 $userContributions = $contributions
                     ->where('contributor_user_id', (int) $user->id)
                     ->values();
@@ -285,18 +332,25 @@ class AgreementDeliverableDisplay
                     $user,
                     $summary,
                     $completed,
-                    $target,
+                    $userTarget,
                     true,
-                    self::statusForAssignment($deliverable, $agreement, $completed, $userContributions, $from, $to)
+                    self::statusForAssignment($deliverable, $agreement, $completed, $userContributions, $from, $to, $userTarget)
                 );
             })->values();
+
+            $rollupCounts = DeliverableAssignmentTargets::countOnTrackStatuses(
+                $individualProgress->pluck('status')
+            );
+            $status = DeliverableAssignmentTargets::rollupIndividualStatus(
+                $individualProgress->pluck('status')
+            );
 
             $pastIndividualProgress = self::buildPastAssignees(
                 $deliverable,
                 $currentlyAssignedUserIds,
                 $contributorByUserId,
                 $teamLookup,
-                $target,
+                0,
                 true,
                 $agreement,
                 $contributions,
@@ -304,6 +358,42 @@ class AgreementDeliverableDisplay
                 $to
             );
         }
+
+        $liveTeams = $deliverable->teams->filter(fn (Team $team) => ! $team->pivot->unassigned_at)->values();
+        $liveUsers = $deliverable->users
+            ->filter(fn (User $user) => self::isActivelyAssignedUser(
+                $user,
+                $deliverable,
+                $teamLookup,
+                $agreementMemberUserIds
+            ))
+            ->values();
+        $allocationSummary = DeliverableAssignmentTargets::summarizeFromDeliverable(
+            $deliverable,
+            $liveUsers,
+            $liveTeams,
+            $teamLookup
+        );
+
+        $countedCompleted = $completedValue;
+        $sectionedBar = null;
+        if ($isIndividual && $target > 0) {
+            $personTargets = [];
+            $personCompleted = [];
+            foreach ($individualProgress as $row) {
+                $userId = (int) $row['user']->id;
+                if ($row['target'] > 0) {
+                    $personTargets[$userId] = (float) $row['target'];
+                }
+                $personCompleted[$userId] = (float) $row['completed_value'];
+            }
+            $countedCompleted = DeliverableAssignmentTargets::countedTotalTowardTarget($personTargets, $personCompleted);
+            $sectionedBar = self::buildIndividualSectionedBar($individualProgress, $target, $allocationSummary);
+        }
+
+        $taggedAssignmentGroups = ($isContact || $isJoint)
+            ? self::buildTaggedDisplayGroups($deliverable, $teamLookup, $agreementMemberUserIds, $contributorByUserId)
+            : collect();
 
         $metricParts = [];
         if ($deliverable->metric_type === 'time') {
@@ -330,21 +420,31 @@ class AgreementDeliverableDisplay
             }
         }
 
+        $displayCompleted = $isIndividual && $target > 0 ? $countedCompleted : $completedValue;
+
         return [
             'deliverable' => $deliverable,
             'target' => $target,
             'has_target' => $target > 0,
             'completed_value' => $completedValue,
-            'percent' => $target > 0 ? min(100, ($completedValue / $target) * 100) : 0,
+            'counted_completed_value' => $displayCompleted,
+            'logged_completed_value' => $completedValue,
+            'show_logged_total' => $isIndividual && $target > 0 && $completedValue > $countedCompleted,
+            'percent' => $target > 0 ? min(100, ($displayCompleted / $target) * 100) : 0,
             'status' => $status,
+            'rollup_on_track' => $isIndividual ? ($rollupCounts ?? null) : null,
             'unit_label' => $unitLabel,
             'metric_summary' => implode(' · ', $metricParts),
             'is_individual' => $isIndividual,
             'is_joint' => $isJoint,
+            'is_contact' => $isContact,
             'live_assignment_groups' => $liveAssignmentGroups,
+            'tagged_assignment_groups' => $taggedAssignmentGroups,
             'past_contributions' => $pastContributions,
             'individual_progress' => $individualProgress,
             'past_individual_progress' => $pastIndividualProgress,
+            'sectioned_bar' => $sectionedBar,
+            'allocation_summary' => $allocationSummary,
             'shows_contributor_breakdown' => $deliverable->contribution_basis === 'user',
             'assignment_groups' => self::buildTableAssignmentGroups(
                 $deliverable,
@@ -352,6 +452,142 @@ class AgreementDeliverableDisplay
                 $agreementMemberUserIds
             ),
         ];
+    }
+
+    private static function resolveUserPivotTarget(AgreementDeliverable $deliverable, int $userId): ?float
+    {
+        $assignedUser = $deliverable->users->firstWhere('id', $userId);
+
+        return DeliverableAssignmentTargets::normalizeQuantity($assignedUser?->pivot?->target_quantity);
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $individualProgress
+     */
+    private static function buildIndividualSectionedBar(
+        Collection $individualProgress,
+        float $totalTarget,
+        array $allocationSummary
+    ): array {
+        $sections = [];
+        $allocatedTarget = 0.0;
+
+        foreach ($individualProgress as $row) {
+            $personTarget = (float) ($row['target'] ?? 0);
+            if ($personTarget <= 0) {
+                continue;
+            }
+
+            $allocatedTarget += $personTarget;
+            $sections[] = [
+                'type' => 'person',
+                'user' => $row['user'],
+                'target' => $personTarget,
+                'completed' => (float) $row['completed_value'],
+                'fill_percent' => min(100, $personTarget > 0 ? ((float) $row['completed_value'] / $personTarget) * 100 : 0),
+            ];
+        }
+
+        $unassigned = max(0, round($totalTarget - $allocatedTarget, 2));
+        if ($unassigned > 0) {
+            $sections[] = [
+                'type' => 'unassigned',
+                'target' => $unassigned,
+            ];
+        }
+
+        $sectionTargetSum = $sections === [] ? 0.0 : array_sum(array_map(
+            fn (array $section) => (float) ($section['target'] ?? 0),
+            $sections
+        ));
+        $scaleBase = max($totalTarget, $sectionTargetSum, 0.0001);
+        $isOverAssigned = $allocationSummary['is_over_assigned'] ?? false;
+
+        foreach ($sections as &$section) {
+            $section['width_percent'] = round(((float) ($section['target'] ?? 0) / $scaleBase) * 100, 2);
+        }
+        unset($section);
+
+        return [
+            'sections' => $sections,
+            'is_over_assigned' => $isOverAssigned,
+            'over_assigned_by' => $isOverAssigned ? abs((float) ($allocationSummary['remainder'] ?? 0)) : 0,
+        ];
+    }
+
+    private static function buildTaggedDisplayGroups(
+        AgreementDeliverable $deliverable,
+        Collection $teamLookup,
+        Collection $agreementMemberUserIds,
+        Collection $contributorByUserId
+    ): Collection {
+        $assignedTeams = $deliverable->teams
+            ->filter(fn (Team $team) => ! $team->pivot->unassigned_at)
+            ->values();
+
+        $groups = collect();
+        $groupedUserIds = collect();
+
+        foreach ($assignedTeams as $team) {
+            $agreementTeam = $teamLookup->get((int) $team->id);
+            $memberIds = $agreementTeam?->users?->pluck('id')->map(fn ($id) => (int) $id) ?? collect();
+            $rows = $memberIds
+                ->map(function (int $userId) use ($deliverable, $contributorByUserId, $team, $agreementTeam, $agreementMemberUserIds, $teamLookup) {
+                    $user = $agreementTeam?->users->firstWhere('id', $userId);
+                    $assignedUser = $deliverable->users->firstWhere('id', $userId);
+                    if (! $user || ! $assignedUser || ! self::isActivelyAssignedUser($assignedUser, $deliverable, $teamLookup, $agreementMemberUserIds)) {
+                        return null;
+                    }
+
+                    $summary = $contributorByUserId->get($userId);
+
+                    return [
+                        'user_id' => $userId,
+                        'user' => $user,
+                        'team_name' => $team->name,
+                        'completed_value' => (float) ($summary['completed_value'] ?? 0),
+                        'recommended_target' => self::resolveUserPivotTarget($deliverable, $userId),
+                    ];
+                })
+                ->filter()
+                ->sortBy(fn (array $row) => $row['user']->name)
+                ->values();
+
+            $groupedUserIds = $groupedUserIds->merge($rows->pluck('user_id'));
+
+            $groups->push([
+                'team' => $team,
+                'team_recommended_target' => DeliverableAssignmentTargets::normalizeQuantity($team->pivot->target_quantity),
+                'users' => $rows,
+            ]);
+        }
+
+        $standaloneRows = $deliverable->users
+            ->filter(fn (User $user) => self::isActivelyAssignedUser($user, $deliverable, $teamLookup, $agreementMemberUserIds))
+            ->reject(fn (User $user) => $groupedUserIds->contains((int) $user->id))
+            ->map(function (User $user) use ($contributorByUserId, $deliverable) {
+                $summary = $contributorByUserId->get((int) $user->id);
+
+                return [
+                    'user_id' => (int) $user->id,
+                    'user' => $user,
+                    'team_name' => $summary['team_name'] ?? null,
+                    'completed_value' => (float) ($summary['completed_value'] ?? 0),
+                    'recommended_target' => self::resolveUserPivotTarget($deliverable, (int) $user->id),
+                ];
+            })
+            ->sortBy(fn (array $row) => $row['user']->name)
+            ->values();
+
+        if ($standaloneRows->isNotEmpty()) {
+            $groups->push([
+                'team' => null,
+                'team_recommended_target' => null,
+                'users' => $standaloneRows,
+            ]);
+        }
+
+        return $groups;
     }
 
     /**
@@ -444,7 +680,7 @@ class AgreementDeliverableDisplay
 
             $rows = $memberIds
                 ->filter(fn (int $userId) => $currentlyAssignedUserIds->contains($userId))
-                ->map(function (int $userId) use ($contributorByUserId, $teamLookup, $team, $agreementTeam) {
+                ->map(function (int $userId) use ($contributorByUserId, $team, $agreementTeam, $deliverable) {
                     $user = $agreementTeam?->users->firstWhere('id', $userId);
                     if (!$user) {
                         return null;
@@ -457,6 +693,7 @@ class AgreementDeliverableDisplay
                         'user' => $user,
                         'team_name' => $team->name,
                         'completed_value' => (float) ($summary['completed_value'] ?? 0),
+                        'recommended_target' => self::resolveUserPivotTarget($deliverable, $userId),
                         'source_assignment_type' => 'team',
                     ];
                 })
@@ -488,6 +725,7 @@ class AgreementDeliverableDisplay
                     'user' => $user,
                     'team_name' => $summary['team_name'] ?? self::resolveDisplayTeamNameForAssignedUser($user, $deliverable, $teamLookup),
                     'completed_value' => (float) ($summary['completed_value'] ?? 0),
+                    'recommended_target' => self::resolveUserPivotTarget($deliverable, (int) $user->id),
                     'source_assignment_type' => $user->pivot->source_team_id ? 'team' : 'user',
                 ];
             })
@@ -618,15 +856,16 @@ class AgreementDeliverableDisplay
                     $userContributions = $contributions
                         ? $contributions->where('contributor_user_id', $userId)->values()
                         : collect();
+                    $userTarget = (float) (self::resolveUserPivotTarget($deliverable, $userId) ?? 0);
 
                     return self::memberRow(
                         $user,
                         array_merge($summary ?? [], ['team_name' => $teamName]),
                         $completed,
-                        $target,
+                        $userTarget,
                         false,
-                        $agreement
-                            ? self::statusForAssignment($deliverable, $agreement, $completed, $userContributions, $from, $to)
+                        $agreement && $userTarget > 0
+                            ? self::statusForAssignment($deliverable, $agreement, $completed, $userContributions, $from, $to, $userTarget)
                             : null
                     );
                 }
@@ -829,9 +1068,10 @@ class AgreementDeliverableDisplay
         float $completed,
         Collection $contributions,
         ?Carbon $from,
-        ?Carbon $to
+        ?Carbon $to,
+        ?float $targetOverride = null
     ): ?DeliverableStatus {
-        $target = (float) ($deliverable->target_quantity ?? 0);
+        $target = $targetOverride ?? (float) ($deliverable->target_quantity ?? 0);
         if ($target <= 0) {
             return null;
         }
@@ -858,7 +1098,7 @@ class AgreementDeliverableDisplay
             return DeliverableStatus::NoProgressMade;
         }
 
-        $expected = self::expectedQuantity($deliverable, $agreement, $from, $to);
+        $expected = self::expectedQuantity($deliverable, $agreement, $from, $to, $target);
         if ($completed >= $expected) {
             return DeliverableStatus::OnTrack;
         }
@@ -874,9 +1114,10 @@ class AgreementDeliverableDisplay
         AgreementDeliverable $deliverable,
         Agreement $agreement,
         ?Carbon $from,
-        ?Carbon $to
+        ?Carbon $to,
+        ?float $targetOverride = null
     ): float {
-        $target = (float) ($deliverable->target_quantity ?? 0);
+        $target = $targetOverride ?? (float) ($deliverable->target_quantity ?? 0);
         $agreementStart = $agreement->start_date->copy()->startOfDay();
         $agreementEnd = ($agreement->extension_end_date ?? $agreement->end_date)->copy()->startOfDay();
         $durationDays = self::inclusiveDayCount($agreementStart, $agreementEnd);

@@ -113,6 +113,7 @@ class DashboardController extends Controller
         // Deliverables assigned to this user
         $myAssignedDeliverables = $user->deliverables()
             ->wherePivotNull('unassigned_at')
+            ->whereNull('agreement_deliverables.retired_at')
             ->whereHas('agreement', fn ($query) => $query->where('active', true))
             ->with(['agreement.organizations', 'activityType', 'contactFamily'])
             ->get();

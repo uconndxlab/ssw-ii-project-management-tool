@@ -90,8 +90,18 @@
                                         </div>
                                         <div class="text-end small text-nowrap">
                                             @if($progress['is_individual'])
-                                                <span class="text-muted">{{ $progress['individual_progress']->count() }} assigned</span>
-                                                <div class="text-muted">{{ number_format($target, 1) }} {{ strtolower($unitLabel) }} each</div>
+                                                <strong>{{ number_format($progress['counted_completed_value'] ?? $completedValue, 1) }}</strong>
+                                                @if($hasTarget)
+                                                    <span class="text-muted">/ {{ number_format($target, 1) }}</span>
+                                                @endif
+                                                <div class="text-muted">{{ $unitLabel }}</div>
+                                                @if(!empty($progress['show_logged_total']))
+                                                    <div class="text-muted">{{ number_format($progress['logged_completed_value'], 1) }} logged in total</div>
+                                                @endif
+                                                <x-deliverable-status :status="$progress['status'] ?? null" class="mt-1" />
+                                                @if(!empty($progress['rollup_on_track']))
+                                                    <div class="text-muted">{{ $progress['rollup_on_track']['on_track'] }} of {{ $progress['rollup_on_track']['total'] }} on track</div>
+                                                @endif
                                             @else
                                                 <strong>{{ number_format($completedValue, 1) }}</strong>
                                                 @if($hasTarget)
@@ -103,7 +113,24 @@
                                         </div>
                                     </div>
 
-                                    @if(!$progress['is_individual'] && $hasTarget)
+                                    @if($progress['is_individual'] && !empty($progress['sectioned_bar']) && $hasTarget)
+                                        <div class="d-flex mb-2 rounded overflow-hidden" style="height:8px;">
+                                            @foreach($progress['sectioned_bar']['sections'] as $section)
+                                                @if(($section['type'] ?? '') === 'unassigned')
+                                                    <div class="bg-secondary-subtle border-end border-white" style="width:{{ $section['width_percent'] }}%" title="Unassigned {{ number_format($section['target'], 1) }}"></div>
+                                                @else
+                                                    <div class="bg-body-secondary border-end border-white" style="width:{{ $section['width_percent'] }}%" title="{{ $section['user']->name }}">
+                                                        <div class="h-100 {{ ($section['fill_percent'] ?? 0) >= 100 ? 'bg-success' : 'bg-primary' }}" style="width:{{ min(100, (float) ($section['fill_percent'] ?? 0)) }}%"></div>
+                                                    </div>
+                                                @endif
+                                            @endforeach
+                                        </div>
+                                        @if(($progress['allocation_summary']['remainder'] ?? 0) > 0.009)
+                                            <div class="text-muted small mb-3">{{ number_format($progress['allocation_summary']['remainder'], 1) }} {{ strtolower($unitLabel) }} unassigned across live assignees</div>
+                                        @elseif(!empty($progress['sectioned_bar']['is_over_assigned']))
+                                            <div class="text-muted small mb-3">Over-assigned by {{ number_format($progress['sectioned_bar']['over_assigned_by'], 1) }} {{ strtolower($unitLabel) }}</div>
+                                        @endif
+                                    @elseif(!$progress['is_individual'] && $hasTarget)
                                         <div class="progress mb-3" style="height:6px;">
                                             <div class="progress-bar {{ $percent >= 100 ? 'bg-success' : 'bg-primary' }}" style="width:{{ $percent }}%"></div>
                                         </div>
@@ -124,7 +151,54 @@
                                                                 <span>
                                                                     <x-user-link :user="$row['user']" :label="$renderContributorLabel($row)" />
                                                                 </span>
-                                                                <span class="text-muted text-nowrap">{{ number_format($row['completed_value'], 1) }} {{ strtolower($unitLabel) }}</span>
+                                                                <span class="text-muted text-nowrap">
+                                                                    {{ number_format($row['completed_value'], 1) }}
+                                                                    @if(!empty($row['recommended_target']))
+                                                                        <span class="text-muted">(rec. {{ number_format($row['recommended_target'], 1) }})</span>
+                                                                    @endif
+                                                                    {{ strtolower($unitLabel) }}
+                                                                </span>
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @elseif($progress['is_contact'] && $progress['tagged_assignment_groups']->isNotEmpty())
+                                        <div class="mb-2">
+                                            <div class="text-muted small mb-2">
+                                                <button type="button"
+                                                        class="btn btn-link btn-sm p-0 text-muted"
+                                                        data-bs-toggle="collapse"
+                                                        data-bs-target="#contact-deliverable-disclaimer-{{ $deliverable->id }}"
+                                                        aria-expanded="false">
+                                                    Why these names?
+                                                </button>
+                                                <div class="collapse mt-1" id="contact-deliverable-disclaimer-{{ $deliverable->id }}">
+                                                    This is a contact-based deliverable. Contributions are not solely derived from the listed users.
+                                                </div>
+                                            </div>
+                                            @foreach($progress['tagged_assignment_groups'] as $group)
+                                                <div class="mb-2">
+                                                    @if($group['team'])
+                                                        <a href="{{ route('teams.show', $group['team']) }}" class="badge bg-secondary-subtle text-secondary-emphasis border text-decoration-underline">{{ $group['team']->name }}</a>
+                                                        @if(!empty($group['team_recommended_target']))
+                                                            <span class="text-muted small ms-1">rec. {{ number_format($group['team_recommended_target'], 1) }}</span>
+                                                        @endif
+                                                    @else
+                                                        <span class="text-muted small fw-semibold">Tagged users</span>
+                                                    @endif
+                                                    <div class="{{ $group['team'] ? 'ps-3 mt-1' : 'mt-1' }}">
+                                                        @foreach($group['users'] as $row)
+                                                            <div class="d-flex justify-content-between small py-1">
+                                                                <span><x-user-link :user="$row['user']" :label="$renderContributorLabel($row)" /></span>
+                                                                <span class="text-muted text-nowrap">
+                                                                    @if(!empty($row['recommended_target']))
+                                                                        rec. {{ number_format($row['recommended_target'], 1) }} {{ strtolower($unitLabel) }}
+                                                                    @else
+                                                                        —
+                                                                    @endif
+                                                                </span>
                                                             </div>
                                                         @endforeach
                                                     </div>

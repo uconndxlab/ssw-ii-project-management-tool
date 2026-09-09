@@ -26,15 +26,31 @@
                                 <div class="border rounded p-3 mb-2 bg-body">
                                     <div class="d-flex justify-content-between align-items-start gap-3 mb-2">
                                         <div>
-                                            <div class="fw-semibold">{{ $progress['metric_summary'] }}</div>
+                                            <div class="fw-semibold">
+                                                {{ $progress['metric_summary'] }}
+                                                <span class="badge bg-secondary-subtle text-secondary-emphasis ms-1">Assigned</span>
+                                            </div>
                                             @if($deliverable->suggested_due_date)
                                                 <div class="text-muted small">Suggested due {{ $deliverable->suggested_due_date->format('M d, Y') }}</div>
                                             @endif
                                         </div>
                                         <div class="text-end small text-nowrap">
-                                            @if($focus['shared'] && $progress['is_joint'])
+                                            @if(!empty($focus['is_contact_tag']))
+                                                @if($focus['has_target'] ?? false)
+                                                    <span class="text-muted">Recommended</span>
+                                                    <div><strong>{{ number_format($focus['target'], 1) }}</strong> {{ $unitLower }}</div>
+                                                @else
+                                                    <span class="text-muted">Tagged</span>
+                                                @endif
+                                            @elseif($focus['shared'] && $progress['is_joint'])
                                                 <span class="text-muted">Your contribution</span>
-                                                <div><strong>{{ number_format($focus['completed'], 1) }}</strong> {{ $unitLower }}</div>
+                                                <div>
+                                                    <strong>{{ number_format($focus['completed'], 1) }}</strong>
+                                                    @if($focus['has_target'] ?? false)
+                                                        <span class="text-muted">(rec. {{ number_format($focus['target'], 1) }})</span>
+                                                    @endif
+                                                    {{ $unitLower }}
+                                                </div>
                                             @elseif($focus['shared'])
                                                 <strong>{{ number_format($focus['completed'], 1) }}</strong>
                                                 @if($focus['has_target'] ?? false)
@@ -51,7 +67,7 @@
                                         </div>
                                     </div>
 
-                                    @if($focus['has_target'] ?? false)
+                                    @if(($focus['has_target'] ?? false) && empty($focus['is_contact_tag']) && ($focus['percent'] ?? null) !== null)
                                         @php $barPercent = (float) ($focus['percent'] ?? 0); @endphp
                                         <div class="progress" style="height:6px;">
                                             <div class="progress-bar {{ $barPercent >= 100 ? 'bg-success' : 'bg-primary' }}" style="width:{{ $barPercent }}%"></div>

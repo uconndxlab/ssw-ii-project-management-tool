@@ -14,7 +14,7 @@
     $basisOptions = [
         'contact' => [
             'label' => 'By Contact',
-            'description' => 'Count at the contact. No assignees.',
+            'description' => 'Count at the contact. Optionally tag responsible staff.',
         ],
         'user' => [
             'label' => 'By User',
@@ -24,11 +24,11 @@
     $groupingOptions = [
         'joint' => [
             'label' => 'Joint',
-            'description' => 'One shared target.',
+            'description' => 'One shared target with optional recommended shares.',
         ],
         'individual' => [
             'label' => 'Individual',
-            'description' => 'One target per assigned user.',
+            'description' => 'Split a total target across assigned users.',
         ],
     ];
 
@@ -325,14 +325,54 @@
         </x-form-subsection>
     </div>
 
-    <div class="{{ ($row['contribution_basis'] ?? '') === 'user' ? '' : 'd-none' }}" data-user-assignment-wrapper>
+    <div class="{{ in_array($row['contribution_basis'] ?? '', ['user', 'contact'], true) ? '' : 'd-none' }}" data-user-assignment-wrapper>
         <x-form-subsection title="Members">
-            <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
-                <p class="text-muted small mb-0">Select from agreement members. Historical contributions use activity snapshots automatically.</p>
+            <div class="d-flex justify-content-between align-items-start gap-3 mb-2">
+                <p class="text-muted small mb-0" data-deliverable-assignment-help>
+                    Select from agreement members. Historical contributions use activity snapshots automatically.
+                </p>
                 <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0 d-none" data-deliverable-select-all>Select All</button>
             </div>
 
-            <div class="border rounded overflow-auto" style="min-height: 140px; max-height: 240px; background-color: #e9ecef;">
+            <div class="d-none mb-2" data-deliverable-contact-disclaimer>
+                <button type="button"
+                        class="btn btn-link btn-sm p-0 text-muted"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#deliverable-contact-disclaimer-body"
+                        aria-expanded="false">
+                    Why these names?
+                </button>
+                <div class="collapse mt-1" id="deliverable-contact-disclaimer-body">
+                    <p class="text-muted small mb-0">
+                        This is a contact-based deliverable. Contributions are not solely derived from the listed users.
+                    </p>
+                </div>
+            </div>
+
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                <div class="small" data-deliverable-allocation-summary>
+                    <span class="text-muted">Allocated</span>
+                    <span data-deliverable-allocation-allocated>0</span>
+                    <span class="text-muted">/</span>
+                    <span data-deliverable-allocation-total>0</span>
+                    <span class="ms-1" data-deliverable-allocation-status></span>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-deliverable-split-evenly>Split evenly</button>
+                    <div class="d-flex align-items-center gap-1">
+                        <input type="number"
+                               class="form-control form-control-sm"
+                               style="width: 5.5rem;"
+                               min="0"
+                               step="0.1"
+                               placeholder="Default"
+                               data-deliverable-default-target>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-deliverable-fill-empty>Fill empty</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border rounded overflow-auto" style="min-height: 140px; max-height: 280px; background-color: #e9ecef;">
                 <div class="small text-muted px-3 py-2 border-bottom bg-body">
                     Agreement members
                 </div>

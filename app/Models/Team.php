@@ -54,7 +54,7 @@ class Team extends Model
             'team_id',
             'agreement_deliverable_id'
         )
-            ->withPivot(['assigned_at', 'unassigned_at'])
+            ->withPivot(['assigned_at', 'unassigned_at', 'target_quantity'])
             ->withTimestamps();
     }
 }

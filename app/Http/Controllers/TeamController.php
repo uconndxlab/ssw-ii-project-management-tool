@@ -197,10 +197,19 @@ class TeamController extends Controller
             $memberDeliverables[$user->id] = [];
             foreach ($team->agreements as $agreement) {
                 foreach ($agreement->deliverables as $deliverable) {
-                    if ($deliverable->users->contains(fn ($assignedUser) => (int) $assignedUser->id === (int) $user->id && !$assignedUser->pivot->unassigned_at)) {
+                    if ($deliverable->retired_at) {
+                        continue;
+                    }
+
+                    $assignedUser = $deliverable->users->first(
+                        fn ($assignedUser) => (int) $assignedUser->id === (int) $user->id && ! $assignedUser->pivot->unassigned_at
+                    );
+
+                    if ($assignedUser) {
                         $memberDeliverables[$user->id][] = [
                             'deliverable' => $deliverable,
-                            'agreement'   => $agreement,
+                            'agreement' => $agreement,
+                            'personal_target' => $assignedUser->pivot->target_quantity,
                         ];
                     }
                 }

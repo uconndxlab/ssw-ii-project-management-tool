@@ -138,7 +138,15 @@
                             @endif
                         </td>
                         <td class="text-center">
-                            {{ $deliverable->target_quantity !== null ? number_format((float) $deliverable->target_quantity, 1) : '—' }}
+                            @php
+                                $personalTarget = $deliverable->pivot->target_quantity;
+                                $displayTarget = $personalTarget !== null && $personalTarget !== ''
+                                    ? (float) $personalTarget
+                                    : (($deliverable->contribution_basis === 'user' && $deliverable->user_grouping_mode === 'individual')
+                                        ? null
+                                        : ($deliverable->target_quantity !== null ? (float) $deliverable->target_quantity : null));
+                            @endphp
+                            {{ $displayTarget !== null ? number_format($displayTarget, 1) : '—' }}
                         </td>
                         <td class="small text-muted">{{ $deliverable->notes ?? '' }}</td>
                     </tr>
