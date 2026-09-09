@@ -19,6 +19,20 @@ class DeliverableAssignmentTargets
         return round((float) $value, 2);
     }
 
+    public static function formatQuantity(mixed $value): string
+    {
+        $normalized = self::normalizeQuantity($value);
+
+        if ($normalized === null) {
+            return '';
+        }
+
+        $formatted = number_format($normalized, 2, '.', '');
+        $formatted = rtrim(rtrim($formatted, '0'), '.');
+
+        return $formatted === '' ? '0' : $formatted;
+    }
+
     public static function isIndividual(AgreementDeliverable $deliverable): bool
     {
         return $deliverable->contribution_basis === 'user'

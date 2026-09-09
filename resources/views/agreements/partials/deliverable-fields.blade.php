@@ -327,54 +327,51 @@
 
     <div class="{{ in_array($row['contribution_basis'] ?? '', ['user', 'contact'], true) ? '' : 'd-none' }}" data-user-assignment-wrapper>
         <x-form-subsection title="Members">
-            <div class="d-flex justify-content-between align-items-start gap-3 mb-2">
+            <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
                 <p class="text-muted small mb-0" data-deliverable-assignment-help>
                     Select from agreement members. Historical contributions use activity snapshots automatically.
                 </p>
-                <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0 d-none" data-deliverable-select-all>Select All</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0 d-none" data-deliverable-select-all>Select All Members</button>
             </div>
 
-            <div class="d-none mb-2" data-deliverable-contact-disclaimer>
-                <button type="button"
-                        class="btn btn-link btn-sm p-0 text-muted"
-                        data-bs-toggle="collapse"
-                        data-bs-target="#deliverable-contact-disclaimer-body"
-                        aria-expanded="false">
-                    Why these names?
-                </button>
-                <div class="collapse mt-1" id="deliverable-contact-disclaimer-body">
-                    <p class="text-muted small mb-0">
-                        This is a contact-based deliverable. Contributions are not solely derived from the listed users.
-                    </p>
-                </div>
-            </div>
-
-            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
-                <div class="small" data-deliverable-allocation-summary>
+            <div class="border rounded bg-body mb-2 p-2 d-none" data-deliverable-allocation-toolbar>
+                <div class="small mb-2 pb-2 border-bottom" data-deliverable-allocation-summary>
                     <span class="text-muted">Allocated</span>
                     <span data-deliverable-allocation-allocated>0</span>
                     <span class="text-muted">/</span>
                     <span data-deliverable-allocation-total>0</span>
                     <span class="ms-1" data-deliverable-allocation-status></span>
                 </div>
-                <div class="d-flex flex-wrap gap-2">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" data-deliverable-split-evenly>Split evenly</button>
-                    <div class="d-flex align-items-center gap-1">
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <button type="button" class="btn btn-sm btn-secondary" data-deliverable-split-evenly>
+                        Distribute total evenly
+                    </button>
+                    <div class="d-flex align-items-center gap-2 small">
+                        <span class="text-muted text-nowrap">Set empty rows to</span>
                         <input type="number"
+                               id="deliverable-default-target-amount"
                                class="form-control form-control-sm"
-                               style="width: 5.5rem;"
+                               style="width: 5rem;"
                                min="0"
                                step="0.1"
-                               placeholder="Default"
+                               aria-label="Amount for empty target rows"
                                data-deliverable-default-target>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" data-deliverable-fill-empty>Fill empty</button>
+                        <button type="button" class="btn btn-sm btn-secondary" data-deliverable-fill-empty>Update</button>
                     </div>
                 </div>
             </div>
 
             <div class="border rounded overflow-auto" style="min-height: 140px; max-height: 280px; background-color: #e9ecef;">
-                <div class="small text-muted px-3 py-2 border-bottom bg-body">
-                    Agreement members
+                <div class="small text-muted px-3 py-2 border-bottom bg-body sticky-top d-flex justify-content-between align-items-center">
+                    <span>Agreement members</span>
+                    <span class="me-2 d-none" data-deliverable-target-column-label>
+                        <span data-deliverable-target-column-text>Suggested target</span>
+                        <i class="bi bi-info-circle ms-1"
+                           data-bs-toggle="tooltip"
+                           data-bs-placement="left"
+                           data-deliverable-target-column-info
+                           title="Optional planning amount. Does not limit logged contributions."></i>
+                    </span>
                 </div>
                 <div class="m-3" data-deliverable-assignment-ledger>
                     <div class="text-muted small py-3" data-deliverable-assignment-empty>

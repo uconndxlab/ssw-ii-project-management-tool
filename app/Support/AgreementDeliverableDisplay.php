@@ -421,6 +421,23 @@ class AgreementDeliverableDisplay
         }
 
         $displayCompleted = $isIndividual && $target > 0 ? $countedCompleted : $completedValue;
+        $overTargetValue = $isIndividual && $target > 0
+            ? max(0, round($completedValue - $countedCompleted, 2))
+            : ($target > 0 ? max(0, round($completedValue - $target, 2)) : 0);
+
+        $allocationNotices = [];
+        if ($overTargetValue > 0) {
+            $allocationNotices['excess_logged'] = $overTargetValue;
+        }
+        if ($isIndividual) {
+            $remainder = (float) ($allocationSummary['remainder'] ?? 0);
+            if ($remainder > 0.009) {
+                $allocationNotices['unassigned_remainder'] = round($remainder, 2);
+            }
+            if (! empty($sectionedBar['is_over_assigned']) && ($sectionedBar['over_assigned_by'] ?? 0) > 0.009) {
+                $allocationNotices['over_assigned_by'] = (float) $sectionedBar['over_assigned_by'];
+            }
+        }
 
         return [
             'deliverable' => $deliverable,
@@ -429,6 +446,8 @@ class AgreementDeliverableDisplay
             'completed_value' => $completedValue,
             'counted_completed_value' => $displayCompleted,
             'logged_completed_value' => $completedValue,
+            'over_target_value' => $overTargetValue,
+            'allocation_notices' => $allocationNotices,
             'show_logged_total' => $isIndividual && $target > 0 && $completedValue > $countedCompleted,
             'percent' => $target > 0 ? min(100, ($displayCompleted / $target) * 100) : 0,
             'status' => $status,
@@ -450,6 +469,11 @@ class AgreementDeliverableDisplay
                 $deliverable,
                 $teamLookup,
                 $agreementMemberUserIds
+            ),
+            'burn_up' => DeliverableActivityHistogram::buildDeliverableBurnUp(
+                $deliverable,
+                $agreement,
+                $target
             ),
         ];
     }
@@ -479,12 +503,14 @@ class AgreementDeliverableDisplay
             }
 
             $allocatedTarget += $personTarget;
+            $completed = (float) $row['completed_value'];
+            $rawPercent = $personTarget > 0 ? ($completed / $personTarget) * 100 : 0;
             $sections[] = [
                 'type' => 'person',
                 'user' => $row['user'],
                 'target' => $personTarget,
-                'completed' => (float) $row['completed_value'],
-                'fill_percent' => min(100, $personTarget > 0 ? ((float) $row['completed_value'] / $personTarget) * 100 : 0),
+                'completed' => $completed,
+                'fill_percent' => min(100, $rawPercent),
             ];
         }
 

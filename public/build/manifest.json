@@ -13,5 +13,11 @@
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true
+  },
+  "resources/js/deliverable-charts.js": {
+    "file": "assets/deliverable-charts-BSTaFTMk.js",
+    "name": "deliverable-charts",
+    "src": "resources/js/deliverable-charts.js",
+    "isEntry": true
   }
 }

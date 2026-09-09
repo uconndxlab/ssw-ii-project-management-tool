@@ -23,6 +23,7 @@ use App\Services\DeliverableContributionService;
 use App\Services\PrivateFileService;
 use App\Support\ActivityTypeDuration;
 use App\Support\AgreementDeliverableDisplay;
+use App\Support\DeliverableActivityHistogram;
 use App\Support\DeliverableAssignmentTargets;
 use App\Support\DeliverableHistoryScope;
 use App\Support\Authorization\ScopeSync;
@@ -278,6 +279,7 @@ class AgreementController extends Controller
             $deliverableFrom,
             $deliverableTo
         );
+        $deliverableActivityBuckets = DeliverableActivityHistogram::buildAgreementBuckets($agreement);
         $effectiveEnd = $agreement->extension_end_date ?? $agreement->end_date;
         $usingExtendedEnd = $agreement->extension_end_date
             && $deliverableTo
@@ -290,6 +292,7 @@ class AgreementController extends Controller
             'lifetimeTotals',
             'ytdTotals',
             'deliverableGroups',
+            'deliverableActivityBuckets',
             'deliverableFrom',
             'deliverableTo',
             'usingExtendedEnd',

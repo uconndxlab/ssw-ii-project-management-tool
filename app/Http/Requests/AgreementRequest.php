@@ -698,20 +698,6 @@ class AgreementRequest extends FormRequest
                     $validator->errors()->add("deliverables.{$deliverableKey}.team_ids", 'Individual deliverables cannot link teams directly. Assign users instead.');
                 }
 
-                foreach (array_keys($row['user_targets'] ?? []) as $targetUserId) {
-                    if (! $deliverableUserIds->contains((int) $targetUserId)) {
-                        $validator->errors()->add("deliverables.{$deliverableKey}.user_targets", 'User targets must match selected users.');
-                        break;
-                    }
-                }
-
-                foreach (array_keys($row['team_targets'] ?? []) as $targetTeamId) {
-                    if (! $deliverableTeamIds->contains((int) $targetTeamId)) {
-                        $validator->errors()->add("deliverables.{$deliverableKey}.team_targets", 'Team targets must match selected teams.');
-                        break;
-                    }
-                }
-
                 if (($row['include_additional_time'] ?? false) && $metricType !== 'time') {
                     $validator->errors()->add("deliverables.{$deliverableKey}.include_additional_time", 'Only time deliverables can include prep and follow up time.');
                 }

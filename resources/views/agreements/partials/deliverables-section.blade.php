@@ -163,10 +163,10 @@
                 ->mapWithKeys(fn ($value, $id) => [(string) $id => $value ?: ''])
                 ->all(),
             'user_targets' => collect($row['user_targets'] ?? [])
-                ->mapWithKeys(fn ($value, $id) => [(string) $id => $value])
+                ->mapWithKeys(fn ($value, $id) => [(string) $id => \App\Support\DeliverableAssignmentTargets::formatQuantity($value)])
                 ->all(),
             'team_targets' => collect($row['team_targets'] ?? [])
-                ->mapWithKeys(fn ($value, $id) => [(string) $id => $value])
+                ->mapWithKeys(fn ($value, $id) => [(string) $id => \App\Support\DeliverableAssignmentTargets::formatQuantity($value)])
                 ->all(),
             'classification_locked' => !empty($row['classification_locked']) || ($existingLockMap[(int) ($row['id'] ?? 0)] ?? false),
             'semantic_locked' => !empty($row['semantic_locked']) || ($existingLockMap[(int) ($row['id'] ?? 0)] ?? false),
@@ -213,10 +213,12 @@
                     ->mapWithKeys(fn ($team) => [(string) $team->id => $team->pivot->assigned_at ?? ''])
                     ->all(),
                 'user_targets' => $deliverable->users
-                    ->mapWithKeys(fn ($user) => [(string) $user->id => $user->pivot->target_quantity ?? ''])
+                    ->filter(fn ($user) => !$user->pivot->unassigned_at)
+                    ->mapWithKeys(fn ($user) => [(string) $user->id => \App\Support\DeliverableAssignmentTargets::formatQuantity($user->pivot->target_quantity)])
                     ->all(),
                 'team_targets' => $deliverable->teams
-                    ->mapWithKeys(fn ($team) => [(string) $team->id => $team->pivot->target_quantity ?? ''])
+                    ->filter(fn ($team) => !$team->pivot->unassigned_at)
+                    ->mapWithKeys(fn ($team) => [(string) $team->id => \App\Support\DeliverableAssignmentTargets::formatQuantity($team->pivot->target_quantity)])
                     ->all(),
             ], 'existing-' . $deliverable->id);
             $deliverableRows[] = $enrichRow($row, $row['row_key']);
@@ -827,6 +829,18 @@
             return basis === 'user' || basis === 'contact';
         }
 
+        function formatQuantity(value) {
+            if (value === null || value === undefined || value === '') {
+                return '';
+            }
+
+            const normalized = Math.round(parseFloat(value) * 100) / 100;
+            let formatted = normalized.toFixed(2);
+            formatted = formatted.replace(/\.?0+$/, '');
+
+            return formatted === '' ? '0' : formatted;
+        }
+
         function collectTargetMapsFromLedger() {
             const user_targets = {};
             const team_targets = {};
@@ -911,7 +925,7 @@
             const allocatedEl = editorFieldset.querySelector('[data-deliverable-allocation-allocated]');
             const totalEl = editorFieldset.querySelector('[data-deliverable-allocation-total]');
             const statusEl = editorFieldset.querySelector('[data-deliverable-allocation-status]');
-            const toolbar = editorFieldset.querySelector('[data-deliverable-allocation-summary]')?.closest('.d-flex');
+            const toolbar = editorFieldset.querySelector('[data-deliverable-allocation-toolbar]');
 
             if (allocatedEl) allocatedEl.textContent = summary.allocated.toFixed(1);
             if (totalEl) totalEl.textContent = summary.total.toFixed(1);
@@ -941,8 +955,8 @@
         function renderAssignmentLedger(selectedUserIds, selectedTeamIds, targetMaps) {
             const ledger = editorFieldset.querySelector('[data-deliverable-assignment-ledger]');
             const selectAllBtn = editorFieldset.querySelector('[data-deliverable-select-all]');
+            const targetColumnLabel = editorFieldset.querySelector('[data-deliverable-target-column-label]');
             const helpEl = editorFieldset.querySelector('[data-deliverable-assignment-help]');
-            const disclaimerEl = editorFieldset.querySelector('[data-deliverable-contact-disclaimer]');
             if (!ledger) return;
 
             const pool = getAgreementMembershipPool();
@@ -962,16 +976,12 @@
                 if (basis === 'contact') {
                     helpEl.textContent = 'Tag responsible staff. Recommended shares are optional and do not limit contact-level contributions.';
                 } else if (isIndividual) {
-                    helpEl.textContent = 'Assign users and split the deliverable total across them.';
+                    helpEl.textContent = 'Select members and set how much each is expected to contribute. Targets are optional and do not block saving.';
                 } else if (basis === 'user') {
                     helpEl.textContent = 'Select assignees. Recommended shares are optional and do not limit contributions.';
                 } else {
                     helpEl.textContent = 'Select from agreement members.';
                 }
-            }
-
-            if (disclaimerEl) {
-                disclaimerEl.classList.toggle('d-none', basis !== 'contact');
             }
 
             if (!assignmentShowsLedger(basis) || (pool.selectedTeamIds.length === 0 && pool.directUserIds.length === 0)) {
@@ -981,11 +991,29 @@
                 empty.textContent = 'Add teams or users in Teams & Users on the agreement form.';
                 ledger.appendChild(empty);
                 if (selectAllBtn) selectAllBtn.classList.add('d-none');
+                if (targetColumnLabel) targetColumnLabel.classList.add('d-none');
                 updateAllocationSummaryDisplay();
                 return;
             }
 
             if (selectAllBtn) selectAllBtn.classList.remove('d-none');
+            if (targetColumnLabel) {
+                const labelText = targetColumnLabel.querySelector('[data-deliverable-target-column-text]');
+                const labelInfo = targetColumnLabel.querySelector('[data-deliverable-target-column-info]');
+                if (labelText) {
+                    labelText.textContent = isIndividual ? 'Required target' : 'Suggested target';
+                }
+                if (labelInfo && window.bootstrap && bootstrap.Tooltip) {
+                    const hint = isIndividual
+                        ? 'How much each member is expected to contribute. Progress is tracked against this when set.'
+                        : 'Optional planning amount. Does not limit logged contributions.';
+                    const existingTooltip = bootstrap.Tooltip.getInstance(labelInfo);
+                    if (existingTooltip) existingTooltip.dispose();
+                    labelInfo.setAttribute('title', hint);
+                    bootstrap.Tooltip.getOrCreateInstance(labelInfo);
+                }
+                targetColumnLabel.classList.remove('d-none');
+            }
 
             function createCheckbox(type, value, checked) {
                 const input = document.createElement('input');
@@ -1009,8 +1037,7 @@
                 input.style.width = '5rem';
                 input.min = '0';
                 input.step = editorFieldset.querySelector('[data-deliverable-metric]:checked')?.value === 'completion' ? '1' : '0.1';
-                input.placeholder = isIndividual ? 'Req' : 'Rec';
-                input.value = value ?? '';
+                input.value = formatQuantity(value);
                 if (kind === 'user') {
                     input.setAttribute('data-deliverable-user-target', '');
                     input.dataset.userId = String(id);
@@ -1076,7 +1103,9 @@
                 }
                 header.appendChild(teamBadge);
                 if (usesTeams) {
-                    header.appendChild(createTargetInput('team', teamId, teamTargets[teamId] ?? teamTargets[String(teamId)] ?? '', false));
+                    const teamTargetInput = createTargetInput('team', teamId, teamTargets[teamId] ?? teamTargets[String(teamId)] ?? '', false);
+                    teamTargetInput.classList.add('ms-auto');
+                    header.appendChild(teamTargetInput);
                 }
                 card.appendChild(header);
 
