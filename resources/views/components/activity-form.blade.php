@@ -516,7 +516,7 @@
                             <x-form-switch
                                 name="not_yet_complete"
                                 label="Not yet complete"
-                                help="Keep in history, count time, and mark as moving forward; but exclude from deliverable progress."
+                                help="Keep in history, count time, log activity, mark as moving forward; but exclude from deliverable progress."
                                 :checked="$notYetCompleteChecked"
                                 class="mb-0"
                             />
