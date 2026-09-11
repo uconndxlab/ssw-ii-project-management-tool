@@ -8,7 +8,7 @@ return [
     'capture_exception_source_code' => env('NIGHTWATCH_CAPTURE_EXCEPTION_SOURCE_CODE', false),
     'capture_request_payload' => env('NIGHTWATCH_CAPTURE_REQUEST_PAYLOAD', false),
     'redact_payload_fields' => explode(',', env('NIGHTWATCH_REDACT_PAYLOAD_FIELDS', '_token,password,password_confirmation,email,name,first_name,last_name,phone,address,notes,po_number,search,q')),
-    'redact_headers' => explode(',', env('NIGHTWATCH_REDACT_HEADERS', 'Authorization,Cookie,Proxy-Authorization,X-XSRF-TOKEN,X-Forwarded-For,X-Real-Ip,X-Original-Forwarded-For,Forwarded,X-Client-Ip')),
+    'redact_headers' => explode(',', env('NIGHTWATCH_REDACT_HEADERS', 'Authorization,Cookie,Proxy-Authorization,X-XSRF-TOKEN,X-Forwarded-For,X-Real-Ip,X-Original-Forwarded-For,Forwarded,X-Client-Ip,CF-Connecting-IP,True-Client-IP')),
 
     // App-owned: gates the /admin/diagnostics/nightwatch probe route, not a vendor setting.
     'diagnostics_enabled' => env('NIGHTWATCH_DIAGNOSTICS_ENABLED', false),
