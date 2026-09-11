@@ -86,9 +86,14 @@ class AppServiceProvider extends ServiceProvider
         // 1. Users: capture staff ID only, no name or email
         Nightwatch::user(fn ($user) => []);
 
-        // 2. Strip query strings from URLs (search terms like ?q=Jane+Doe)
+        // 2. Strip query strings from URLs and referers (search terms like ?q=Jane+Doe), drop IPs
         Nightwatch::redactRequests(function (RequestRecord $request) {
             $request->url = Str::before($request->url, '?');
+            $request->ip = '';
+
+            if ($request->headers->has('referer')) {
+                $request->headers->set('referer', Str::before($request->headers->get('referer'), '?'));
+            }
         });
 
         // 3. DB exception messages embed the full SQL WITH values,

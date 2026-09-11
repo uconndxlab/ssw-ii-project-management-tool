@@ -8,6 +8,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ContactFamilyController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LoggingFieldController;
+use App\Http\Controllers\NightwatchDiagnosticsController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\ProfileController;
@@ -83,5 +84,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/users/{user}/edit', [AdminUserController::class, 'edit'])->name('users.edit');
         Route::put('/users/{user}', [AdminUserController::class, 'update'])->name('users.update');
         Route::delete('/users/{user}', [AdminUserController::class, 'destroy'])->name('users.destroy');
+
+        Route::get('/diagnostics/nightwatch', NightwatchDiagnosticsController::class)->name('diagnostics.nightwatch');
     });
 });
