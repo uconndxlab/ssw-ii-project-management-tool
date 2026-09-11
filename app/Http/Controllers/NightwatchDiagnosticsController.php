@@ -25,6 +25,9 @@ class NightwatchDiagnosticsController extends Controller
             404
         );
 
+        // Bypass the low request sampling rate so this probe is always captured.
+        Nightwatch::sample(1);
+
         $checks = [];
 
         $this->probeLogs();
