@@ -54,7 +54,8 @@ return [
 
         'stack' => [
             'driver' => 'stack',
-            'channels' => explode(',', (string) env('LOG_STACK', 'single')),
+            // nightwatch is appended so app logs reach it regardless of LOG_STACK.
+            'channels' => array_unique([...explode(',', (string) env('LOG_STACK', 'single')), 'nightwatch']),
             'ignore_exceptions' => false,
         ],
 
