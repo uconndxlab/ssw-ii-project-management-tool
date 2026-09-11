@@ -66,8 +66,8 @@ class NightwatchDiagnosticsController extends Controller
             DB::transaction(function () use ($request) {
                 DB::table('users')->insert([
                     'name' => 'Nightwatch Probe Duplicate',
-                    'email' => $request->userStr::il,
-                    'password' => Hash::make(str()->random(32)),
+                    'email' => $request->user()->email,
+                    'password' => Hash::make(Str::random(32)),
                 ]);
             });
         } catch (QueryException $e) {
