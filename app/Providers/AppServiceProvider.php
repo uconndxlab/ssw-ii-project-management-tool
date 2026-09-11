@@ -9,6 +9,11 @@ use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
+use Laravel\Nightwatch\Facades\Nightwatch;
+use Laravel\Nightwatch\Records\Request as RequestRecord;
+use Laravel\Nightwatch\Records\Exception as ExceptionRecord;
+use Laravel\Nightwatch\Records\Mail as MailRecord;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -25,6 +30,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+
+        $this->registerNightwatchRedactions();
         $this->registerCaseInsensitiveLike();
         $this->registerAuthorization();
 
@@ -71,6 +78,33 @@ class AppServiceProvider extends ServiceProvider
 
         QueryBuilder::macro('orWhereIlike', function (string $column, mixed $value) use ($operator) {
             return $this->orWhere($column, $operator($this), $value);
+        });
+    }
+
+    private function registerNightwatchRedactions(): void
+    {
+        // 1. Users: capture staff ID only, no name or email
+        Nightwatch::user(fn ($user) => []);
+
+        // 2. Strip query strings from URLs (search terms like ?q=Jane+Doe)
+        Nightwatch::redactRequests(function (RequestRecord $request) {
+            $request->url = Str::before($request->url, '?');
+        });
+
+        // 3. DB exception messages embed the full SQL WITH values,
+        //    and Postgres adds a DETAIL line like "Key (email)=(jane@...)"
+        Nightwatch::redactExceptions(function (ExceptionRecord $exception) {
+            if (str_starts_with($exception->message, 'SQLSTATE')) {
+                $exception->message = preg_split(
+                    '/\s+DETAIL:|\s+\(Connection:/',
+                    $exception->message
+                )[0];
+            }
+        });
+
+        // 4. Mail subjects (if any mention a client)
+        Nightwatch::redactMail(function (MailRecord $mail) {
+            $mail->subject = '[redacted]';
         });
     }
 }
