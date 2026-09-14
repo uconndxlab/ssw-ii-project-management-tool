@@ -966,6 +966,74 @@
         }
     }
 
+    const autoSelectSignatures = {};
+
+    function pickerIsDisabled(picker) {
+        return !!picker.querySelector('[data-token-control].token-picker-control-disabled');
+    }
+
+    // Fills a coverage picker only when its allowed set has just changed and narrowed to a single
+    // option, so a manually cleared token is not immediately re-added.
+    function autoSelectSoleOption(key, picker, allowedIds, currentIds) {
+        // Restriction passes that run before the pickers boot cannot be trusted to report selections.
+        if (!picker || picker.dataset.tokenPickerInitialized !== 'true') {
+            return;
+        }
+
+        const normalized = Array.from(new Set((allowedIds || []).map(String))).sort();
+        const signature = normalized.join('|');
+
+        if (autoSelectSignatures[key] === signature) {
+            return;
+        }
+
+        autoSelectSignatures[key] = signature;
+
+        if (normalized.length !== 1 || (currentIds || []).length > 0 || pickerIsDisabled(picker)) {
+            return;
+        }
+
+        picker.dispatchEvent(new CustomEvent('token-picker:set', { detail: normalized }));
+    }
+
+    function scopeSectionElement() {
+        return form.querySelector('[data-scope-id="activity-coverage-scope"]');
+    }
+
+    function allowedScopeProgramIds() {
+        const scopeSection = scopeSectionElement();
+
+        if (!scopeSection) {
+            return [];
+        }
+
+        const projectProgramMap = parseJson(scopeSection.dataset.projectProgramMap, {});
+        const agreementProgramIds = new Set(mergePreservedCoverage(
+            selectedAgreementIds().length ? uniqueMergedIds('program_ids') : [],
+            initialProgramIds
+        ));
+        const allowed = new Set();
+
+        selectedProjectIds().forEach(function (projectId) {
+            (projectProgramMap[String(projectId)] || []).forEach(function (programId) {
+                if (agreementProgramIds.has(String(programId))) {
+                    allowed.add(String(programId));
+                }
+            });
+        });
+
+        return Array.from(allowed);
+    }
+
+    function autoSelectSoleProgram() {
+        autoSelectSoleOption(
+            'programs',
+            document.getElementById('activity-coverage-scope-programs'),
+            allowedScopeProgramIds(),
+            selectedProgramIds()
+        );
+    }
+
     function noteCoverageInteraction(event) {
         if (event.isTrusted) {
             coverageInteractionDetected = true;
@@ -1097,6 +1165,8 @@
             return;
         }
 
+        const restrictedStateIds = mergePreservedCoverage(allowedStateIds, initialStateIds);
+
         statePicker.dispatchEvent(new CustomEvent('token-picker:set-disabled', {
             detail: {
                 disabled: agreements.length === 0 || allowedStateIds.length === 0,
@@ -1107,7 +1177,8 @@
                     : 'Search states...',
             }
         }));
-        statePicker.dispatchEvent(new CustomEvent('token-picker:restrict', { detail: mergePreservedCoverage(allowedStateIds, initialStateIds) }));
+        statePicker.dispatchEvent(new CustomEvent('token-picker:restrict', { detail: restrictedStateIds }));
+        autoSelectSoleOption('states', statePicker, restrictedStateIds, selectedStateIds());
     }
 
     function restrictOrganizationPicker() {
@@ -1126,6 +1197,8 @@
                 return states.length === 0 || intersectionValues(config.state_ids || [], states).length > 0;
             });
 
+        const restrictedOrganizationIds = mergePreservedCoverage(allowedOrganizationIds, initialOrganizationIds);
+
         orgPicker.dispatchEvent(new CustomEvent('token-picker:set-disabled', {
             detail: {
                 disabled: agreements.length === 0 || allowedOrganizationIds.length === 0,
@@ -1135,8 +1208,9 @@
             }
         }));
         orgPicker.dispatchEvent(new CustomEvent('token-picker:restrict', {
-            detail: mergePreservedCoverage(allowedOrganizationIds, initialOrganizationIds)
+            detail: restrictedOrganizationIds
         }));
+        autoSelectSoleOption('organizations', orgPicker, restrictedOrganizationIds, selectedOrganizationIds());
     }
 
     function restrictParticipantPicker() {
@@ -1446,7 +1520,7 @@
 
     function restrictScopePickers() {
         const agreements = selectedAgreementIds();
-        const scopeSection = form.querySelector('[data-scope-id="activity-coverage-scope"]');
+        const scopeSection = scopeSectionElement();
         const projectPicker = document.getElementById('activity-coverage-scope-projects');
 
         if (!scopeSection || !projectPicker) return;
@@ -1462,6 +1536,8 @@
             ? 'Select at least one agreement first...'
             : 'No programs are available from the selected agreements...';
 
+        const restrictedProjectIds = mergePreservedCoverage(allowedProjectIds, initialProjectIds);
+
         projectPicker.dispatchEvent(new CustomEvent('token-picker:set-disabled', {
             detail: {
                 disabled: disableProjects,
@@ -1469,7 +1545,7 @@
             }
         }));
         projectPicker.dispatchEvent(new CustomEvent('token-picker:restrict', {
-            detail: mergePreservedCoverage(allowedProjectIds, initialProjectIds)
+            detail: restrictedProjectIds
         }));
         scopeSection.dispatchEvent(new CustomEvent('project-program-scope:restrict', {
             detail: {
@@ -1480,6 +1556,8 @@
                 programDisabledPlaceholder: programDisabledPlaceholder,
             }
         }));
+        autoSelectSoleOption('projects', projectPicker, restrictedProjectIds, selectedProjectIds());
+        autoSelectSoleProgram();
     }
 
     function restrictAgreementPicker() {
@@ -1854,6 +1932,7 @@
     form.querySelector('[data-scope-id="activity-coverage-scope"]')?.addEventListener('project-program-scope:change', function () {
         programsPickerInitialized = true;
         stopPreservingInitialCoverageIfNeeded();
+        autoSelectSoleProgram();
         restrictParticipantPicker();
         updateAgreementLoggingGroups();
         updateContactFamilyLoggingGroups();
