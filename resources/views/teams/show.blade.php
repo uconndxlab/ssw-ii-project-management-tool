@@ -204,7 +204,7 @@
                                                                 ? null
                                                                 : ($entry['deliverable']->target_quantity !== null ? (float) $entry['deliverable']->target_quantity : null));
                                                     @endphp
-                                                    {{ $displayTarget !== null ? number_format($displayTarget, 1) : '—' }}
+                                                    {{ ($displayTarget ?? null) !== null ? number_format($displayTarget, 1) : '—' }}
                                                 </td>
                                             </tr>
                                             @endforeach
