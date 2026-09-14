@@ -8,6 +8,7 @@ use App\Models\Concerns\VisibleToUser;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * View: you are on organization_user, or a listed program is in your privilege.
@@ -45,6 +46,14 @@ class Organization extends Model
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'organization_user')->withTimestamps();
+    }
+
+    public function contacts(): HasMany
+    {
+        return $this->hasMany(OrganizationContact::class)
+            ->orderByDesc('is_primary')
+            ->orderBy('sort_order')
+            ->orderBy('id');
     }
 
     public function agreements(): BelongsToMany

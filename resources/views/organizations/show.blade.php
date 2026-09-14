@@ -33,6 +33,9 @@
             <dt class="col-5 text-muted fw-normal small">State(s)</dt>
             <dd class="col-7 mb-2"><x-entity-count-badge kind="state" :count="$organization->states->count()" /></dd>
 
+            <dt class="col-5 text-muted fw-normal small">Contacts</dt>
+            <dd class="col-7 mb-2"><x-entity-count-badge kind="user" :count="$organization->contacts->count()" /></dd>
+
             <dt class="col-5 text-muted fw-normal small">Associated Users</dt>
             <dd class="col-7 mb-2">
                 @forelse($organization->users as $user)
@@ -52,6 +55,23 @@
                 <x-entity-count-badge kind="team" :count="$teamMembers->count()" />
             </dd>
         </dl>
+
+        <x-relationship-scroll-panel
+            title="Contacts"
+            kind="user"
+            :count="$organization->contacts->count()"
+            height="220px"
+            collapsible
+            :collapsed="false"
+            class="mt-3">
+            <div class="d-flex flex-column gap-2">
+                @forelse($organization->contacts as $contact)
+                    <x-organization-contact-row :contact="$contact" />
+                @empty
+                    <p class="text-muted small mb-0 py-1">No contacts added.</p>
+                @endforelse
+            </div>
+        </x-relationship-scroll-panel>
 
         <x-relationship-scroll-panel
             title="States"

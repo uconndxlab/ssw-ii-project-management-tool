@@ -13,6 +13,7 @@ use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 
 class OrganizationController extends Controller
@@ -104,7 +105,7 @@ class OrganizationController extends Controller
     public function show(Organization $organization)
     {
         $this->authorize('view', $organization);
-        $organization->load(['states', 'programs.projects', 'users']);
+        $organization->load(['states', 'programs.projects', 'users', 'contacts']);
 
         // Load agreements with relationships
         $agreements = $organization->agreements()->active()->with(['states', 'users'])->get();
@@ -188,6 +189,7 @@ class OrganizationController extends Controller
             $validated['program_ids'] ?? [],
         );
         $organization->users()->sync($validated['user_ids'] ?? []);
+        $this->syncOrganizationContacts($organization, $validated['contacts'] ?? []);
 
         return redirect()
             ->route('organizations.index')
@@ -197,7 +199,7 @@ class OrganizationController extends Controller
     public function edit(Organization $organization)
     {
         $this->authorize('update', $organization);
-        $organization->load(['states', 'programs.projects', 'users']);
+        $organization->load(['states', 'programs.projects', 'users', 'contacts']);
         $states = State::orderBy('name', 'asc')->get();
         $projects = ProjectProgramScope::assignableProjectsWithProgramsFor(Auth::user(), $organization);
         $users = User::query()->active()->orderBy('name', 'asc')->get();
@@ -224,6 +226,7 @@ class OrganizationController extends Controller
             $validated['program_ids'] ?? [],
         );
         $organization->users()->sync($validated['user_ids'] ?? []);
+        $this->syncOrganizationContacts($organization, $validated['contacts'] ?? []);
 
         return $this->redirectAfterSave($organization, 'Organization updated successfully.');
     }
@@ -259,10 +262,19 @@ class OrganizationController extends Controller
             'project_ids.*' => ['distinct', 'exists:projects,id'],
             'user_ids' => ['nullable', 'array'],
             'user_ids.*' => ['exists:users,id'],
+            'contacts' => ['nullable', 'array', 'max:10'],
+            'contacts.*.id' => ['nullable', 'integer'],
+            'contacts.*._delete' => ['nullable', 'boolean'],
+            'contacts.*.name' => ['nullable', 'string', 'max:255'],
+            'contacts.*.title' => ['nullable', 'string', 'max:255'],
+            'contacts.*.email' => ['nullable', 'string', 'email', 'max:255'],
+            'contacts.*.phone' => ['nullable', 'string', 'max:30'],
+            'contacts.*.is_primary' => ['nullable', 'boolean'],
         ], [
             'po_number.regex' => 'The PO number must be exactly 6 digits.',
             'po_number.size' => 'The PO number must be exactly 6 digits.',
             'po_number.unique' => 'This PO number is already assigned to another organization.',
+            'contacts.max' => 'Organizations may have at most 10 contacts.',
         ]);
 
         $validator->after(function ($validator) use ($request, $organization) {
@@ -288,6 +300,7 @@ class OrganizationController extends Controller
                 $organization?->programs()->pluck('programs.id')->all() ?? [],
             );
             $this->validateUniqueNameAndStates($validator, $request, $organization);
+            $this->validateContacts($validator, $request);
         });
 
         $validated = $validator->validate();
@@ -344,6 +357,44 @@ class OrganizationController extends Controller
         );
     }
 
+    private function validateContacts($validator, Request $request): void
+    {
+        $rows = $request->input('contacts', []);
+
+        if (!is_array($rows)) {
+            return;
+        }
+
+        $primaryCount = 0;
+
+        foreach ($rows as $key => $row) {
+            if (!is_array($row) || filter_var($row['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                continue;
+            }
+
+            $name = trim((string) ($row['name'] ?? ''));
+            $email = trim((string) ($row['email'] ?? ''));
+            $title = trim((string) ($row['title'] ?? ''));
+            $phone = trim((string) ($row['phone'] ?? ''));
+
+            if ($name === '' && $email === '' && $title === '' && $phone === '') {
+                continue;
+            }
+
+            if ($name === '' && $email === '') {
+                $validator->errors()->add("contacts.{$key}.name", 'Provide a name or an email for each contact.');
+            }
+
+            if (filter_var($row['is_primary'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                $primaryCount++;
+            }
+        }
+
+        if ($primaryCount > 1) {
+            $validator->errors()->add('contacts', 'Only one contact can be marked as primary.');
+        }
+    }
+
     private function applyOrganizationIndexSort($query, string $sort, string $direction): void
     {
         $dir = $direction === 'desc' ? 'DESC' : 'ASC';
@@ -386,5 +437,53 @@ class OrganizationController extends Controller
             FROM programs p
             INNER JOIN organization_program op ON op.program_id = p.id AND op.organization_id = organizations.id
         ), '')";
+    }
+
+    private function syncOrganizationContacts(Organization $organization, array $rows): void
+    {
+        $existingContacts = $organization->contacts()->get()->keyBy('id');
+        $sortOrder = 0;
+
+        // Primary contact is synced first so it lands at sort_order 1 and sorts to the top.
+        $orderedRows = collect($rows)
+            ->filter(fn ($row) => is_array($row))
+            ->sortByDesc(fn ($row) => filter_var($row['is_primary'] ?? false, FILTER_VALIDATE_BOOLEAN));
+
+        foreach ($orderedRows as $row) {
+            $rowId = isset($row['id']) && $row['id'] !== '' ? (int) $row['id'] : null;
+            $markedForDeletion = filter_var($row['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+            if ($markedForDeletion) {
+                if ($rowId && $existingContacts->has($rowId)) {
+                    $existingContacts->get($rowId)->delete();
+                }
+
+                continue;
+            }
+
+            $name = trim((string) ($row['name'] ?? ''));
+            $email = trim((string) ($row['email'] ?? ''));
+            $title = trim((string) ($row['title'] ?? ''));
+            $phone = trim((string) ($row['phone'] ?? ''));
+
+            if ($name === '' && $email === '' && $title === '' && $phone === '') {
+                continue;
+            }
+
+            $attributes = [
+                'name' => $name !== '' ? $name : null,
+                'email' => $email !== '' ? $email : null,
+                'title' => $title !== '' ? $title : null,
+                'phone' => $phone !== '' ? $phone : null,
+                'is_primary' => filter_var($row['is_primary'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                'sort_order' => ++$sortOrder,
+            ];
+
+            if ($rowId && $existingContacts->has($rowId)) {
+                $existingContacts->get($rowId)->update($attributes);
+            } else {
+                $organization->contacts()->create($attributes);
+            }
+        }
     }
 }

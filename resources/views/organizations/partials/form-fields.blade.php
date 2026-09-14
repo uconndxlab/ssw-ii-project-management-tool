@@ -9,6 +9,41 @@
             'search' => trim($user->name . ' ' . ($user->email ?? '') . ' ' . $user->accessLabel()),
         ];
     });
+
+    $rawContactRows = old('contacts');
+    $contactRows = [];
+
+    if (is_array($rawContactRows)) {
+        foreach ($rawContactRows as $key => $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $contactRows[] = [
+                'row_key' => is_string($key) ? $key : 'row-' . $key,
+                'id' => $row['id'] ?? '',
+                'name' => $row['name'] ?? '',
+                'title' => $row['title'] ?? '',
+                'email' => $row['email'] ?? '',
+                'phone' => $row['phone'] ?? '',
+                'is_primary' => !empty($row['is_primary']) ? 1 : 0,
+                '_delete' => !empty($row['_delete']) ? 1 : 0,
+            ];
+        }
+    } elseif ($organization?->contacts) {
+        foreach ($organization->contacts as $contact) {
+            $contactRows[] = [
+                'row_key' => 'existing-' . $contact->id,
+                'id' => $contact->id,
+                'name' => $contact->name,
+                'title' => $contact->title,
+                'email' => $contact->email,
+                'phone' => $contact->phone,
+                'is_primary' => $contact->is_primary ? 1 : 0,
+                '_delete' => 0,
+            ];
+        }
+    }
 @endphp
 
 <x-section-card title="Information">
@@ -33,6 +68,40 @@
                placeholder="e.g. 423232">
     </x-form-field>
 
+    <x-form-options class="mt-4">
+        <x-form-switch
+            name="active"
+            label="Active"
+            help="Only active organizations appear on agreement and activity forms."
+            :checked="old('active', $organization?->active ?? true)"
+            class="mb-0"
+        />
+    </x-form-options>
+</x-section-card>
+
+<x-section-card title="Contacts">
+    <x-form-field label="Points of Contact" name="contacts" help="Each contact needs a name or an email. Up to 10 contacts; mark one as primary.">
+        <x-inline-record-list
+            list-id="organization-contacts"
+            name="contacts"
+            :rows="$contactRows"
+            :max-rows="10"
+            :sortable="true"
+            primary-field="is_primary"
+            primary-label="Primary Contact"
+            add-button-text="Add Contact"
+            empty-message="No contacts added yet."
+            :fields="[
+                ['key' => 'name', 'label' => 'Name', 'type' => 'text', 'placeholder' => 'Full name', 'col' => 'col-md-3'],
+                ['key' => 'title', 'label' => 'Title', 'type' => 'text', 'placeholder' => 'Job title', 'col' => 'col-md-3'],
+                ['key' => 'email', 'label' => 'Email', 'type' => 'email', 'placeholder' => 'name@example.com', 'col' => 'col-md-3'],
+                ['key' => 'phone', 'label' => 'Phone', 'type' => 'tel', 'placeholder' => '(555) 555-5555', 'col' => 'col-md-3', 'maxlength' => 30],
+            ]"
+        />
+    </x-form-field>
+</x-section-card>
+
+<x-section-card title="Coverage">
     <x-form-field label="States" name="state_ids" :required="true">
         <x-token-picker
             picker-id="organization-states"
@@ -42,21 +111,6 @@
             placeholder="Search states..."
             :height="'220px'"
             entity="state"
-        />
-    </x-form-field>
-
-    <x-form-field label="Associated Users" name="user_ids">
-        <x-token-picker
-            picker-id="organization-users"
-            name="user_ids[]"
-            :options="$userOptions"
-            :selected-ids="old('user_ids', $organization?->users?->pluck('id')->toArray() ?? [])"
-            label-key="label"
-            value-key="value"
-            search-key="search"
-            placeholder="Search to add users..."
-            :height="'220px'"
-            entity="user"
         />
     </x-form-field>
 
@@ -71,14 +125,21 @@
         project-empty-selection-label=""
         program-empty-selection-label=""
     />
+</x-section-card>
 
-    <x-form-options class="mt-4">
-        <x-form-switch
-            name="active"
-            label="Active"
-            help="Only active organizations appear on agreement and activity forms."
-            :checked="old('active', $organization?->active ?? true)"
-            class="mb-0"
+<x-section-card title="Membership">
+    <x-form-field label="Associated Users" name="user_ids">
+        <x-token-picker
+            picker-id="organization-users"
+            name="user_ids[]"
+            :options="$userOptions"
+            :selected-ids="old('user_ids', $organization?->users?->pluck('id')->toArray() ?? [])"
+            label-key="label"
+            value-key="value"
+            search-key="search"
+            placeholder="Search to add users..."
+            :height="'220px'"
+            entity="user"
         />
-    </x-form-options>
+    </x-form-field>
 </x-section-card>
