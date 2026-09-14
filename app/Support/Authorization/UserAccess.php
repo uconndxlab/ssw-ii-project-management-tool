@@ -34,6 +34,9 @@ class UserAccess
 
     private ?Collection $privileges = null;
 
+    /** @var array<string, bool> */
+    private array $recordVisibilityCache = [];
+
     public function __construct(private User $user)
     {
     }
@@ -780,7 +783,13 @@ class UserAccess
 
     public function canViewRecord(Model $record): bool
     {
-        return match (true) {
+        // Views render the same record's visibility check repeatedly (badges, lists); avoid a query per occurrence.
+        $cacheKey = get_class($record) . ':' . $record->getKey();
+        if (array_key_exists($cacheKey, $this->recordVisibilityCache)) {
+            return $this->recordVisibilityCache[$cacheKey];
+        }
+
+        return $this->recordVisibilityCache[$cacheKey] = match (true) {
             $record instanceof Project => $this->applyProjectVisibility(Project::query()->whereKey($record->id))->exists(),
             $record instanceof Program => $this->applyProgramVisibility(Program::query()->whereKey($record->id))->exists(),
             $record instanceof Team => $this->applyTeamVisibility(Team::query()->whereKey($record->id))->exists(),
