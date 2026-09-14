@@ -25,7 +25,7 @@
 <div class="row g-4">
     {{-- Summary column (narrow) --}}
     <div class="col-lg-4">
-        <div class="card shadow-sm entity-show-card h-100">
+        <div class="card shadow-sm entity-show-card">
             <div class="card-header bg-light py-2 px-3">
                 <span class="text-muted fw-semibold small text-uppercase mb-0" style="letter-spacing:.05em;">
                     Summary

@@ -59,8 +59,8 @@
             <div class="small text-muted px-3 py-2 border-bottom bg-body d-flex align-items-center gap-2 flex-shrink-0">
                 <div class="d-flex align-items-center gap-2 min-w-0 flex-grow-1">
                     @if($collapsible)
-                        <div class="d-flex align-items-center justify-content-between gap-3 w-100">
-                            <div class="d-flex align-items-center gap-2 min-w-0 flex-wrap">
+                        <div class="d-flex align-items-center gap-3 w-100">
+                            <div class="d-flex align-items-center gap-2 min-w-0 flex-wrap flex-grow-1">
                                 @if(filled($titleHref))
                                     <a href="{{ $titleHref }}" class="fw-semibold text-body text-decoration-underline text-break">{{ $title }}</a>
                                 @else
@@ -78,9 +78,13 @@
                                 @endif
                             </div>
 
+                            @if($headerActionsFilled)
+                                <div class="flex-shrink-0">{{ $headerActions }}</div>
+                            @endif
+
                             <button
                                 type="button"
-                                class="relationship-ledger-toggle btn btn-link btn-sm p-0 text-decoration-none text-reset d-inline-flex align-items-center {{ $collapsed ? 'collapsed' : '' }}"
+                                class="relationship-ledger-toggle btn btn-link btn-sm p-0 text-decoration-none text-reset d-inline-flex align-items-center flex-shrink-0 {{ $collapsed ? 'collapsed' : '' }}"
                                 data-bs-toggle="collapse"
                                 data-bs-target="#{{ $bodyId }}"
                                 aria-expanded="{{ $collapsed ? 'false' : 'true' }}"
@@ -109,7 +113,7 @@
                         </div>
                     @endif
                 </div>
-                @if($headerActionsFilled)
+                @if($headerActionsFilled && ! $collapsible)
                     <div class="ms-auto flex-shrink-0">{{ $headerActions }}</div>
                 @endif
             </div>

@@ -5,6 +5,7 @@
     'titleAsBadge' => false,
     'wrapTitle' => false,
     'showKindBadge' => false,
+    'subtitle' => null,
     'description' => null,
     'contextBadges' => [],
     'metaBadges' => [],
@@ -91,6 +92,10 @@
                     <x-entity-type-badge :label="$resolvedKindLabel" :badge-class="\App\Support\EntityBadge::typeClasses($kind)" />
                 @endif
             </div>
+
+            @if(filled($subtitle))
+                <div class="small text-muted mt-1">{{ $subtitle }}</div>
+            @endif
 
             @if($contextBadges->isNotEmpty())
                 <div class="d-flex flex-wrap gap-1 mt-2">

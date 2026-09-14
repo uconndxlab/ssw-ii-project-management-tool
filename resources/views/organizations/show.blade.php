@@ -92,13 +92,13 @@
     {{-- ── Relationships ───────────────────────────────────────────────── --}}
     <x-slot:relationships>
         <div class="row g-4 align-items-stretch">
-            <div class="col-md-7 d-flex flex-column">
+            <div class="col-md-6 d-flex">
                 <x-relationship-scroll-panel
                     title="Linked agreements"
                     kind="agreement"
                     :count="$agreements->count()"
                     collapsible
-                    class="flex-grow-1"
+                    class="w-100"
                 >
                     @can('create', App\Models\Agreement::class)
                         <x-slot:headerActions>
@@ -121,34 +121,35 @@
                 </x-relationship-scroll-panel>
             </div>
 
-            {{-- Team Members --}}
-            <div class="col-md-5">
-                <h6 class="fw-semibold mb-3">
-                    Assigned Staff
-                    <span class="badge bg-primary rounded-pill ms-1">{{ $teamMembers->count() }}</span>
-                </h6>
-                @forelse($teamMembers as $member)
-                    <div class="py-2 border-bottom">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <x-user-link :user="$member" class="text-decoration-none fw-semibold small" />
-                            @if($member->access_profile)
-                                <x-category-badge kind="role" class="ms-2">{{ $member->accessLabel() }}</x-category-badge>
+            <div class="col-md-6 d-flex">
+                <x-relationship-scroll-panel
+                    title="Assigned Staff"
+                    kind="user"
+                    :count="$teamMembers->count()"
+                    collapsible
+                    class="w-100"
+                >
+                    @forelse($teamMembers as $member)
+                        <x-relationship-ledger-row
+                            :title="$member->name"
+                            :href="\App\Support\UserProfileLink::route($member)"
+                            kind="user"
+                            :subtitle="$member->email"
+                        >
+                            @if($member->via_agreements?->isNotEmpty())
+                                <x-slot:footer>
+                                    <div class="d-flex flex-wrap gap-1">
+                                        @foreach($member->via_agreements as $agreementName)
+                                            <span class="badge bg-success-subtle text-success-emphasis">{{ $agreementName }}</span>
+                                        @endforeach
+                                    </div>
+                                </x-slot:footer>
                             @endif
-                        </div>
-                        @if($member->email)
-                            <div class="small text-muted">{{ $member->email }}</div>
-                        @endif
-                        @if($member->via_agreements?->isNotEmpty())
-                            <div class="mt-1 d-flex flex-wrap gap-1">
-                                @foreach($member->via_agreements as $agreementName)
-                                    <span class="badge bg-success-subtle text-success-emphasis" style="font-size:.7rem;">{{ $agreementName }}</span>
-                                @endforeach
-                            </div>
-                        @endif
-                    </div>
-                @empty
-                    <p class="text-muted small mb-0">No staff assigned.</p>
-                @endforelse
+                        </x-relationship-ledger-row>
+                    @empty
+                        <p class="text-muted small mb-0 py-2">No staff assigned.</p>
+                    @endforelse
+                </x-relationship-scroll-panel>
             </div>
         </div>
 
