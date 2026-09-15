@@ -14,18 +14,18 @@ class DashboardController extends Controller
     public function index()
     {
         $user = Auth::user();
-        
+
         if ($user->isSystemAdmin()) {
             return $this->adminHome();
         }
-        
+
         return $this->userHome($user);
     }
-    
+
     protected function adminHome()
     {
         $user = Auth::user();
-        
+
         // YTD activities
         $ytdActivities = Activity::whereYear('engagement_date', now()->year)
             ->with(['activityType.contactFamily', 'user', 'agreements'])
@@ -65,58 +65,28 @@ class DashboardController extends Controller
             ->orderBy('name')
             ->get();
 
-        // Always define these for the view
-        $myActivities = collect();
-        $myAgreements = collect();
-        $myAssignedDeliverables = collect();
+        // Admins get their own personal work shown alongside the system-wide stats
+        ['agreements' => $myAgreements, 'activities' => $myActivities, 'deliverables' => $myAssignedDeliverables] = $this->personalWorkData($user);
 
         return view('home', compact('ytdTotals', 'recentActivities', 'agreements', 'stats', 'user', 'myActivities', 'myAgreements', 'myAssignedDeliverables'));
     }
-    
+
     protected function userHome($user)
     {
-        // Get user's agreements
-        $myAgreements = $user->accessibleAgreementsQuery()
-            ->where('agreements.active', true)
-            ->with(['organizations', 'states'])
-            ->withCount('activities')
-            ->withMax('activities', 'engagement_date')
-            ->get();
+        ['agreements' => $myAgreements, 'activities' => $myActivities, 'deliverables' => $myAssignedDeliverables] = $this->personalWorkData($user);
 
-        $allAssignedAgreementIds = $user->accessibleAgreementsQuery()->pluck('agreements.id');
-
-        // Get activities for user's agreements (include inactive agreements for history)
-        $agreementIds = $allAssignedAgreementIds;
-
-        // My recent activities (last 10)
-        $myActivities = Activity::whereHas('agreements', function ($query) use ($agreementIds) {
-                $query->whereIn('agreements.id', $agreementIds);
-            })
-            ->with(['activityType.contactFamily', 'user', 'agreements', 'participants'])
-            ->orderByRecentDisplay()
-            ->limit(10)
-            ->get();
-        
         // My YTD hours (activities I personally logged)
         $myYtdActivities = Activity::where('user_id', $user->id)
             ->whereYear('engagement_date', now()->year)
             ->get();
-        
+
         $myYtdHours = $myYtdActivities->sum(fn($e) => $e->event_hours + ($e->prep_hours ?? 0) + ($e->followup_hours ?? 0));
-        
+
         // This month for user
         $myThisMonthActivities = Activity::where('user_id', $user->id)
             ->whereYear('engagement_date', now()->year)
             ->whereMonth('engagement_date', now()->month)
             ->count();
-
-        // Deliverables assigned to this user
-        $myAssignedDeliverables = $user->deliverables()
-            ->wherePivotNull('unassigned_at')
-            ->whereNull('agreement_deliverables.retired_at')
-            ->whereHas('agreement', fn ($query) => $query->where('active', true))
-            ->with(['agreement.organizations', 'activityType', 'contactFamily'])
-            ->get();
 
         // Global stats
         $stats = [
@@ -129,5 +99,42 @@ class DashboardController extends Controller
         $recentActivities = collect();
 
         return view('home', compact('myAgreements', 'myActivities', 'stats', 'user', 'myActivities', 'myAgreements', 'myAssignedDeliverables', 'recentActivities'));
+    }
+
+    /**
+     * Agreements, activities, and deliverables personally assigned to the given user,
+     * used for the "My Work" dashboard panel for both regular users and admins.
+     */
+    protected function personalWorkData($user)
+    {
+        $myAgreements = $user->accessibleAgreementsQuery()
+            ->where('agreements.active', true)
+            ->with(['organizations', 'states'])
+            ->withCount('activities')
+            ->withMax('activities', 'engagement_date')
+            ->get();
+
+        $agreementIds = $user->accessibleAgreementsQuery()->pluck('agreements.id');
+
+        $myActivities = Activity::whereHas('agreements', function ($query) use ($agreementIds) {
+                $query->whereIn('agreements.id', $agreementIds);
+            })
+            ->with(['activityType.contactFamily', 'user', 'agreements', 'participants'])
+            ->orderByRecentDisplay()
+            ->limit(10)
+            ->get();
+
+        $myAssignedDeliverables = $user->deliverables()
+            ->wherePivotNull('unassigned_at')
+            ->whereNull('agreement_deliverables.retired_at')
+            ->whereHas('agreement', fn ($query) => $query->where('active', true))
+            ->with(['agreement.organizations', 'activityType', 'contactFamily'])
+            ->get();
+
+        return [
+            'agreements' => $myAgreements,
+            'activities' => $myActivities,
+            'deliverables' => $myAssignedDeliverables,
+        ];
     }
 }

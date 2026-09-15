@@ -6,88 +6,88 @@
     <div class="card-body">
         <div class="row g-4">
             @if($myAgreements && $myAgreements->count() > 0)
-            <div class="col-md-6">
-                <h6 class="mb-3">My Agreements</h6>
-                <div class="list-group list-group-sm">
-                    @foreach($myAgreements->take(5) as $agreement)
-                        @if($agreement->isLinkable())
-                            <a href="{{ route('agreements.show', $agreement) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                        @else
-                            <div class="list-group-item d-flex justify-content-between align-items-center">
-                        @endif
-                            <div>
-                                <div class="fw-bold">{{ $agreement->name }}</div>
-                                <small class="text-muted">
-                                    @if($agreement->organizations?->isNotEmpty())
-                                        {{ $agreement->organizations->pluck('name')->join(', ') }}
-                                    @else
-                                        No organizations
-                                    @endif
-                                </small>
-                            </div>
-                            <span class="badge bg-secondary rounded-pill">{{ $agreement->activities_count ?? 0 }}</span>
-                        @if($agreement->isLinkable())
-                            </a>
-                        @else
-                            </div>
-                        @endif
-                    @endforeach
-                </div>
-                @if($myAgreements->count() > 5)
-                    <div class="mt-2">
-                        <a href="{{ route('agreements.index') }}" class="text-decoration-none small">View all agreements</a>
+                <div class="col-md-6">
+                    <h6 class="mb-3">My Agreements</h6>
+                    <div class="list-group list-group-sm">
+                        @foreach($myAgreements->take(5) as $agreement)
+                            @if($agreement->isLinkable())
+                                <a href="{{ route('agreements.show', $agreement) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                            @else
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                            @endif
+                                <div>
+                                    <div class="fw-bold">{{ $agreement->name }}</div>
+                                    <small class="text-muted">
+                                        @if($agreement->organizations?->isNotEmpty())
+                                            {{ $agreement->organizations->pluck('name')->join(', ') }}
+                                        @else
+                                            No organizations
+                                        @endif
+                                    </small>
+                                </div>
+                                <span class="badge bg-secondary rounded-pill">{{ $agreement->activities_count ?? 0 }}</span>
+                            @if($agreement->isLinkable())
+                                </a>
+                            @else
+                                </div>
+                            @endif
+                        @endforeach
                     </div>
-                @endif
-            </div>
+                    @if($myAgreements->count() > 5)
+                        <div class="mt-2">
+                            <a href="{{ route('agreements.index') }}" class="text-decoration-none small">View all agreements</a>
+                        </div>
+                    @endif
+                </div>
             @endif
 
             @if($myActivities && $myActivities->count() > 0)
-            <div class="col-md-6">
-                <h6 class="mb-3">Recent Activity</h6>
-                <div class="list-group list-group-sm">
-                    @foreach($myActivities->take(5) as $activity)
-                        @php($canManage = auth()->user()->can('update', $activity))
-                        <div class="list-group-item">
-                            <div class="d-flex justify-content-between align-items-start gap-3">
-                                <div class="flex-grow-1 min-w-0">
-                                    <div class="fw-bold mb-1">
-                                        <a href="{{ route('activities.show', $activity) }}" class="text-decoration-none text-body">{{ $activity->activityType?->name ?? 'Activity' }}</a>
-                                        @if($activity->cancelled)
-                                            <x-status-badge :active="false" inactive-label="Cancelled" class="ms-1" />
-                                        @endif
-                                    </div>
-                                    <div class="small text-muted mb-2">{{ $activity->activityType?->contactFamily?->name ?? '—' }}</div>
-                                    <div class="d-flex flex-wrap align-items-center gap-2 small">
-                                        <span class="text-muted">{{ $activity->engagement_date->format('M d, Y') }}</span>
-                                        <div class="d-flex flex-wrap gap-1">
-                                            @forelse($activity->agreements as $agreement)
-                                                <x-entity-relation-badge kind="agreement" :href="$agreement->isLinkable() ? route('agreements.show', $agreement) : null">
-                                                    {{ $agreement->name }}
-                                                </x-entity-relation-badge>
-                                            @empty
-                                                <span class="text-muted">—</span>
-                                            @endforelse
+                <div class="col-md-6">
+                    <h6 class="mb-3">Recent Activity</h6>
+                    <div class="list-group list-group-sm">
+                        @foreach($myActivities->take(5) as $activity)
+                            @php $canManage = auth()->user()->can('update', $activity); @endphp
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                    <div class="flex-grow-1 min-w-0">
+                                        <div class="fw-bold mb-1">
+                                            <a href="{{ route('activities.show', $activity) }}" class="text-decoration-none text-body">{{ $activity->activityType?->name ?? 'Activity' }}</a>
+                                            @if($activity->cancelled)
+                                                <x-status-badge :active="false" inactive-label="Cancelled" class="ms-1" />
+                                            @endif
+                                        </div>
+                                        <div class="small text-muted mb-2">{{ $activity->activityType?->contactFamily?->name ?? '—' }}</div>
+                                        <div class="d-flex flex-wrap align-items-center gap-2 small">
+                                            <span class="text-muted">{{ $activity->engagement_date->format('M d, Y') }}</span>
+                                            <div class="d-flex flex-wrap gap-1">
+                                                @forelse($activity->agreements as $agreement)
+                                                    <x-entity-relation-badge kind="agreement" :href="$agreement->isLinkable() ? route('agreements.show', $agreement) : null">
+                                                        {{ $agreement->name }}
+                                                    </x-entity-relation-badge>
+                                                @empty
+                                                    <span class="text-muted">—</span>
+                                                @endforelse
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                                <div class="btn-group btn-group-sm" role="group" aria-label="My recent activity actions">
-                                    <a href="{{ route('activities.show', $activity) }}" class="btn btn-outline-primary" aria-label="View activity">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
-                                    @if($canManage)
-                                        <a href="{{ route('activities.edit', $activity) }}" class="btn btn-outline-secondary" aria-label="Edit activity">
-                                            <i class="bi bi-pencil-square"></i>
+                                    <div class="btn-group btn-group-sm" role="group" aria-label="My recent activity actions">
+                                        <a href="{{ route('activities.show', $activity) }}" class="btn btn-outline-primary" aria-label="View activity">
+                                            <i class="bi bi-eye"></i>
                                         </a>
-                                    @endif
+                                        @if($canManage)
+                                            <a href="{{ route('activities.edit', $activity) }}" class="btn btn-outline-secondary" aria-label="Edit activity">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </a>
+                                        @endif
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    @endforeach
+                        @endforeach
+                    </div>
+                    <div class="mt-2">
+                        <a href="{{ route('activities.index') }}" class="text-decoration-none small">View all activities</a>
+                    </div>
                 </div>
-                <div class="mt-2">
-                    <a href="{{ route('activities.index') }}" class="text-decoration-none small">View all activities</a>
-                </div>
-            </div>
             @endif
         </div>
 
