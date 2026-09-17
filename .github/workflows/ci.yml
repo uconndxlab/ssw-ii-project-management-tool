@@ -22,7 +22,7 @@ jobs:
 
     # composer for audit, lint, stan
       - name: Cache Composer
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.composer/cache
           key: composer-${{ hashFiles('composer.lock') }}
