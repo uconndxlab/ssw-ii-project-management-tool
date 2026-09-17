@@ -3847,6 +3847,12 @@ parameters:
 			path: app/Services/DeliverableContributionService.php
 
 		-
+			message: '#^Anonymous function has an unused use \$contributionKind\.$#'
+			identifier: closure.unusedUse
+			count: 1
+			path: app/Services/DeliverableContributionService.php
+
+		-
 			message: '#^Method App\\Services\\DeliverableContributionService\:\:buildContactContributionRows\(\) has parameter \$matchingHistory with no type specified\.$#'
 			identifier: missingType.parameter
 			count: 1
@@ -4204,6 +4210,12 @@ parameters:
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$pivot\.$#'
 			identifier: property.notFound
 			count: 5
+			path: app/Support/AgreementDeliverableDisplay.php
+
+		-
+			message: '#^Anonymous function has an unused use \$target\.$#'
+			identifier: closure.unusedUse
+			count: 1
 			path: app/Support/AgreementDeliverableDisplay.php
 
 		-

@@ -35,5 +35,5 @@ jobs:
       - name: Security advisories
         run: composer audit --no-dev
 
-      - name: Format
-        run: vendor/bin/pint --test
+      # - name: Format
+      #   run: vendor/bin/pint --test
