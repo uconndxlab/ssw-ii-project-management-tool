@@ -5,6 +5,8 @@ use App\Http\Controllers\ActivityTypeController;
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\AgreementController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CertificateController;
+use App\Http\Controllers\CertificationToolController;
 use App\Http\Controllers\ContactFamilyController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LoggingFieldController;
@@ -73,6 +75,8 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::resource('logging-fields', LoggingFieldController::class);
     Route::resource('contact-families', ContactFamilyController::class)->except(['show']);
     Route::resource('activity-types', ActivityTypeController::class)->except(['show']);
+    Route::resource('certification-tools', CertificationToolController::class)->except(['show']);
+    Route::resource('certificates', CertificateController::class)->except(['show']);
 
     Route::get('/supervisees', [AdminUserController::class, 'supervisees'])->name('supervisees.index');
     Route::get('/users/{user}', [AdminUserController::class, 'show'])->name('users.show');

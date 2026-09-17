@@ -74,9 +74,19 @@ class User extends Authenticatable
         return UserAccess::for($this);
     }
 
+    public function certification(): \App\Support\Authorization\CertificationAccess
+    {
+        return \App\Support\Authorization\CertificationAccess::for($this);
+    }
+
     public function privileges(): HasMany
     {
         return $this->hasMany(UserPrivilege::class);
+    }
+
+    public function certificationDuties(): HasMany
+    {
+        return $this->hasMany(\App\Models\UserCertificationDuty::class);
     }
 
     public function isActive(): bool

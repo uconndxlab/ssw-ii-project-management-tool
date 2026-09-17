@@ -799,6 +799,8 @@ class UserAccess
             $record instanceof ContactFamily => $this->hasAdmin() && $this->applyScopedEntityVisibility(ContactFamily::query()->whereKey($record->id))->exists(),
             $record instanceof LoggingField => $this->hasAdmin() && $this->applyScopedEntityVisibility(LoggingField::query()->whereKey($record->id))->exists(),
             $record instanceof \App\Models\ActivityType => $this->hasAdmin() && $this->applyScopedEntityVisibility(\App\Models\ActivityType::query()->whereKey($record->id))->exists(),
+            $record instanceof \App\Models\CertificationTool => $this->hasAdmin() && $this->applyScopedEntityVisibility(\App\Models\CertificationTool::query()->whereKey($record->id))->exists(),
+            $record instanceof \App\Models\Certificate => $this->hasAdmin() && $this->applyScopedEntityVisibility(\App\Models\Certificate::query()->whereKey($record->id))->exists(),
             $record instanceof Activity => $this->canViewActivity($record),
             $record instanceof User => $this->canViewUser($record),
             default => false,

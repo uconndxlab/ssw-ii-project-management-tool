@@ -135,6 +135,13 @@ class AppNav
                 ],
             ],
             [
+                'header' => 'Certification Setup',
+                'items' => [
+                    ['label' => 'Certification Tools', 'route' => 'certification-tools.index', 'active' => ['certification-tools.*']],
+                    ['label' => 'Certificates', 'route' => 'certificates.index', 'active' => ['certificates.*']],
+                ],
+            ],
+            [
                 'header' => 'People',
                 'items' => [
                     ['label' => 'Teams', 'route' => 'teams.index', 'active' => ['teams.*']],

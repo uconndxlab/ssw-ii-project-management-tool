@@ -28,7 +28,9 @@ trait VisibleToUser
             \App\Models\User::class => $access->applyUserIndexVisibility($query),
             \App\Models\ContactFamily::class,
             \App\Models\LoggingField::class,
-            \App\Models\ActivityType::class => $access->applyScopedEntityVisibility($query),
+            \App\Models\ActivityType::class,
+            \App\Models\CertificationTool::class,
+            \App\Models\Certificate::class => $access->applyScopedEntityVisibility($query),
             default => $query,
         };
     }
