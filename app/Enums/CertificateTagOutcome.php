@@ -8,6 +8,7 @@ enum CertificateTagOutcome: string
     case NotPassed = 'not_passed';
     case NotScored = 'not_scored';
 
+    /** @return list<string> */
     public static function values(): array
     {
         return array_map(fn (self $case) => $case->value, self::cases());

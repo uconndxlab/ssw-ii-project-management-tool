@@ -8,7 +8,6 @@ use App\Models\Agreement;
 use App\Models\ContactFamily;
 use App\Models\Program;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class ReportController extends Controller
 {
@@ -57,7 +56,7 @@ class ReportController extends Controller
             ->get();
 
         $query = Activity::query()
-            ->visibleTo(Auth::user())
+            ->visibleTo($this->actor())
             ->with(['agreements.organizations', 'agreements.states', 'user', 'activityType.contactFamily'])
             ->whereBetween('activity_date', [$startDate, $endDate]);
 
@@ -108,7 +107,12 @@ class ReportController extends Controller
         }
 
         // Sort by agreement name
-        usort($agreementData, fn ($a, $b) => strcmp($a['agreement']->name, $b['agreement']->name));
+        usort($agreementData, function (array $a, array $b): int {
+            $nameA = $a['agreement'] instanceof Agreement ? $a['agreement']->name : '';
+            $nameB = $b['agreement'] instanceof Agreement ? $b['agreement']->name : '';
+
+            return strcmp($nameA, $nameB);
+        });
 
         // If HTMX request, return only the results partial
         if ($request->header('HX-Request')) {
@@ -141,7 +145,7 @@ class ReportController extends Controller
     private function getVisibleAgreements()
     {
         return Agreement::query()
-            ->visibleTo(Auth::user())
+            ->visibleTo($this->actor())
             ->active()
             ->with('organizations')
             ->orderBy('name')
@@ -152,7 +156,7 @@ class ReportController extends Controller
     {
         $agreement = Agreement::query()->findOrFail($agreementId);
 
-        if (! Auth::user()->can('view', $agreement)) {
+        if (! $this->actor()->can('view', $agreement)) {
             abort(403, 'You do not have access to this agreement.');
         }
     }

@@ -10,7 +10,6 @@ use App\Models\Project;
 use App\Support\Authorization\ScopeSync;
 use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
 class ContactFamilyController extends Controller
@@ -20,7 +19,7 @@ class ContactFamilyController extends Controller
         $this->authorize('viewAny', ContactFamily::class);
 
         $query = ContactFamily::query()
-            ->visibleTo(Auth::user())
+            ->visibleTo($this->actor())
             ->withCount('activityTypes')
             ->with(['programs.projects']);
 
@@ -108,7 +107,7 @@ class ContactFamilyController extends Controller
             ->where('available_in_contact_families', true)
             ->with('programs')
             ->get();
-        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor(Auth::user());
+        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor($this->actor());
 
         return view('admin.contact-families.create', compact('contactFamilyLoggingFields', 'projects'));
     }
@@ -171,7 +170,7 @@ class ContactFamilyController extends Controller
         ]);
 
         ScopeSync::applyTo(
-            Auth::user(),
+            $this->actor(),
             $contactFamily,
             ProgramScopeMode::from($validated['program_scope_mode']),
             $validated['program_ids'] ?? [],
@@ -199,7 +198,7 @@ class ContactFamilyController extends Controller
             ->where('available_in_contact_families', true)
             ->with('programs')
             ->get();
-        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor(Auth::user(), $contactFamily);
+        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor($this->actor(), $contactFamily);
         $contactFamily->load(['contactFamilyLoggingFields', 'programs.projects']);
 
         return view('admin.contact-families.edit', compact('contactFamily', 'contactFamilyLoggingFields', 'projects'));
@@ -261,7 +260,7 @@ class ContactFamilyController extends Controller
             'sort_order' => $validated['sort_order'],
         ]);
         ScopeSync::applyTo(
-            Auth::user(),
+            $this->actor(),
             $contactFamily,
             ProgramScopeMode::from($validated['program_scope_mode']),
             $validated['program_ids'] ?? [],

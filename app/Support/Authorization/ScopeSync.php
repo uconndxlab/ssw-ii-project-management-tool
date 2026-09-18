@@ -166,7 +166,8 @@ class ScopeSync
     }
 
     /**
-     * @param  list<int>  $submittedProgramIds
+     * @param  array<int>  $submittedProgramIds
+     * @param  array<int>  $existingProgramIds
      */
     public static function validateSubmittedProgramsAreInAdminScope(
         Validator $validator,
@@ -192,7 +193,8 @@ class ScopeSync
     }
 
     /**
-     * @param  list<int>  $submittedProjectIds
+     * @param  array<int>  $submittedProjectIds
+     * @param  array<int>  $existingProjectIds
      */
     public static function validateSubmittedProjectsAreInAdminScope(
         Validator $validator,

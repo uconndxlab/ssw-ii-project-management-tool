@@ -11,6 +11,8 @@ use Illuminate\Support\Str;
 
 /**
  * Recorded-only numeric field. Never evaluated by the system - see the spine's "no score math" rule.
+ *
+ * @property CertificationToolScoreUnit $unit
  */
 class CertificationToolScoreField extends Model
 {
@@ -42,6 +44,7 @@ class CertificationToolScoreField extends Model
         ];
     }
 
+    /** @return BelongsTo<CertificationTool, $this> */
     public function tool(): BelongsTo
     {
         return $this->belongsTo(CertificationTool::class, 'certification_tool_id');

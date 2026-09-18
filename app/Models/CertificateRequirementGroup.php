@@ -10,6 +10,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property CertificateRequirementPhase $phase
+ * @property CertificateGroupSatisfyMode $satisfy_mode
+ */
 class CertificateRequirementGroup extends Model
 {
     /** @use HasFactory<CertificateRequirementGroupFactory> */
@@ -34,11 +38,13 @@ class CertificateRequirementGroup extends Model
         ];
     }
 
+    /** @return BelongsTo<Certificate, $this> */
     public function certificate(): BelongsTo
     {
         return $this->belongsTo(Certificate::class);
     }
 
+    /** @return HasMany<CertificateRequirement, $this> */
     public function requirements(): HasMany
     {
         return $this->hasMany(CertificateRequirement::class)->orderBy('sort_order');

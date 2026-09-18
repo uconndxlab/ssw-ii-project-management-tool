@@ -9,6 +9,7 @@ enum ActivityAction: string
     case Duplicate = 'duplicate';
     case Delete = 'delete';
 
+    /** @return list<string> */
     public static function values(): array
     {
         return array_map(fn (self $case) => $case->value, self::cases());

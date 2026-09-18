@@ -32,7 +32,6 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -48,7 +47,7 @@ class AgreementController extends Controller
     {
         $this->authorize('viewAny', Agreement::class);
 
-        $user = Auth::user();
+        $user = $this->actor();
         $states = State::query()->get(['id', 'name'])->sortBy('name')->values();
         $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
         $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
@@ -315,7 +314,7 @@ class AgreementController extends Controller
     {
         $this->authorize('duplicate', $agreement);
 
-        $copy = $this->agreementDuplicationService->duplicate($agreement, Auth::user());
+        $copy = $this->agreementDuplicationService->duplicate($agreement, $this->actor());
 
         return redirect()
             ->route('agreements.edit', $copy)
@@ -398,7 +397,7 @@ class AgreementController extends Controller
     private function syncAgreementRelations(Agreement $agreement, array $validated): void
     {
         ScopeSync::applyTo(
-            Auth::user(),
+            $this->actor(),
             $agreement,
             ProgramScopeMode::from($validated['program_scope_mode'] ?? ProgramScopeMode::Specific->value),
             $validated['program_ids'] ?? [],
@@ -569,7 +568,7 @@ class AgreementController extends Controller
 
         foreach ($agreement->deliverables as $deliverable) {
             foreach ($deliverable->users as $user) {
-                if ($user->pivot->unassigned_at || $memberUserIds->contains((int) $user->id)) {
+                if ($user->pivot?->unassigned_at || $memberUserIds->contains((int) $user->id)) {
                     continue;
                 }
 
@@ -609,7 +608,9 @@ class AgreementController extends Controller
             if ($markedForDeletion) {
                 if ($rowId && $existingDeliverables->has($rowId)) {
                     $deliverable = $existingDeliverables->get($rowId);
-                    $this->retireOrDeleteDeliverable($deliverable, $histories);
+                    if ($deliverable instanceof AgreementDeliverable) {
+                        $this->retireOrDeleteDeliverable($deliverable, $histories);
+                    }
                 }
 
                 continue;
@@ -667,32 +668,40 @@ class AgreementController extends Controller
             if ($rowId && $existingDeliverables->has($rowId)) {
                 $deliverable = $existingDeliverables->get($rowId);
 
-                if (DeliverableHistoryScope::hasMatchingHistory($histories, $deliverable)) {
-                    $data = array_merge($data, [
-                        'contact_family_id' => $deliverable->contact_family_id,
-                        'activity_type_id' => $deliverable->activity_type_id,
-                        'program_id' => $deliverable->program_id,
-                        'metric_type' => $deliverable->metric_type,
-                        'time_basis' => $deliverable->time_basis,
-                        'allotted_time_unit' => $deliverable->allotted_time_unit,
-                        'contribution_basis' => $deliverable->contribution_basis,
-                        'user_grouping_mode' => $deliverable->user_grouping_mode,
-                        'include_additional_time' => (bool) $deliverable->include_additional_time,
-                    ]);
-                }
+                if ($deliverable instanceof AgreementDeliverable) {
+                    if (DeliverableHistoryScope::hasMatchingHistory($histories, $deliverable)) {
+                        $data = array_merge($data, [
+                            'contact_family_id' => $deliverable->contact_family_id,
+                            'activity_type_id' => $deliverable->activity_type_id,
+                            'program_id' => $deliverable->program_id,
+                            'metric_type' => $deliverable->metric_type,
+                            'time_basis' => $deliverable->time_basis,
+                            'allotted_time_unit' => $deliverable->allotted_time_unit,
+                            'contribution_basis' => $deliverable->contribution_basis,
+                            'user_grouping_mode' => $deliverable->user_grouping_mode,
+                            'include_additional_time' => (bool) $deliverable->include_additional_time,
+                        ]);
+                    }
 
-                $deliverable->update($data);
+                    $deliverable->update($data);
+                    $this->syncDeliverableParticipants($deliverable, $row, $isNewDeliverable);
+                    $deliverable->load(['users', 'teams']);
+                    $warning = $this->describeDeliverableAllocationWarning($deliverable, $agreement);
+                    if ($warning !== null) {
+                        $allocationWarnings[] = $warning;
+                    }
+                    $retainedDeliverableIds->push($deliverable->id);
+                }
             } else {
                 $deliverable = $agreement->deliverables()->create($data);
+                $this->syncDeliverableParticipants($deliverable, $row, $isNewDeliverable);
+                $deliverable->load(['users', 'teams']);
+                $warning = $this->describeDeliverableAllocationWarning($deliverable, $agreement);
+                if ($warning !== null) {
+                    $allocationWarnings[] = $warning;
+                }
+                $retainedDeliverableIds->push($deliverable->id);
             }
-
-            $this->syncDeliverableParticipants($deliverable, $row, $isNewDeliverable);
-            $deliverable->load(['users', 'teams']);
-            $warning = $this->describeDeliverableAllocationWarning($deliverable, $agreement);
-            if ($warning !== null) {
-                $allocationWarnings[] = $warning;
-            }
-            $retainedDeliverableIds->push($deliverable->id);
         }
 
         $staleDeliverableIds = $existingDeliverables->keys()->diff($retainedDeliverableIds)->values();
@@ -760,7 +769,7 @@ class AgreementController extends Controller
             $attributes = [
                 'assigned_at' => $this->resolveDeliverableAssignmentTimestamp(
                     $existingUser !== null && ! $wasUnassigned,
-                    $existingUser?->pivot->assigned_at,
+                    $existingUser?->pivot?->assigned_at,
                     $submittedUserAssignedAt[$userId] ?? $submittedUserAssignedAt[(string) $userId] ?? null,
                     $isNewDeliverable
                 ),
@@ -784,9 +793,11 @@ class AgreementController extends Controller
         $staleUserIds = $existingUsersById->keys()->diff($allUserIds)->values();
         foreach ($staleUserIds as $userId) {
             $user = $existingUsersById->get((int) $userId);
-            $deliverable->users()->updateExistingPivot($userId, [
-                'unassigned_at' => $user->pivot->unassigned_at ?? now(),
-            ]);
+            if ($user instanceof User) {
+                $deliverable->users()->updateExistingPivot($userId, [
+                    'unassigned_at' => $user->pivot->unassigned_at ?? now(),
+                ]);
+            }
         }
 
         foreach ($teamIds as $teamId) {
@@ -796,7 +807,7 @@ class AgreementController extends Controller
             $attributes = [
                 'assigned_at' => $this->resolveDeliverableAssignmentTimestamp(
                     $existingTeam !== null && ! $wasUnassigned,
-                    $existingTeam?->pivot->assigned_at,
+                    $existingTeam?->pivot?->assigned_at,
                     $submittedTeamAssignedAt[$teamId] ?? $submittedTeamAssignedAt[(string) $teamId] ?? null,
                     $isNewDeliverable
                 ),
@@ -819,9 +830,11 @@ class AgreementController extends Controller
         $staleTeamIds = $existingTeamsById->keys()->diff($teamIds)->values();
         foreach ($staleTeamIds as $teamId) {
             $team = $existingTeamsById->get((int) $teamId);
-            $deliverable->teams()->updateExistingPivot($teamId, [
-                'unassigned_at' => $team->pivot->unassigned_at ?? now(),
-            ]);
+            if ($team instanceof Team) {
+                $deliverable->teams()->updateExistingPivot($teamId, [
+                    'unassigned_at' => $team->pivot->unassigned_at ?? now(),
+                ]);
+            }
         }
     }
 
@@ -866,7 +879,7 @@ class AgreementController extends Controller
                 $memberIds
             ))
             ->values();
-        $liveTeams = $deliverable->teams->filter(fn (Team $team) => ! $team->pivot->unassigned_at)->values();
+        $liveTeams = $deliverable->teams->filter(fn (Team $team) => ! $team->pivot?->unassigned_at)->values();
 
         $summary = DeliverableAssignmentTargets::summarizeFromDeliverable($deliverable, $liveUsers, $liveTeams, $teamLookup);
 
@@ -942,7 +955,10 @@ class AgreementController extends Controller
 
             if ($markedForDeletion) {
                 if ($rowId && $existingCandidates->has($rowId)) {
-                    $existingCandidates->get($rowId)->delete();
+                    $candidate = $existingCandidates->get($rowId);
+                    if ($candidate instanceof AgreementCertificationCandidate) {
+                        $candidate->delete();
+                    }
                 }
 
                 continue;
@@ -953,7 +969,10 @@ class AgreementController extends Controller
             }
 
             if ($rowId && $existingCandidates->has($rowId)) {
-                $existingCandidates->get($rowId)->update(['name' => $value]);
+                $candidate = $existingCandidates->get($rowId);
+                if ($candidate instanceof AgreementCertificationCandidate) {
+                    $candidate->update(['name' => $value]);
+                }
             } else {
                 $agreement->certificationCandidates()->create([
                     'name' => $value,
@@ -1035,7 +1054,7 @@ class AgreementController extends Controller
             ->get()
             ->sortBy(fn ($item) => [$item->sort_order, $item->name])
             ->values();
-        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor(Auth::user(), $agreement)->sortBy('name')->values();
+        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor($this->actor(), $agreement)->sortBy('name')->values();
         $agreementLoggingFields = LoggingField::active()
             ->ordered()
             ->where('available_in_agreements', true)

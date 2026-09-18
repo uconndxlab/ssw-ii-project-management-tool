@@ -6,6 +6,7 @@ use App\Enums\ProgramScopeMode;
 use App\Models\Concerns\HasProgramScope;
 use App\Models\Concerns\VisibleToUser;
 use Database\Factories\CertificationToolFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -14,6 +15,8 @@ use Illuminate\Support\Str;
 
 /**
  * A scoring instrument (COMET, SAS, CREST, ...) built via the tool builder. Not an activity type.
+ *
+ * @property ProgramScopeMode $program_scope_mode
  */
 class CertificationTool extends Model
 {
@@ -48,32 +51,44 @@ class CertificationTool extends Model
         ];
     }
 
+    /** @return BelongsToMany<Program, $this> */
     public function programs(): BelongsToMany
     {
         return $this->belongsToMany(Program::class, 'certification_tool_program')->withTimestamps();
     }
 
+    /** @return HasMany<CertificationToolDimension, $this> */
     public function dimensions(): HasMany
     {
         return $this->hasMany(CertificationToolDimension::class)->orderBy('sort_order');
     }
 
+    /** @return HasMany<CertificationToolScoreField, $this> */
     public function scoreFields(): HasMany
     {
         return $this->hasMany(CertificationToolScoreField::class)->orderBy('sort_order');
     }
 
+    /** @return HasMany<CertificateRequirement, $this> */
     public function requirements(): HasMany
     {
         return $this->hasMany(CertificateRequirement::class);
     }
 
-    public function scopeActive($query)
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopeActive(Builder $query): Builder
     {
         return $query->where('active', true);
     }
 
-    public function scopeNotRetired($query)
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopeNotRetired(Builder $query): Builder
     {
         return $query->whereNull('retired_at');
     }

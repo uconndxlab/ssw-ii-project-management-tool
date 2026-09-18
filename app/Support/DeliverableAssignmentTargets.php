@@ -131,12 +131,12 @@ class DeliverableAssignmentTargets
     ): array {
         $userTargets = [];
         foreach ($liveUsers as $user) {
-            $userTargets[(int) $user->id] = $user->pivot->target_quantity;
+            $userTargets[(int) $user->id] = $user->pivot?->target_quantity;
         }
 
         $teamTargets = [];
         foreach ($liveTeams as $team) {
-            $teamTargets[(int) $team->id] = $team->pivot->target_quantity;
+            $teamTargets[(int) $team->id] = $team->pivot?->target_quantity;
         }
 
         return self::summarizeFromRow(

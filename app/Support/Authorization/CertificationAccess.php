@@ -20,10 +20,13 @@ class CertificationAccess
     /** @var \WeakMap<User, self>|null */
     private static ?\WeakMap $cache = null;
 
+    /** @var Collection<int, UserCertificationDuty>|null */
     private ?Collection $duties = null;
 
+    /** @var array<int>|null */
     private ?array $coachProgramIds = null;
 
+    /** @var array<int>|null */
     private ?array $managerProgramIds = null;
 
     public function __construct(private User $user) {}
@@ -35,6 +38,7 @@ class CertificationAccess
         return self::$cache[$user] ??= new self($user);
     }
 
+    /** @return Collection<int, UserCertificationDuty> */
     public function duties(): Collection
     {
         if ($this->duties !== null) {
@@ -61,17 +65,13 @@ class CertificationAccess
         return $this->hasDuty(CertificationDuty::Manager);
     }
 
-    /**
-     * @return list<int>
-     */
+    /** @return array<int> */
     public function coachProgramIds(): array
     {
         return $this->coachProgramIds ??= $this->programIdsForDuty(CertificationDuty::Coach);
     }
 
-    /**
-     * @return list<int>
-     */
+    /** @return array<int> */
     public function managerProgramIds(): array
     {
         return $this->managerProgramIds ??= $this->programIdsForDuty(CertificationDuty::Manager);
@@ -98,9 +98,7 @@ class CertificationAccess
         };
     }
 
-    /**
-     * @return list<int>
-     */
+    /** @return array<int> */
     private function programIdsForDuty(CertificationDuty $duty): array
     {
         $rows = $this->duties()->filter(fn (UserCertificationDuty $row) => $row->duty === $duty);

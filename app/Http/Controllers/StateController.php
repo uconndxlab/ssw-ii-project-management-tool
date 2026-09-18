@@ -90,6 +90,9 @@ class StateController extends Controller
                     $staffMembersMap[$user->id] = clone $user;
                     $staffMembersMap[$user->id]->via_agreements = collect();
                 }
+                if ($staffMembersMap[$user->id]->via_agreements === null) {
+                    $staffMembersMap[$user->id]->via_agreements = collect();
+                }
                 $staffMembersMap[$user->id]->via_agreements->push($agreement->name);
             }
         }

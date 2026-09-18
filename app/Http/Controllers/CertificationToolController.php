@@ -6,24 +6,28 @@ use App\Enums\CertificationToolScoreUnit;
 use App\Enums\ProgramScopeMode;
 use App\Models\CertificationTool;
 use App\Models\CertificationToolDimension;
+use App\Models\CertificationToolDimensionOption;
+use App\Models\CertificationToolScoreField;
 use App\Models\Program;
 use App\Models\Project;
 use App\Support\Authorization\ScopeSync;
 use App\Support\ProjectProgramScope;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Validator as ValidatorInstance;
 
 class CertificationToolController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request): View|RedirectResponse
     {
         $this->authorize('viewAny', CertificationTool::class);
 
         $query = CertificationTool::query()
-            ->visibleTo(Auth::user())
+            ->visibleTo($this->actor())
             ->withCount(['dimensions', 'scoreFields'])
             ->with(['programs.projects']);
 
@@ -77,16 +81,16 @@ class CertificationToolController extends Controller
         ));
     }
 
-    public function create()
+    public function create(): View|RedirectResponse
     {
         $this->authorize('create', CertificationTool::class);
 
-        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor(Auth::user());
+        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor($this->actor());
 
         return view('admin.certification-tools.create', compact('projects'));
     }
 
-    public function store(Request $request)
+    public function store(Request $request): View|RedirectResponse
     {
         $this->authorize('create', CertificationTool::class);
 
@@ -102,7 +106,7 @@ class CertificationToolController extends Controller
             ]);
 
             ScopeSync::applyTo(
-                Auth::user(),
+                $this->actor(),
                 $tool,
                 ProgramScopeMode::from($validated['program_scope_mode']),
                 $validated['program_ids'] ?? [],
@@ -119,17 +123,17 @@ class CertificationToolController extends Controller
             ->with('success', 'Certification tool created successfully.');
     }
 
-    public function edit(CertificationTool $certificationTool)
+    public function edit(CertificationTool $certificationTool): View|RedirectResponse
     {
         $this->authorize('update', $certificationTool);
 
-        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor(Auth::user(), $certificationTool);
+        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor($this->actor(), $certificationTool);
         $certificationTool->load(['programs.projects', 'dimensions.options', 'scoreFields']);
 
         return view('admin.certification-tools.edit', compact('certificationTool', 'projects'));
     }
 
-    public function update(Request $request, CertificationTool $certificationTool)
+    public function update(Request $request, CertificationTool $certificationTool): View|RedirectResponse
     {
         $this->authorize('update', $certificationTool);
 
@@ -144,7 +148,7 @@ class CertificationToolController extends Controller
             ]);
 
             ScopeSync::applyTo(
-                Auth::user(),
+                $this->actor(),
                 $certificationTool,
                 ProgramScopeMode::from($validated['program_scope_mode']),
                 $validated['program_ids'] ?? [],
@@ -157,7 +161,7 @@ class CertificationToolController extends Controller
         return $this->redirectAfterSave($certificationTool, 'Certification tool updated successfully.');
     }
 
-    public function destroy(CertificationTool $certificationTool)
+    public function destroy(CertificationTool $certificationTool): View|RedirectResponse
     {
         $this->authorize('delete', $certificationTool);
 
@@ -176,10 +180,13 @@ class CertificationToolController extends Controller
             ->with('success', 'Certification tool deleted successfully.');
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function validateTool(Request $request, ?CertificationTool $certificationTool = null): array
     {
         $validator = Validator::make($request->all(), [
-            'name' => ['required', 'string', 'max:255', 'unique:certification_tools,name,'.($certificationTool?->id ?? 'NULL').',id'],
+            'name' => ['required', 'string', 'max:255', 'unique:certification_tools,name,'.($certificationTool !== null ? $certificationTool->id : 'NULL').',id'],
             'description' => ['nullable', 'string'],
             'active' => ['boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
@@ -214,13 +221,13 @@ class CertificationToolController extends Controller
             ProjectProgramScope::validateModeSelection($validator, $mode, CertificationTool::class, $projectIds, $programIds);
 
             $submittedMode = ProgramScopeMode::tryFrom((string) $mode) ?? ProgramScopeMode::Specific;
-            $existingMode = $certificationTool?->program_scope_mode ?? ProgramScopeMode::None;
-            ScopeSync::validateSubmittedMode($validator, Auth::user(), $existingMode, $submittedMode);
+            $existingMode = $certificationTool !== null ? $certificationTool->program_scope_mode : ProgramScopeMode::None;
+            ScopeSync::validateSubmittedMode($validator, $this->actor(), $existingMode, $submittedMode);
             ScopeSync::validateSubmittedProgramsAreInAdminScope(
                 $validator,
-                Auth::user(),
+                $this->actor(),
                 $programIds,
-                $certificationTool?->exists ? $certificationTool->programs()->pluck('programs.id')->all() : [],
+                $certificationTool !== null && $certificationTool->exists ? $certificationTool->programs()->pluck('programs.id')->all() : [],
             );
 
             $this->validateNestedToolRows($validator, $request, $certificationTool);
@@ -235,7 +242,7 @@ class CertificationToolController extends Controller
         return $validated;
     }
 
-    private function validateNestedToolRows($validator, Request $request, ?CertificationTool $tool): void
+    private function validateNestedToolRows(ValidatorInstance $validator, Request $request, ?CertificationTool $tool): void
     {
         $seenDimensionSlugs = [];
 
@@ -328,6 +335,9 @@ class CertificationToolController extends Controller
         }
     }
 
+    /**
+     * @param  array<int|string, mixed>  $rows
+     */
     private function syncDimensions(CertificationTool $tool, array $rows): void
     {
         $existing = $tool->dimensions()->with('options')->get()->keyBy('id');
@@ -344,7 +354,10 @@ class CertificationToolController extends Controller
 
             if ($markedForDeletion) {
                 if ($rowId && $existing->has($rowId)) {
-                    $existing->get($rowId)->delete();
+                    $dimension = $existing->get($rowId);
+                    if ($dimension instanceof CertificationToolDimension) {
+                        $dimension->delete();
+                    }
                 }
 
                 continue;
@@ -361,7 +374,11 @@ class CertificationToolController extends Controller
 
             if ($rowId && $existing->has($rowId)) {
                 $dimension = $existing->get($rowId);
-                $dimension->update($data);
+                if ($dimension instanceof CertificationToolDimension) {
+                    $dimension->update($data);
+                } else {
+                    continue;
+                }
             } else {
                 $dimension = $tool->dimensions()->create($data);
             }
@@ -370,9 +387,17 @@ class CertificationToolController extends Controller
             $retainedIds->push($dimension->id);
         }
 
-        $existing->keys()->diff($retainedIds)->each(fn (int $id) => $existing->get($id)->delete());
+        $existing->keys()->diff($retainedIds)->each(function (int $id) use ($existing): void {
+            $dimension = $existing->get($id);
+            if ($dimension instanceof CertificationToolDimension) {
+                $dimension->delete();
+            }
+        });
     }
 
+    /**
+     * @param  array<int|string, mixed>  $rows
+     */
     private function syncDimensionOptions(CertificationToolDimension $dimension, array $rows): void
     {
         $existing = $dimension->options()->get()->keyBy('id');
@@ -389,7 +414,10 @@ class CertificationToolController extends Controller
 
             if ($markedForDeletion) {
                 if ($rowId && $existing->has($rowId)) {
-                    $existing->get($rowId)->delete();
+                    $option = $existing->get($rowId);
+                    if ($option instanceof CertificationToolDimensionOption) {
+                        $option->delete();
+                    }
                 }
 
                 continue;
@@ -405,16 +433,27 @@ class CertificationToolController extends Controller
             ];
 
             if ($rowId && $existing->has($rowId)) {
-                $existing->get($rowId)->update($data);
-                $retainedIds->push($rowId);
+                $option = $existing->get($rowId);
+                if ($option instanceof CertificationToolDimensionOption) {
+                    $option->update($data);
+                    $retainedIds->push($rowId);
+                }
             } else {
                 $retainedIds->push($dimension->options()->create($data)->id);
             }
         }
 
-        $existing->keys()->diff($retainedIds)->each(fn (int $id) => $existing->get($id)->delete());
+        $existing->keys()->diff($retainedIds)->each(function (int $id) use ($existing): void {
+            $option = $existing->get($id);
+            if ($option instanceof CertificationToolDimensionOption) {
+                $option->delete();
+            }
+        });
     }
 
+    /**
+     * @param  array<int|string, mixed>  $rows
+     */
     private function syncScoreFields(CertificationTool $tool, array $rows): void
     {
         $existing = $tool->scoreFields()->get()->keyBy('id');
@@ -431,7 +470,10 @@ class CertificationToolController extends Controller
 
             if ($markedForDeletion) {
                 if ($rowId && $existing->has($rowId)) {
-                    $existing->get($rowId)->delete();
+                    $scoreField = $existing->get($rowId);
+                    if ($scoreField instanceof CertificationToolScoreField) {
+                        $scoreField->delete();
+                    }
                 }
 
                 continue;
@@ -448,13 +490,21 @@ class CertificationToolController extends Controller
             ];
 
             if ($rowId && $existing->has($rowId)) {
-                $existing->get($rowId)->update($data);
-                $retainedIds->push($rowId);
+                $scoreField = $existing->get($rowId);
+                if ($scoreField instanceof CertificationToolScoreField) {
+                    $scoreField->update($data);
+                    $retainedIds->push($rowId);
+                }
             } else {
                 $retainedIds->push($tool->scoreFields()->create($data)->id);
             }
         }
 
-        $existing->keys()->diff($retainedIds)->each(fn (int $id) => $existing->get($id)->delete());
+        $existing->keys()->diff($retainedIds)->each(function (int $id) use ($existing): void {
+            $scoreField = $existing->get($id);
+            if ($scoreField instanceof CertificationToolScoreField) {
+                $scoreField->delete();
+            }
+        });
     }
 }

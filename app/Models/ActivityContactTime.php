@@ -28,6 +28,7 @@ class ActivityContactTime extends Model
         ];
     }
 
+    /** @return BelongsTo<Activity, $this> */
     public function activity(): BelongsTo
     {
         return $this->belongsTo(Activity::class);

@@ -322,13 +322,13 @@ class ProjectProgramScope
      *
      * @param  Collection<int, Project>  $projects
      * @return array{
-     *     scopeProjects: Collection,
-     *     selectedProjectIds: list<string>,
-     *     selectedProgramIds: list<string>,
-     *     programOptions: list<array<string, mixed>>,
-     *     programProjectIdsMap: array<string, list<string>>,
-     *     projectProgramMap: array<string, list<string>>,
-     *     projectNamesMap: array<string, string>,
+     *     scopeProjects: Collection<int, Project>,
+     *     selectedProjectIds: array<int, string>,
+     *     selectedProgramIds: array<int, string>,
+     *     programOptions: array<int, array<string, mixed>>,
+     *     programProjectIdsMap: array<int|string, array<int, string>>,
+     *     projectProgramMap: array<int|string, array<int, string>>,
+     *     projectNamesMap: array<int|string, string>,
      *     projectPickerId: string,
      *     programPickerId: string,
      * }

@@ -4,13 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateProfilePasswordRequest;
 use App\Services\UserShowPageData;
-use Illuminate\Support\Facades\Auth;
 
 class ProfileController extends Controller
 {
     public function show()
     {
-        $data = UserShowPageData::for(Auth::user());
+        $data = UserShowPageData::for($this->actor());
         $data['isProfile'] = true;
 
         return view('admin.users.show', $data);
@@ -19,7 +18,7 @@ class ProfileController extends Controller
     public function edit()
     {
         return view('profile.edit', [
-            'user' => Auth::user(),
+            'user' => $this->actor(),
         ]);
     }
 

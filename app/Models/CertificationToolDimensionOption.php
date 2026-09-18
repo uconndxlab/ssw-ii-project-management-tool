@@ -36,6 +36,7 @@ class CertificationToolDimensionOption extends Model
         ];
     }
 
+    /** @return BelongsTo<CertificationToolDimension, $this> */
     public function dimension(): BelongsTo
     {
         return $this->belongsTo(CertificationToolDimension::class, 'certification_tool_dimension_id');

@@ -7,6 +7,7 @@ use App\Enums\ProgramScopeMode;
 use App\Models\Concerns\HasProgramScope;
 use App\Models\Concerns\VisibleToUser;
 use Database\Factories\CertificateFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -14,6 +15,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Catalog entry pursued by candidates. Requirements are computed against live activity work, never materialized.
+ *
+ * @property ProgramScopeMode $program_scope_mode
  */
 class Certificate extends Model
 {
@@ -44,42 +47,56 @@ class Certificate extends Model
         ];
     }
 
+    /** @return BelongsToMany<Program, $this> */
     public function programs(): BelongsToMany
     {
         return $this->belongsToMany(Program::class, 'certificate_program')->withTimestamps();
     }
 
+    /** @return BelongsToMany<Certificate, $this> */
     public function prerequisites(): BelongsToMany
     {
         return $this->belongsToMany(Certificate::class, 'certificate_prerequisites', 'certificate_id', 'required_certificate_id')->withTimestamps();
     }
 
+    /** @return HasMany<CertificateRequirementGroup, $this> */
     public function requirementGroups(): HasMany
     {
         return $this->hasMany(CertificateRequirementGroup::class)->orderBy('sort_order');
     }
 
+    /** @return HasMany<CertificateRequirement, $this> */
     public function requirements(): HasMany
     {
         return $this->hasMany(CertificateRequirement::class)->orderBy('sort_order');
     }
 
+    /** @return HasMany<CertificateRequirement, $this> */
     public function requirementsForPhase(CertificateRequirementPhase $phase): HasMany
     {
         return $this->requirements()->where('phase', $phase->value);
     }
 
+    /** @return HasMany<CertificationRole, $this> */
     public function roles(): HasMany
     {
         return $this->hasMany(CertificationRole::class)->orderBy('sort_order');
     }
 
-    public function scopeActive($query)
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopeActive(Builder $query): Builder
     {
         return $query->where('active', true);
     }
 
-    public function scopeNotRetired($query)
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopeNotRetired(Builder $query): Builder
     {
         return $query->whereNull('retired_at');
     }

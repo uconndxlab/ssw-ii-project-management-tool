@@ -82,7 +82,10 @@ class ActivityFundingSourceTokens
 
     /**
      * @param  Collection<int, Agreement>  $agreements
-     * @return array<int, array<string, list<string>>>
+     * @return array<int, array{
+     *     payor: list<array{value: string, label: string, search: string, entity: string, contextLabels: array<string>, meta: string|null}>,
+     *     payee: list<array{value: string, label: string, search: string, entity: string, contextLabels: array<string>, meta: string|null}>
+     * }>
      */
     public static function fundingSourceOptionsByAgreement(Collection $agreements): array
     {
@@ -192,7 +195,7 @@ class ActivityFundingSourceTokens
     private static function kfsNumbersByOrganization(Agreement $agreement): array
     {
         return $agreement->organizationKfsAccounts
-            ->groupBy(fn ($account) => (int) $account->pivot->organization_id)
+            ->groupBy(fn ($account) => (int) $account->pivot?->organization_id)
             ->map(fn ($accounts) => $accounts->pluck('number')->sort()->values()->all())
             ->all();
     }

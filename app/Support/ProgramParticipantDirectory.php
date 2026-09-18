@@ -16,8 +16,8 @@ class ProgramParticipantDirectory
      *
      * @param  Collection<int, Program>  $programs
      * @return array{
-     *     user_ids_by_program_id: array<string, list<string>>,
-     *     users: Collection<int, User>
+     *     user_ids_by_program_id: array<int|string, array<int, string>>,
+     *     users: Collection<int, User>|EloquentCollection<int, User>
      * }
      */
     public static function build(Collection $programs): array

@@ -6,6 +6,9 @@ use App\Enums\ActivityAction;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property ActivityAction $action
+ */
 class ActivityActionLog extends Model
 {
     public const UPDATED_AT = null;
@@ -28,16 +31,19 @@ class ActivityActionLog extends Model
         ];
     }
 
+    /** @return BelongsTo<Activity, $this> */
     public function activity(): BelongsTo
     {
         return $this->belongsTo(Activity::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /** @return BelongsTo<Activity, $this> */
     public function relatedActivity(): BelongsTo
     {
         return $this->belongsTo(Activity::class, 'related_activity_id');

@@ -8,6 +8,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property CertificateDimensionRuleMode $mode
+ */
 class CertificateRequirementDimensionRule extends Model
 {
     /** @use HasFactory<CertificateRequirementDimensionRuleFactory> */
@@ -30,11 +33,13 @@ class CertificateRequirementDimensionRule extends Model
         ];
     }
 
+    /** @return BelongsTo<CertificateRequirement, $this> */
     public function requirement(): BelongsTo
     {
         return $this->belongsTo(CertificateRequirement::class, 'certificate_requirement_id');
     }
 
+    /** @return BelongsTo<CertificationToolDimension, $this> */
     public function dimension(): BelongsTo
     {
         return $this->belongsTo(CertificationToolDimension::class, 'certification_tool_dimension_id');

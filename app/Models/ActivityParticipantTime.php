@@ -33,11 +33,13 @@ class ActivityParticipantTime extends Model
         ];
     }
 
+    /** @return BelongsTo<Activity, $this> */
     public function activity(): BelongsTo
     {
         return $this->belongsTo(Activity::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

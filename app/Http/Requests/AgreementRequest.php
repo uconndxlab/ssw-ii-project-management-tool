@@ -19,7 +19,6 @@ use App\Support\DeliverableHistoryScope;
 use App\Support\ProjectProgramScope;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\File;
 use Illuminate\Validation\Validator;
@@ -28,7 +27,7 @@ class AgreementRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        $user = Auth::user();
+        $user = $this->user();
 
         if ($user === null) {
             return false;
@@ -174,9 +173,12 @@ class AgreementRequest extends FormRequest
             $existingProgramIds = $agreement instanceof Agreement
                 ? $agreement->programs()->pluck('programs.id')->all()
                 : [];
+            $actor = $this->user();
+            assert($actor instanceof User);
+
             ScopeSync::validateSubmittedMode(
                 $validator,
-                Auth::user(),
+                $actor,
                 $existingMode,
                 $programScopeMode instanceof ProgramScopeMode
                     ? $programScopeMode
@@ -184,7 +186,7 @@ class AgreementRequest extends FormRequest
             );
             ScopeSync::validateSubmittedProgramsAreInAdminScope(
                 $validator,
-                Auth::user(),
+                $actor,
                 $programIds->all(),
                 $existingProgramIds,
             );

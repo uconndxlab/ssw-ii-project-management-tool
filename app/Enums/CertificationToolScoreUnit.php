@@ -8,6 +8,7 @@ enum CertificationToolScoreUnit: string
     case Points = 'points';
     case Number = 'number';
 
+    /** @return list<string> */
     public static function values(): array
     {
         return array_map(fn (self $case) => $case->value, self::cases());

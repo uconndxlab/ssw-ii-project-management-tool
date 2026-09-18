@@ -12,6 +12,7 @@ enum CertificateEnrollmentStatus: string
     case Expired = 'expired';
     case Revoked = 'revoked';
 
+    /** @return list<string> */
     public static function values(): array
     {
         return array_map(fn (self $case) => $case->value, self::cases());
@@ -30,7 +31,7 @@ enum CertificateEnrollmentStatus: string
         };
     }
 
-    public function icon(): ?string
+    public function icon(): string
     {
         return match ($this) {
             self::NotStarted => 'circle',

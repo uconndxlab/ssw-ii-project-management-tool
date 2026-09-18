@@ -10,6 +10,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property CertificateRequirementPhase $phase
+ * @property CertificateRequirementKind $kind
+ */
 class CertificateRequirement extends Model
 {
     /** @use HasFactory<CertificateRequirementFactory> */
@@ -45,36 +49,43 @@ class CertificateRequirement extends Model
         ];
     }
 
+    /** @return BelongsTo<Certificate, $this> */
     public function certificate(): BelongsTo
     {
         return $this->belongsTo(Certificate::class);
     }
 
+    /** @return BelongsTo<CertificateRequirementGroup, $this> */
     public function group(): BelongsTo
     {
         return $this->belongsTo(CertificateRequirementGroup::class, 'certificate_requirement_group_id');
     }
 
+    /** @return BelongsTo<ContactFamily, $this> */
     public function contactFamily(): BelongsTo
     {
         return $this->belongsTo(ContactFamily::class);
     }
 
+    /** @return BelongsTo<ActivityType, $this> */
     public function activityType(): BelongsTo
     {
         return $this->belongsTo(ActivityType::class);
     }
 
+    /** @return BelongsTo<CertificationTool, $this> */
     public function certificationTool(): BelongsTo
     {
         return $this->belongsTo(CertificationTool::class);
     }
 
+    /** @return BelongsTo<CertificationRole, $this> */
     public function certificationRole(): BelongsTo
     {
         return $this->belongsTo(CertificationRole::class);
     }
 
+    /** @return HasMany<CertificateRequirementDimensionRule, $this> */
     public function dimensionRules(): HasMany
     {
         return $this->hasMany(CertificateRequirementDimensionRule::class);

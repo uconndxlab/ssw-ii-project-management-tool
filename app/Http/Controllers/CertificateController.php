@@ -10,6 +10,8 @@ use App\Enums\ProgramScopeMode;
 use App\Models\ActivityType;
 use App\Models\Certificate;
 use App\Models\CertificateRequirement;
+use App\Models\CertificateRequirementDimensionRule;
+use App\Models\CertificateRequirementGroup;
 use App\Models\CertificationRole;
 use App\Models\CertificationTool;
 use App\Models\CertificationToolDimension;
@@ -18,20 +20,22 @@ use App\Models\Program;
 use App\Models\Project;
 use App\Support\Authorization\ScopeSync;
 use App\Support\ProjectProgramScope;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Validator as ValidatorInstance;
 
 class CertificateController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request): View|RedirectResponse
     {
         $this->authorize('viewAny', Certificate::class);
 
         $query = Certificate::query()
-            ->visibleTo(Auth::user())
+            ->visibleTo($this->actor())
             ->withCount('requirements')
             ->with(['programs.projects']);
 
@@ -85,11 +89,11 @@ class CertificateController extends Controller
         ));
     }
 
-    public function create()
+    public function create(): View|RedirectResponse
     {
         $this->authorize('create', Certificate::class);
 
-        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor(Auth::user());
+        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor($this->actor());
 
         return view('admin.certificates.create', array_merge(
             compact('projects'),
@@ -97,7 +101,7 @@ class CertificateController extends Controller
         ));
     }
 
-    public function store(Request $request)
+    public function store(Request $request): View|RedirectResponse
     {
         $this->authorize('create', Certificate::class);
 
@@ -116,7 +120,7 @@ class CertificateController extends Controller
             ]);
 
             ScopeSync::applyTo(
-                Auth::user(),
+                $this->actor(),
                 $certificate,
                 ProgramScopeMode::from($validated['program_scope_mode']),
                 $validated['program_ids'] ?? [],
@@ -136,11 +140,11 @@ class CertificateController extends Controller
             ->with('success', 'Certificate created successfully.');
     }
 
-    public function edit(Certificate $certificate)
+    public function edit(Certificate $certificate): View|RedirectResponse
     {
         $this->authorize('update', $certificate);
 
-        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor(Auth::user(), $certificate);
+        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor($this->actor(), $certificate);
         $certificate->load([
             'programs.projects',
             'prerequisites',
@@ -155,7 +159,7 @@ class CertificateController extends Controller
         ));
     }
 
-    public function update(Request $request, Certificate $certificate)
+    public function update(Request $request, Certificate $certificate): View|RedirectResponse
     {
         $this->authorize('update', $certificate);
 
@@ -173,7 +177,7 @@ class CertificateController extends Controller
             ]);
 
             ScopeSync::applyTo(
-                Auth::user(),
+                $this->actor(),
                 $certificate,
                 ProgramScopeMode::from($validated['program_scope_mode']),
                 $validated['program_ids'] ?? [],
@@ -189,7 +193,7 @@ class CertificateController extends Controller
         return $this->redirectAfterSave($certificate, 'Certificate updated successfully.');
     }
 
-    public function destroy(Certificate $certificate)
+    public function destroy(Certificate $certificate): View|RedirectResponse
     {
         $this->authorize('delete', $certificate);
 
@@ -210,6 +214,8 @@ class CertificateController extends Controller
 
     /**
      * Data shared by create/edit views: pickers, tool catalog for dimension rule authoring.
+     *
+     * @return array<string, mixed>
      */
     private function sharedFormData(?Certificate $certificate = null): array
     {
@@ -217,25 +223,28 @@ class CertificateController extends Controller
         $activityTypes = ActivityType::active()->orderBy('sort_order')->orderBy('name')->get();
         $certificationTools = CertificationTool::query()
             ->notRetired()
-            ->visibleTo(Auth::user())
+            ->visibleTo($this->actor())
             ->with('dimensions.options')
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
         $globalRoles = CertificationRole::whereNull('certificate_id')->active()->orderBy('sort_order')->get();
-        $otherCertificates = Certificate::query()
-            ->visibleTo(Auth::user())
-            ->when($certificate, fn ($q) => $q->whereKeyNot($certificate->id))
-            ->orderBy('name')
-            ->get(['id', 'name']);
+        $otherCertificatesQuery = Certificate::query()->visibleTo($this->actor());
+        if ($certificate !== null) {
+            $otherCertificatesQuery->whereKeyNot($certificate->id);
+        }
+        $otherCertificates = $otherCertificatesQuery->orderBy('name')->get(['id', 'name']);
 
         return compact('contactFamilies', 'activityTypes', 'certificationTools', 'globalRoles', 'otherCertificates');
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function validateCertificate(Request $request, ?Certificate $certificate = null): array
     {
         $validator = Validator::make($request->all(), [
-            'name' => ['required', 'string', 'max:255', 'unique:certificates,name,'.($certificate?->id ?? 'NULL').',id'],
+            'name' => ['required', 'string', 'max:255', 'unique:certificates,name,'.($certificate !== null ? $certificate->id : 'NULL').',id'],
             'description' => ['nullable', 'string'],
             'active' => ['boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
@@ -298,13 +307,13 @@ class CertificateController extends Controller
             ProjectProgramScope::validateModeSelection($validator, $mode, Certificate::class, $projectIds, $programIds);
 
             $submittedMode = ProgramScopeMode::tryFrom((string) $mode) ?? ProgramScopeMode::Specific;
-            $existingMode = $certificate?->program_scope_mode ?? ProgramScopeMode::None;
-            ScopeSync::validateSubmittedMode($validator, Auth::user(), $existingMode, $submittedMode);
+            $existingMode = $certificate !== null ? $certificate->program_scope_mode : ProgramScopeMode::None;
+            ScopeSync::validateSubmittedMode($validator, $this->actor(), $existingMode, $submittedMode);
             ScopeSync::validateSubmittedProgramsAreInAdminScope(
                 $validator,
-                Auth::user(),
+                $this->actor(),
                 $programIds,
-                $certificate?->exists ? $certificate->programs()->pluck('programs.id')->all() : [],
+                $certificate !== null && $certificate->exists ? $certificate->programs()->pluck('programs.id')->all() : [],
             );
 
             $this->validateRoles($validator, $request, $certificate);
@@ -321,7 +330,7 @@ class CertificateController extends Controller
         return $validated;
     }
 
-    private function validatePrerequisites($validator, Request $request, ?Certificate $certificate): void
+    private function validatePrerequisites(ValidatorInstance $validator, Request $request, ?Certificate $certificate): void
     {
         $prerequisiteIds = ProjectProgramScope::normalizeIds($request->input('prerequisite_certificate_ids', []));
 
@@ -349,6 +358,9 @@ class CertificateController extends Controller
         }
     }
 
+    /**
+     * @param  array<int, int>  $visited
+     */
     private function prerequisiteReaches(int $fromCertificateId, int $targetCertificateId, array $visited = []): bool
     {
         if ($fromCertificateId === $targetCertificateId) {
@@ -372,7 +384,7 @@ class CertificateController extends Controller
         return false;
     }
 
-    private function validateRoles($validator, Request $request, ?Certificate $certificate): void
+    private function validateRoles(ValidatorInstance $validator, Request $request, ?Certificate $certificate): void
     {
         $seenSlugs = [];
 
@@ -410,7 +422,7 @@ class CertificateController extends Controller
         }
     }
 
-    private function validateRequirementGroupsAndRows($validator, Request $request): void
+    private function validateRequirementGroupsAndRows(ValidatorInstance $validator, Request $request): void
     {
         $groupRows = $request->input('requirement_groups', []);
         $requirementRows = $request->input('requirements', []);
@@ -443,9 +455,9 @@ class CertificateController extends Controller
                     continue;
                 }
 
-                $dimension = CertificationToolDimension::find($rule['certification_tool_dimension_id']);
+                $dimension = CertificationToolDimension::query()->find((int) $rule['certification_tool_dimension_id']);
 
-                if ($dimension && $toolId && (int) $dimension->certification_tool_id !== $toolId) {
+                if ($dimension instanceof CertificationToolDimension && $toolId && (int) $dimension->certification_tool_id !== $toolId) {
                     $validator->errors()->add("requirements.{$index}.dimension_rules.{$ruleIndex}.certification_tool_dimension_id", 'Dimension must belong to the selected tool.');
                 }
 
@@ -484,6 +496,9 @@ class CertificateController extends Controller
         }
     }
 
+    /**
+     * @param  array<int|string, mixed>  $rows
+     */
     private function syncRoles(Certificate $certificate, array $rows): void
     {
         $existing = $certificate->roles()->get()->keyBy('id');
@@ -500,7 +515,10 @@ class CertificateController extends Controller
 
             if ($markedForDeletion) {
                 if ($rowId && $existing->has($rowId)) {
-                    $existing->get($rowId)->delete();
+                    $role = $existing->get($rowId);
+                    if ($role instanceof CertificationRole) {
+                        $role->delete();
+                    }
                 }
 
                 continue;
@@ -517,17 +535,26 @@ class CertificateController extends Controller
             ];
 
             if ($rowId && $existing->has($rowId)) {
-                $existing->get($rowId)->update($data);
-                $retainedIds->push($rowId);
+                $role = $existing->get($rowId);
+                if ($role instanceof CertificationRole) {
+                    $role->update($data);
+                    $retainedIds->push($rowId);
+                }
             } else {
                 $retainedIds->push($certificate->roles()->create($data)->id);
             }
         }
 
-        $existing->keys()->diff($retainedIds)->each(fn (int $id) => $existing->get($id)->delete());
+        $existing->keys()->diff($retainedIds)->each(function (int $id) use ($existing): void {
+            $role = $existing->get($id);
+            if ($role instanceof CertificationRole) {
+                $role->delete();
+            }
+        });
     }
 
     /**
+     * @param  array<int|string, mixed>  $rows
      * @return array<int|string, int> map of submitted requirement_groups[] array key -> saved group id
      */
     private function syncRequirementGroups(Certificate $certificate, array $rows): array
@@ -547,7 +574,10 @@ class CertificateController extends Controller
 
             if ($markedForDeletion) {
                 if ($rowId && $existing->has($rowId)) {
-                    $existing->get($rowId)->delete();
+                    $group = $existing->get($rowId);
+                    if ($group instanceof CertificateRequirementGroup) {
+                        $group->delete();
+                    }
                 }
 
                 continue;
@@ -568,7 +598,11 @@ class CertificateController extends Controller
 
             if ($rowId && $existing->has($rowId)) {
                 $group = $existing->get($rowId);
-                $group->update($data);
+                if ($group instanceof CertificateRequirementGroup) {
+                    $group->update($data);
+                } else {
+                    continue;
+                }
             } else {
                 $group = $certificate->requirementGroups()->create($data);
             }
@@ -577,11 +611,20 @@ class CertificateController extends Controller
             $indexToId[$index] = $group->id;
         }
 
-        $existing->keys()->diff($retainedIds)->each(fn (int $id) => $existing->get($id)->delete());
+        $existing->keys()->diff($retainedIds)->each(function (int $id) use ($existing): void {
+            $group = $existing->get($id);
+            if ($group instanceof CertificateRequirementGroup) {
+                $group->delete();
+            }
+        });
 
         return $indexToId;
     }
 
+    /**
+     * @param  array<int|string, mixed>  $rows
+     * @param  array<int|string, int>  $groupIndexToId
+     */
     private function syncRequirements(Certificate $certificate, array $rows, array $groupIndexToId): void
     {
         $existing = $certificate->requirements()->with('dimensionRules')->get()->keyBy('id');
@@ -598,7 +641,10 @@ class CertificateController extends Controller
 
             if ($markedForDeletion) {
                 if ($rowId && $existing->has($rowId)) {
-                    $existing->get($rowId)->delete();
+                    $requirement = $existing->get($rowId);
+                    if ($requirement instanceof CertificateRequirement) {
+                        $requirement->delete();
+                    }
                 }
 
                 continue;
@@ -632,7 +678,11 @@ class CertificateController extends Controller
 
             if ($rowId && $existing->has($rowId)) {
                 $requirement = $existing->get($rowId);
-                $requirement->update($data);
+                if ($requirement instanceof CertificateRequirement) {
+                    $requirement->update($data);
+                } else {
+                    continue;
+                }
             } else {
                 $requirement = $certificate->requirements()->create($data);
             }
@@ -641,9 +691,17 @@ class CertificateController extends Controller
             $retainedIds->push($requirement->id);
         }
 
-        $existing->keys()->diff($retainedIds)->each(fn (int $id) => $existing->get($id)->delete());
+        $existing->keys()->diff($retainedIds)->each(function (int $id) use ($existing): void {
+            $requirement = $existing->get($id);
+            if ($requirement instanceof CertificateRequirement) {
+                $requirement->delete();
+            }
+        });
     }
 
+    /**
+     * @param  array<int|string, mixed>  $rows
+     */
     private function syncDimensionRules(CertificateRequirement $requirement, array $rows): void
     {
         $existing = $requirement->dimensionRules()->get()->keyBy('id');
@@ -659,7 +717,10 @@ class CertificateController extends Controller
 
             if ($markedForDeletion) {
                 if ($rowId && $existing->has($rowId)) {
-                    $existing->get($rowId)->delete();
+                    $rule = $existing->get($rowId);
+                    if ($rule instanceof CertificateRequirementDimensionRule) {
+                        $rule->delete();
+                    }
                 }
 
                 continue;
@@ -677,13 +738,21 @@ class CertificateController extends Controller
             ];
 
             if ($rowId && $existing->has($rowId)) {
-                $existing->get($rowId)->update($data);
-                $retainedIds->push($rowId);
+                $rule = $existing->get($rowId);
+                if ($rule instanceof CertificateRequirementDimensionRule) {
+                    $rule->update($data);
+                    $retainedIds->push($rowId);
+                }
             } else {
                 $retainedIds->push($requirement->dimensionRules()->create($data)->id);
             }
         }
 
-        $existing->keys()->diff($retainedIds)->each(fn (int $id) => $existing->get($id)->delete());
+        $existing->keys()->diff($retainedIds)->each(function (int $id) use ($existing): void {
+            $rule = $existing->get($id);
+            if ($rule instanceof CertificateRequirementDimensionRule) {
+                $rule->delete();
+            }
+        });
     }
 }

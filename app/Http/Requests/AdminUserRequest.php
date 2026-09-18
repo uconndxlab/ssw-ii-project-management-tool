@@ -9,7 +9,6 @@ use App\Support\Authorization\ScopeSync;
 use App\Support\Authorization\UserAccess;
 use App\Support\ProjectProgramScope;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\Validator;
@@ -83,15 +82,16 @@ class AdminUserRequest extends FormRequest
     {
         $validator->after(function (Validator $validator) {
             $user = $this->route('user');
-            $actor = Auth::user();
+            $actor = $this->user();
+            assert($actor instanceof User);
             $access = UserAccess::for($actor);
 
-            if ($user instanceof User && Auth::id() === $user->id) {
+            if ($user instanceof User && $actor->id === $user->id) {
                 $validator->errors()->add('access_profile', 'You cannot change your own permissions.');
             }
 
             if (! $this->boolean('active')) {
-                if ($user instanceof User && Auth::id() === $user->id) {
+                if ($user instanceof User && $actor->id === $user->id) {
                     $validator->errors()->add('active', 'You cannot deactivate your own user account.');
                 }
 

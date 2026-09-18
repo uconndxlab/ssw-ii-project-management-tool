@@ -31,6 +31,7 @@ class Project extends Model
         ];
     }
 
+    /** @return BelongsToMany<Program, $this> */
     public function programs(): BelongsToMany
     {
         return $this->belongsToMany(Program::class, 'program_project')->withTimestamps();
@@ -57,14 +58,21 @@ class Project extends Model
             ? $this->programs
             : $this->programs()->with($relation)->get();
 
-        $programs->each(function ($program) use ($relation) {
+        $programs->each(function (Program $program) use ($relation) {
             if (! $program->relationLoaded($relation)) {
                 $program->load($relation);
             }
         });
 
         return $programs
-            ->flatMap(fn ($program) => $program->{$relation})
+            ->flatMap(function (Program $program) use ($relation) {
+                return match ($relation) {
+                    'activities' => $program->activities,
+                    'organizations' => $program->organizations,
+                    'users' => $program->users,
+                    default => collect(),
+                };
+            })
             ->unique('id')
             ->sortBy('name')
             ->values();

@@ -28,7 +28,13 @@ class CertificationRolePolicy
             return true;
         }
 
-        return $user->access()->canViewRecord($certificationRole->certificate);
+        $certificate = $certificationRole->certificate;
+
+        if (! $certificate) {
+            return false;
+        }
+
+        return $user->access()->canViewRecord($certificate);
     }
 
     public function update(User $user, CertificationRole $certificationRole): bool
@@ -37,7 +43,13 @@ class CertificationRolePolicy
             return $user->access()->isSystemAdmin();
         }
 
-        return $user->access()->canUpdateScopedRecord($certificationRole->certificate);
+        $certificate = $certificationRole->certificate;
+
+        if (! $certificate) {
+            return false;
+        }
+
+        return $user->access()->canUpdateScopedRecord($certificate);
     }
 
     public function delete(User $user, CertificationRole $certificationRole): bool
@@ -46,6 +58,12 @@ class CertificationRolePolicy
             return $user->access()->isSystemAdmin();
         }
 
-        return $user->access()->canDeleteScopedRecord($certificationRole->certificate);
+        $certificate = $certificationRole->certificate;
+
+        if (! $certificate) {
+            return false;
+        }
+
+        return $user->access()->canDeleteScopedRecord($certificate);
     }
 }

@@ -10,7 +10,6 @@ use App\Models\User;
 use App\Support\Authorization\ScopeSync;
 use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
 class TeamController extends Controller
@@ -20,7 +19,7 @@ class TeamController extends Controller
         $this->authorize('viewAny', Team::class);
 
         $query = Team::query()
-            ->visibleTo(Auth::user())
+            ->visibleTo($this->actor())
             ->withCount('users')
             ->with([
                 'programs.projects:id,name',
@@ -108,7 +107,7 @@ class TeamController extends Controller
         $this->authorize('create', Team::class);
 
         $users = User::query()->active()->orderBy('name', 'asc')->get();
-        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor(Auth::user());
+        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor($this->actor());
 
         return view('teams.create', compact('users', 'projects'));
     }
@@ -140,13 +139,13 @@ class TeamController extends Controller
             );
             ScopeSync::validateSubmittedMode(
                 $validator,
-                Auth::user(),
+                $this->actor(),
                 ProgramScopeMode::None,
                 ProgramScopeMode::from($request->input('program_scope_mode', ProgramScopeMode::Specific->value)),
             );
             ScopeSync::validateSubmittedProgramsAreInAdminScope(
                 $validator,
-                Auth::user(),
+                $this->actor(),
                 ProjectProgramScope::normalizeIds($request->input('program_ids', [])),
             );
         });
@@ -162,7 +161,7 @@ class TeamController extends Controller
 
         $team->users()->sync($validated['user_ids'] ?? []);
         ScopeSync::applyTo(
-            Auth::user(),
+            $this->actor(),
             $team,
             ProgramScopeMode::from($validated['program_scope_mode']),
             $validated['program_ids'] ?? [],
@@ -202,14 +201,14 @@ class TeamController extends Controller
                     }
 
                     $assignedUser = $deliverable->users->first(
-                        fn ($assignedUser) => (int) $assignedUser->id === (int) $user->id && ! $assignedUser->pivot->unassigned_at
+                        fn ($assignedUser) => (int) $assignedUser->id === (int) $user->id && ! $assignedUser->pivot?->unassigned_at
                     );
 
                     if ($assignedUser) {
                         $memberDeliverables[$user->id][] = [
                             'deliverable' => $deliverable,
                             'agreement' => $agreement,
-                            'personal_target' => $assignedUser->pivot->target_quantity,
+                            'personal_target' => $assignedUser->pivot?->target_quantity,
                         ];
                     }
                 }
@@ -225,7 +224,7 @@ class TeamController extends Controller
         $this->authorize('update', $team);
 
         $users = User::query()->active()->orderBy('name', 'asc')->get();
-        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor(Auth::user(), $team);
+        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor($this->actor(), $team);
         $team->load(['users', 'programs.projects']);
 
         return view('teams.edit', compact('team', 'users', 'projects'));
@@ -258,13 +257,13 @@ class TeamController extends Controller
             );
             ScopeSync::validateSubmittedMode(
                 $validator,
-                Auth::user(),
+                $this->actor(),
                 $team->program_scope_mode,
                 ProgramScopeMode::from($request->input('program_scope_mode', ProgramScopeMode::Specific->value)),
             );
             ScopeSync::validateSubmittedProgramsAreInAdminScope(
                 $validator,
-                Auth::user(),
+                $this->actor(),
                 ProjectProgramScope::normalizeIds($request->input('program_ids', [])),
                 $team->programs()->pluck('programs.id')->all(),
             );
@@ -280,7 +279,7 @@ class TeamController extends Controller
 
         $team->users()->sync($validated['user_ids'] ?? []);
         ScopeSync::applyTo(
-            Auth::user(),
+            $this->actor(),
             $team,
             ProgramScopeMode::from($validated['program_scope_mode']),
             $validated['program_ids'] ?? [],

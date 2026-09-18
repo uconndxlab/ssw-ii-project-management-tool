@@ -7,6 +7,7 @@ enum CertificateDimensionRuleMode: string
     case Coverage = 'coverage';
     case Quota = 'quota';
 
+    /** @return list<string> */
     public static function values(): array
     {
         return array_map(fn (self $case) => $case->value, self::cases());

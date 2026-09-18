@@ -37,11 +37,13 @@ class CertificationToolDimension extends Model
         ];
     }
 
+    /** @return BelongsTo<CertificationTool, $this> */
     public function tool(): BelongsTo
     {
         return $this->belongsTo(CertificationTool::class, 'certification_tool_id');
     }
 
+    /** @return HasMany<CertificationToolDimensionOption, $this> */
     public function options(): HasMany
     {
         return $this->hasMany(CertificationToolDimensionOption::class)->orderBy('sort_order');

@@ -21,6 +21,7 @@ class AgreementAttachment extends Model
         'file_size',
     ];
 
+    /** @return BelongsTo<Agreement, $this> */
     public function agreement(): BelongsTo
     {
         return $this->belongsTo(Agreement::class);

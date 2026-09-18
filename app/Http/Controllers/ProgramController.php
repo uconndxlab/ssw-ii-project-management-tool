@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Activity;
+use App\Models\ActivityType;
 use App\Models\Program;
 use App\Models\Project;
 use App\Support\Authorization\ScopeSync;
@@ -9,7 +11,6 @@ use App\Support\Authorization\UserAccess;
 use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Auth;
 
 class ProgramController extends Controller
 {
@@ -17,7 +18,7 @@ class ProgramController extends Controller
     {
         $this->authorize('viewAny', Program::class);
 
-        $query = Program::query()->visibleTo(Auth::user())->with('projects');
+        $query = Program::query()->visibleTo($this->actor())->with('projects');
 
         $search = trim((string) $request->input('search', ''));
         if ($search !== '') {
@@ -79,7 +80,7 @@ class ProgramController extends Controller
         ]);
 
         $projectIds = ScopeSync::mergeProjectIds(
-            Auth::user(),
+            $this->actor(),
             [],
             ProjectProgramScope::normalizeIds($validated['project_ids'] ?? []),
         );
@@ -113,11 +114,22 @@ class ProgramController extends Controller
         ]);
 
         $recentActivities = $program->activities
-            ->sortBy([
-                ['engagement_date', 'desc'],
-                [fn ($activity) => mb_strtolower($activity->activityType?->name ?? ''), 'asc'],
-                ['id', 'desc'],
-            ])
+            ->sort(function (Activity $a, Activity $b): int {
+                $dateCompare = $b->engagement_date <=> $a->engagement_date;
+                if ($dateCompare !== 0) {
+                    return $dateCompare;
+                }
+
+                $nameCompare = strcasecmp(
+                    $a->activityType instanceof ActivityType ? ($a->activityType->name ?? '') : '',
+                    $b->activityType instanceof ActivityType ? ($b->activityType->name ?? '') : ''
+                );
+                if ($nameCompare !== 0) {
+                    return $nameCompare;
+                }
+
+                return $b->id <=> $a->id;
+            })
             ->take(10)
             ->values();
 
@@ -173,7 +185,7 @@ class ProgramController extends Controller
 
         $program->loadMissing('projects');
         $projectIds = ScopeSync::mergeProjectIds(
-            Auth::user(),
+            $this->actor(),
             $program->projects->pluck('id')->all(),
             ProjectProgramScope::normalizeIds($validated['project_ids'] ?? []),
         );
@@ -202,7 +214,7 @@ class ProgramController extends Controller
      */
     private function assignableProjects(?Program $program = null)
     {
-        $access = UserAccess::for(Auth::user());
+        $access = UserAccess::for($this->actor());
 
         $query = Project::query()->orderBy('name');
 
