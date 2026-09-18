@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Enums\CertificationToolScoreUnit;
+use Database\Factories\CertificationToolScoreFieldFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
@@ -12,6 +14,9 @@ use Illuminate\Support\Str;
  */
 class CertificationToolScoreField extends Model
 {
+    /** @use HasFactory<CertificationToolScoreFieldFactory> */
+    use HasFactory;
+
     protected $fillable = [
         'certification_tool_id',
         'name',

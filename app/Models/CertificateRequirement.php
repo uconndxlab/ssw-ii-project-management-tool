@@ -4,12 +4,17 @@ namespace App\Models;
 
 use App\Enums\CertificateRequirementKind;
 use App\Enums\CertificateRequirementPhase;
+use Database\Factories\CertificateRequirementFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CertificateRequirement extends Model
 {
+    /** @use HasFactory<CertificateRequirementFactory> */
+    use HasFactory;
+
     protected $fillable = [
         'certificate_id',
         'certificate_requirement_group_id',

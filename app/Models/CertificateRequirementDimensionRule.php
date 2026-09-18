@@ -3,11 +3,16 @@
 namespace App\Models;
 
 use App\Enums\CertificateDimensionRuleMode;
+use Database\Factories\CertificateRequirementDimensionRuleFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CertificateRequirementDimensionRule extends Model
 {
+    /** @use HasFactory<CertificateRequirementDimensionRuleFactory> */
+    use HasFactory;
+
     protected $fillable = [
         'certificate_requirement_id',
         'certification_tool_dimension_id',

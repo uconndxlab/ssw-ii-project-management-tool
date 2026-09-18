@@ -2,12 +2,17 @@
 
 namespace App\Models;
 
+use Database\Factories\CertificationToolDimensionOptionFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 class CertificationToolDimensionOption extends Model
 {
+    /** @use HasFactory<CertificationToolDimensionOptionFactory> */
+    use HasFactory;
+
     protected $fillable = [
         'certification_tool_dimension_id',
         'label',

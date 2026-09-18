@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Database\Factories\CertificationRoleFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
@@ -11,6 +13,9 @@ use Illuminate\Support\Str;
  */
 class CertificationRole extends Model
 {
+    /** @use HasFactory<CertificationRoleFactory> */
+    use HasFactory;
+
     protected $fillable = [
         'name',
         'slug',
