@@ -3325,12 +3325,6 @@ parameters:
 			path: app/Models/Program.php
 
 		-
-			message: '#^Class App\\Models\\Project uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Models/Project.php
-
-		-
 			message: '#^Method App\\Models\\Project\:\:collectProgramRelation\(\) return type with generic class Illuminate\\Support\\Collection does not specify its types\: TKey, TValue$#'
 			identifier: missingType.generics
 			count: 1
@@ -3399,12 +3393,6 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$projects\.$#'
 			identifier: property.notFound
-			count: 1
-			path: app/Models/Team.php
-
-		-
-			message: '#^Class App\\Models\\Team uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
-			identifier: missingType.generics
 			count: 1
 			path: app/Models/Team.php
 

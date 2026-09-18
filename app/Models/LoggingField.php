@@ -5,6 +5,8 @@ namespace App\Models;
 use App\Enums\ProgramScopeMode;
 use App\Models\Concerns\HasProgramScope;
 use App\Models\Concerns\VisibleToUser;
+use Database\Factories\LoggingFieldFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Str;
@@ -15,11 +17,15 @@ use Illuminate\Support\Str;
  */
 class LoggingField extends Model
 {
-    use HasProgramScope, VisibleToUser;
+    /** @use HasFactory<LoggingFieldFactory> */
+    use HasFactory, HasProgramScope, VisibleToUser;
 
     public const FIELD_TYPE_CHECKBOX = 'checkbox';
+
     public const FIELD_TYPE_MULTISELECT = 'multiselect';
+
     public const FIELD_TYPE_CHECKBOX_GROUP = 'checkbox_group';
+
     public const FIELD_TYPE_SELECT = 'select';
 
     protected $fillable = [
@@ -168,7 +174,7 @@ class LoggingField extends Model
                     ];
                 }
 
-                if (!is_array($option)) {
+                if (! is_array($option)) {
                     return null;
                 }
 

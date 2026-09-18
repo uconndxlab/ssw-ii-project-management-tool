@@ -5,9 +5,11 @@ namespace App\Models;
 use App\Enums\ProgramScopeMode;
 use App\Models\Concerns\HasProgramScope;
 use App\Models\Concerns\VisibleToUser;
+use Database\Factories\ContactFamilyFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Index/view: admins only, and a listed program is in your privilege.
@@ -15,7 +17,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  */
 class ContactFamily extends Model
 {
-    use HasProgramScope, VisibleToUser;
+    /** @use HasFactory<ContactFamilyFactory> */
+    use HasFactory, HasProgramScope, VisibleToUser;
 
     protected $fillable = [
         'name',

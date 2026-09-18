@@ -20,6 +20,7 @@
         "laravel/sail": "^1.41",
         "mockery/mockery": "^1.6",
         "nunomaduro/collision": "^8.6",
+        "pestphp/pest": "^5.2",
         "phpunit/phpunit": "^13.3"
     },
     "autoload": {
@@ -49,7 +50,7 @@
         ],
         "test": [
             "@php artisan config:clear --ansi",
-            "@php artisan test"
+            "./vendor/bin/sail artisan test"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
@@ -70,8 +71,17 @@
             "Illuminate\\Foundation\\ComposerScripts::prePackageUninstall"
         ],
         "lint": "pint",
+        "lint:check": "pint --test",
+        "audit": "composer audit --no-dev",
         "analyse": "phpstan analyse --memory-limit=2G",
-        "check": ["@lint", "@analyse"]
+        "check": [
+            "composer install --prefer-dist --no-interaction",
+            "npm install",
+            "@audit",
+            "@lint:check",
+            "@analyse",
+            "@test"
+        ]
     },
     "extra": {
         "laravel": {

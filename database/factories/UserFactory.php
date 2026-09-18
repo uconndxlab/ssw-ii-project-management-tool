@@ -3,12 +3,15 @@
 namespace Database\Factories;
 
 use App\Enums\AccessProfile;
+use App\Enums\PrivilegeCapability;
+use App\Enums\PrivilegeScopeType;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\User>
+ * @extends Factory<User>
  */
 class UserFactory extends Factory
 {
@@ -31,6 +34,7 @@ class UserFactory extends Factory
             'password' => static::$password ??= Hash::make('password'),
             'access_profile' => AccessProfile::Member,
             'is_supervisor' => false,
+            'active' => true,
             'remember_token' => Str::random(10),
         ];
     }
@@ -50,10 +54,10 @@ class UserFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'access_profile' => AccessProfile::AdminViewer,
             'is_supervisor' => false,
-        ])->afterCreating(function (\App\Models\User $user) {
+        ])->afterCreating(function (User $user) {
             $user->privileges()->firstOrCreate([
-                'capability' => \App\Enums\PrivilegeCapability::Admin,
-                'scope_type' => \App\Enums\PrivilegeScopeType::System,
+                'capability' => PrivilegeCapability::Admin,
+                'scope_type' => PrivilegeScopeType::System,
                 'scope_id' => null,
             ]);
         });

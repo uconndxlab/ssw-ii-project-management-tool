@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\VisibleToUser;
+use Database\Factories\ProjectFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -14,6 +15,7 @@ use Illuminate\Support\Collection;
  */
 class Project extends Model
 {
+    /** @use HasFactory<ProjectFactory> */
     use HasFactory, VisibleToUser;
 
     protected $fillable = [

@@ -4,7 +4,9 @@ namespace App\Models;
 
 use App\Models\Concerns\HasProgramScope;
 use App\Models\Concerns\VisibleToUser;
+use Database\Factories\ActivityFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -18,7 +20,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  */
 class Activity extends Model
 {
-    use HasProgramScope, VisibleToUser;
+    /** @use HasFactory<ActivityFactory> */
+    use HasFactory, HasProgramScope, VisibleToUser;
 
     protected $fillable = [
         'user_id',

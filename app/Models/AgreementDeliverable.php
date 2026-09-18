@@ -2,13 +2,18 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Database\Factories\AgreementDeliverableFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class AgreementDeliverable extends Model
 {
+    /** @use HasFactory<AgreementDeliverableFactory> */
+    use HasFactory;
+
     protected $fillable = [
         'agreement_id',
         'activity_type_id',
