@@ -2,11 +2,16 @@
 
 namespace App\Models;
 
+use Database\Factories\ActivityParticipantTimeFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ActivityParticipantTime extends Model
 {
+    /** @use HasFactory<ActivityParticipantTimeFactory> */
+    use HasFactory;
+
     protected $table = 'activity_participant_times';
 
     protected $fillable = [

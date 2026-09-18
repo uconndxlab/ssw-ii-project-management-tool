@@ -2,11 +2,16 @@
 
 namespace App\Models;
 
+use Database\Factories\OrganizationContactFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OrganizationContact extends Model
 {
+    /** @use HasFactory<OrganizationContactFactory> */
+    use HasFactory;
+
     protected $fillable = [
         'organization_id',
         'name',

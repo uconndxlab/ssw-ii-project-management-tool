@@ -4,11 +4,16 @@ namespace App\Models;
 
 use App\Enums\PrivilegeCapability;
 use App\Enums\PrivilegeScopeType;
+use Database\Factories\UserPrivilegeFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class UserPrivilege extends Model
 {
+    /** @use HasFactory<UserPrivilegeFactory> */
+    use HasFactory;
+
     protected $fillable = [
         'user_id',
         'capability',

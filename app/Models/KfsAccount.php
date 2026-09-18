@@ -2,12 +2,17 @@
 
 namespace App\Models;
 
+use Database\Factories\KfsAccountFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class KfsAccount extends Model
 {
+    /** @use HasFactory<KfsAccountFactory> */
+    use HasFactory;
+
     protected $fillable = [
         'number',
     ];

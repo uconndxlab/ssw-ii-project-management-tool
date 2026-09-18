@@ -1,0 +1,17 @@
+---
+description: Test execution safety and feature test expectations
+alwaysApply: true
+---
+
+Tests run against the testing environment only. Never run migrate:fresh,
+migrate:refresh, or db:wipe outside APP_ENV=testing. Never point test
+configuration at the development or production database.
+
+Run tests with `sail artisan test`, never bare `php artisan test` on the host.
+
+New tests use Pest syntax: test() or it() with closures, expect() or Laravel
+assertions. No new class-based PHPUnit tests.
+
+New features ship with feature tests covering the behavior described in the
+spec, factories for any new model, and seeder updates where the feature needs
+data to be visible.
