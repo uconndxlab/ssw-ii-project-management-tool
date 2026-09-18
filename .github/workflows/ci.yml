@@ -12,6 +12,20 @@ concurrency:
 jobs:
   checks:
     runs-on: ubuntu-latest
+    services:
+      pgsql:
+        image: postgres:16
+        env:
+          POSTGRES_USER: sail
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: testing
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v7
 
@@ -31,6 +45,17 @@ jobs:
 
       - name: Static analysis
         run: vendor/bin/phpstan analyse --memory-limit=2G
+
+      - name: Tests
+        env:
+          APP_KEY: base64:yBm+o7r7+hor7dcM9Fn6a26dxK21B3lpZbuIITtzNEU=
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_DATABASE: testing
+          DB_USERNAME: sail
+          DB_PASSWORD: password
+        run: php artisan test
 
       - name: Security advisories
         run: composer audit --no-dev
