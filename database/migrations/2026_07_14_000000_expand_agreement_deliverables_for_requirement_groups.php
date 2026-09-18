@@ -9,31 +9,31 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('agreement_deliverables', function (Blueprint $table) {
-            if (!Schema::hasColumn('agreement_deliverables', 'program_id')) {
+            if (! Schema::hasColumn('agreement_deliverables', 'program_id')) {
                 $table->foreignId('program_id')->nullable()->after('contact_family_id')->constrained()->nullOnDelete();
             }
-            if (!Schema::hasColumn('agreement_deliverables', 'metric_type')) {
+            if (! Schema::hasColumn('agreement_deliverables', 'metric_type')) {
                 $table->string('metric_type')->nullable()->after('program_id');
             }
-            if (!Schema::hasColumn('agreement_deliverables', 'contribution_basis')) {
+            if (! Schema::hasColumn('agreement_deliverables', 'contribution_basis')) {
                 $table->string('contribution_basis')->nullable()->after('metric_type');
             }
-            if (!Schema::hasColumn('agreement_deliverables', 'user_grouping_mode')) {
+            if (! Schema::hasColumn('agreement_deliverables', 'user_grouping_mode')) {
                 $table->string('user_grouping_mode')->nullable()->after('contribution_basis');
             }
-            if (!Schema::hasColumn('agreement_deliverables', 'include_additional_time')) {
+            if (! Schema::hasColumn('agreement_deliverables', 'include_additional_time')) {
                 $table->boolean('include_additional_time')->default(false)->after('user_grouping_mode');
             }
-            if (!Schema::hasColumn('agreement_deliverables', 'target_quantity')) {
+            if (! Schema::hasColumn('agreement_deliverables', 'target_quantity')) {
                 $table->decimal('target_quantity', 10, 2)->nullable()->after('include_additional_time');
             }
-            if (!Schema::hasColumn('agreement_deliverables', 'suggested_due_date')) {
+            if (! Schema::hasColumn('agreement_deliverables', 'suggested_due_date')) {
                 $table->date('suggested_due_date')->nullable()->after('program_id');
             }
-            if (!Schema::hasColumn('agreement_deliverables', 'sort_order')) {
+            if (! Schema::hasColumn('agreement_deliverables', 'sort_order')) {
                 $table->unsignedInteger('sort_order')->default(0)->after('suggested_due_date');
             }
-            if (!Schema::hasColumn('agreement_deliverables', 'retired_at')) {
+            if (! Schema::hasColumn('agreement_deliverables', 'retired_at')) {
                 $table->timestamp('retired_at')->nullable()->after('notes');
             }
 
@@ -42,12 +42,12 @@ return new class extends Migration
                 Schema::hasColumn('agreement_deliverables', 'required_activities') ? 'required_activities' : null,
             ]));
 
-            if (!empty($dropColumns)) {
+            if (! empty($dropColumns)) {
                 $table->dropColumn($dropColumns);
             }
         });
 
-        if (!Schema::hasTable('deliverable_user')) {
+        if (! Schema::hasTable('deliverable_user')) {
             Schema::create('deliverable_user', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('agreement_deliverable_id')->constrained('agreement_deliverables')->cascadeOnDelete();
@@ -61,19 +61,19 @@ return new class extends Migration
             });
         } else {
             Schema::table('deliverable_user', function (Blueprint $table) {
-                if (!Schema::hasColumn('deliverable_user', 'source_team_id')) {
+                if (! Schema::hasColumn('deliverable_user', 'source_team_id')) {
                     $table->foreignId('source_team_id')->nullable()->after('user_id')->constrained('teams')->nullOnDelete();
                 }
-                if (!Schema::hasColumn('deliverable_user', 'assigned_at')) {
+                if (! Schema::hasColumn('deliverable_user', 'assigned_at')) {
                     $table->timestamp('assigned_at')->nullable()->after('source_team_id');
                 }
-                if (!Schema::hasColumn('deliverable_user', 'unassigned_at')) {
+                if (! Schema::hasColumn('deliverable_user', 'unassigned_at')) {
                     $table->timestamp('unassigned_at')->nullable()->after('assigned_at');
                 }
             });
         }
 
-        if (!Schema::hasTable('deliverable_team')) {
+        if (! Schema::hasTable('deliverable_team')) {
             Schema::create('deliverable_team', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('agreement_deliverable_id')->constrained('agreement_deliverables')->cascadeOnDelete();
@@ -86,7 +86,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('agreement_activity_histories')) {
+        if (! Schema::hasTable('agreement_activity_histories')) {
             Schema::create('agreement_activity_histories', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('agreement_id')->constrained()->cascadeOnDelete();
@@ -110,7 +110,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('deliverable_contributions')) {
+        if (! Schema::hasTable('deliverable_contributions')) {
             Schema::create('deliverable_contributions', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('agreement_activity_history_id')->nullable()->constrained('agreement_activity_histories')->nullOnDelete();

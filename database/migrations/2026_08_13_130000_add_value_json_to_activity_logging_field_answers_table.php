@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('activity_logging_field_answers', function (Blueprint $table) {
-            if (!Schema::hasColumn('activity_logging_field_answers', 'value_json')) {
+            if (! Schema::hasColumn('activity_logging_field_answers', 'value_json')) {
                 $table->json('value_json')->nullable()->after('value_text');
             }
         });

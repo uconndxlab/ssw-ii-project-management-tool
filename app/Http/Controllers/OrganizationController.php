@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ProgramScopeMode;
+use App\Models\Activity;
 use App\Models\Organization;
 use App\Models\Program;
 use App\Models\Project;
@@ -11,9 +12,9 @@ use App\Models\User;
 use App\Support\Authorization\ScopeSync;
 use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 
 class OrganizationController extends Controller
@@ -111,7 +112,7 @@ class OrganizationController extends Controller
         $agreements = $organization->agreements()->active()->with(['states', 'users'])->get();
 
         // Get all activities for this organization's agreements
-        $allActivities = \App\Models\Activity::whereHas('agreements', function ($query) use ($agreements) {
+        $allActivities = Activity::whereHas('agreements', function ($query) use ($agreements) {
             $query->whereIn('agreements.id', $agreements->pluck('id'));
         })
             ->with(['activityType.contactFamily', 'user', 'agreements'])
@@ -125,7 +126,7 @@ class OrganizationController extends Controller
         $teamMembersMap = [];
         foreach ($agreements as $agreement) {
             foreach ($agreement->users as $user) {
-                if (!isset($teamMembersMap[$user->id])) {
+                if (! isset($teamMembersMap[$user->id])) {
                     $teamMembersMap[$user->id] = clone $user;
                     $teamMembersMap[$user->id]->via_agreements = collect();
                 }
@@ -361,14 +362,14 @@ class OrganizationController extends Controller
     {
         $rows = $request->input('contacts', []);
 
-        if (!is_array($rows)) {
+        if (! is_array($rows)) {
             return;
         }
 
         $primaryCount = 0;
 
         foreach ($rows as $key => $row) {
-            if (!is_array($row) || filter_var($row['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+            if (! is_array($row) || filter_var($row['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
                 continue;
             }
 

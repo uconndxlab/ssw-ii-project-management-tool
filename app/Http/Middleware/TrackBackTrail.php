@@ -9,9 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class TrackBackTrail
 {
-    public function __construct(private readonly SessionBackTargetService $backTargetService)
-    {
-    }
+    public function __construct(private readonly SessionBackTargetService $backTargetService) {}
 
     public function handle(Request $request, Closure $next): Response
     {

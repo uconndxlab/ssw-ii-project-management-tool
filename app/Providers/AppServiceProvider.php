@@ -11,9 +11,9 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Laravel\Nightwatch\Facades\Nightwatch;
-use Laravel\Nightwatch\Records\Request as RequestRecord;
 use Laravel\Nightwatch\Records\Exception as ExceptionRecord;
 use Laravel\Nightwatch\Records\Mail as MailRecord;
+use Laravel\Nightwatch\Records\Request as RequestRecord;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -58,6 +58,7 @@ class AppServiceProvider extends ServiceProvider
             return true;
         });
     }
+
     private function registerCaseInsensitiveLike(): void
     {
         $operator = function ($query): string {

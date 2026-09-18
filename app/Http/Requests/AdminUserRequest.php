@@ -90,7 +90,7 @@ class AdminUserRequest extends FormRequest
                 $validator->errors()->add('access_profile', 'You cannot change your own permissions.');
             }
 
-            if (!$this->boolean('active')) {
+            if (! $this->boolean('active')) {
                 if ($user instanceof User && Auth::id() === $user->id) {
                     $validator->errors()->add('active', 'You cannot deactivate your own user account.');
                 }
@@ -193,7 +193,7 @@ class AdminUserRequest extends FormRequest
         while ($currentSupervisorId !== null && $depth < $maxDepth) {
             $supervisor = User::query()->find($currentSupervisorId);
 
-            if (!$supervisor) {
+            if (! $supervisor) {
                 return false;
             }
 

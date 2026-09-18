@@ -10,13 +10,15 @@ use Illuminate\Support\Collection;
 class ActivityTypeDuration
 {
     public const UNIT_NONE = 'none';
+
     public const UNIT_HOURS = 'hours';
+
     public const UNIT_DAYS = 'days';
 
     /**
-     * @param \Illuminate\Support\Collection<int, ActivityType> $activityTypes
-     * @param array<int, int|string> $selectedProgramIds
-     * @return \Illuminate\Support\Collection<int, ActivityType>
+     * @param  Collection<int, ActivityType>  $activityTypes
+     * @param  array<int, int|string>  $selectedProgramIds
+     * @return Collection<int, ActivityType>
      */
     public static function filterActivityTypesInScope(
         Collection $activityTypes,
@@ -56,14 +58,14 @@ class ActivityTypeDuration
     }
 
     /**
-     * @param \Illuminate\Support\Collection<int, ActivityType> $activityTypesInScope
+     * @param  Collection<int, ActivityType>  $activityTypesInScope
      */
     public static function selectionSupportsAllottedTime(
         ?int $contactFamilyId,
         ?int $activityTypeId,
         Collection $activityTypesInScope
     ): bool {
-        if (!$contactFamilyId) {
+        if (! $contactFamilyId) {
             return false;
         }
 
@@ -79,7 +81,7 @@ class ActivityTypeDuration
     }
 
     /**
-     * @param \Illuminate\Support\Collection<int, ActivityType> $activityTypesInScope
+     * @param  Collection<int, ActivityType>  $activityTypesInScope
      * @return array{has_days: bool, has_hours: bool, is_mixed: bool, allowed_units: array<int, string>}
      */
     public static function resolveAllottedUnitsForSelection(
@@ -87,7 +89,7 @@ class ActivityTypeDuration
         ?int $activityTypeId,
         Collection $activityTypesInScope
     ): array {
-        if (!$contactFamilyId) {
+        if (! $contactFamilyId) {
             return [
                 'has_days' => false,
                 'has_hours' => false,
@@ -138,7 +140,7 @@ class ActivityTypeDuration
     }
 
     /**
-     * @param \Illuminate\Support\Collection<int, ActivityType> $activityTypesInScope
+     * @param  Collection<int, ActivityType>  $activityTypesInScope
      */
     public static function normalizeAllottedTimeUnit(
         ?int $contactFamilyId,
@@ -192,7 +194,7 @@ class ActivityTypeDuration
 
     public static function fromActivityType(?ActivityType $activityType): self
     {
-        if (!$activityType) {
+        if (! $activityType) {
             return new self(self::UNIT_NONE, null);
         }
 
@@ -233,8 +235,7 @@ class ActivityTypeDuration
     public function __construct(
         private readonly string $unit,
         private readonly ?float $value
-    ) {
-    }
+    ) {}
 
     public function hasDuration(): bool
     {
@@ -253,7 +254,7 @@ class ActivityTypeDuration
 
     public function totalForCompletionCount(int $completionCount): array
     {
-        if (!$this->hasDuration()) {
+        if (! $this->hasDuration()) {
             return [
                 'allotted_hours' => null,
                 'allotted_days' => null,
@@ -270,20 +271,20 @@ class ActivityTypeDuration
 
     public function formatLabel(): ?string
     {
-        if (!$this->hasDuration()) {
+        if (! $this->hasDuration()) {
             return null;
         }
 
         $value = rtrim(rtrim(number_format($this->value, 1, '.', ''), '0'), '.');
 
         return $this->unit === self::UNIT_DAYS
-            ? $value . ' ' . ($this->value == 1 ? 'day' : 'days')
-            : $value . ' ' . ($this->value == 1 ? 'hour' : 'hours');
+            ? $value.' '.($this->value == 1 ? 'day' : 'days')
+            : $value.' '.($this->value == 1 ? 'hour' : 'hours');
     }
 
     public function formatTotalLabel(int $completionCount): ?string
     {
-        if (!$this->hasDuration()) {
+        if (! $this->hasDuration()) {
             return null;
         }
 
@@ -291,7 +292,7 @@ class ActivityTypeDuration
         $formatted = rtrim(rtrim(number_format($total, 1, '.', ''), '0'), '.');
 
         return $this->unit === self::UNIT_DAYS
-            ? $formatted . ' ' . ($total == 1 ? 'day' : 'days')
-            : $formatted . ' ' . ($total == 1 ? 'hour' : 'hours');
+            ? $formatted.' '.($total == 1 ? 'day' : 'days')
+            : $formatted.' '.($total == 1 ? 'hour' : 'hours');
     }
 }

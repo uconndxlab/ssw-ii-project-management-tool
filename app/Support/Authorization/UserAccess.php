@@ -7,6 +7,7 @@ use App\Enums\PrivilegeCapability;
 use App\Enums\PrivilegeScopeType;
 use App\Enums\ProgramScopeMode;
 use App\Models\Activity;
+use App\Models\ActivityType;
 use App\Models\Agreement;
 use App\Models\ContactFamily;
 use App\Models\LoggingField;
@@ -27,9 +28,13 @@ class UserAccess
     private static ?\WeakMap $cache = null;
 
     private ?array $adminProjectIds = null;
+
     private ?array $adminProgramIds = null;
+
     private ?array $viewProjectIds = null;
+
     private ?array $viewProgramIds = null;
+
     private ?array $directReportIds = null;
 
     private ?Collection $privileges = null;
@@ -37,13 +42,11 @@ class UserAccess
     /** @var array<string, bool> */
     private array $recordVisibilityCache = [];
 
-    public function __construct(private User $user)
-    {
-    }
+    public function __construct(private User $user) {}
 
     public static function for(User $user): self
     {
-        self::$cache ??= new \WeakMap();
+        self::$cache ??= new \WeakMap;
 
         return self::$cache[$user] ??= new self($user);
     }
@@ -784,7 +787,7 @@ class UserAccess
     public function canViewRecord(Model $record): bool
     {
         // Views render the same record's visibility check repeatedly (badges, lists); avoid a query per occurrence.
-        $cacheKey = get_class($record) . ':' . $record->getKey();
+        $cacheKey = get_class($record).':'.$record->getKey();
         if (array_key_exists($cacheKey, $this->recordVisibilityCache)) {
             return $this->recordVisibilityCache[$cacheKey];
         }
@@ -798,7 +801,7 @@ class UserAccess
             $record instanceof State => $this->applyStateVisibility(State::query()->whereKey($record->id))->exists(),
             $record instanceof ContactFamily => $this->hasAdmin() && $this->applyScopedEntityVisibility(ContactFamily::query()->whereKey($record->id))->exists(),
             $record instanceof LoggingField => $this->hasAdmin() && $this->applyScopedEntityVisibility(LoggingField::query()->whereKey($record->id))->exists(),
-            $record instanceof \App\Models\ActivityType => $this->hasAdmin() && $this->applyScopedEntityVisibility(\App\Models\ActivityType::query()->whereKey($record->id))->exists(),
+            $record instanceof ActivityType => $this->hasAdmin() && $this->applyScopedEntityVisibility(ActivityType::query()->whereKey($record->id))->exists(),
             $record instanceof Activity => $this->canViewActivity($record),
             $record instanceof User => $this->canViewUser($record),
             default => false,

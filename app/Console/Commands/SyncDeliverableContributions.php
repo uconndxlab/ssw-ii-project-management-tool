@@ -25,7 +25,7 @@ class SyncDeliverableContributions extends Command
             return self::FAILURE;
         }
 
-        if (!$syncAll && $agreementId === null) {
+        if (! $syncAll && $agreementId === null) {
             $this->error('Pass an agreement ID or use --all.');
 
             return self::FAILURE;
@@ -47,7 +47,7 @@ class SyncDeliverableContributions extends Command
 
         $agreement = Agreement::query()->find($agreementId);
 
-        if (!$agreement) {
+        if (! $agreement) {
             $this->error("Agreement {$agreementId} not found.");
 
             return self::FAILURE;

@@ -3,6 +3,9 @@
 namespace App\Support;
 
 use App\Enums\ProgramScopeMode;
+use App\Models\ActivityType;
+use App\Models\ContactFamily;
+use App\Models\LoggingField;
 use App\Models\Program;
 use App\Models\Project;
 use App\Models\User;
@@ -15,9 +18,9 @@ class ProjectProgramScope
     public static function defaultModeForModel(string $modelClass): ProgramScopeMode
     {
         return match ($modelClass) {
-            \App\Models\LoggingField::class,
-            \App\Models\ContactFamily::class,
-            \App\Models\ActivityType::class => ProgramScopeMode::All,
+            LoggingField::class,
+            ContactFamily::class,
+            ActivityType::class => ProgramScopeMode::All,
             default => ProgramScopeMode::Specific,
         };
     }
@@ -147,7 +150,7 @@ class ProjectProgramScope
 
     public static function validateSelection($validator, array $projectIds, array $programIds, string $projectKey = 'project_ids', string $programKey = 'program_ids'): void
     {
-        if (!empty($programIds) && empty($projectIds)) {
+        if (! empty($programIds) && empty($projectIds)) {
             $validator->errors()->add($projectKey, 'Select at least one project before assigning programs.');
 
             return;
@@ -288,7 +291,7 @@ class ProjectProgramScope
             ->get();
 
         $invalidEntityIds = $entities
-            ->filter(fn (Model $entity) => !self::matchesSelectedPrograms(
+            ->filter(fn (Model $entity) => ! self::matchesSelectedPrograms(
                 $entity->programs->pluck('id'),
                 $selectedProgramIds,
                 $allowGlobal
@@ -355,7 +358,7 @@ class ProjectProgramScope
             foreach ($project->programs as $program) {
                 $programKey = (string) $program->id;
 
-                if (!isset($programsById[$programKey])) {
+                if (! isset($programsById[$programKey])) {
                     $programsById[$programKey] = [
                         'id' => $program->id,
                         'name' => $program->name,

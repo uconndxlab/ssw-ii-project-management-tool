@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ProgramScopeMode;
-use App\Models\AgreementDeliverable;
 use App\Models\Activity;
 use App\Models\ActivityType;
+use App\Models\AgreementDeliverable;
 use App\Models\ContactFamily;
 use App\Models\LoggingField;
 use App\Models\Program;
@@ -195,7 +195,7 @@ class ActivityTypeController extends Controller
             return back()
                 ->withInput()
                 ->withErrors([
-                    'name' => 'An activity type with this name already exists in the selected activity family.'
+                    'name' => 'An activity type with this name already exists in the selected activity family.',
                 ]);
         }
 
@@ -259,7 +259,7 @@ class ActivityTypeController extends Controller
             return back()
                 ->withInput()
                 ->withErrors([
-                    'name' => 'An activity type with this name already exists in the selected activity family.'
+                    'name' => 'An activity type with this name already exists in the selected activity family.',
                 ]);
         }
 
@@ -311,7 +311,7 @@ class ActivityTypeController extends Controller
 
     public function getByFamily(Request $request)
     {
-        $this->authorize('create', \App\Models\Activity::class);
+        $this->authorize('create', Activity::class);
         $contactFamilyId = $request->input('contact_family_id');
         $selectedActivityTypeId = (int) $request->input('activity_type_id');
         $agreementIds = collect($request->input('agreement_ids', []))
@@ -320,7 +320,7 @@ class ActivityTypeController extends Controller
             ->unique()
             ->values();
 
-        if (!$contactFamilyId) {
+        if (! $contactFamilyId) {
             return response('<option value="">Select activity type...</option>');
         }
 
@@ -344,10 +344,10 @@ class ActivityTypeController extends Controller
 
             $hasFamilyLevelDeliverable = $deliverables->contains(function ($deliverable) use ($contactFamilyId) {
                 return (int) $deliverable->contact_family_id === (int) $contactFamilyId
-                    && !$deliverable->activity_type_id;
+                    && ! $deliverable->activity_type_id;
             });
 
-            if (!$hasFamilyLevelDeliverable) {
+            if (! $hasFamilyLevelDeliverable) {
                 $allowedActivityTypeIds = $deliverables
                     ->pluck('activity_type_id')
                     ->filter()
@@ -365,11 +365,11 @@ class ActivityTypeController extends Controller
             $selected = $selectedActivityTypeId === (int) $type->id ? ' selected' : '';
             $durationHours = (float) $type->duration_hours > 0 ? $type->duration_hours : '';
             $durationDays = (float) $type->duration_days > 0 ? $type->duration_days : '';
-            $html .= '<option value="' . $type->id . '"'
-                . ' data-duration-hours="' . e((string) $durationHours) . '"'
-                . ' data-duration-days="' . e((string) $durationDays) . '"'
-                . ' data-helper-text="' . e((string) ($type->helper_text ?? '')) . '"'
-                . $selected . '>' . e($type->name) . '</option>';
+            $html .= '<option value="'.$type->id.'"'
+                .' data-duration-hours="'.e((string) $durationHours).'"'
+                .' data-duration-days="'.e((string) $durationDays).'"'
+                .' data-helper-text="'.e((string) ($type->helper_text ?? '')).'"'
+                .$selected.'>'.e($type->name).'</option>';
         }
 
         return response($html);
