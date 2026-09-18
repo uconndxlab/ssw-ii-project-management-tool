@@ -6,16 +6,16 @@ use App\Enums\CertificateDimensionRuleMode;
 use App\Enums\CertificateGroupSatisfyMode;
 use App\Enums\CertificateRequirementKind;
 use App\Enums\CertificateRequirementPhase;
+use App\Enums\ProgramScopeMode;
 use App\Models\ActivityType;
 use App\Models\Certificate;
 use App\Models\CertificateRequirement;
-use App\Models\CertificateRequirementGroup;
 use App\Models\CertificationRole;
 use App\Models\CertificationTool;
+use App\Models\CertificationToolDimension;
 use App\Models\ContactFamily;
 use App\Models\Program;
 use App\Models\Project;
-use App\Enums\ProgramScopeMode;
 use App\Support\Authorization\ScopeSync;
 use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
@@ -393,7 +393,7 @@ class CertificateController extends Controller
                     continue;
                 }
 
-                $dimension = \App\Models\CertificationToolDimension::find($rule['certification_tool_dimension_id']);
+                $dimension = CertificationToolDimension::find($rule['certification_tool_dimension_id']);
 
                 if ($dimension && $toolId && (int) $dimension->certification_tool_id !== $toolId) {
                     $validator->errors()->add("requirements.{$index}.dimension_rules.{$ruleIndex}.certification_tool_dimension_id", 'Dimension must belong to the selected tool.');

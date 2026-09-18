@@ -7,6 +7,7 @@ use App\Enums\AccessProfile;
 use App\Enums\ProgramScopeMode;
 use App\Models\Concerns\HasProgramScope;
 use App\Models\Concerns\VisibleToUser;
+use App\Support\Authorization\CertificationAccess;
 use App\Support\Authorization\UserAccess;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -76,9 +77,9 @@ class User extends Authenticatable
         return UserAccess::for($this);
     }
 
-    public function certification(): \App\Support\Authorization\CertificationAccess
+    public function certification(): CertificationAccess
     {
-        return \App\Support\Authorization\CertificationAccess::for($this);
+        return CertificationAccess::for($this);
     }
 
     public function privileges(): HasMany
@@ -88,7 +89,7 @@ class User extends Authenticatable
 
     public function certificationDuties(): HasMany
     {
-        return $this->hasMany(\App\Models\UserCertificationDuty::class);
+        return $this->hasMany(UserCertificationDuty::class);
     }
 
     public function isActive(): bool

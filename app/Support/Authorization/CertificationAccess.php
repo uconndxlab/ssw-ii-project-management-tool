@@ -21,16 +21,16 @@ class CertificationAccess
     private static ?\WeakMap $cache = null;
 
     private ?Collection $duties = null;
+
     private ?array $coachProgramIds = null;
+
     private ?array $managerProgramIds = null;
 
-    public function __construct(private User $user)
-    {
-    }
+    public function __construct(private User $user) {}
 
     public static function for(User $user): self
     {
-        self::$cache ??= new \WeakMap();
+        self::$cache ??= new \WeakMap;
 
         return self::$cache[$user] ??= new self($user);
     }

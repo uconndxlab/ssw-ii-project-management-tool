@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\CertificationToolScoreUnit;
 use App\Enums\ProgramScopeMode;
 use App\Models\CertificationTool;
+use App\Models\CertificationToolDimension;
 use App\Models\Program;
 use App\Models\Project;
 use App\Support\Authorization\ScopeSync;
@@ -265,7 +266,7 @@ class CertificationToolController extends Controller
         $existing->keys()->diff($retainedIds)->each(fn (int $id) => $existing->get($id)->delete());
     }
 
-    private function syncDimensionOptions(\App\Models\CertificationToolDimension $dimension, array $rows): void
+    private function syncDimensionOptions(CertificationToolDimension $dimension, array $rows): void
     {
         $existing = $dimension->options()->get()->keyBy('id');
         $retainedIds = collect();
