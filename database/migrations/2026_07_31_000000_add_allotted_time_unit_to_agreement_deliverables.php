@@ -10,7 +10,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('agreement_deliverables', function (Blueprint $table) {
-            if (!Schema::hasColumn('agreement_deliverables', 'allotted_time_unit')) {
+            if (! Schema::hasColumn('agreement_deliverables', 'allotted_time_unit')) {
                 $table->string('allotted_time_unit')->nullable()->after('time_basis');
             }
         });
@@ -26,7 +26,7 @@ return new class extends Migration
                 ->where('id', $deliverable->activity_type_id)
                 ->first(['duration_days', 'duration_hours']);
 
-            if (!$activityType) {
+            if (! $activityType) {
                 continue;
             }
 

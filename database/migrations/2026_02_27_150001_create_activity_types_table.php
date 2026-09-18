@@ -18,7 +18,7 @@ return new class extends Migration
             $table->boolean('active')->default(true);
             $table->integer('sort_order')->default(0);
             $table->timestamps();
-            
+
             // Ensure unique activity type names within each contact family
             $table->unique(['contact_family_id', 'name']);
         });

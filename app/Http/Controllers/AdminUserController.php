@@ -22,8 +22,7 @@ class AdminUserController extends Controller
 {
     public function __construct(
         private UserDeactivationService $userDeactivationService,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request)
     {
@@ -40,8 +39,8 @@ class AdminUserController extends Controller
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
                 $q->whereIlike('name', "%{$search}%")
-                  ->orWhereIlike('email', "%{$search}%")
-                  ->orWhereIlike('po_number', "%{$search}%");
+                    ->orWhereIlike('email', "%{$search}%")
+                    ->orWhereIlike('po_number', "%{$search}%");
             });
         }
 
@@ -80,7 +79,7 @@ class AdminUserController extends Controller
             $query->where('active', false);
         }
 
-        $sort      = $request->input('sort', 'name');
+        $sort = $request->input('sort', 'name');
         $direction = $request->input('direction', 'asc') === 'desc' ? 'desc' : 'asc';
 
         $this->applyUserIndexSort($query, $sort, $direction);
@@ -165,12 +164,12 @@ class AdminUserController extends Controller
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
                 $q->whereIlike('name', "%{$search}%")
-                  ->orWhereIlike('email', "%{$search}%")
-                  ->orWhereIlike('po_number', "%{$search}%");
+                    ->orWhereIlike('email', "%{$search}%")
+                    ->orWhereIlike('po_number', "%{$search}%");
             });
         }
 
-        $sort      = $request->input('sort', 'name');
+        $sort = $request->input('sort', 'name');
         $direction = $request->input('direction', 'asc') === 'desc' ? 'desc' : 'asc';
         $this->applyUserIndexSort($query, $sort, $direction);
 
@@ -190,7 +189,7 @@ class AdminUserController extends Controller
     {
         $this->authorize('create', User::class);
 
-        return view('admin.users.create', $this->userFormData(new User()));
+        return view('admin.users.create', $this->userFormData(new User));
     }
 
     public function store(AdminUserRequest $request)
@@ -247,13 +246,13 @@ class AdminUserController extends Controller
             'supervisor_id' => $validated['supervisor_id'] ?? null,
         ];
 
-        if (!empty($validated['password'])) {
+        if (! empty($validated['password'])) {
             $attributes['password'] = $validated['password'];
         }
 
         $user->update($attributes);
 
-        if (!$isActive) {
+        if (! $isActive) {
             if ($wasActive) {
                 $this->userDeactivationService->revokeMembership($user);
             }

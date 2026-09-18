@@ -207,8 +207,8 @@ class DeliverableAssignmentTargets
     }
 
     /**
-     * @param  array<int, float>  $personTargets keyed by user id
-     * @param  array<int, float>  $personCompleted keyed by user id
+     * @param  array<int, float>  $personTargets  keyed by user id
+     * @param  array<int, float>  $personCompleted  keyed by user id
      */
     public static function countedTotalTowardTarget(
         array $personTargets,

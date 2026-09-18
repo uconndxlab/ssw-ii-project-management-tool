@@ -4,6 +4,7 @@ namespace App\Support\Authorization;
 
 use App\Enums\ProgramScopeMode;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\Validator;
 
 class ScopeSync
@@ -218,7 +219,7 @@ class ScopeSync
 
     public static function applyTo(
         User $actor,
-        \Illuminate\Database\Eloquent\Model $entity,
+        Model $entity,
         ProgramScopeMode $submittedMode,
         array $submittedProgramIds,
     ): void {

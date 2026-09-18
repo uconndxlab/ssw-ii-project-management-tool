@@ -86,7 +86,7 @@ class StateController extends Controller
         $staffMembersMap = [];
         foreach ($state->agreements as $agreement) {
             foreach ($agreement->users as $user) {
-                if (!isset($staffMembersMap[$user->id])) {
+                if (! isset($staffMembersMap[$user->id])) {
                     $staffMembersMap[$user->id] = clone $user;
                     $staffMembersMap[$user->id]->via_agreements = collect();
                 }
@@ -107,6 +107,7 @@ class StateController extends Controller
     public function edit(State $state)
     {
         $this->authorize('update', $state);
+
         return view('states.edit', compact('state'));
     }
 
@@ -114,7 +115,7 @@ class StateController extends Controller
     {
         $this->authorize('update', $state);
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255', 'unique:states,name,' . $state->id],
+            'name' => ['required', 'string', 'max:255', 'unique:states,name,'.$state->id],
         ]);
 
         $state->update($validated);

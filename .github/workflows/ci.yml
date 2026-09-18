@@ -46,8 +46,8 @@ jobs:
       - name: Security advisories
         run: composer audit --no-dev
 
-      # - name: Format
-      #   run: vendor/bin/pint --test
+      - name: Format
+        run: vendor/bin/pint --test
 
       - name: Static analysis
         run: vendor/bin/phpstan analyse --memory-limit=2G

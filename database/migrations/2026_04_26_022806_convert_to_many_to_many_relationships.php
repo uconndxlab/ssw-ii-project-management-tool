@@ -31,7 +31,7 @@ return new class extends Migration
             $table->foreignId('agreement_id')->constrained()->cascadeOnDelete();
             $table->foreignId('organization_id')->constrained()->cascadeOnDelete();
             $table->timestamps();
-            
+
             $table->unique(['agreement_id', 'organization_id']);
         });
 
@@ -40,7 +40,7 @@ return new class extends Migration
             $table->foreignId('agreement_id')->constrained()->cascadeOnDelete();
             $table->foreignId('state_id')->constrained()->cascadeOnDelete();
             $table->timestamps();
-            
+
             $table->unique(['agreement_id', 'state_id']);
         });
 
@@ -49,7 +49,7 @@ return new class extends Migration
             $table->foreignId('activity_id')->constrained()->cascadeOnDelete();
             $table->foreignId('agreement_id')->constrained()->cascadeOnDelete();
             $table->timestamps();
-            
+
             $table->unique(['activity_id', 'agreement_id']);
         });
 
@@ -58,7 +58,7 @@ return new class extends Migration
             $table->foreignId('activity_id')->constrained()->cascadeOnDelete();
             $table->foreignId('organization_id')->constrained()->cascadeOnDelete();
             $table->timestamps();
-            
+
             $table->unique(['activity_id', 'organization_id']);
         });
 
@@ -67,7 +67,7 @@ return new class extends Migration
             $table->foreignId('activity_id')->constrained()->cascadeOnDelete();
             $table->foreignId('state_id')->constrained()->cascadeOnDelete();
             $table->timestamps();
-            
+
             $table->unique(['activity_id', 'state_id']);
         });
     }

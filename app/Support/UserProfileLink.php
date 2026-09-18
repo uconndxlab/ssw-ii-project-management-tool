@@ -8,13 +8,13 @@ class UserProfileLink
 {
     public static function route(?User $user): ?string
     {
-        if (!$user) {
+        if (! $user) {
             return null;
         }
 
         $auth = auth()->user();
 
-        if (!$auth) {
+        if (! $auth) {
             return null;
         }
 

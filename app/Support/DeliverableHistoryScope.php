@@ -9,7 +9,7 @@ use Illuminate\Support\Collection;
 class DeliverableHistoryScope
 {
     /**
-     * @param \Illuminate\Support\Collection<int, AgreementActivityHistory> $histories
+     * @param  Collection<int, AgreementActivityHistory>  $histories
      */
     public static function hasMatchingHistory(Collection $histories, AgreementDeliverable $deliverable): bool
     {

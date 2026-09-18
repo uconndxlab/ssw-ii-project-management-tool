@@ -10,10 +10,10 @@ use App\Models\Project;
 use App\Support\Authorization\ScopeSync;
 use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class LoggingFieldController extends Controller
 {
@@ -32,16 +32,16 @@ class LoggingFieldController extends Controller
         $query = LoggingField::query()
             ->visibleTo(Auth::user())
             ->with([
-            'programs.projects:id,name',
-        ]);
+                'programs.projects:id,name',
+            ]);
 
         // Search filter
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->whereIlike('name', "%{$search}%")
-                  ->orWhereIlike('slug', "%{$search}%")
-                  ->orWhereIlike('help_text', "%{$search}%");
+                    ->orWhereIlike('slug', "%{$search}%")
+                    ->orWhereIlike('help_text', "%{$search}%");
             });
         }
 
@@ -214,7 +214,7 @@ class LoggingFieldController extends Controller
 
             $fieldType = (string) $request->input('field_type');
 
-            if (!in_array($fieldType, self::OPTION_FIELD_TYPES, true)) {
+            if (! in_array($fieldType, self::OPTION_FIELD_TYPES, true)) {
                 return;
             }
 
@@ -302,7 +302,7 @@ class LoggingFieldController extends Controller
     {
         $this->authorize('update', $loggingField);
         $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255|unique:logging_fields,name,' . $loggingField->id,
+            'name' => 'required|string|max:255|unique:logging_fields,name,'.$loggingField->id,
             'field_type' => ['required', Rule::in(array_keys(LoggingField::fieldTypes()))],
             'help_text' => 'nullable|string|max:1000',
             'options_json' => 'nullable|string',
@@ -349,7 +349,7 @@ class LoggingFieldController extends Controller
 
             $fieldType = (string) $request->input('field_type');
 
-            if (!in_array($fieldType, self::OPTION_FIELD_TYPES, true)) {
+            if (! in_array($fieldType, self::OPTION_FIELD_TYPES, true)) {
                 return;
             }
 
@@ -408,7 +408,7 @@ class LoggingFieldController extends Controller
 
     private function optionPayloadForFieldType(string $fieldType, mixed $optionRows, ?string $fallbackJson): ?array
     {
-        if (!in_array($fieldType, self::OPTION_FIELD_TYPES, true)) {
+        if (! in_array($fieldType, self::OPTION_FIELD_TYPES, true)) {
             return null;
         }
 
@@ -420,7 +420,7 @@ class LoggingFieldController extends Controller
         if (is_array($optionRows) && $optionRows !== []) {
             return collect($optionRows)
                 ->map(function ($row) {
-                    if (!is_array($row) || !empty($row['_delete'])) {
+                    if (! is_array($row) || ! empty($row['_delete'])) {
                         return null;
                     }
 
@@ -446,7 +446,7 @@ class LoggingFieldController extends Controller
 
         $decoded = json_decode($fallbackJson, true);
 
-        if (json_last_error() !== JSON_ERROR_NONE || !is_array($decoded)) {
+        if (json_last_error() !== JSON_ERROR_NONE || ! is_array($decoded)) {
             return null;
         }
 
@@ -465,7 +465,7 @@ class LoggingFieldController extends Controller
                     ];
                 }
 
-                if (!is_array($option)) {
+                if (! is_array($option)) {
                     return null;
                 }
 
@@ -496,7 +496,7 @@ class LoggingFieldController extends Controller
         $contactFamilyCount = $loggingField->contactFamilies()->count();
 
         if ($agreementCount > 0 || $contactFamilyCount > 0) {
-            return back()->with('error', "Cannot delete this field. It is currently used by {$agreementCount} ".($agreementCount === 1 ? 'agreement' : 'agreements')." and {$contactFamilyCount} activity ".($contactFamilyCount === 1 ? 'family' : 'families').".");
+            return back()->with('error', "Cannot delete this field. It is currently used by {$agreementCount} ".($agreementCount === 1 ? 'agreement' : 'agreements')." and {$contactFamilyCount} activity ".($contactFamilyCount === 1 ? 'family' : 'families').'.');
         }
 
         LoggingField::destroy($loggingField->id);

@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Activity;
 use App\Models\Agreement;
-use App\Models\AgreementDeliverable;
 use App\Models\Organization;
 use App\Models\State;
 use Illuminate\Support\Facades\Auth;
@@ -34,7 +33,7 @@ class DashboardController extends Controller
         // YTD totals
         $ytdTotals = [
             'activities' => $ytdActivities->count(),
-            'hours' => $ytdActivities->sum(fn($e) => $e->event_hours + ($e->prep_hours ?? 0) + ($e->followup_hours ?? 0)),
+            'hours' => $ytdActivities->sum(fn ($e) => $e->event_hours + ($e->prep_hours ?? 0) + ($e->followup_hours ?? 0)),
             'participants' => $ytdActivities->sum('participant_count'),
         ];
 
@@ -80,7 +79,7 @@ class DashboardController extends Controller
             ->whereYear('engagement_date', now()->year)
             ->get();
 
-        $myYtdHours = $myYtdActivities->sum(fn($e) => $e->event_hours + ($e->prep_hours ?? 0) + ($e->followup_hours ?? 0));
+        $myYtdHours = $myYtdActivities->sum(fn ($e) => $e->event_hours + ($e->prep_hours ?? 0) + ($e->followup_hours ?? 0));
 
         // This month for user
         $myThisMonthActivities = Activity::where('user_id', $user->id)
@@ -90,10 +89,10 @@ class DashboardController extends Controller
 
         // Global stats
         $stats = [
-            'active_agreements'       => $myAgreements->count(),
-            'my_activities_ytd'       => $myYtdActivities->count(),
-            'my_activities_this_month'=> $myThisMonthActivities,
-            'my_total_hours_ytd'      => $myYtdHours,
+            'active_agreements' => $myAgreements->count(),
+            'my_activities_ytd' => $myYtdActivities->count(),
+            'my_activities_this_month' => $myThisMonthActivities,
+            'my_total_hours_ytd' => $myYtdHours,
         ];
 
         $recentActivities = collect();
@@ -117,8 +116,8 @@ class DashboardController extends Controller
         $agreementIds = $user->accessibleAgreementsQuery()->pluck('agreements.id');
 
         $myActivities = Activity::whereHas('agreements', function ($query) use ($agreementIds) {
-                $query->whereIn('agreements.id', $agreementIds);
-            })
+            $query->whereIn('agreements.id', $agreementIds);
+        })
             ->with(['activityType.contactFamily', 'user', 'agreements', 'participants'])
             ->orderByRecentDisplay()
             ->limit(10)

@@ -1,5 +1,10 @@
 <?php
 
+use App\Http\Middleware\Authenticate;
+use App\Http\Middleware\EnsurePasswordResetEnabled;
+use App\Http\Middleware\EnsureUserIsActive;
+use App\Http\Middleware\SecurityHeaders;
+use App\Http\Middleware\TrackBackTrail;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -12,14 +17,14 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
-            \App\Http\Middleware\SecurityHeaders::class,
-            \App\Http\Middleware\TrackBackTrail::class,
+            SecurityHeaders::class,
+            TrackBackTrail::class,
         ]);
 
         $middleware->alias([
-            'auth' => \App\Http\Middleware\Authenticate::class,
-            'active' => \App\Http\Middleware\EnsureUserIsActive::class,
-            'password-reset-enabled' => \App\Http\Middleware\EnsurePasswordResetEnabled::class,
+            'auth' => Authenticate::class,
+            'active' => EnsureUserIsActive::class,
+            'password-reset-enabled' => EnsurePasswordResetEnabled::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

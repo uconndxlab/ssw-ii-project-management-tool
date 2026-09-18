@@ -23,7 +23,7 @@ class ProjectController extends Controller
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
                 $q->whereIlike('name', "%{$search}%")
-                  ->orWhereIlike('description', "%{$search}%");
+                    ->orWhereIlike('description', "%{$search}%");
             });
         }
 
@@ -57,6 +57,7 @@ class ProjectController extends Controller
     public function create()
     {
         $this->authorize('create', Project::class);
+
         return view('projects.create');
     }
 
@@ -116,6 +117,7 @@ class ProjectController extends Controller
     public function edit(Project $project)
     {
         $this->authorize('update', $project);
+
         return view('projects.edit', compact('project'));
     }
 

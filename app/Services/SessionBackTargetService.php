@@ -13,12 +13,14 @@ use Illuminate\Support\Str;
 class SessionBackTargetService
 {
     private const SESSION_KEY = 'navigation.back_trail';
+
     private const MAX_DEPTH = 12;
+
     private const MAX_AGE_SECONDS = 14400;
 
     public function clear(Request $request): void
     {
-        if (!$request->hasSession()) {
+        if (! $request->hasSession()) {
             return;
         }
 
@@ -27,7 +29,7 @@ class SessionBackTargetService
 
     public function track(Request $request): void
     {
-        if (!$this->shouldTrack($request)) {
+        if (! $this->shouldTrack($request)) {
             return;
         }
 
@@ -80,7 +82,7 @@ class SessionBackTargetService
 
     public function resolve(Request $request): ?array
     {
-        if (!$request->hasSession() || !$request->user()) {
+        if (! $request->hasSession() || ! $request->user()) {
             return null;
         }
 
@@ -92,11 +94,11 @@ class SessionBackTargetService
             $entry = $trail[$index];
             $entryUrl = $entry['url'] ?? null;
 
-            if (!$entryUrl || $entryUrl === $currentUrl) {
+            if (! $entryUrl || $entryUrl === $currentUrl) {
                 continue;
             }
 
-            if (!$this->isValidEntry($request, $entry)) {
+            if (! $this->isValidEntry($request, $entry)) {
                 unset($trail[$index]);
                 $changed = true;
 
@@ -125,7 +127,7 @@ class SessionBackTargetService
      */
     public function breadcrumbs(Request $request, ?string $currentLabel = null): array
     {
-        if (!$request->hasSession() || !$request->user()) {
+        if (! $request->hasSession() || ! $request->user()) {
             return $currentLabel ? [[
                 'label' => $currentLabel,
                 'url' => null,
@@ -141,11 +143,11 @@ class SessionBackTargetService
         foreach ($trail as $index => $entry) {
             $entryUrl = $entry['url'] ?? null;
 
-            if (!$entryUrl || $entryUrl === $currentUrl) {
+            if (! $entryUrl || $entryUrl === $currentUrl) {
                 continue;
             }
 
-            if (!$this->isValidEntry($request, $entry)) {
+            if (! $this->isValidEntry($request, $entry)) {
                 unset($trail[$index]);
                 $changed = true;
 
@@ -180,15 +182,15 @@ class SessionBackTargetService
 
     private function shouldTrack(Request $request): bool
     {
-        if (!$request->hasSession() || !$request->user()) {
+        if (! $request->hasSession() || ! $request->user()) {
             return false;
         }
 
-        if (!$request->isMethod('GET')) {
+        if (! $request->isMethod('GET')) {
             return false;
         }
 
-        if ($request->expectsJson() || !$request->acceptsHtml()) {
+        if ($request->expectsJson() || ! $request->acceptsHtml()) {
             return false;
         }
 
@@ -213,7 +215,7 @@ class SessionBackTargetService
         $routeName = $route?->getName();
 
         // this check is slightly redundant -> already checked
-        if (!$route instanceof RoutingRoute || !$this->isTrackableRouteName($routeName)) {
+        if (! $route instanceof RoutingRoute || ! $this->isTrackableRouteName($routeName)) {
             return null;
         }
 
@@ -265,7 +267,7 @@ class SessionBackTargetService
         $appHost = parse_url(config('app.url') ?: $request->getSchemeAndHttpHost(), PHP_URL_HOST);
 
         $trail = array_values(array_filter($trail, function ($entry) use ($cutoff, $appHost) {
-            if (!is_array($entry)) {
+            if (! is_array($entry)) {
                 return false;
             }
 
@@ -273,11 +275,11 @@ class SessionBackTargetService
             $recordedAt = (int) ($entry['recorded_at'] ?? 0);
             $host = parse_url((string) $url, PHP_URL_HOST);
 
-            if (!is_string($url) || $url === '' || $recordedAt < $cutoff) {
+            if (! is_string($url) || $url === '' || $recordedAt < $cutoff) {
                 return false;
             }
 
-            if ($host && $appHost && !hash_equals($appHost, $host)) {
+            if ($host && $appHost && ! hash_equals($appHost, $host)) {
                 return false;
             }
 
@@ -295,7 +297,7 @@ class SessionBackTargetService
     {
         $url = $entry['url'] ?? null;
 
-        if (!is_string($url) || $url === '') {
+        if (! is_string($url) || $url === '') {
             return false;
         }
 
@@ -306,13 +308,13 @@ class SessionBackTargetService
             return false;
         }
 
-        if (!$route instanceof RoutingRoute || !$this->isTrackableRouteName($route->getName())) {
+        if (! $route instanceof RoutingRoute || ! $this->isTrackableRouteName($route->getName())) {
             return false;
         }
 
         $user = $request->user();
 
-        if (!$user instanceof User || !$user->isActive()) {
+        if (! $user instanceof User || ! $user->isActive()) {
             return false;
         }
 
@@ -327,7 +329,7 @@ class SessionBackTargetService
     {
         $agreement = $this->resolveAgreement($agreement);
 
-        if (!$agreement instanceof Agreement) {
+        if (! $agreement instanceof Agreement) {
             return false;
         }
 
@@ -338,7 +340,7 @@ class SessionBackTargetService
     {
         $activity = $this->resolveActivity($activity);
 
-        if (!$activity instanceof Activity) {
+        if (! $activity instanceof Activity) {
             return false;
         }
 
@@ -434,7 +436,7 @@ class SessionBackTargetService
 
     private function activityCrumbLabel(?Activity $activity): string
     {
-        if (!$activity instanceof Activity) {
+        if (! $activity instanceof Activity) {
             return 'Activity';
         }
 

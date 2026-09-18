@@ -4,7 +4,6 @@ namespace App\Support;
 
 use App\Models\ActivityAgreementFundingSource;
 use App\Models\Agreement;
-use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Support\Collection;
 
@@ -15,11 +14,11 @@ class ActivityFundingSourceTokens
      */
     public static function parseToken(mixed $token): ?array
     {
-        if (!is_string($token) || $token === '') {
+        if (! is_string($token) || $token === '') {
             return null;
         }
 
-        if (!preg_match('/^(user|organization):(\d+)$/', $token, $matches)) {
+        if (! preg_match('/^(user|organization):(\d+)$/', $token, $matches)) {
             return null;
         }
 
@@ -46,7 +45,7 @@ class ActivityFundingSourceTokens
 
             $payorTokens = $agreement->organizations
                 ->filter(fn ($org) => (bool) ($org->pivot->payor_source ?? false))
-                ->filter(fn ($org) => !empty($kfsNumbersByOrganization[(int) $org->id] ?? []))
+                ->filter(fn ($org) => ! empty($kfsNumbersByOrganization[(int) $org->id] ?? []))
                 ->map(fn ($org) => ActivityAgreementFundingSource::tokenFor(
                     ActivityAgreementFundingSource::SOURCE_ORGANIZATION,
                     (int) $org->id
@@ -99,7 +98,7 @@ class ActivityFundingSourceTokens
             foreach ($agreement->organizations as $organization) {
                 $token = ActivityAgreementFundingSource::tokenFor(ActivityAgreementFundingSource::SOURCE_ORGANIZATION, (int) $organization->id);
 
-                if ((bool) ($organization->pivot->payor_source ?? false) && !empty($kfsNumbersByOrganization[(int) $organization->id] ?? [])) {
+                if ((bool) ($organization->pivot->payor_source ?? false) && ! empty($kfsNumbersByOrganization[(int) $organization->id] ?? [])) {
                     $kfsNumbers = $kfsNumbersByOrganization[(int) $organization->id];
 
                     $agreementOptions[ActivityAgreementFundingSource::ROLE_PAYOR][] = [
@@ -125,7 +124,7 @@ class ActivityFundingSourceTokens
             }
 
             foreach (self::memberUsers($agreement) as $user) {
-                if (!self::hasValidPoNumber($user->po_number)) {
+                if (! self::hasValidPoNumber($user->po_number)) {
                     continue;
                 }
 

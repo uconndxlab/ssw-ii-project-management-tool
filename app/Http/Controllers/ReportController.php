@@ -3,12 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Activity;
+use App\Models\ActivityType;
 use App\Models\Agreement;
+use App\Models\ContactFamily;
 use App\Models\Program;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 class ReportController extends Controller
 {
@@ -42,16 +42,16 @@ class ReportController extends Controller
 
         // Get visible agreements for dropdown
         $visibleAgreements = $this->getVisibleAgreements();
-        
+
         // Get active programs for dropdown
         $programs = Program::where('active', true)->orderBy('name')->get();
-        
+
         // Get active contact families and activity types for dropdowns
-        $contactFamilies = \App\Models\ContactFamily::where('active', true)
+        $contactFamilies = ContactFamily::where('active', true)
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
-        $activityTypes = \App\Models\ActivityType::where('active', true)
+        $activityTypes = ActivityType::where('active', true)
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
@@ -96,8 +96,8 @@ class ReportController extends Controller
             // Get first agreement for grouping (activities can have multiple)
             $firstAgreement = $activity->agreements->first();
             $aid = $firstAgreement?->id ?? 0;
-            
-            if (!isset($agreementData[$aid])) {
+
+            if (! isset($agreementData[$aid])) {
                 $agreementData[$aid] = [
                     'agreement' => $firstAgreement,
                     'activity_count' => 0,
@@ -108,7 +108,7 @@ class ReportController extends Controller
         }
 
         // Sort by agreement name
-        usort($agreementData, fn($a, $b) => strcmp($a['agreement']->name, $b['agreement']->name));
+        usort($agreementData, fn ($a, $b) => strcmp($a['agreement']->name, $b['agreement']->name));
 
         // If HTMX request, return only the results partial
         if ($request->header('HX-Request')) {

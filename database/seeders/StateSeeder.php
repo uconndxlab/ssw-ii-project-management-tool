@@ -90,6 +90,6 @@ class StateSeeder extends Seeder
             );
         }
 
-        $this->command->info('✓ Seeded ' . count($states) . ' states and territories');
+        $this->command->info('✓ Seeded '.count($states).' states and territories');
     }
 }
