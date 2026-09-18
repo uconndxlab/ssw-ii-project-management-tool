@@ -43,6 +43,12 @@ jobs:
 
       - run: composer install --prefer-dist --no-interaction --no-progress
 
+      - name: Security advisories
+        run: composer audit --no-dev
+
+      # - name: Format
+      #   run: vendor/bin/pint --test
+
       - name: Static analysis
         run: vendor/bin/phpstan analyse --memory-limit=2G
 
@@ -56,9 +62,3 @@ jobs:
           DB_USERNAME: sail
           DB_PASSWORD: password
         run: php artisan test
-
-      - name: Security advisories
-        run: composer audit --no-dev
-
-      # - name: Format
-      #   run: vendor/bin/pint --test
