@@ -8,20 +8,6 @@ use App\Models\CertificationTool;
 use App\Models\CertificationToolDimension;
 use App\Models\CertificationToolDimensionOption;
 
-function minimalCertificatePayload(array $overrides = []): array
-{
-    [$project, $program] = createProjectWithProgram();
-
-    return array_merge([
-        'name' => 'Validation Cert',
-        'active' => '1',
-        'program_scope_mode' => 'specific',
-        'project_ids' => [$project->id],
-        'program_ids' => [$program->id],
-        'prerequisite_mode' => 'all',
-    ], $overrides);
-}
-
 test('tool submission requirement requires certification_tool_id', function () {
     $admin = createSystemAdmin();
 

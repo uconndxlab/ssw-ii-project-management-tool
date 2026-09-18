@@ -1,97 +1,12 @@
 <?php
 
-use App\Enums\CertificateDimensionRuleMode;
 use App\Enums\CertificateRequirementKind;
 use App\Enums\CertificateRequirementPhase;
 use App\Models\Certificate;
 use App\Models\CertificateRequirement;
 use App\Models\CertificateRequirementGroup;
 use App\Models\CertificationRole;
-use App\Models\CertificationTool;
-use App\Models\CertificationToolDimension;
-use App\Models\CertificationToolDimensionOption;
 use App\Models\User;
-
-function certificateStorePayload(array $overrides = [], bool $withNestedFixture = false): array
-{
-    [$project, $program] = createProjectWithProgram();
-
-    $payload = [
-        'name' => 'NWIC Local Coach',
-        'description' => 'Full coach certification',
-        'active' => '1',
-        'program_scope_mode' => 'specific',
-        'project_ids' => [$project->id],
-        'program_ids' => [$program->id],
-        'validity_months' => 24,
-        'default_window_months' => 12,
-        'prerequisite_mode' => 'all',
-        'prerequisite_certificate_ids' => [],
-        'roles' => [],
-        'requirement_groups' => [],
-        'requirements' => [],
-    ];
-
-    if ($withNestedFixture) {
-        $prerequisite = Certificate::factory()->forProgram($program)->create(['name' => 'Coach Prereq '.uniqid()]);
-        $crestTool = CertificationTool::factory()->forProgram($program)->create(['name' => 'CREST '.uniqid()]);
-        $cometTool = CertificationTool::factory()->forProgram($program)->create(['name' => 'COMET '.uniqid()]);
-        $dimension = CertificationToolDimension::factory()->for($cometTool, 'tool')->create(['name' => 'Phase']);
-        $option = CertificationToolDimensionOption::factory()->for($dimension, 'dimension')->create(['label' => 'Phase 1']);
-
-        $payload['prerequisite_certificate_ids'] = [$prerequisite->id];
-        $payload['roles'] = [
-            0 => ['name' => 'Observer', 'active' => '1'],
-        ];
-        $payload['requirement_groups'] = [
-            0 => [
-                'phase' => CertificateRequirementPhase::Initial->value,
-                'label' => 'Core',
-                'satisfy_mode' => 'all',
-            ],
-        ];
-        $payload['requirements'] = [
-            0 => [
-                'phase' => CertificateRequirementPhase::Initial->value,
-                'kind' => CertificateRequirementKind::Attestation->value,
-                'label' => 'Registration',
-                'group_index' => 0,
-                'target_count' => 1,
-            ],
-            1 => [
-                'phase' => CertificateRequirementPhase::Initial->value,
-                'kind' => CertificateRequirementKind::ToolSubmission->value,
-                'label' => 'CREST submissions',
-                'certification_tool_id' => $crestTool->id,
-                'target_count' => 12,
-                'requires_passing' => '1',
-            ],
-            2 => [
-                'phase' => CertificateRequirementPhase::Initial->value,
-                'kind' => CertificateRequirementKind::ToolSubmission->value,
-                'label' => 'COMET with rules',
-                'certification_tool_id' => $cometTool->id,
-                'target_count' => 6,
-                'requires_passing' => '1',
-                'dimension_rules' => [
-                    0 => [
-                        'certification_tool_dimension_id' => $dimension->id,
-                        'mode' => CertificateDimensionRuleMode::Coverage->value,
-                        'option_ids' => [$option->id],
-                    ],
-                ],
-            ],
-            3 => [
-                'phase' => CertificateRequirementPhase::Renewal->value,
-                'kind' => CertificateRequirementKind::Attestation->value,
-                'label' => 'Renewal attestation',
-                'target_count' => 1,
-            ],
-        ];
-    }
-
-    return array_merge($payload, $overrides);
-}
 
 test('system admin can create a certificate with nested structure in one submission', function () {
     $admin = createSystemAdmin();
@@ -245,6 +160,70 @@ test('certificate store requires program when scope mode is specific', function 
             'prerequisite_mode' => 'all',
         ])
         ->assertSessionHasErrors('program_ids');
+});
+
+test('certificate nested rows assign sort_order from submitted order', function () {
+    $admin = createSystemAdmin();
+
+    $this->actingAs($admin)->post(route('certificates.store'), certificateStorePayload([
+        'name' => 'Sort Order Certificate',
+        'roles' => [
+            0 => ['name' => 'First Role', 'active' => '1'],
+            1 => ['name' => 'Second Role', 'active' => '1'],
+        ],
+        'requirement_groups' => [
+            0 => [
+                'phase' => 'initial',
+                'label' => 'First Group',
+                'satisfy_mode' => 'all',
+            ],
+            1 => [
+                'phase' => 'initial',
+                'label' => 'Second Group',
+                'satisfy_mode' => 'all',
+            ],
+        ],
+        'requirements' => [
+            0 => [
+                'phase' => 'initial',
+                'kind' => 'attestation',
+                'label' => 'First Req',
+                'target_count' => 1,
+            ],
+            1 => [
+                'phase' => 'initial',
+                'kind' => 'attestation',
+                'label' => 'Second Req',
+                'target_count' => 1,
+            ],
+        ],
+    ]));
+
+    $certificate = Certificate::where('name', 'Sort Order Certificate')->firstOrFail();
+
+    expect($certificate->roles->pluck('sort_order')->all())->toBe([0, 1]);
+    expect($certificate->requirementGroups->pluck('sort_order')->all())->toBe([0, 1]);
+    expect($certificate->requirements->pluck('sort_order')->all())->toBe([0, 1]);
+});
+
+test('duplicate certificate role slugs return validation errors not a server error', function () {
+    $admin = createSystemAdmin();
+
+    $this->actingAs($admin)
+        ->from(route('certificates.create'))
+        ->post(route('certificates.store'), certificateStorePayload([
+            'name' => 'Duplicate Roles Certificate',
+            'roles' => [
+                0 => ['name' => 'Observer', 'active' => '1'],
+                1 => ['name' => 'Observer', 'active' => '1'],
+            ],
+            'requirements' => [],
+            'requirement_groups' => [],
+        ]))
+        ->assertSessionHasErrors('roles.1.name')
+        ->assertRedirect();
+
+    expect(Certificate::where('name', 'Duplicate Roles Certificate')->exists())->toBeFalse();
 });
 
 test('member cannot access certificate routes', function () {

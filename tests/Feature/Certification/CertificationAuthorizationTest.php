@@ -126,6 +126,47 @@ test('destroy hard-deletes certificate without requirements', function () {
     expect(Certificate::find($certificate->id))->toBeNull();
 });
 
+test('program-scoped admin cannot create certificate scoped to programs they do not administer', function () {
+    [$projectA, $programA] = createProjectWithProgram();
+    [$projectB, $programB] = createProjectWithProgram();
+    $adminA = createProgramAdmin($programA);
+
+    $this->actingAs($adminA)
+        ->from(route('certificates.create'))
+        ->post(route('certificates.store'), [
+            'name' => 'Out of Scope Cert',
+            'active' => '1',
+            'program_scope_mode' => 'specific',
+            'project_ids' => [$projectB->id],
+            'program_ids' => [$programB->id],
+            'prerequisite_mode' => 'all',
+        ])
+        ->assertSessionHasErrors('program_ids')
+        ->assertRedirect();
+
+    expect(Certificate::where('name', 'Out of Scope Cert')->exists())->toBeFalse();
+});
+
+test('program-scoped admin cannot create tool scoped to programs they do not administer', function () {
+    [$projectA, $programA] = createProjectWithProgram();
+    [$projectB, $programB] = createProjectWithProgram();
+    $adminA = createProgramAdmin($programA);
+
+    $this->actingAs($adminA)
+        ->from(route('certification-tools.create'))
+        ->post(route('certification-tools.store'), [
+            'name' => 'Out of Scope Tool',
+            'active' => '1',
+            'program_scope_mode' => 'specific',
+            'project_ids' => [$projectB->id],
+            'program_ids' => [$programB->id],
+        ])
+        ->assertSessionHasErrors('program_ids')
+        ->assertRedirect();
+
+    expect(CertificationTool::where('name', 'Out of Scope Tool')->exists())->toBeFalse();
+});
+
 test('certification role policy restricts global roles to system admins', function () {
     [$project, $program] = createProjectWithProgram();
     $programAdmin = createProgramAdmin($program);

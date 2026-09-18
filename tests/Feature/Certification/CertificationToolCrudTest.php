@@ -5,34 +5,6 @@ use App\Models\CertificationToolDimension;
 use App\Models\CertificationToolScoreField;
 use App\Models\User;
 
-function toolStorePayload(array $overrides = []): array
-{
-    [$project, $program] = createProjectWithProgram();
-
-    return array_merge([
-        'name' => 'COMET',
-        'description' => 'Coaching observation tool',
-        'active' => '1',
-        'program_scope_mode' => 'specific',
-        'project_ids' => [$project->id],
-        'program_ids' => [$program->id],
-        'dimensions' => [
-            0 => [
-                'name' => 'Phase',
-                'sort_order' => 0,
-                'options' => [
-                    0 => ['label' => 'Phase 1', 'sort_order' => 0],
-                    1 => ['label' => 'Phase 2', 'sort_order' => 1],
-                ],
-            ],
-        ],
-        'score_fields' => [
-            0 => ['name' => 'Overall Match %', 'unit' => 'percent', 'sort_order' => 0],
-            1 => ['name' => 'Element Match %', 'unit' => 'percent', 'sort_order' => 1],
-        ],
-    ], $overrides);
-}
-
 test('system admin can create a certification tool with nested dimensions and score fields', function () {
     $admin = createSystemAdmin();
     $payload = toolStorePayload();
@@ -220,6 +192,25 @@ test('tool store rejects invalid score field unit', function () {
             ],
         ]))
         ->assertSessionHasErrors('score_fields.0.unit');
+});
+
+test('duplicate tool dimension slugs return validation errors not a server error', function () {
+    $admin = createSystemAdmin();
+
+    $this->actingAs($admin)
+        ->from(route('certification-tools.create'))
+        ->post(route('certification-tools.store'), toolStorePayload([
+            'name' => 'Duplicate Dimension Tool',
+            'dimensions' => [
+                0 => ['name' => 'Phase', 'sort_order' => 0, 'options' => []],
+                1 => ['name' => 'Phase', 'sort_order' => 1, 'options' => []],
+            ],
+            'score_fields' => [],
+        ]))
+        ->assertSessionHasErrors('dimensions.1.name')
+        ->assertRedirect();
+
+    expect(CertificationTool::where('name', 'Duplicate Dimension Tool')->exists())->toBeFalse();
 });
 
 test('member cannot access certification tool routes', function () {

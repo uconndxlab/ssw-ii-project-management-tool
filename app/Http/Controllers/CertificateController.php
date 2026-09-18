@@ -22,6 +22,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class CertificateController extends Controller
 {
@@ -296,6 +297,17 @@ class CertificateController extends Controller
 
             ProjectProgramScope::validateModeSelection($validator, $mode, Certificate::class, $projectIds, $programIds);
 
+            $submittedMode = ProgramScopeMode::tryFrom((string) $mode) ?? ProgramScopeMode::Specific;
+            $existingMode = $certificate?->program_scope_mode ?? ProgramScopeMode::None;
+            ScopeSync::validateSubmittedMode($validator, Auth::user(), $existingMode, $submittedMode);
+            ScopeSync::validateSubmittedProgramsAreInAdminScope(
+                $validator,
+                Auth::user(),
+                $programIds,
+                $certificate?->exists ? $certificate->programs()->pluck('programs.id')->all() : [],
+            );
+
+            $this->validateRoles($validator, $request, $certificate);
             $this->validatePrerequisites($validator, $request, $certificate);
             $this->validateRequirementGroupsAndRows($validator, $request);
         });
@@ -358,6 +370,44 @@ class CertificateController extends Controller
         }
 
         return false;
+    }
+
+    private function validateRoles($validator, Request $request, ?Certificate $certificate): void
+    {
+        $seenSlugs = [];
+
+        foreach ($request->input('roles', []) as $index => $row) {
+            if (! is_array($row) || filter_var($row['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                continue;
+            }
+
+            if (blank($row['name'] ?? null)) {
+                continue;
+            }
+
+            $slug = Str::slug($row['name']);
+
+            if (isset($seenSlugs[$slug])) {
+                $validator->errors()->add("roles.{$index}.name", 'Role names must be unique on this certificate.');
+
+                continue;
+            }
+
+            $seenSlugs[$slug] = true;
+
+            $rowId = isset($row['id']) && $row['id'] !== '' ? (int) $row['id'] : null;
+
+            if ($certificate) {
+                $conflict = $certificate->roles()
+                    ->where('slug', $slug)
+                    ->when($rowId, fn ($query) => $query->whereKeyNot($rowId))
+                    ->exists();
+
+                if ($conflict) {
+                    $validator->errors()->add("roles.{$index}.name", 'Role names must be unique on this certificate.');
+                }
+            }
+        }
     }
 
     private function validateRequirementGroupsAndRows($validator, Request $request): void
@@ -438,6 +488,7 @@ class CertificateController extends Controller
     {
         $existing = $certificate->roles()->get()->keyBy('id');
         $retainedIds = collect();
+        $sortOrder = 0;
 
         foreach ($rows as $row) {
             if (! is_array($row)) {
@@ -462,6 +513,7 @@ class CertificateController extends Controller
             $data = [
                 'name' => $row['name'],
                 'active' => filter_var($row['active'] ?? true, FILTER_VALIDATE_BOOLEAN),
+                'sort_order' => $sortOrder++,
             ];
 
             if ($rowId && $existing->has($rowId)) {
@@ -483,6 +535,7 @@ class CertificateController extends Controller
         $existing = $certificate->requirementGroups()->get()->keyBy('id');
         $retainedIds = collect();
         $indexToId = [];
+        $sortOrder = 0;
 
         foreach ($rows as $index => $row) {
             if (! is_array($row)) {
@@ -504,11 +557,13 @@ class CertificateController extends Controller
                 continue;
             }
 
+            $satisfyMode = $row['satisfy_mode'] ?? CertificateGroupSatisfyMode::All->value;
             $data = [
                 'phase' => $row['phase'] ?? CertificateRequirementPhase::Initial->value,
                 'label' => $row['label'],
-                'satisfy_mode' => $row['satisfy_mode'] ?? CertificateGroupSatisfyMode::All->value,
-                'required_count' => $row['satisfy_mode'] === CertificateGroupSatisfyMode::NOf->value ? ($row['required_count'] ?? null) : null,
+                'satisfy_mode' => $satisfyMode,
+                'required_count' => $satisfyMode === CertificateGroupSatisfyMode::NOf->value ? ($row['required_count'] ?? null) : null,
+                'sort_order' => $sortOrder++,
             ];
 
             if ($rowId && $existing->has($rowId)) {
@@ -531,6 +586,7 @@ class CertificateController extends Controller
     {
         $existing = $certificate->requirements()->with('dimensionRules')->get()->keyBy('id');
         $retainedIds = collect();
+        $sortOrder = 0;
 
         foreach ($rows as $row) {
             if (! is_array($row)) {
@@ -571,6 +627,7 @@ class CertificateController extends Controller
                 'window_months' => ($row['window_months'] ?? null) ?: null,
                 'label' => $row['label'] ?? null,
                 'notes' => $row['notes'] ?? null,
+                'sort_order' => $sortOrder++,
             ];
 
             if ($rowId && $existing->has($rowId)) {

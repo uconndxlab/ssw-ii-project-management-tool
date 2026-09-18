@@ -77,3 +77,5 @@ function createProgramViewer(Program $program): User
 
     return $user;
 }
+
+require_once __DIR__.'/Support/CertificationHelpers.php';

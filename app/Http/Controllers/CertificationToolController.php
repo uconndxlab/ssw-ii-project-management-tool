@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class CertificationToolController extends Controller
 {
@@ -205,12 +206,24 @@ class CertificationToolController extends Controller
             'score_fields.*.sort_order' => ['nullable', 'integer', 'min:0'],
         ]);
 
-        $validator->after(function ($validator) use ($request) {
+        $validator->after(function ($validator) use ($request, $certificationTool) {
             $mode = $request->input('program_scope_mode', ProgramScopeMode::All->value);
             $projectIds = ProjectProgramScope::normalizeIds($request->input('project_ids', []));
             $programIds = ProjectProgramScope::normalizeIds($request->input('program_ids', []));
 
             ProjectProgramScope::validateModeSelection($validator, $mode, CertificationTool::class, $projectIds, $programIds);
+
+            $submittedMode = ProgramScopeMode::tryFrom((string) $mode) ?? ProgramScopeMode::Specific;
+            $existingMode = $certificationTool?->program_scope_mode ?? ProgramScopeMode::None;
+            ScopeSync::validateSubmittedMode($validator, Auth::user(), $existingMode, $submittedMode);
+            ScopeSync::validateSubmittedProgramsAreInAdminScope(
+                $validator,
+                Auth::user(),
+                $programIds,
+                $certificationTool?->exists ? $certificationTool->programs()->pluck('programs.id')->all() : [],
+            );
+
+            $this->validateNestedToolRows($validator, $request, $certificationTool);
         });
 
         $validated = $validator->validate();
@@ -222,10 +235,104 @@ class CertificationToolController extends Controller
         return $validated;
     }
 
+    private function validateNestedToolRows($validator, Request $request, ?CertificationTool $tool): void
+    {
+        $seenDimensionSlugs = [];
+
+        foreach ($request->input('dimensions', []) as $index => $row) {
+            if (! is_array($row) || filter_var($row['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                continue;
+            }
+
+            if (blank($row['name'] ?? null)) {
+                continue;
+            }
+
+            $slug = Str::slug($row['name']);
+
+            if (isset($seenDimensionSlugs[$slug])) {
+                $validator->errors()->add("dimensions.{$index}.name", 'Dimension names must be unique on this tool.');
+
+                continue;
+            }
+
+            $seenDimensionSlugs[$slug] = true;
+
+            $rowId = isset($row['id']) && $row['id'] !== '' ? (int) $row['id'] : null;
+
+            if ($tool) {
+                $conflict = $tool->dimensions()
+                    ->where('slug', $slug)
+                    ->when($rowId, fn ($query) => $query->whereKeyNot($rowId))
+                    ->exists();
+
+                if ($conflict) {
+                    $validator->errors()->add("dimensions.{$index}.name", 'Dimension names must be unique on this tool.');
+                }
+            }
+
+            $seenOptionValues = [];
+
+            foreach ($row['options'] ?? [] as $optionIndex => $option) {
+                if (! is_array($option) || filter_var($option['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                    continue;
+                }
+
+                if (blank($option['label'] ?? null)) {
+                    continue;
+                }
+
+                $value = Str::slug($option['label']);
+
+                if (isset($seenOptionValues[$value])) {
+                    $validator->errors()->add("dimensions.{$index}.options.{$optionIndex}.label", 'Option labels must be unique within the dimension.');
+                }
+
+                $seenOptionValues[$value] = true;
+            }
+        }
+
+        $seenScoreFieldSlugs = [];
+
+        foreach ($request->input('score_fields', []) as $index => $row) {
+            if (! is_array($row) || filter_var($row['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                continue;
+            }
+
+            if (blank($row['name'] ?? null)) {
+                continue;
+            }
+
+            $slug = Str::slug($row['name']);
+
+            if (isset($seenScoreFieldSlugs[$slug])) {
+                $validator->errors()->add("score_fields.{$index}.name", 'Score field names must be unique on this tool.');
+
+                continue;
+            }
+
+            $seenScoreFieldSlugs[$slug] = true;
+
+            $rowId = isset($row['id']) && $row['id'] !== '' ? (int) $row['id'] : null;
+
+            if ($tool) {
+                $conflict = $tool->scoreFields()
+                    ->where('slug', $slug)
+                    ->when($rowId, fn ($query) => $query->whereKeyNot($rowId))
+                    ->exists();
+
+                if ($conflict) {
+                    $validator->errors()->add("score_fields.{$index}.name", 'Score field names must be unique on this tool.');
+                }
+            }
+        }
+    }
+
     private function syncDimensions(CertificationTool $tool, array $rows): void
     {
         $existing = $tool->dimensions()->with('options')->get()->keyBy('id');
         $retainedIds = collect();
+        $sortOrder = 0;
 
         foreach ($rows as $row) {
             if (! is_array($row)) {
@@ -249,7 +356,7 @@ class CertificationToolController extends Controller
 
             $data = [
                 'name' => $row['name'],
-                'sort_order' => $row['sort_order'] ?? 0,
+                'sort_order' => $sortOrder++,
             ];
 
             if ($rowId && $existing->has($rowId)) {
@@ -270,6 +377,7 @@ class CertificationToolController extends Controller
     {
         $existing = $dimension->options()->get()->keyBy('id');
         $retainedIds = collect();
+        $sortOrder = 0;
 
         foreach ($rows as $row) {
             if (! is_array($row)) {
@@ -293,7 +401,7 @@ class CertificationToolController extends Controller
 
             $data = [
                 'label' => $row['label'],
-                'sort_order' => $row['sort_order'] ?? 0,
+                'sort_order' => $sortOrder++,
             ];
 
             if ($rowId && $existing->has($rowId)) {
@@ -311,6 +419,7 @@ class CertificationToolController extends Controller
     {
         $existing = $tool->scoreFields()->get()->keyBy('id');
         $retainedIds = collect();
+        $sortOrder = 0;
 
         foreach ($rows as $row) {
             if (! is_array($row)) {
@@ -335,7 +444,7 @@ class CertificationToolController extends Controller
             $data = [
                 'name' => $row['name'],
                 'unit' => $row['unit'] ?? CertificationToolScoreUnit::Percent->value,
-                'sort_order' => $row['sort_order'] ?? 0,
+                'sort_order' => $sortOrder++,
             ];
 
             if ($rowId && $existing->has($rowId)) {
