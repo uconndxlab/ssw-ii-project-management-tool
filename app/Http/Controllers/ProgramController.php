@@ -8,6 +8,7 @@ use App\Support\Authorization\ScopeSync;
 use App\Support\Authorization\UserAccess;
 use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 
 class ProgramController extends Controller
@@ -157,7 +158,7 @@ class ProgramController extends Controller
     {
         $this->authorize('update', $program);
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255', 'unique:programs,name,' . $program->id],
+            'name' => ['required', 'string', 'max:255', 'unique:programs,name,'.$program->id],
             'description' => ['nullable', 'string', 'max:2000'],
             'active' => ['nullable', 'boolean'],
             'project_ids' => ['required', 'array', 'min:1'],
@@ -197,7 +198,7 @@ class ProgramController extends Controller
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, Project>
+     * @return Collection<int, Project>
      */
     private function assignableProjects(?Program $program = null)
     {

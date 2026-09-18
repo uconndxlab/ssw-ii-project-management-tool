@@ -9,7 +9,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (!Schema::hasTable('activity_logging_field_answers')) {
+        if (! Schema::hasTable('activity_logging_field_answers')) {
             Schema::create('activity_logging_field_answers', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('activity_id')->constrained()->cascadeOnDelete();
@@ -38,12 +38,12 @@ return new class extends Migration
 
                     foreach ($activities as $activity) {
                         $data = json_decode($activity->logging_field_data ?? 'null', true);
-                        if (!is_array($data)) {
+                        if (! is_array($data)) {
                             continue;
                         }
 
                         foreach (($data['agreements'] ?? []) as $agreementId => $fields) {
-                            if (!is_array($fields)) {
+                            if (! is_array($fields)) {
                                 continue;
                             }
 
@@ -79,7 +79,7 @@ return new class extends Migration
                         }
                     }
 
-                    if (!empty($rows)) {
+                    if (! empty($rows)) {
                         DB::table('activity_logging_field_answers')->insert($rows);
                     }
                 }, 'activities.id', 'activity_row_id');
@@ -123,6 +123,7 @@ return new class extends Migration
 
                 if ($answer->context_type === 'agreement') {
                     $payload['agreements'][$answer->context_id][$answer->logging_field_id] = $value;
+
                     continue;
                 }
 

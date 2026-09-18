@@ -2,11 +2,16 @@
 
 namespace App\Models;
 
+use Database\Factories\ActivityContactTimeFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ActivityContactTime extends Model
 {
+    /** @use HasFactory<ActivityContactTimeFactory> */
+    use HasFactory;
+
     protected $fillable = [
         'activity_id',
         'activity_hours',

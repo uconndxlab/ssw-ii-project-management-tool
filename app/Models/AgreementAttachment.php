@@ -3,11 +3,16 @@
 namespace App\Models;
 
 use App\Services\PrivateFileService;
+use Database\Factories\AgreementAttachmentFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AgreementAttachment extends Model
 {
+    /** @use HasFactory<AgreementAttachmentFactory> */
+    use HasFactory;
+
     protected $fillable = [
         'agreement_id',
         'filename',

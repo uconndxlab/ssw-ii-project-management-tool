@@ -22,10 +22,10 @@ class SearchController extends Controller
 
         if ($query === '') {
             return view('search.results', [
-                'query'         => '',
-                'agreements'    => collect(),
+                'query' => '',
+                'agreements' => collect(),
                 'organizations' => collect(),
-                'users'         => collect(),
+                'users' => collect(),
             ]);
         }
 
@@ -36,8 +36,8 @@ class SearchController extends Controller
             ->with(['organizations', 'states'])
             ->where(function ($q) use ($like) {
                 $q->whereIlike('name', $like)
-                  ->orWhereHas('organizations', fn ($o) => $o->whereIlike('name', $like))
-                  ->orWhereHas('states', fn ($s) => $s->whereIlike('name', $like));
+                    ->orWhereHas('organizations', fn ($o) => $o->whereIlike('name', $like))
+                    ->orWhereHas('states', fn ($s) => $s->whereIlike('name', $like));
             })
             ->active()
             ->orderBy('name')

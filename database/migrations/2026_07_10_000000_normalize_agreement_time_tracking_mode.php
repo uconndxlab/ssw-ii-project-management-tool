@@ -34,7 +34,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        if (!Schema::hasColumn('agreements', 'time_tracking_mode')) {
+        if (! Schema::hasColumn('agreements', 'time_tracking_mode')) {
             return;
         }
 

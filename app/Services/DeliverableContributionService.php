@@ -5,8 +5,8 @@ namespace App\Services;
 use App\Models\Activity;
 use App\Models\Agreement;
 use App\Models\AgreementActivityHistory;
-use App\Models\DeliverableContribution;
 use App\Models\AgreementDeliverable;
+use App\Models\DeliverableContribution;
 use App\Support\ActivityTypeDuration;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -47,7 +47,7 @@ class DeliverableContributionService
             );
         }
 
-        if (!empty($rows)) {
+        if (! empty($rows)) {
             DeliverableContribution::query()->insert($rows);
         }
     }
@@ -74,7 +74,7 @@ class DeliverableContributionService
             ->delete();
 
         $contactFamilyId = $activity->activityType?->contact_family_id;
-        if (!$contactFamilyId) {
+        if (! $contactFamilyId) {
             return;
         }
 
@@ -102,7 +102,7 @@ class DeliverableContributionService
             }
         }
 
-        if (!empty($rows)) {
+        if (! empty($rows)) {
             DeliverableContribution::query()->insert($rows);
         }
     }
@@ -114,7 +114,7 @@ class DeliverableContributionService
             ->whereNotNull('contributor_user_id')
             ->get()
             ->mapWithKeys(fn (AgreementActivityHistory $history) => [
-                $history->agreement_id . ':' . $history->contributor_user_id => $history->team_ids_snapshot,
+                $history->agreement_id.':'.$history->contributor_user_id => $history->team_ids_snapshot,
             ]);
 
         AgreementActivityHistory::query()
@@ -122,7 +122,7 @@ class DeliverableContributionService
             ->delete();
 
         $contactFamilyId = $activity->activityType?->contact_family_id;
-        if (!$contactFamilyId) {
+        if (! $contactFamilyId) {
             return;
         }
 
@@ -209,7 +209,7 @@ class DeliverableContributionService
 
             foreach ($activity->participants as $participant) {
                 $userId = (int) $participant->id;
-                $snapshotKey = $agreement->id . ':' . $userId;
+                $snapshotKey = $agreement->id.':'.$userId;
                 $teamIdsSnapshot = $existingTeamSnapshotsByAgreementUser->has($snapshotKey)
                     ? $existingTeamSnapshotsByAgreementUser->get($snapshotKey)
                     : $agreementTeamIdsByUser->get($userId, []);
@@ -247,7 +247,7 @@ class DeliverableContributionService
                 }
 
                 $participantTime = $participantTimesByUser->get($userId);
-                if (!$participantTime || (float) $participantTime->hours <= 0) {
+                if (! $participantTime || (float) $participantTime->hours <= 0) {
                     continue;
                 }
 
@@ -270,7 +270,7 @@ class DeliverableContributionService
             }
         }
 
-        if (!empty($rows)) {
+        if (! empty($rows)) {
             $rows = array_map(function (array $row) {
                 $row['program_ids_snapshot'] = $row['program_ids_snapshot'] !== null
                     ? json_encode($row['program_ids_snapshot'])
@@ -289,7 +289,7 @@ class DeliverableContributionService
     }
 
     /**
-     * @param array<int, int>|null $teamIdsSnapshot
+     * @param  array<int, int>|null  $teamIdsSnapshot
      */
     private function buildHistoryRow(
         int $agreementId,
@@ -330,7 +330,7 @@ class DeliverableContributionService
     }
 
     /**
-     * @param \Illuminate\Support\Collection<int, AgreementActivityHistory> $agreementHistory
+     * @param  Collection<int, AgreementActivityHistory>  $agreementHistory
      * @return array<int, array<string, mixed>>
      */
     private function buildDeliverableContributionRows(
@@ -360,7 +360,7 @@ class DeliverableContributionService
                 return false;
             }
 
-            if ($deliverable->program_id && !collect($history->program_ids_snapshot ?? [])->contains((int) $deliverable->program_id)) {
+            if ($deliverable->program_id && ! collect($history->program_ids_snapshot ?? [])->contains((int) $deliverable->program_id)) {
                 return false;
             }
 
@@ -543,8 +543,8 @@ class DeliverableContributionService
             $metric,
             $timeBasis,
             $includeAdditional,
-            $fingerprint,
-            $contributionKind
+            $fingerprint
+
         ) {
             /** @var AgreementActivityHistory $history */
             $history = $matchedRow['history'];
@@ -652,7 +652,7 @@ class DeliverableContributionService
             foreach ($historyTeamIds as $teamId) {
                 $team = $deliverableTeamsById->get($teamId);
 
-                if (!$team || $this->activityIsAfterUnassignment($activityDate, $team->pivot->unassigned_at)) {
+                if (! $team || $this->activityIsAfterUnassignment($activityDate, $team->pivot->unassigned_at)) {
                     continue;
                 }
 
@@ -669,7 +669,7 @@ class DeliverableContributionService
 
     private function activityIsAfterUnassignment(CarbonImmutable $activityDate, mixed $unassignedAt): bool
     {
-        if (!$unassignedAt) {
+        if (! $unassignedAt) {
             return false;
         }
 

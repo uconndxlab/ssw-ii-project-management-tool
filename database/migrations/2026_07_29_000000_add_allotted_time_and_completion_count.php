@@ -10,37 +10,37 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('agreement_deliverables', function (Blueprint $table) {
-            if (!Schema::hasColumn('agreement_deliverables', 'time_basis')) {
+            if (! Schema::hasColumn('agreement_deliverables', 'time_basis')) {
                 $table->string('time_basis')->default('observed')->after('metric_type');
             }
         });
 
         Schema::table('activities', function (Blueprint $table) {
-            if (!Schema::hasColumn('activities', 'completion_count')) {
+            if (! Schema::hasColumn('activities', 'completion_count')) {
                 $table->unsignedInteger('completion_count')->default(1)->after('activity_type_id');
             }
-            if (!Schema::hasColumn('activities', 'allotted_duration_hours')) {
+            if (! Schema::hasColumn('activities', 'allotted_duration_hours')) {
                 $table->decimal('allotted_duration_hours', 8, 1)->nullable()->after('completion_count');
             }
-            if (!Schema::hasColumn('activities', 'allotted_duration_days')) {
+            if (! Schema::hasColumn('activities', 'allotted_duration_days')) {
                 $table->decimal('allotted_duration_days', 8, 1)->nullable()->after('allotted_duration_hours');
             }
         });
 
         Schema::table('agreement_activity_histories', function (Blueprint $table) {
-            if (!Schema::hasColumn('agreement_activity_histories', 'allotted_hours')) {
+            if (! Schema::hasColumn('agreement_activity_histories', 'allotted_hours')) {
                 $table->decimal('allotted_hours', 10, 2)->nullable()->after('follow_up_hours');
             }
-            if (!Schema::hasColumn('agreement_activity_histories', 'allotted_days')) {
+            if (! Schema::hasColumn('agreement_activity_histories', 'allotted_days')) {
                 $table->decimal('allotted_days', 10, 2)->nullable()->after('allotted_hours');
             }
         });
 
         Schema::table('deliverable_contributions', function (Blueprint $table) {
-            if (!Schema::hasColumn('deliverable_contributions', 'credited_allotted_hours')) {
+            if (! Schema::hasColumn('deliverable_contributions', 'credited_allotted_hours')) {
                 $table->decimal('credited_allotted_hours', 10, 2)->nullable()->after('credited_hours');
             }
-            if (!Schema::hasColumn('deliverable_contributions', 'credited_allotted_days')) {
+            if (! Schema::hasColumn('deliverable_contributions', 'credited_allotted_days')) {
                 $table->decimal('credited_allotted_days', 10, 2)->nullable()->after('credited_allotted_hours');
             }
         });

@@ -9,9 +9,7 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
-    public function __construct(private readonly SessionBackTargetService $backTargetService)
-    {
-    }
+    public function __construct(private readonly SessionBackTargetService $backTargetService) {}
 
     public function showLogin()
     {
@@ -32,7 +30,7 @@ class AuthController extends Controller
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $user = Auth::user();
 
-            if (!$user->isActive()) {
+            if (! $user->isActive()) {
                 Auth::logout();
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();

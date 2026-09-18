@@ -2,6 +2,7 @@
 
 namespace App\Models\Concerns;
 
+use App\Models\Project;
 use Illuminate\Support\Collection;
 
 trait HasProgramScope
@@ -9,7 +10,7 @@ trait HasProgramScope
     /**
      * Projects are display/filter context inferred from the persisted programs.
      *
-     * @return Collection<int, \App\Models\Project>
+     * @return Collection<int, Project>
      */
     public function getProjectsAttribute(): Collection
     {

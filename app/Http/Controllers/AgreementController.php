@@ -23,10 +23,10 @@ use App\Services\DeliverableContributionService;
 use App\Services\PrivateFileService;
 use App\Support\ActivityTypeDuration;
 use App\Support\AgreementDeliverableDisplay;
+use App\Support\Authorization\ScopeSync;
 use App\Support\DeliverableActivityHistogram;
 use App\Support\DeliverableAssignmentTargets;
 use App\Support\DeliverableHistoryScope;
-use App\Support\Authorization\ScopeSync;
 use App\Support\ProjectProgramScope;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -56,10 +56,10 @@ class AgreementController extends Controller
         $query = Agreement::query()
             ->visibleTo($user)
             ->with([
-            'states',
-            'programs.projects:id,name',
-            'principalInvestigators:id,name',
-        ]);
+                'states',
+                'programs.projects:id,name',
+                'principalInvestigators:id,name',
+            ]);
 
         if (! $user->access()->hasView()) {
             $query->active();
@@ -297,7 +297,7 @@ class AgreementController extends Controller
             'deliverableTo',
             'usingExtendedEnd',
         ) + [
-            'missingAgreementDates' => !$agreement->start_date || !$effectiveEnd,
+            'missingAgreementDates' => ! $agreement->start_date || ! $effectiveEnd,
             'startDateAfterToday' => $agreement->start_date
                 && $agreement->start_date->toDateString() > now()->toDateString(),
         ]);
@@ -345,6 +345,7 @@ class AgreementController extends Controller
             $this->syncAgreementRelations($agreement, $validated);
             $this->softUnassignDeliverableUsersOutsideAgreementMembership($agreement);
             $this->syncAgreementCertificationCandidates($agreement, $validated['certification_candidates'] ?? []);
+
             return $this->syncAgreementDeliverables($agreement, $validated['deliverables'] ?? []);
         });
 

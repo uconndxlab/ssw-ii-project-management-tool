@@ -8,8 +8,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class ActivityAgreementFundingSource extends Model
 {
     public const ROLE_PAYOR = 'payor';
+
     public const ROLE_PAYEE = 'payee';
+
     public const SOURCE_USER = 'user';
+
     public const SOURCE_ORGANIZATION = 'organization';
 
     protected $fillable = [

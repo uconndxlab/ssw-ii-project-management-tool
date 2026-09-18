@@ -2,7 +2,6 @@
 
 namespace App\Policies;
 
-use App\Models\Organization;
 use App\Policies\Concerns\AuthorizesScopedEntity;
 
 class OrganizationPolicy

@@ -2,6 +2,16 @@
 
 namespace App\Models\Concerns;
 
+use App\Models\Activity;
+use App\Models\ActivityType;
+use App\Models\Agreement;
+use App\Models\ContactFamily;
+use App\Models\LoggingField;
+use App\Models\Organization;
+use App\Models\Program;
+use App\Models\Project;
+use App\Models\State;
+use App\Models\Team;
 use App\Models\User;
 use App\Support\Authorization\UserAccess;
 use Illuminate\Database\Eloquent\Builder;

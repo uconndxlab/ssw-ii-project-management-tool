@@ -23,7 +23,7 @@ return new class extends Migration
             $table->text('follow_up')->nullable()->after('summary');
             $table->text('strengths')->nullable()->after('follow_up');
             $table->text('recommendations')->nullable()->after('strengths');
-            
+
             // Drop legacy fields
             $table->dropColumn(['engagement_type', 'hours', 'notes']);
         });
@@ -39,7 +39,7 @@ return new class extends Migration
             $table->string('engagement_type')->after('engagement_date');
             $table->decimal('hours', 5, 2)->after('engagement_type');
             $table->text('notes')->nullable()->after('hours');
-            
+
             // Drop new structured fields
             $table->dropColumn([
                 'activity_type',
@@ -51,7 +51,7 @@ return new class extends Migration
                 'summary',
                 'follow_up',
                 'strengths',
-                'recommendations'
+                'recommendations',
             ]);
         });
     }

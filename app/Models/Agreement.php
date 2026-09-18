@@ -6,11 +6,12 @@ use App\Enums\AgreementTimeTrackingRequirement;
 use App\Enums\ProgramScopeMode;
 use App\Models\Concerns\HasProgramScope;
 use App\Models\Concerns\VisibleToUser;
+use Database\Factories\AgreementFactory;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Builder;
 
 /**
  * View: belong (you or your team) or a listed program is in your privilege.
@@ -19,7 +20,8 @@ use Illuminate\Database\Eloquent\Builder;
  */
 class Agreement extends Model
 {
-    use HasProgramScope, VisibleToUser;
+    /** @use HasFactory<AgreementFactory> */
+    use HasFactory, HasProgramScope, VisibleToUser;
 
     protected $fillable = [
         'name',

@@ -8,13 +8,15 @@ use App\Enums\ProgramScopeMode;
 use App\Models\Concerns\HasProgramScope;
 use App\Models\Concerns\VisibleToUser;
 use App\Support\Authorization\UserAccess;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Collection;
 
 /**
  * View others: viewer/admin with overlapping membership, or they report to you.
@@ -22,7 +24,7 @@ use Illuminate\Notifications\Notifiable;
  */
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    /** @use HasFactory<UserFactory> */
     use HasFactory, HasProgramScope, Notifiable, VisibleToUser;
 
     /**
@@ -219,10 +221,10 @@ class User extends Authenticatable
      * Requires teams (with nested programs.projects and agreements) and direct relations loaded.
      *
      * @return array{
-     *     direct: array{projects: \Illuminate\Support\Collection, programs: \Illuminate\Support\Collection, agreements: \Illuminate\Support\Collection},
-     *     viaTeams: array{projects: \Illuminate\Support\Collection, programs: \Illuminate\Support\Collection, agreements: \Illuminate\Support\Collection},
+     *     direct: array{projects: Collection, programs: Collection, agreements: Collection},
+     *     viaTeams: array{projects: Collection, programs: Collection, agreements: Collection},
      *     totals: array{projects: int, programs: int, agreements: int, teams: int},
-     *     index: array{projects: \Illuminate\Support\Collection, programs: \Illuminate\Support\Collection},
+     *     index: array{projects: Collection, programs: Collection},
      * }
      */
     public function getScopeBySource(): array
@@ -340,6 +342,4 @@ class User extends Authenticatable
             return $team->{$relation}->contains('id', $entityId);
         })->sortBy('name')->values();
     }
-
-
 }
