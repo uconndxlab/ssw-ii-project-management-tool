@@ -15,7 +15,8 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  *
  * context_id has no foreign key; its referent depends on context_type.
  * Use forAgreement(), forContactFamily(), or forActivityType() when the
- * default activity_type context is not appropriate.
+ * default activity_type context is not appropriate. Each of those states
+ * also swaps the default logging field for one available in that context.
  */
 class ActivityLoggingFieldAnswerFactory extends Factory
 {
@@ -58,6 +59,7 @@ class ActivityLoggingFieldAnswerFactory extends Factory
     public function forAgreement(Agreement $agreement): static
     {
         return $this->state(fn (array $attributes) => [
+            'logging_field_id' => LoggingField::factory()->forAgreements(),
             'context_type' => 'agreement',
             'context_id' => $agreement->id,
         ]);
@@ -66,6 +68,7 @@ class ActivityLoggingFieldAnswerFactory extends Factory
     public function forContactFamily(ContactFamily $contactFamily): static
     {
         return $this->state(fn (array $attributes) => [
+            'logging_field_id' => LoggingField::factory()->forContactFamilies(),
             'context_type' => 'contact_family',
             'context_id' => $contactFamily->id,
         ]);
