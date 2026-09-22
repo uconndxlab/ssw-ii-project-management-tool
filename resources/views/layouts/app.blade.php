@@ -182,6 +182,10 @@
         });
     </script>
 
+    @once
+        @include('components.repeater-rows-script')
+    @endonce
+
     @stack('scripts')
 </body>
 </html>

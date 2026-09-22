@@ -112,7 +112,6 @@
         background-color: rgba(var(--bs-primary-rgb), 0.08);
     }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
 <script>
 (function () {
     function parseJson(value, fallback) {
