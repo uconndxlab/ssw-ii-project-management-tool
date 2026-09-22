@@ -372,6 +372,8 @@ class SessionBackTargetService
             'logging-fields.index' => 'Back to logging fields',
             'contact-families.index' => 'Back to activity families',
             'activity-types.index' => 'Back to activity types',
+            'certification-tools.index' => 'Back to certification tools',
+            'certificates.index' => 'Back to certificates',
             default => 'Back',
         };
     }
@@ -430,6 +432,8 @@ class SessionBackTargetService
             'logging-fields.index' => 'Logging Fields',
             'contact-families.index' => 'Activity Families',
             'activity-types.index' => 'Activity Types',
+            'certification-tools.index' => 'Certification Tools',
+            'certificates.index' => 'Certificates',
             default => 'Current Page',
         };
     }
