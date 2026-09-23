@@ -42,13 +42,17 @@ class UserDeliverableReporting
         return $agreements->map(function (Agreement $agreement) use ($user, $accessMeta) {
             $meta = $accessMeta->get((int) $agreement->id);
 
+            if (! is_array($meta)) {
+                return null;
+            }
+
             return [
                 'agreement' => $agreement,
                 'direct' => (bool) $meta['direct'],
                 'teams' => $meta['teams'],
                 'deliverableGroups' => AgreementDeliverableDisplay::buildGroupedProgressForUser($agreement, $user),
             ];
-        });
+        })->filter()->values();
     }
 
     /**

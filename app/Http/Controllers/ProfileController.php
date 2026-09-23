@@ -24,7 +24,7 @@ class ProfileController extends Controller
 
     public function updatePassword(UpdateProfilePasswordRequest $request)
     {
-        $request->user()->update([
+        $this->actor()->update([
             'password' => $request->validated('password'),
         ]);
 

@@ -180,9 +180,7 @@ class AgreementRequest extends FormRequest
                 $validator,
                 $actor,
                 $existingMode,
-                $programScopeMode instanceof ProgramScopeMode
-                    ? $programScopeMode
-                    : ProgramScopeMode::from((string) $this->input('program_scope_mode', ProgramScopeMode::Specific->value)),
+                $programScopeMode,
             );
             ScopeSync::validateSubmittedProgramsAreInAdminScope(
                 $validator,

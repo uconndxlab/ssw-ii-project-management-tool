@@ -378,7 +378,7 @@ class ProjectProgramScope
         string $scopeId,
         string $programBadgeClass = 'bg-primary-subtle text-primary-emphasis border',
     ): array {
-        $scopeProjects = $projects instanceof Collection ? $projects : collect($projects);
+        $scopeProjects = $projects;
 
         $selectedProjectIds = collect($selectedProjectIds)
             ->map(fn ($id) => (string) $id)

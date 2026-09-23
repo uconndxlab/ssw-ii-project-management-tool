@@ -24,13 +24,13 @@ use App\Services\PrivateFileService;
 use App\Support\ActivityTypeDuration;
 use App\Support\AgreementDeliverableDisplay;
 use App\Support\Authorization\ScopeSync;
+use App\Support\CarbonDate;
 use App\Support\DeliverableActivityHistogram;
 use App\Support\DeliverableAssignmentTargets;
 use App\Support\DeliverableHistoryScope;
 use App\Support\ProjectProgramScope;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -279,10 +279,12 @@ class AgreementController extends Controller
             $deliverableTo
         );
         $deliverableActivityBuckets = DeliverableActivityHistogram::buildAgreementBuckets($agreement);
-        $effectiveEnd = $agreement->extension_end_date ?? $agreement->end_date;
-        $usingExtendedEnd = $agreement->extension_end_date
+        $startDate = CarbonDate::parse($agreement->start_date);
+        $effectiveEnd = CarbonDate::parse($agreement->extension_end_date ?? $agreement->end_date);
+        $extensionEnd = CarbonDate::parse($agreement->extension_end_date);
+        $usingExtendedEnd = $extensionEnd
             && $deliverableTo
-            && $deliverableTo->toDateString() === $agreement->extension_end_date->toDateString();
+            && $deliverableTo->toDateString() === $extensionEnd->toDateString();
 
         return view('agreements.show', compact(
             'agreement',
@@ -296,9 +298,9 @@ class AgreementController extends Controller
             'deliverableTo',
             'usingExtendedEnd',
         ) + [
-            'missingAgreementDates' => ! $agreement->start_date || ! $effectiveEnd,
-            'startDateAfterToday' => $agreement->start_date
-                && $agreement->start_date->toDateString() > now()->toDateString(),
+            'missingAgreementDates' => ! $startDate || ! $effectiveEnd,
+            'startDateAfterToday' => $startDate
+                && $startDate->toDateString() > now()->toDateString(),
         ]);
     }
 
@@ -378,7 +380,7 @@ class AgreementController extends Controller
 
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
-                if (! $file instanceof UploadedFile || ! $file->isValid()) {
+                if (! $file->isValid()) {
                     throw ValidationException::withMessages([
                         'attachments' => 'One or more attachments failed to upload. Check the file size and try again.',
                     ]);
@@ -1160,10 +1162,10 @@ class AgreementController extends Controller
             ];
         }
 
-        $end = $agreement->extension_end_date ?? $agreement->end_date;
+        $end = CarbonDate::parse($agreement->extension_end_date ?? $agreement->end_date);
 
         return [
-            $agreement->start_date?->copy()->startOfDay(),
+            CarbonDate::parse($agreement->start_date)?->copy()->startOfDay(),
             $end?->copy()->startOfDay(),
         ];
     }

@@ -4,7 +4,13 @@ namespace App\Services;
 
 use App\Models\Activity;
 use App\Models\Agreement;
+use App\Models\Organization;
+use App\Models\Program;
+use App\Models\Project;
+use App\Models\State;
+use App\Models\Team;
 use App\Models\User;
+use App\Support\CarbonDate;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Carbon;
@@ -266,11 +272,7 @@ class SessionBackTargetService
         $cutoff = Carbon::now()->subSeconds(self::MAX_AGE_SECONDS)->timestamp;
         $appHost = parse_url(config('app.url') ?: $request->getSchemeAndHttpHost(), PHP_URL_HOST);
 
-        $trail = array_values(array_filter($trail, function ($entry) use ($cutoff, $appHost) {
-            if (! is_array($entry)) {
-                return false;
-            }
-
+        $trail = array_values(array_filter($trail, function (array $entry) use ($cutoff, $appHost) {
             $url = $entry['url'] ?? null;
             $recordedAt = (int) ($entry['recorded_at'] ?? 0);
             $host = parse_url((string) $url, PHP_URL_HOST);
@@ -308,7 +310,7 @@ class SessionBackTargetService
             return false;
         }
 
-        if (! $route instanceof RoutingRoute || ! $this->isTrackableRouteName($route->getName())) {
+        if (! $this->isTrackableRouteName($route->getName())) {
             return false;
         }
 
@@ -397,14 +399,28 @@ class SessionBackTargetService
             'profile' => 'Profile',
             'agreements.show' => $this->resolveAgreement($route->parameter('agreement'))?->name ?? 'Agreement',
             'activities.show' => $this->activityCrumbLabel($this->resolveActivity($route->parameter('activity'))),
-            'organizations.show' => $route->parameter('organization')?->name ?? 'Organization',
-            'projects.show' => $route->parameter('project')?->name ?? 'Project',
-            'programs.show' => $route->parameter('program')?->name ?? 'Program',
-            'states.show' => $route->parameter('state')?->name ?? 'State',
-            'teams.show' => $route->parameter('team')?->name ?? 'Team',
-            'users.show' => $route->parameter('user')?->name ?? 'User',
+            'organizations.show' => $this->parameterName($route->parameter('organization'), 'Organization'),
+            'projects.show' => $this->parameterName($route->parameter('project'), 'Project'),
+            'programs.show' => $this->parameterName($route->parameter('program'), 'Program'),
+            'states.show' => $this->parameterName($route->parameter('state'), 'State'),
+            'teams.show' => $this->parameterName($route->parameter('team'), 'Team'),
+            'users.show' => $this->parameterName($route->parameter('user'), 'User'),
             default => $this->fallbackCrumbLabel($route->getName()),
         };
+    }
+
+    private function parameterName(mixed $value, string $fallback): string
+    {
+        if ($value instanceof Organization
+            || $value instanceof Program
+            || $value instanceof Project
+            || $value instanceof State
+            || $value instanceof Team
+            || $value instanceof User) {
+            return $value->name !== '' ? $value->name : $fallback;
+        }
+
+        return $fallback;
     }
 
     private function fallbackCrumbLabel(?string $routeName): string
@@ -448,7 +464,7 @@ class SessionBackTargetService
 
         $name = $activity->activityType?->name
             ?: $activity->activityType?->contactFamily?->name;
-        $dateLabel = $activity->engagement_date?->format('M j, Y');
+        $dateLabel = CarbonDate::parse($activity->engagement_date)?->format('M j, Y');
 
         return collect([$name, $dateLabel])
             ->filter(fn ($value) => is_string($value) && $value !== '')
@@ -488,7 +504,8 @@ class SessionBackTargetService
      */
     private function trail(Request $request): array
     {
-        $trail = $request->session()->get(self::SESSION_KEY, []);
+        /** @var mixed $trail */
+        $trail = $request->session()->get(self::SESSION_KEY);
 
         return is_array($trail) ? $trail : [];
     }

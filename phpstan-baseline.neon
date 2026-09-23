@@ -1,11 +1,6 @@
 parameters:
 		ignoreErrors:
 		-
-			message: '#^Cannot call method accessLabel\(\) on App\\Models\\User\|null\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Console/Commands/CreateUser.php
-		-
 			message: '#^Method App\\Console\\Commands\\ImportSqliteDatabase\:\:copyTable\(\) has parameter \$connection with no type specified\.$#'
 			identifier: missingType.parameter
 			count: 1
@@ -311,21 +306,6 @@ parameters:
 			count: 1
 			path: app/Http/Controllers/ActivityController.php
 		-
-			message: '#^Offset ''activity_type_id'' might not exist on array\{time_tracking\: mixed, program_ids\: mixed, participant_user_ids\: mixed, project_ids\: mixed, \.\.\.\}\.$#'
-			identifier: offsetAccess.notFound
-			count: 3
-			path: app/Http/Controllers/ActivityController.php
-		-
-			message: '#^Offset ''completion_count'' might not exist on array\{time_tracking\: mixed, program_ids\: mixed, participant_user_ids\: mixed, project_ids\: mixed, \.\.\.\}\.$#'
-			identifier: offsetAccess.notFound
-			count: 2
-			path: app/Http/Controllers/ActivityController.php
-		-
-			message: '#^Offset ''engagement_date'' might not exist on array\{time_tracking\: mixed, program_ids\: mixed, participant_user_ids\: mixed, project_ids\: mixed, \.\.\.\}\.$#'
-			identifier: offsetAccess.notFound
-			count: 2
-			path: app/Http/Controllers/ActivityController.php
-		-
 			message: '#^Offset ''program_ids'' on non\-empty\-array on left side of \?\? always exists and is not nullable\.$#'
 			identifier: nullCoalesce.offset
 			count: 4
@@ -369,11 +349,6 @@ parameters:
 			message: '#^Parameter \#5 \$activityType of method App\\Http\\Controllers\\ActivityController\:\:syncLoggingFieldAnswers\(\) expects App\\Models\\ActivityType, App\\Models\\ActivityType\|Illuminate\\Database\\Eloquent\\Collection\<\(int\|string\), App\\Models\\ActivityType\> given\.$#'
 			identifier: argument.type
 			count: 2
-			path: app/Http/Controllers/ActivityController.php
-		-
-			message: '#^Ternary operator condition is always false\.$#'
-			identifier: ternary.alwaysFalse
-			count: 1
 			path: app/Http/Controllers/ActivityController.php
 		-
 			message: '#^Unable to resolve the template type TKey in call to function collect$#'
@@ -541,21 +516,6 @@ parameters:
 			count: 1
 			path: app/Http/Controllers/AdminUserController.php
 		-
-			message: '#^Cannot call method copy\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 2
-			path: app/Http/Controllers/AgreementController.php
-		-
-			message: '#^Cannot call method toDateString\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 2
-			path: app/Http/Controllers/AgreementController.php
-		-
-			message: '#^Instanceof between Illuminate\\Http\\UploadedFile and Illuminate\\Http\\UploadedFile will always evaluate to true\.$#'
-			identifier: instanceof.alwaysTrue
-			count: 1
-			path: app/Http/Controllers/AgreementController.php
-		-
 			message: '#^Method App\\Http\\Controllers\\AgreementController\:\:agreementFormData\(\) return type has no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
@@ -670,11 +630,6 @@ parameters:
 			identifier: nullCoalesce.variable
 			count: 1
 			path: app/Http/Controllers/AgreementController.php
-		-
-			message: '#^Cannot call method isActive\(\) on App\\Models\\User\|null\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Controllers/AuthController.php
 		-
 			message: '#^Method App\\Http\\Controllers\\AuthController\:\:login\(\) has no return type specified\.$#'
 			identifier: missingType.return
@@ -811,18 +766,8 @@ parameters:
 			count: 1
 			path: app/Http/Controllers/LoggingFieldController.php
 		-
-			message: '#^Cannot access property \$email on App\\Models\\User\|null\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Http/Controllers/NightwatchDiagnosticsController.php
-		-
 			message: '#^Access to an undefined property App\\Models\\Activity\:\:\$event_hours\.$#'
 			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/OrganizationController.php
-		-
-			message: '#^Cannot access property \$year on string\.$#'
-			identifier: property.nonObject
 			count: 1
 			path: app/Http/Controllers/OrganizationController.php
 		-
@@ -926,11 +871,6 @@ parameters:
 			count: 1
 			path: app/Http/Controllers/PasswordResetController.php
 		-
-			message: '#^Cannot call method update\(\) on App\\Models\\User\|null\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Controllers/ProfileController.php
-		-
 			message: '#^Method App\\Http\\Controllers\\ProfileController\:\:edit\(\) has no return type specified\.$#'
 			identifier: missingType.return
 			count: 1
@@ -945,11 +885,6 @@ parameters:
 			identifier: missingType.return
 			count: 1
 			path: app/Http/Controllers/ProfileController.php
-		-
-			message: '#^Cannot access property \$id on App\\Models\\Program\|null\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Http/Controllers/ProgramController.php
 		-
 			message: '#^Method App\\Http\\Controllers\\ProgramController\:\:create\(\) has no return type specified\.$#'
 			identifier: missingType.return
@@ -1186,11 +1121,6 @@ parameters:
 			count: 1
 			path: app/Http/Requests/AgreementRequest.php
 		-
-			message: '#^Instanceof between App\\Enums\\ProgramScopeMode and App\\Enums\\ProgramScopeMode will always evaluate to true\.$#'
-			identifier: instanceof.alwaysTrue
-			count: 1
-			path: app/Http/Requests/AgreementRequest.php
-		-
 			message: '#^Method App\\Http\\Requests\\AgreementRequest\:\:deliverableClassificationChanged\(\) has parameter \$row with no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
@@ -1241,11 +1171,6 @@ parameters:
 			count: 1
 			path: app/Http/Requests/UpdateProfilePasswordRequest.php
 		-
-			message: '#^Cannot call method format\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Models/Activity.php
-		-
 			message: '#^Method App\\Models\\Activity\:\:buildLoggingFieldValueMap\(\) return type has no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
@@ -1286,16 +1211,6 @@ parameters:
 			count: 1
 			path: app/Models/Activity.php
 		-
-			message: '#^Unable to resolve the template type TValue in call to function collect$#'
-			identifier: argument.templateType
-			count: 1
-			path: app/Models/Activity.php
-		-
-			message: '#^Using nullsafe method call on non\-nullable type string\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 1
-			path: app/Models/Activity.php
-		-
 			message: '#^Method App\\Models\\Agreement\:\:allUsers\(\) has no return type specified\.$#'
 			identifier: missingType.return
 			count: 1
@@ -1305,11 +1220,6 @@ parameters:
 			identifier: missingType.iterableValue
 			count: 1
 			path: app/Models/Agreement.php
-		-
-			message: '#^Call to function is_string\(\) with string will always evaluate to true\.$#'
-			identifier: function.alreadyNarrowedType
-			count: 1
-			path: app/Models/LoggingField.php
 		-
 			message: '#^Method App\\Models\\LoggingField\:\:availabilityOptions\(\) return type has no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
@@ -1333,16 +1243,6 @@ parameters:
 		-
 			message: '#^Method App\\Models\\LoggingField\:\:optionValues\(\) return type has no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
-			count: 1
-			path: app/Models/LoggingField.php
-		-
-			message: '#^Parameter \#1 \$value of function collect expects Illuminate\\Contracts\\Support\\Arrayable\<\*NEVER\*, \*NEVER\*\>\|iterable\<\*NEVER\*, \*NEVER\*\>\|null, array\{\}\|string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Models/LoggingField.php
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
 			count: 1
 			path: app/Models/LoggingField.php
 		-
@@ -1383,11 +1283,6 @@ parameters:
 		-
 			message: '#^Call to an undefined method object\:\:getEmailForPasswordReset\(\)\.$#'
 			identifier: method.notFound
-			count: 1
-			path: app/Providers/AppServiceProvider.php
-		-
-			message: '#^Cannot access offset 0 on non\-empty\-list\<string\>\|false\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
 			count: 1
 			path: app/Providers/AppServiceProvider.php
 		-
@@ -1471,33 +1366,13 @@ parameters:
 			count: 1
 			path: app/Services/DeliverableContributionService.php
 		-
-			message: '#^Call to function is_string\(\) with string will always evaluate to true\.$#'
-			identifier: function.alreadyNarrowedType
-			count: 1
-			path: app/Services/PrivateFileService.php
-		-
 			message: '#^Parameter \#1 \$paths of method Illuminate\\Contracts\\Filesystem\\Filesystem\:\:delete\(\) expects array\|string, string\|null given\.$#'
 			identifier: argument.type
 			count: 1
 			path: app/Services/PrivateFileService.php
 		-
-			message: '#^Call to function is_array\(\) with array\<string, mixed\> will always evaluate to true\.$#'
-			identifier: function.alreadyNarrowedType
-			count: 1
-			path: app/Services/SessionBackTargetService.php
-		-
-			message: '#^Cannot access property \$name on object\|string\.$#'
-			identifier: property.nonObject
-			count: 6
-			path: app/Services/SessionBackTargetService.php
-		-
-			message: '#^Cannot call method format\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Services/SessionBackTargetService.php
-		-
-			message: '#^Instanceof between Illuminate\\Routing\\Route and Illuminate\\Routing\\Route will always evaluate to true\.$#'
-			identifier: instanceof.alwaysTrue
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Services/SessionBackTargetService.php
 		-
@@ -1524,21 +1399,6 @@ parameters:
 			message: '#^Method App\\Services\\SessionBackTargetService\:\:resolve\(\) return type has no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
-			path: app/Services/SessionBackTargetService.php
-		-
-			message: '#^Unable to resolve the template type TValue in call to function collect$#'
-			identifier: argument.templateType
-			count: 1
-			path: app/Services/SessionBackTargetService.php
-		-
-			message: '#^Using nullsafe method call on non\-nullable type string\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 1
-			path: app/Services/SessionBackTargetService.php
-		-
-			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 7
 			path: app/Services/SessionBackTargetService.php
 		-
 			message: '#^Method App\\Services\\UserShowPageData\:\:for\(\) return type has no value type specified in iterable type array\.$#'
@@ -1570,21 +1430,6 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: app/Support/ActivityTypeDuration.php
-		-
-			message: '#^Strict comparison using \!\=\= between int\|string and null will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
-			count: 1
-			path: app/Support/ActivityTypeDuration.php
-		-
-			message: '#^Cannot call method copy\(\) on string\|null\.$#'
-			identifier: method.nonObject
-			count: 2
-			path: app/Support/AgreementDeliverableDisplay.php
-		-
-			message: '#^Cannot call method toDateString\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Support/AgreementDeliverableDisplay.php
 		-
 			message: '#^Method App\\Support\\AgreementDeliverableDisplay\:\:buildAgreementMemberUserIds\(\) return type with generic class Illuminate\\Support\\Collection does not specify its types\: TKey, TValue$#'
 			identifier: missingType.generics
@@ -1876,16 +1721,6 @@ parameters:
 			count: 1
 			path: app/Support/Authorization/PrivilegeSync.php
 		-
-			message: '#^Strict comparison using \!\=\= between int and '''' will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
-			count: 1
-			path: app/Support/Authorization/PrivilegeSync.php
-		-
-			message: '#^Strict comparison using \!\=\= between int and null will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
-			count: 1
-			path: app/Support/Authorization/PrivilegeSync.php
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$program_scope_mode\.$#'
 			identifier: property.notFound
 			count: 1
@@ -2146,41 +1981,6 @@ parameters:
 			count: 1
 			path: app/Support/Authorization/UserAccess.php
 		-
-			message: '#^Strict comparison using \!\=\= between non\-empty\-list\<int\> and array\{\} will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
-			count: 1
-			path: app/Support/Authorization/UserAccess.php
-		-
-			message: '#^Strict comparison using \=\=\= between App\\Enums\\PrivilegeScopeType\:\:Program and App\\Enums\\PrivilegeScopeType\:\:Program will always evaluate to true\.$#'
-			identifier: identical.alwaysTrue
-			count: 1
-			path: app/Support/Authorization/UserAccess.php
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
-			count: 1
-			path: app/Support/Authorization/UserAccess.php
-		-
-			message: '#^Cannot call method copy\(\) on Carbon\\Carbon\|null\.$#'
-			identifier: method.nonObject
-			count: 4
-			path: app/Support/DeliverableActivityHistogram.php
-		-
-			message: '#^Cannot call method copy\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 4
-			path: app/Support/DeliverableActivityHistogram.php
-		-
-			message: '#^Cannot call method gt\(\) on Carbon\\Carbon\|null\.$#'
-			identifier: method.nonObject
-			count: 2
-			path: app/Support/DeliverableActivityHistogram.php
-		-
-			message: '#^Cannot call method lt\(\) on Carbon\\Carbon\|null\.$#'
-			identifier: method.nonObject
-			count: 2
-			path: app/Support/DeliverableActivityHistogram.php
-		-
 			message: '#^Method App\\Support\\DeliverableAssignmentTargets\:\:countOnTrackStatuses\(\) return type has no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
@@ -2243,11 +2043,6 @@ parameters:
 		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:programs\(\)\.$#'
 			identifier: method.notFound
-			count: 1
-			path: app/Support/ProjectProgramScope.php
-		-
-			message: '#^Instanceof between Illuminate\\Support\\Collection\<int, App\\Models\\Project\> and Illuminate\\Support\\Collection will always evaluate to true\.$#'
-			identifier: instanceof.alwaysTrue
 			count: 1
 			path: app/Support/ProjectProgramScope.php
 		-
@@ -2381,16 +2176,6 @@ parameters:
 			count: 1
 			path: app/Support/ProjectProgramScope.php
 		-
-			message: '#^Unable to resolve the template type TKey in call to function collect$#'
-			identifier: argument.templateType
-			count: 1
-			path: app/Support/ProjectProgramScope.php
-		-
-			message: '#^Unable to resolve the template type TValue in call to function collect$#'
-			identifier: argument.templateType
-			count: 1
-			path: app/Support/ProjectProgramScope.php
-		-
 			message: '#^Method App\\Support\\UserDeliverableReporting\:\:agreementAccessMeta\(\) return type with generic class Illuminate\\Support\\Collection does not specify its types\: TKey, TValue$#'
 			identifier: missingType.generics
 			count: 1
@@ -2399,14 +2184,4 @@ parameters:
 			message: '#^Method App\\Support\\UserDeliverableReporting\:\:buildAgreementReports\(\) return type with generic class Illuminate\\Support\\Collection does not specify its types\: TKey, TValue$#'
 			identifier: missingType.generics
 			count: 2
-			path: app/Support/UserDeliverableReporting.php
-		-
-			message: '#^Offset ''direct'' might not exist on array\{direct\: bool, teams\: Illuminate\\Support\\Collection\}\|null\.$#'
-			identifier: offsetAccess.notFound
-			count: 1
-			path: app/Support/UserDeliverableReporting.php
-		-
-			message: '#^Offset ''teams'' might not exist on array\{direct\: bool, teams\: Illuminate\\Support\\Collection\}\|null\.$#'
-			identifier: offsetAccess.notFound
-			count: 1
 			path: app/Support/UserDeliverableReporting.php

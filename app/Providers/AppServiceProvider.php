@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\User;
 use App\Services\SessionBackTargetService;
+use App\Support\NightwatchSqlMessage;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
@@ -101,10 +102,7 @@ class AppServiceProvider extends ServiceProvider
         //    and Postgres adds a DETAIL line like "Key (email)=(jane@...)"
         Nightwatch::redactExceptions(function (ExceptionRecord $exception) {
             if (str_starts_with($exception->message, 'SQLSTATE')) {
-                $exception->message = preg_split(
-                    '/\s+DETAIL:|\s+\(Connection:/',
-                    $exception->message
-                )[0];
+                $exception->message = NightwatchSqlMessage::trim($exception->message);
             }
         });
 

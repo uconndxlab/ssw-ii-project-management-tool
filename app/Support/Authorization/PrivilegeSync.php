@@ -49,7 +49,7 @@ class PrivilegeSync
                 return [
                     'capability' => PrivilegeCapability::from($row['capability']),
                     'scope_type' => PrivilegeScopeType::from($row['scope_type']),
-                    'scope_id' => isset($row['scope_id']) && $row['scope_id'] !== '' && $row['scope_id'] !== null
+                    'scope_id' => isset($row['scope_id'])
                         ? (int) $row['scope_id']
                         : null,
                 ];

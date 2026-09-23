@@ -27,7 +27,7 @@ class ActivityTypeDuration
         array $selectedProgramIds
     ): Collection {
         $selectedProgramIdSet = collect($selectedProgramIds)
-            ->filter(fn ($id) => $id !== null && $id !== '')
+            ->filter(fn ($id) => $id !== '')
             ->map(fn ($id) => (int) $id)
             ->unique()
             ->values();

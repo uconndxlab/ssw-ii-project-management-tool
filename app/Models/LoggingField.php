@@ -18,6 +18,7 @@ use Illuminate\Support\Str;
  * Edit: you admin a listed program. Delete: every listed program is in your admin scope. No programs: system admin only.
  *
  * @property ProgramScopeMode $program_scope_mode
+ * @property array<int, string|array<string, mixed>>|null $options_json
  * @property AgreementLoggingFieldPivot|null $pivot
  */
 class LoggingField extends Model
@@ -175,7 +176,10 @@ class LoggingField extends Model
 
     public function normalizedOptions(): array
     {
-        return collect($this->options_json ?? [])
+        /** @var array<int, mixed>|null $options */
+        $options = $this->options_json;
+
+        return collect($options ?? [])
             ->map(function ($option, $index) {
                 if (is_string($option)) {
                     $label = trim($option);

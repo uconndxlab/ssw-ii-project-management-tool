@@ -81,10 +81,12 @@ class CreateUser extends Command
             $user->forceFill(['access_profile' => AccessProfile::AdminViewer])->save();
         }
 
+        $created = $user->fresh() ?? $user;
+
         $this->info('User created successfully!');
         $this->table(
             ['ID', 'Name', 'Email', 'Profile'],
-            [[$user->id, $user->name, $user->email, $user->fresh()->accessLabel()]]
+            [[$created->id, $created->name, $created->email, $created->accessLabel()]]
         );
 
         return self::SUCCESS;

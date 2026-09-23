@@ -1100,13 +1100,14 @@ class AgreementDeliverableDisplay
             return null;
         }
 
-        $agreementEnd = $agreement->extension_end_date ?? $agreement->end_date;
-        if (! $agreement->start_date || ! $agreementEnd) {
+        $startDate = CarbonDate::parse($agreement->start_date);
+        $agreementEnd = CarbonDate::parse($agreement->extension_end_date ?? $agreement->end_date);
+        if (! $startDate || ! $agreementEnd) {
             return DeliverableStatus::NotApplicable;
         }
 
         $today = now()->toDateString();
-        if ($agreement->start_date->toDateString() > $today) {
+        if ($startDate->toDateString() > $today) {
             return DeliverableStatus::NotApplicable;
         }
 
@@ -1142,8 +1143,11 @@ class AgreementDeliverableDisplay
         ?float $targetOverride = null
     ): float {
         $target = $targetOverride ?? (float) ($deliverable->target_quantity ?? 0);
-        $agreementStart = $agreement->start_date->copy()->startOfDay();
-        $agreementEnd = ($agreement->extension_end_date ?? $agreement->end_date)->copy()->startOfDay();
+        $agreementStart = CarbonDate::parse($agreement->start_date)?->copy()->startOfDay();
+        $agreementEnd = CarbonDate::parse($agreement->extension_end_date ?? $agreement->end_date)?->copy()->startOfDay();
+        if (! $agreementStart || ! $agreementEnd) {
+            return 0;
+        }
         $durationDays = self::inclusiveDayCount($agreementStart, $agreementEnd);
         if ($durationDays <= 0) {
             return 0;

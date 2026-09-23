@@ -324,6 +324,9 @@ class ActivityController extends Controller
         });
 
         $baseValidated = $validator->validate();
+        $engagementDate = $baseValidated['engagement_date'];
+        $activityTypeId = $baseValidated['activity_type_id'];
+        $completionCount = (int) $baseValidated['completion_count'];
         $baseValidated['project_ids'] = ProjectProgramScope::normalizeIds($baseValidated['project_ids'] ?? []);
         $baseValidated['program_ids'] = ProjectProgramScope::normalizeIds($baseValidated['program_ids'] ?? []);
         $baseValidated['participant_user_ids'] = collect($baseValidated['participant_user_ids'] ?? [])
@@ -339,7 +342,7 @@ class ActivityController extends Controller
         $baseValidated['program_ids'] = $this->effectiveActivityProgramIds($baseValidated, $agreements);
         $contactFamily = ContactFamily::with('contactFamilyLoggingFields.programs:id')
             ->findOrFail($baseValidated['contact_family_id']);
-        $activityType = ActivityType::with('activityTypeLoggingFields.programs:id')->findOrFail($baseValidated['activity_type_id']);
+        $activityType = ActivityType::with('activityTypeLoggingFields.programs:id')->findOrFail($activityTypeId);
 
         $this->validateAgreementCoverageSelections($baseValidated, $agreements);
         $this->validateAgreementClassificationSelections($baseValidated, $agreements);
@@ -358,12 +361,12 @@ class ActivityController extends Controller
         );
         $activity = null;
 
-        DB::transaction(function () use (&$activity, $validated, $agreements, $contactFamily, $activityType) {
+        DB::transaction(function () use (&$activity, $validated, $agreements, $contactFamily, $activityType, $engagementDate, $activityTypeId, $completionCount) {
             $activity = Activity::create([
                 'user_id' => Auth::id(),
-                'engagement_date' => $validated['engagement_date'],
-                'activity_type_id' => $validated['activity_type_id'],
-                'completion_count' => (int) $validated['completion_count'],
+                'engagement_date' => $engagementDate,
+                'activity_type_id' => $activityTypeId,
+                'completion_count' => $completionCount,
                 'internal_only' => $validated['internal_only'] ?? false,
                 'cancelled' => $validated['cancelled'] ?? false,
                 'not_yet_complete' => $validated['not_yet_complete'] ?? false,
@@ -534,6 +537,9 @@ class ActivityController extends Controller
         });
 
         $baseValidated = $validator->validate();
+        $engagementDate = $baseValidated['engagement_date'];
+        $activityTypeId = $baseValidated['activity_type_id'];
+        $completionCount = (int) $baseValidated['completion_count'];
         $baseValidated['project_ids'] = ProjectProgramScope::normalizeIds($baseValidated['project_ids'] ?? []);
         $baseValidated['program_ids'] = ProjectProgramScope::normalizeIds($baseValidated['program_ids'] ?? []);
         $baseValidated['participant_user_ids'] = collect($baseValidated['participant_user_ids'] ?? [])
@@ -554,7 +560,7 @@ class ActivityController extends Controller
         $baseValidated['program_ids'] = $this->effectiveActivityProgramIds($baseValidated, $agreements);
         $contactFamily = ContactFamily::with('contactFamilyLoggingFields.programs:id')
             ->findOrFail($baseValidated['contact_family_id']);
-        $activityType = ActivityType::with('activityTypeLoggingFields.programs:id')->findOrFail($baseValidated['activity_type_id']);
+        $activityType = ActivityType::with('activityTypeLoggingFields.programs:id')->findOrFail($activityTypeId);
 
         $this->validateAgreementCoverageSelections($baseValidated, $agreements, $activity);
         $this->validateAgreementClassificationSelections($baseValidated, $agreements);
@@ -570,13 +576,13 @@ class ActivityController extends Controller
             )
         );
 
-        DB::transaction(function () use ($activity, $validated, $agreements, $contactFamily, $activityType) {
-            $activityTypeChanged = (int) $activity->activity_type_id !== (int) $validated['activity_type_id'];
+        DB::transaction(function () use ($activity, $validated, $agreements, $contactFamily, $activityType, $engagementDate, $activityTypeId, $completionCount) {
+            $activityTypeChanged = (int) $activity->activity_type_id !== (int) $activityTypeId;
 
             $activity->update([
-                'engagement_date' => $validated['engagement_date'],
-                'activity_type_id' => $validated['activity_type_id'],
-                'completion_count' => (int) $validated['completion_count'],
+                'engagement_date' => $engagementDate,
+                'activity_type_id' => $activityTypeId,
+                'completion_count' => $completionCount,
                 'internal_only' => $validated['internal_only'] ?? false,
                 'cancelled' => $validated['cancelled'] ?? false,
                 'not_yet_complete' => $validated['not_yet_complete'] ?? false,
@@ -1175,9 +1181,7 @@ class ActivityController extends Controller
                 ]);
             }
 
-            $users = $selectedParticipantIds->isEmpty()
-                ? collect()
-                : User::query()->whereIn('id', $selectedParticipantIds)->get()->keyBy('id');
+            $users = User::query()->whereIn('id', $selectedParticipantIds)->get()->keyBy('id');
 
             foreach ($selectedParticipantIds as $participantId) {
                 $row = is_array($participantInput[$participantId] ?? null) ? $participantInput[$participantId] : [];

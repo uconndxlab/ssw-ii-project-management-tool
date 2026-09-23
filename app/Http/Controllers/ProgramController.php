@@ -219,10 +219,12 @@ class ProgramController extends Controller
         $query = Project::query()->orderBy('name');
 
         if ($access->isSystemAdmin()) {
+            $programId = $program?->id;
+
             return $query
                 ->when(
-                    $program,
-                    fn ($q) => $q->where(fn ($inner) => $inner->where('active', true)->orWhereHas('programs', fn ($rel) => $rel->whereKey($program->id))),
+                    $programId !== null,
+                    fn ($q) => $q->where(fn ($inner) => $inner->where('active', true)->orWhereHas('programs', fn ($rel) => $rel->whereKey($programId))),
                     fn ($q) => $q->where('active', true),
                 )
                 ->get();

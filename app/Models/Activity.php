@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\HasProgramScope;
 use App\Models\Concerns\VisibleToUser;
+use App\Support\CarbonDate;
 use Database\Factories\ActivityFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -133,7 +134,7 @@ class Activity extends Model
         }
 
         $parts[] = $this->activityType?->contactFamily?->name;
-        $parts[] = $this->engagement_date?->format('M j, Y');
+        $parts[] = CarbonDate::parse($this->engagement_date)?->format('M j, Y');
 
         if (filled($this->user?->name)) {
             $parts[] = 'Logged by '.$this->user->name;

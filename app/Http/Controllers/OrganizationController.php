@@ -12,6 +12,7 @@ use App\Models\Project;
 use App\Models\State;
 use App\Models\User;
 use App\Support\Authorization\ScopeSync;
+use App\Support\CarbonDate;
 use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -140,7 +141,7 @@ class OrganizationController extends Controller
         $teamMembers = collect($teamMembersMap)->sortBy('name');
 
         // YTD activities
-        $ytdActivities = $allActivities->filter(fn ($e) => $e->engagement_date->year === now()->year);
+        $ytdActivities = $allActivities->filter(fn ($e) => CarbonDate::parse($e->engagement_date)?->year === now()->year);
 
         // YTD totals
         $ytdTotals = [

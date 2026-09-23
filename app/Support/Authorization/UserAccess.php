@@ -255,11 +255,7 @@ class UserAccess
             return $scopeId !== null && $this->adminsProject($scopeId);
         }
 
-        if ($scopeType === PrivilegeScopeType::Program) {
-            return $scopeId !== null && $this->adminsProgram($scopeId);
-        }
-
-        return false;
+        return $scopeId !== null && $this->adminsProgram($scopeId);
     }
 
     /**
@@ -405,7 +401,7 @@ class UserAccess
                 }
             }
 
-            return $projectIds !== [];
+            return true;
         }
 
         if ($programIds === []) {

@@ -43,11 +43,12 @@ class PrivateFileService
             ]);
         }
 
+        /** @var string|false $path */
         $path = $file->store($directory, [
             'disk' => $this->diskName(),
         ]);
 
-        if (! is_string($path) || $path === '') {
+        if ($path === false || $path === '') {
             throw new RuntimeException('Failed to store the uploaded file.');
         }
 
@@ -56,7 +57,7 @@ class PrivateFileService
 
     public function exists(?string $path): bool
     {
-        return is_string($path) && $path !== '' && $this->disk()->exists($path);
+        return $path !== null && $path !== '' && $this->disk()->exists($path);
     }
 
     public function copy(string $from, string $to): void
@@ -96,7 +97,7 @@ class PrivateFileService
                 'ResponseContentDisposition' => $disposition,
             ];
 
-            if (is_string($responseMime) && $responseMime !== '') {
+            if ($responseMime !== '') {
                 $options['ResponseContentType'] = $responseMime;
             }
 

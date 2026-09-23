@@ -31,24 +31,23 @@ class DeliverableActivityHistogram
                     return null;
                 }
 
-                return Carbon::parse($history->activity_date)->startOfDay();
+                return CarbonDate::parse($history->activity_date)?->startOfDay();
             })
             ->filter()
             ->values();
 
-        $effectiveEnd = $agreement->extension_end_date ?? $agreement->end_date;
-        $spanStart = $agreement->start_date?->copy()->startOfDay();
-        $spanEnd = $effectiveEnd?->copy()->startOfDay();
+        $spanStart = CarbonDate::parse($agreement->start_date)?->copy()->startOfDay();
+        $spanEnd = CarbonDate::parse($agreement->extension_end_date ?? $agreement->end_date)?->copy()->startOfDay();
 
         if ($dates->isNotEmpty()) {
             $minDate = $dates->min();
             $maxDate = $dates->max();
 
-            if (! $spanStart || $minDate->lt($spanStart)) {
+            if ($minDate instanceof Carbon && (! $spanStart || $minDate->lt($spanStart))) {
                 $spanStart = $minDate->copy();
             }
 
-            if (! $spanEnd || $maxDate->gt($spanEnd)) {
+            if ($maxDate instanceof Carbon && (! $spanEnd || $maxDate->gt($spanEnd))) {
                 $spanEnd = $maxDate->copy();
             }
         }
@@ -98,9 +97,8 @@ class DeliverableActivityHistogram
             ->filter(fn (DeliverableContribution $contribution) => ! $contribution->cancelled)
             ->filter(fn (DeliverableContribution $contribution) => $contribution->activityHistory instanceof AgreementActivityHistory);
 
-        $effectiveEnd = $agreement->extension_end_date ?? $agreement->end_date;
-        $spanStart = $agreement->start_date?->copy()->startOfDay();
-        $spanEnd = $effectiveEnd?->copy()->startOfDay();
+        $spanStart = CarbonDate::parse($agreement->start_date)?->copy()->startOfDay();
+        $spanEnd = CarbonDate::parse($agreement->extension_end_date ?? $agreement->end_date)?->copy()->startOfDay();
 
         $contributionDates = $contributions
             ->map(function (DeliverableContribution $contribution) {
@@ -109,7 +107,7 @@ class DeliverableActivityHistogram
                     return null;
                 }
 
-                return Carbon::parse($history->activity_date)->startOfDay();
+                return CarbonDate::parse($history->activity_date)?->startOfDay();
             })
             ->filter()
             ->values();
@@ -118,11 +116,11 @@ class DeliverableActivityHistogram
             $minDate = $contributionDates->min();
             $maxDate = $contributionDates->max();
 
-            if (! $spanStart || $minDate->lt($spanStart)) {
+            if ($minDate instanceof Carbon && (! $spanStart || $minDate->lt($spanStart))) {
                 $spanStart = $minDate->copy();
             }
 
-            if (! $spanEnd || $maxDate->gt($spanEnd)) {
+            if ($maxDate instanceof Carbon && (! $spanEnd || $maxDate->gt($spanEnd))) {
                 $spanEnd = $maxDate->copy();
             }
         }
@@ -144,8 +142,13 @@ class DeliverableActivityHistogram
                     return null;
                 }
 
+                $activityDate = CarbonDate::parse($history->activity_date);
+                if ($activityDate === null) {
+                    return null;
+                }
+
                 return [
-                    'key' => self::bucketKey(Carbon::parse($history->activity_date)->startOfDay(), $granularity),
+                    'key' => self::bucketKey($activityDate->startOfDay(), $granularity),
                     'contribution' => $contribution,
                 ];
             })
