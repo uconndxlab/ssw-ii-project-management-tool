@@ -27,16 +27,19 @@ class State extends Model
         'is_territory' => 'boolean',
     ];
 
+    /** @return BelongsToMany<Organization, $this> */
     public function organizations(): BelongsToMany
     {
         return $this->belongsToMany(Organization::class, 'organization_state')->withTimestamps();
     }
 
+    /** @return BelongsToMany<Agreement, $this> */
     public function agreements(): BelongsToMany
     {
         return $this->belongsToMany(Agreement::class, 'agreement_state')->withTimestamps();
     }
 
+    /** @return BelongsToMany<Activity, $this> */
     public function activities(): BelongsToMany
     {
         return $this->belongsToMany(Activity::class, 'activity_state')->withTimestamps();
@@ -44,6 +47,8 @@ class State extends Model
 
     /**
      * Legacy accessor for backwards compatibility during migration
+     *
+     * @return BelongsToMany<Agreement, $this>
      */
     public function projects(): BelongsToMany
     {

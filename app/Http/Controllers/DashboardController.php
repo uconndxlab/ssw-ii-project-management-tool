@@ -6,13 +6,12 @@ use App\Models\Activity;
 use App\Models\Agreement;
 use App\Models\Organization;
 use App\Models\State;
-use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        $user = Auth::user();
+        $user = $this->actor();
 
         if ($user->isSystemAdmin()) {
             return $this->adminHome();
@@ -23,7 +22,7 @@ class DashboardController extends Controller
 
     protected function adminHome()
     {
-        $user = Auth::user();
+        $user = $this->actor();
 
         // YTD activities
         $ytdActivities = Activity::whereYear('engagement_date', now()->year)

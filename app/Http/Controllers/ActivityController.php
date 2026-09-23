@@ -46,7 +46,7 @@ class ActivityController extends Controller
         $visibleAgreementIds = $visibleAgreements->pluck('id');
 
         $query = Activity::query()
-            ->visibleTo(Auth::user())
+            ->visibleTo($this->actor())
             ->with(['agreements.organizations', 'agreements.states', 'user', 'activityType', 'organizations', 'states']);
 
         // Search
@@ -412,12 +412,20 @@ class ActivityController extends Controller
             'agreementFundingSources',
         ]);
 
-        $scopedLoggingFields = $this->scopedLoggingFields(
-            $activity->agreements,
-            $activity->activityType->contactFamily,
-            $activity->activityType,
-            $activity->programs->pluck('id')->all()
-        );
+        $activityType = $activity->activityType;
+        if (! $activityType instanceof ActivityType) {
+            $scopedLoggingFields = [];
+        } else {
+            $contactFamily = $activityType->contactFamily;
+            $scopedLoggingFields = $contactFamily instanceof ContactFamily
+                ? $this->scopedLoggingFields(
+                    $activity->agreements,
+                    $contactFamily,
+                    $activityType,
+                    $activity->programs->pluck('id')->all()
+                )
+                : [];
+        }
 
         return view('activities.show', compact('activity', 'scopedLoggingFields'));
     }
@@ -464,7 +472,8 @@ class ActivityController extends Controller
             'programs.projects',
             'programs.users:id,name,email,access_profile,active',
         ]);
-        $currentContactFamilyId = old('contact_family_id', $activity->activityType?->contactFamily?->id);
+        $contactFamilyId = $activity->activityType?->contactFamily?->id;
+        $currentContactFamilyId = old('contact_family_id', $contactFamilyId !== null ? (string) $contactFamilyId : '');
 
         return view('activities.edit', compact(
             'activity',
@@ -648,7 +657,7 @@ class ActivityController extends Controller
     private function getVisibleAgreements()
     {
         return Agreement::query()
-            ->visibleTo(Auth::user())
+            ->visibleTo($this->actor())
             ->where('agreements.active', true)
             ->with('organizations')
             ->orderBy('name')

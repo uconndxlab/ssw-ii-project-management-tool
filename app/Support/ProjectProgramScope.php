@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Enums\ProgramScopeMode;
 use App\Models\ActivityType;
+use App\Models\Certificate;
 use App\Models\ContactFamily;
 use App\Models\LoggingField;
 use App\Models\Program;
@@ -232,6 +233,43 @@ class ProjectProgramScope
             ->isNotEmpty();
     }
 
+    /**
+     * Whether a scoped catalog entity (e.g. certification tool) may be assigned on a certificate form,
+     * using the same rules as the logging-field assignment picker.
+     *
+     * @param  Collection<int, int|string>  $entityProgramIds
+     * @param  array<int, int|string>  $certificateProgramIds
+     */
+    public static function scopedEntityVisibleToCertificatePrograms(
+        ProgramScopeMode|string|null $entityMode,
+        Collection $entityProgramIds,
+        ProgramScopeMode|string|null $certificateMode,
+        array $certificateProgramIds,
+    ): bool {
+        $certificateMode = self::normalizeMode($certificateMode, Certificate::class);
+        $entityMode = $entityMode instanceof ProgramScopeMode
+            ? $entityMode
+            : (ProgramScopeMode::tryFrom((string) $entityMode) ?? ProgramScopeMode::Specific);
+
+        if ($certificateMode === ProgramScopeMode::All) {
+            return $entityMode !== ProgramScopeMode::None;
+        }
+
+        if ($certificateMode === ProgramScopeMode::None || $certificateProgramIds === []) {
+            return false;
+        }
+
+        if ($entityMode === ProgramScopeMode::All) {
+            return true;
+        }
+
+        if ($entityMode === ProgramScopeMode::None || $entityProgramIds->isEmpty()) {
+            return false;
+        }
+
+        return self::matchesSelectedPrograms($entityProgramIds, $certificateProgramIds, false);
+    }
+
     public static function modeAwareProgramIds(ProgramScopeMode|string|null $mode, string $modelClass, array $projectIds, array $programIds): array
     {
         $normalizedMode = self::normalizeMode($mode, $modelClass);
@@ -322,13 +360,13 @@ class ProjectProgramScope
      *
      * @param  Collection<int, Project>  $projects
      * @return array{
-     *     scopeProjects: Collection,
-     *     selectedProjectIds: list<string>,
-     *     selectedProgramIds: list<string>,
-     *     programOptions: list<array<string, mixed>>,
-     *     programProjectIdsMap: array<string, list<string>>,
-     *     projectProgramMap: array<string, list<string>>,
-     *     projectNamesMap: array<string, string>,
+     *     scopeProjects: Collection<int, Project>,
+     *     selectedProjectIds: array<int, string>,
+     *     selectedProgramIds: array<int, string>,
+     *     programOptions: array<int, array<string, mixed>>,
+     *     programProjectIdsMap: array<int|string, array<int, string>>,
+     *     projectProgramMap: array<int|string, array<int, string>>,
+     *     projectNamesMap: array<int|string, string>,
      *     projectPickerId: string,
      *     programPickerId: string,
      * }

@@ -1,5 +1,9 @@
 <?php
 
+use App\Models\Program;
+use App\Models\Project;
+use App\Models\User;
+use App\Models\UserPrivilege;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -44,7 +48,34 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+function createProjectWithProgram(): array
 {
-    // ..
+    $project = Project::factory()->create();
+    $program = Program::factory()->create();
+    $project->programs()->attach($program);
+
+    return [$project, $program];
 }
+
+function createSystemAdmin(): User
+{
+    return User::factory()->systemAdmin()->create();
+}
+
+function createProgramAdmin(Program $program): User
+{
+    $user = User::factory()->adminViewer()->create();
+    UserPrivilege::factory()->programAdmin($program)->create(['user_id' => $user->id]);
+
+    return $user;
+}
+
+function createProgramViewer(Program $program): User
+{
+    $user = User::factory()->adminViewer()->create();
+    UserPrivilege::factory()->programViewer($program)->create(['user_id' => $user->id]);
+
+    return $user;
+}
+
+require_once __DIR__.'/Support/CertificationHelpers.php';

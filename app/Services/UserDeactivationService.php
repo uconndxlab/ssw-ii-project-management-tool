@@ -25,7 +25,7 @@ class UserDeactivationService
             $user->load(['deliverables']);
 
             foreach ($user->deliverables as $deliverable) {
-                if ($deliverable->pivot->unassigned_at) {
+                if ($deliverable->pivot?->unassigned_at) {
                     continue;
                 }
 

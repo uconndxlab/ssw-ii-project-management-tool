@@ -6,6 +6,7 @@ use App\Enums\ProgramScopeMode;
 use App\Models\Concerns\HasProgramScope;
 use App\Models\Concerns\VisibleToUser;
 use Database\Factories\ActivityTypeFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,6 +16,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * Index/view: admins only, and a listed program is in your privilege.
  * Edit: you admin a listed program. Delete: every listed program is in your admin scope. No programs: system admin only.
+ *
+ * @property ProgramScopeMode $program_scope_mode
  */
 class ActivityType extends Model
 {
@@ -44,16 +47,19 @@ class ActivityType extends Model
         ];
     }
 
+    /** @return BelongsTo<ContactFamily, $this> */
     public function contactFamily(): BelongsTo
     {
         return $this->belongsTo(ContactFamily::class);
     }
 
+    /** @return HasMany<Activity, $this> */
     public function activities(): HasMany
     {
         return $this->hasMany(Activity::class);
     }
 
+    /** @return BelongsToMany<LoggingField, $this> */
     public function activityTypeLoggingFields(): BelongsToMany
     {
         return $this->belongsToMany(LoggingField::class, 'activity_type_logging_field_assignments', 'activity_type_id', 'logging_field_id')
@@ -63,6 +69,7 @@ class ActivityType extends Model
             ->orderBy('name', 'asc');
     }
 
+    /** @return BelongsToMany<Program, $this> */
     public function programs(): BelongsToMany
     {
         return $this->belongsToMany(Program::class, 'activity_type_program')->withTimestamps();
@@ -70,8 +77,11 @@ class ActivityType extends Model
 
     /**
      * Scope to only active activity types
+     *
+     * @param  Builder<static>  $query
+     * @return Builder<static>
      */
-    public function scopeActive($query)
+    public function scopeActive(Builder $query): Builder
     {
         return $query->where('active', true);
     }

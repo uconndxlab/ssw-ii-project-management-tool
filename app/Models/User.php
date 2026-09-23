@@ -7,6 +7,8 @@ use App\Enums\AccessProfile;
 use App\Enums\ProgramScopeMode;
 use App\Models\Concerns\HasProgramScope;
 use App\Models\Concerns\VisibleToUser;
+use App\Models\Pivots\DeliverableUserPivot;
+use App\Support\Authorization\CertificationAccess;
 use App\Support\Authorization\UserAccess;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -21,6 +23,13 @@ use Illuminate\Support\Collection;
 /**
  * View others: viewer/admin with overlapping membership, or they report to you.
  * Members cannot browse users. You cannot edit your own permissions.
+ *
+ * @property AccessProfile $access_profile
+ * @property ProgramScopeMode $program_scope_mode
+ * @property DeliverableUserPivot|null $pivot
+ * @property Collection<int, string>|null $via_agreements
+ * @property bool|null $is_principal_investigator
+ * @property list<string>|null $also_in_teams
  */
 class User extends Authenticatable
 {
@@ -76,9 +85,21 @@ class User extends Authenticatable
         return UserAccess::for($this);
     }
 
+    public function certification(): CertificationAccess
+    {
+        return CertificationAccess::for($this);
+    }
+
+    /** @return HasMany<UserPrivilege, $this> */
     public function privileges(): HasMany
     {
         return $this->hasMany(UserPrivilege::class);
+    }
+
+    /** @return HasMany<UserCertificationDuty, $this> */
+    public function certificationDuties(): HasMany
+    {
+        return $this->hasMany(UserCertificationDuty::class);
     }
 
     public function isActive(): bool
@@ -87,8 +108,8 @@ class User extends Authenticatable
     }
 
     /**
-     * @param  Builder<User>  $query
-     * @return Builder<User>
+     * @param  Builder<static>  $query
+     * @return Builder<static>
      */
     public function scopeActive(Builder $query): Builder
     {
@@ -124,6 +145,7 @@ class User extends Authenticatable
         };
     }
 
+    /** @return HasMany<User, $this> */
     public function supervisees(): HasMany
     {
         return $this->hasMany(User::class, 'supervisor_id');
@@ -131,6 +153,8 @@ class User extends Authenticatable
 
     /**
      * Agreements this user is assigned to.
+     *
+     * @return BelongsToMany<Agreement, $this>
      */
     public function agreements(): BelongsToMany
     {
@@ -152,6 +176,7 @@ class User extends Authenticatable
         return $this->accessibleAgreementsQuery()->whereKey($agreementId)->exists();
     }
 
+    /** @return BelongsToMany<Agreement, $this> */
     public function principalInvestigatorAgreements(): BelongsToMany
     {
         return $this->belongsToMany(Agreement::class, 'agreement_principal_investigator')->withTimestamps();
@@ -159,12 +184,15 @@ class User extends Authenticatable
 
     /**
      * Programs this user is explicitly assigned to.
+     *
+     * @return BelongsToMany<Program, $this>
      */
     public function programs(): BelongsToMany
     {
         return $this->belongsToMany(Program::class, 'user_program')->withTimestamps();
     }
 
+    /** @return BelongsToMany<Activity, $this> */
     public function activities(): BelongsToMany
     {
         return $this->belongsToMany(Activity::class, 'activity_user')->withTimestamps();
@@ -172,6 +200,8 @@ class User extends Authenticatable
 
     /**
      * Teams this user belongs to.
+     *
+     * @return BelongsToMany<Team, $this>
      */
     public function teams(): BelongsToMany
     {
@@ -180,6 +210,8 @@ class User extends Authenticatable
 
     /**
      * Organizations this user is associated with.
+     *
+     * @return BelongsToMany<Organization, $this>
      */
     public function organizations(): BelongsToMany
     {
@@ -188,12 +220,15 @@ class User extends Authenticatable
 
     /**
      * The supervisor of this user.
+     *
+     * @return BelongsTo<User, $this>
      */
     public function supervisor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'supervisor_id');
     }
 
+    /** @return BelongsToMany<AgreementDeliverable, $this, DeliverableUserPivot> */
     public function deliverables(): BelongsToMany
     {
         return $this->belongsToMany(
@@ -203,6 +238,7 @@ class User extends Authenticatable
             'agreement_deliverable_id'
         )
             ->withPivot(['assigned_at', 'unassigned_at', 'source_team_id', 'target_quantity'])
+            ->using(DeliverableUserPivot::class)
             ->withTimestamps();
     }
 

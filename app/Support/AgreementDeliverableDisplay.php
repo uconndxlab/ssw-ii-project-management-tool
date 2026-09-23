@@ -23,7 +23,7 @@ class AgreementDeliverableDisplay
         $agreementMemberUserIds = self::buildAgreementMemberUserIds($agreement);
 
         $items = $agreement->deliverables
-            ->reject(fn (AgreementDeliverable $deliverable) => $deliverable->retired_at)
+            ->reject(fn (AgreementDeliverable $deliverable) => $deliverable->retired_at !== null)
             ->map(fn (AgreementDeliverable $deliverable) => self::buildDeliverableProgress(
                 $deliverable,
                 $teamLookup,
@@ -46,7 +46,7 @@ class AgreementDeliverableDisplay
         $userId = (int) $user->id;
 
         $items = $agreement->deliverables
-            ->reject(fn (AgreementDeliverable $deliverable) => $deliverable->retired_at)
+            ->reject(fn (AgreementDeliverable $deliverable) => $deliverable->retired_at !== null)
             ->filter(fn (AgreementDeliverable $deliverable) => self::userIsTaggedOrAssigned($agreement, $deliverable, $user))
             ->map(function (AgreementDeliverable $deliverable) use ($agreement, $userId) {
                 $teamLookup = $agreement->teams->keyBy(fn (Team $team) => (int) $team->id);
@@ -358,7 +358,7 @@ class AgreementDeliverableDisplay
             );
         }
 
-        $liveTeams = $deliverable->teams->filter(fn (Team $team) => ! $team->pivot->unassigned_at)->values();
+        $liveTeams = $deliverable->teams->filter(fn (Team $team) => ! $team->pivot?->unassigned_at)->values();
         $liveUsers = $deliverable->users
             ->filter(fn (User $user) => self::isActivelyAssignedUser(
                 $user,
@@ -547,7 +547,7 @@ class AgreementDeliverableDisplay
         Collection $contributorByUserId
     ): Collection {
         $assignedTeams = $deliverable->teams
-            ->filter(fn (Team $team) => ! $team->pivot->unassigned_at)
+            ->filter(fn (Team $team) => ! $team->pivot?->unassigned_at)
             ->values();
 
         $groups = collect();
@@ -582,7 +582,7 @@ class AgreementDeliverableDisplay
 
             $groups->push([
                 'team' => $team,
-                'team_recommended_target' => DeliverableAssignmentTargets::normalizeQuantity($team->pivot->target_quantity),
+                'team_recommended_target' => DeliverableAssignmentTargets::normalizeQuantity($team->pivot?->target_quantity),
                 'users' => $rows,
             ]);
         }
@@ -626,10 +626,10 @@ class AgreementDeliverableDisplay
         Collection $agreementMemberUserIds
     ): array {
         $assignedTeams = $deliverable->teams
-            ->filter(fn (Team $team) => ! $team->pivot->unassigned_at)
+            ->filter(fn (Team $team) => ! $team->pivot?->unassigned_at)
             ->values();
         $assignedUsers = $deliverable->users
-            ->filter(fn (User $user) => ! $user->pivot->unassigned_at)
+            ->filter(fn (User $user) => ! $user->pivot?->unassigned_at)
             ->values();
 
         $groups = [];
@@ -688,10 +688,10 @@ class AgreementDeliverableDisplay
         Collection $contributorByUserId
     ): Collection {
         $assignedTeams = $deliverable->teams
-            ->filter(fn (Team $team) => ! $team->pivot->unassigned_at)
+            ->filter(fn (Team $team) => ! $team->pivot?->unassigned_at)
             ->values();
         $assignedUsers = $deliverable->users
-            ->filter(fn (User $user) => ! $user->pivot->unassigned_at)
+            ->filter(fn (User $user) => ! $user->pivot?->unassigned_at)
             ->values();
 
         $groups = collect();
@@ -751,7 +751,7 @@ class AgreementDeliverableDisplay
                     'team_name' => $summary['team_name'] ?? self::resolveDisplayTeamNameForAssignedUser($user, $deliverable, $teamLookup),
                     'completed_value' => (float) ($summary['completed_value'] ?? 0),
                     'recommended_target' => self::resolveUserPivotTarget($deliverable, (int) $user->id),
-                    'source_assignment_type' => $user->pivot->source_team_id ? 'team' : 'user',
+                    'source_assignment_type' => $user->pivot?->source_team_id ? 'team' : 'user',
                 ];
             })
             ->sortBy(fn (array $row) => $row['user']->name)
@@ -793,7 +793,7 @@ class AgreementDeliverableDisplay
         Collection $teamLookup,
         Collection $agreementMemberUserIds
     ): bool {
-        if ($user->pivot->unassigned_at) {
+        if ($user->pivot?->unassigned_at) {
             return false;
         }
 
@@ -807,7 +807,7 @@ class AgreementDeliverableDisplay
         }
 
         $teamAssignedToDeliverable = $deliverable->teams
-            ->filter(fn (Team $team) => ! $team->pivot->unassigned_at)
+            ->filter(fn (Team $team) => ! $team->pivot?->unassigned_at)
             ->pluck('id')
             ->map(fn ($id) => (int) $id)
             ->contains($sourceTeamId);
@@ -939,7 +939,7 @@ class AgreementDeliverableDisplay
         }
 
         $activeTeamIds = $deliverable->teams
-            ->filter(fn (Team $team) => ! $team->pivot->unassigned_at)
+            ->filter(fn (Team $team) => ! $team->pivot?->unassigned_at)
             ->pluck('id')
             ->map(fn ($id) => (int) $id);
 
@@ -965,7 +965,7 @@ class AgreementDeliverableDisplay
         }
 
         $activeDeliverableTeamIds = $deliverable->teams
-            ->filter(fn (Team $team) => ! $team->pivot->unassigned_at)
+            ->filter(fn (Team $team) => ! $team->pivot?->unassigned_at)
             ->pluck('id')
             ->map(fn ($id) => (int) $id);
 

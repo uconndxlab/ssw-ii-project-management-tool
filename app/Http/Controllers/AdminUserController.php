@@ -16,7 +16,6 @@ use App\Support\Authorization\ScopeSync;
 use App\Support\Authorization\UserAccess;
 use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class AdminUserController extends Controller
 {
@@ -28,7 +27,7 @@ class AdminUserController extends Controller
     {
         $this->authorize('viewAny', User::class);
 
-        $query = User::query()->visibleTo(Auth::user())->with([
+        $query = User::query()->visibleTo($this->actor())->with([
             'supervisor:id,name',
             'programs.projects:id,name',
             'teams.programs.projects:id,name',
@@ -158,7 +157,7 @@ class AdminUserController extends Controller
             'programs.projects:id,name',
             'teams.programs.projects:id,name',
         ]);
-        UserAccess::for(Auth::user())->applySuperviseesVisibility($query);
+        UserAccess::for($this->actor())->applySuperviseesVisibility($query);
 
         if ($request->filled('search')) {
             $search = $request->input('search');
@@ -272,7 +271,7 @@ class AdminUserController extends Controller
         return view('admin.users.show', [
             ...UserShowPageData::for($user),
             'isProfile' => false,
-            'canEditUser' => Auth::user()->can('update', $user),
+            'canEditUser' => $this->actor()->can('update', $user),
         ]);
     }
 
@@ -302,10 +301,10 @@ class AdminUserController extends Controller
     {
         $user->loadMissing(['programs.projects', 'privileges']);
 
-        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor(Auth::user(), $user->exists ? $user : null);
+        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor($this->actor(), $user->exists ? $user : null);
 
         $teams = Team::query()->orderBy('name')->get(['id', 'name']);
-        $access = UserAccess::for(Auth::user());
+        $access = UserAccess::for($this->actor());
         $ledgerProjects = Project::query()->orderBy('name');
         $ledgerPrograms = Program::query()->orderBy('name');
         if (! $access->isSystemAdmin()) {
@@ -326,7 +325,7 @@ class AdminUserController extends Controller
     private function syncScopeAssignments(User $user, array $validated): void
     {
         ScopeSync::applyTo(
-            Auth::user(),
+            $this->actor(),
             $user,
             ProgramScopeMode::from($validated['program_scope_mode'] ?? ProgramScopeMode::Specific->value),
             $validated['program_ids'] ?? [],
@@ -338,11 +337,11 @@ class AdminUserController extends Controller
         $user->load('privileges');
         $profile = AccessProfile::from($validated['access_profile']);
         PrivilegeSync::apply(
-            Auth::user(),
+            $this->actor(),
             $user,
             $profile,
             $request->boolean('is_supervisor') && $profile !== AccessProfile::Input,
-            PrivilegeSync::rowsFromRequest($request->all(), Auth::user()),
+            PrivilegeSync::rowsFromRequest($request->all(), $this->actor()),
         );
     }
 }

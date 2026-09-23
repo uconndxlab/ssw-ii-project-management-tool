@@ -2,9 +2,14 @@
 
 namespace App\Models\Concerns;
 
+use App\Models\Program;
 use App\Models\Project;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
 
+/**
+ * @property-read EloquentCollection<int, Program> $programs
+ */
 trait HasProgramScope
 {
     /**
@@ -18,14 +23,14 @@ trait HasProgramScope
             ? $this->programs
             : $this->programs()->with('projects')->get();
 
-        $programs->each(function ($program) {
+        $programs->each(function (Program $program) {
             if (! $program->relationLoaded('projects')) {
                 $program->load('projects');
             }
         });
 
         return $programs
-            ->flatMap(fn ($program) => $program->projects)
+            ->flatMap(fn (Program $program) => $program->projects)
             ->unique('id')
             ->sortBy('name')
             ->values();

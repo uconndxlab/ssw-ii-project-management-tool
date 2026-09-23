@@ -9,6 +9,8 @@ use App\Enums\ProgramScopeMode;
 use App\Models\Activity;
 use App\Models\ActivityType;
 use App\Models\Agreement;
+use App\Models\Certificate;
+use App\Models\CertificationTool;
 use App\Models\ContactFamily;
 use App\Models\LoggingField;
 use App\Models\Organization;
@@ -802,6 +804,8 @@ class UserAccess
             $record instanceof ContactFamily => $this->hasAdmin() && $this->applyScopedEntityVisibility(ContactFamily::query()->whereKey($record->id))->exists(),
             $record instanceof LoggingField => $this->hasAdmin() && $this->applyScopedEntityVisibility(LoggingField::query()->whereKey($record->id))->exists(),
             $record instanceof ActivityType => $this->hasAdmin() && $this->applyScopedEntityVisibility(ActivityType::query()->whereKey($record->id))->exists(),
+            $record instanceof CertificationTool => $this->hasAdmin() && $this->applyScopedEntityVisibility(CertificationTool::query()->whereKey($record->id))->exists(),
+            $record instanceof Certificate => $this->hasAdmin() && $this->applyScopedEntityVisibility(Certificate::query()->whereKey($record->id))->exists(),
             $record instanceof Activity => $this->canViewActivity($record),
             $record instanceof User => $this->canViewUser($record),
             default => false,

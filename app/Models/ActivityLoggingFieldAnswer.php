@@ -37,11 +37,13 @@ class ActivityLoggingFieldAnswer extends Model
         ];
     }
 
+    /** @return BelongsTo<Activity, $this> */
     public function activity(): BelongsTo
     {
         return $this->belongsTo(Activity::class);
     }
 
+    /** @return BelongsTo<LoggingField, $this> */
     public function loggingField(): BelongsTo
     {
         return $this->belongsTo(LoggingField::class);

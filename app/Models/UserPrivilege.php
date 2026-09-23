@@ -9,6 +9,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property PrivilegeCapability $capability
+ * @property PrivilegeScopeType $scope_type
+ */
 class UserPrivilege extends Model
 {
     /** @use HasFactory<UserPrivilegeFactory> */
@@ -30,6 +34,7 @@ class UserPrivilege extends Model
         ];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

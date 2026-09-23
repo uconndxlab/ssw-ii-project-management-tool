@@ -43,26 +43,31 @@ class DeliverableContribution extends Model
         ];
     }
 
+    /** @return BelongsTo<AgreementActivityHistory, $this> */
     public function activityHistory(): BelongsTo
     {
         return $this->belongsTo(AgreementActivityHistory::class, 'agreement_activity_history_id');
     }
 
+    /** @return BelongsTo<AgreementDeliverable, $this> */
     public function deliverable(): BelongsTo
     {
         return $this->belongsTo(AgreementDeliverable::class, 'agreement_deliverable_id');
     }
 
+    /** @return BelongsTo<Agreement, $this> */
     public function agreement(): BelongsTo
     {
         return $this->belongsTo(Agreement::class);
     }
 
+    /** @return BelongsTo<Activity, $this> */
     public function activity(): BelongsTo
     {
         return $this->belongsTo(Activity::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function contributor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'contributor_user_id');

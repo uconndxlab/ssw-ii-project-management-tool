@@ -32,36 +32,43 @@ class Program extends Model
         ];
     }
 
+    /** @return BelongsToMany<Activity, $this> */
     public function activities(): BelongsToMany
     {
         return $this->belongsToMany(Activity::class, 'activity_program')->withTimestamps();
     }
 
+    /** @return BelongsToMany<Agreement, $this> */
     public function agreements(): BelongsToMany
     {
         return $this->belongsToMany(Agreement::class, 'agreement_program')->withTimestamps();
     }
 
+    /** @return HasMany<AgreementCertificationCandidate, $this> */
     public function agreementCertificationCandidates(): HasMany
     {
         return $this->hasMany(AgreementCertificationCandidate::class);
     }
 
+    /** @return BelongsToMany<Project, $this> */
     public function projects(): BelongsToMany
     {
         return $this->belongsToMany(Project::class, 'program_project')->withTimestamps();
     }
 
+    /** @return BelongsToMany<Organization, $this> */
     public function organizations(): BelongsToMany
     {
         return $this->belongsToMany(Organization::class, 'organization_program')->withTimestamps();
     }
 
+    /** @return BelongsToMany<User, $this> */
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'user_program')->withTimestamps();
     }
 
+    /** @return BelongsToMany<Team, $this> */
     public function teams(): BelongsToMany
     {
         return $this->belongsToMany(Team::class, 'team_program')->withTimestamps();

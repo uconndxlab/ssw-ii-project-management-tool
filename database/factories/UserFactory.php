@@ -49,12 +49,17 @@ class UserFactory extends Factory
         ]);
     }
 
-    public function systemAdmin(): static
+    public function adminViewer(): static
     {
         return $this->state(fn (array $attributes) => [
             'access_profile' => AccessProfile::AdminViewer,
             'is_supervisor' => false,
-        ])->afterCreating(function (User $user) {
+        ]);
+    }
+
+    public function systemAdmin(): static
+    {
+        return $this->adminViewer()->afterCreating(function (User $user) {
             $user->privileges()->firstOrCreate([
                 'capability' => PrivilegeCapability::Admin,
                 'scope_type' => PrivilegeScopeType::System,

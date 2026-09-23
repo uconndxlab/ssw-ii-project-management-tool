@@ -8,6 +8,7 @@ enum ProgramScopeMode: string
     case Specific = 'specific';
     case None = 'none';
 
+    /** @return list<string> */
     public static function values(): array
     {
         return array_map(fn (self $case) => $case->value, self::cases());

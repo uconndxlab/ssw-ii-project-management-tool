@@ -6,13 +6,12 @@ use App\Models\Agreement;
 use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class SearchController extends Controller
 {
     public function index(Request $request)
     {
-        $user = Auth::user();
+        $user = $this->actor();
 
         if ($user->access()->isInput()) {
             abort(403);

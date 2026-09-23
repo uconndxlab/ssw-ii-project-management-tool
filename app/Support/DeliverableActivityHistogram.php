@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Agreement;
+use App\Models\AgreementActivityHistory;
 use App\Models\AgreementDeliverable;
 use App\Models\DeliverableContribution;
 use Carbon\Carbon;
@@ -21,10 +22,18 @@ class DeliverableActivityHistogram
         $contributions = $agreement->deliverables
             ->flatMap(fn (AgreementDeliverable $deliverable) => $deliverable->contributions)
             ->filter(fn (DeliverableContribution $contribution) => ! $contribution->cancelled)
-            ->filter(fn (DeliverableContribution $contribution) => $contribution->activityHistory?->activity_date !== null);
+            ->filter(fn (DeliverableContribution $contribution) => $contribution->activityHistory instanceof AgreementActivityHistory);
 
         $dates = $contributions
-            ->map(fn (DeliverableContribution $contribution) => Carbon::parse($contribution->activityHistory->activity_date)->startOfDay())
+            ->map(function (DeliverableContribution $contribution) {
+                $history = $contribution->activityHistory;
+                if (! $history instanceof AgreementActivityHistory) {
+                    return null;
+                }
+
+                return Carbon::parse($history->activity_date)->startOfDay();
+            })
+            ->filter()
             ->values();
 
         $effectiveEnd = $agreement->extension_end_date ?? $agreement->end_date;
@@ -87,14 +96,23 @@ class DeliverableActivityHistogram
     ): array {
         $contributions = $deliverable->contributions
             ->filter(fn (DeliverableContribution $contribution) => ! $contribution->cancelled)
-            ->filter(fn (DeliverableContribution $contribution) => $contribution->activityHistory?->activity_date !== null);
+            ->filter(fn (DeliverableContribution $contribution) => $contribution->activityHistory instanceof AgreementActivityHistory);
 
         $effectiveEnd = $agreement->extension_end_date ?? $agreement->end_date;
         $spanStart = $agreement->start_date?->copy()->startOfDay();
         $spanEnd = $effectiveEnd?->copy()->startOfDay();
 
         $contributionDates = $contributions
-            ->map(fn (DeliverableContribution $contribution) => Carbon::parse($contribution->activityHistory->activity_date)->startOfDay());
+            ->map(function (DeliverableContribution $contribution) {
+                $history = $contribution->activityHistory;
+                if (! $history instanceof AgreementActivityHistory) {
+                    return null;
+                }
+
+                return Carbon::parse($history->activity_date)->startOfDay();
+            })
+            ->filter()
+            ->values();
 
         if ($contributionDates->isNotEmpty()) {
             $minDate = $contributionDates->min();
@@ -120,11 +138,20 @@ class DeliverableActivityHistogram
         $granularity = self::resolveGranularity($spanStart, $spanEnd);
         $bucketRanges = self::buildBucketRanges($spanStart, $spanEnd, $granularity);
         $creditedByStart = $contributions
-            ->groupBy(fn (DeliverableContribution $contribution) => self::bucketKey(
-                Carbon::parse($contribution->activityHistory->activity_date)->startOfDay(),
-                $granularity
-            ))
-            ->map(fn (Collection $group) => round($group->sum(fn (DeliverableContribution $contribution) => self::creditedValue($deliverable, $contribution)), 2));
+            ->map(function (DeliverableContribution $contribution) use ($granularity) {
+                $history = $contribution->activityHistory;
+                if (! $history instanceof AgreementActivityHistory) {
+                    return null;
+                }
+
+                return [
+                    'key' => self::bucketKey(Carbon::parse($history->activity_date)->startOfDay(), $granularity),
+                    'contribution' => $contribution,
+                ];
+            })
+            ->filter()
+            ->groupBy('key')
+            ->map(fn (Collection $group) => round($group->sum(fn (array $row) => self::creditedValue($deliverable, $row['contribution'])), 2));
 
         $totalDays = max(1, $spanStart->diffInDays($spanEnd) + 1);
         $cumulative = 0.0;

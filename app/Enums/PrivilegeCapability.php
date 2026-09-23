@@ -7,6 +7,7 @@ enum PrivilegeCapability: string
     case Admin = 'admin';
     case View = 'view';
 
+    /** @return list<string> */
     public static function values(): array
     {
         return array_map(fn (self $case) => $case->value, self::cases());

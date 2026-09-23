@@ -19,11 +19,13 @@ class AgreementCertificationCandidate extends Model
         'notes',
     ];
 
+    /** @return BelongsTo<Agreement, $this> */
     public function agreement(): BelongsTo
     {
         return $this->belongsTo(Agreement::class);
     }
 
+    /** @return BelongsTo<Program, $this> */
     public function program(): BelongsTo
     {
         return $this->belongsTo(Program::class);

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Activity;
+use App\Models\ActivityParticipantTime;
 use App\Models\Agreement;
 use App\Models\AgreementActivityHistory;
 use App\Models\AgreementDeliverable;
@@ -133,7 +134,7 @@ class DeliverableContributionService
             ->all();
 
         $participantTimesByUser = $activity->participantTimes
-            ->filter(fn ($time) => $time->user_id)
+            ->filter(fn (ActivityParticipantTime $time) => $time->user_id !== null)
             ->keyBy(fn ($time) => (int) $time->user_id);
 
         $completionCount = max(1, (int) ($activity->completion_count ?? 1));
@@ -652,7 +653,7 @@ class DeliverableContributionService
             foreach ($historyTeamIds as $teamId) {
                 $team = $deliverableTeamsById->get($teamId);
 
-                if (! $team || $this->activityIsAfterUnassignment($activityDate, $team->pivot->unassigned_at)) {
+                if (! $team || $this->activityIsAfterUnassignment($activityDate, $team->pivot?->unassigned_at)) {
                     continue;
                 }
 
@@ -661,7 +662,7 @@ class DeliverableContributionService
         }
 
         if ($contributor) {
-            return $contributor->pivot->source_team_id ? 'team' : 'user';
+            return $contributor->pivot?->source_team_id ? 'team' : 'user';
         }
 
         return null;

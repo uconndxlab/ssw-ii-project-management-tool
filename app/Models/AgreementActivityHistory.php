@@ -45,31 +45,37 @@ class AgreementActivityHistory extends Model
         ];
     }
 
+    /** @return BelongsTo<Agreement, $this> */
     public function agreement(): BelongsTo
     {
         return $this->belongsTo(Agreement::class);
     }
 
+    /** @return BelongsTo<Activity, $this> */
     public function activity(): BelongsTo
     {
         return $this->belongsTo(Activity::class);
     }
 
+    /** @return BelongsTo<ContactFamily, $this> */
     public function contactFamily(): BelongsTo
     {
         return $this->belongsTo(ContactFamily::class);
     }
 
+    /** @return BelongsTo<ActivityType, $this> */
     public function activityType(): BelongsTo
     {
         return $this->belongsTo(ActivityType::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function contributor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'contributor_user_id');
     }
 
+    /** @return HasMany<DeliverableContribution, $this> */
     public function deliverableContributions(): HasMany
     {
         return $this->hasMany(DeliverableContribution::class, 'agreement_activity_history_id');

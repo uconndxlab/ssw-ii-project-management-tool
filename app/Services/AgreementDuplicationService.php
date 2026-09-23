@@ -51,8 +51,8 @@ class AgreementDuplicationService
                 $source->organizations
                     ->mapWithKeys(fn ($organization) => [
                         $organization->id => [
-                            'payor_source' => (bool) $organization->pivot->payor_source,
-                            'recipient' => (bool) $organization->pivot->recipient,
+                            'payor_source' => (bool) $organization->pivot?->payor_source,
+                            'recipient' => (bool) $organization->pivot?->recipient,
                         ],
                     ])
                     ->all()
@@ -63,7 +63,7 @@ class AgreementDuplicationService
                 ->map(function (KfsAccount $account) use ($copy) {
                     return [
                         'agreement_id' => $copy->id,
-                        'organization_id' => (int) $account->pivot->organization_id,
+                        'organization_id' => (int) $account->pivot?->organization_id,
                         'kfs_account_id' => $account->id,
                         'created_at' => now(),
                         'updated_at' => now(),
@@ -89,7 +89,7 @@ class AgreementDuplicationService
 
             $loggingFieldSync = $source->agreementLoggingFields
                 ->mapWithKeys(fn ($field) => [
-                    $field->id => ['is_required' => (bool) $field->pivot->is_required],
+                    $field->id => ['is_required' => (bool) $field->pivot?->is_required],
                 ])
                 ->all();
             $copy->agreementLoggingFields()->sync($loggingFieldSync);
@@ -175,27 +175,27 @@ class AgreementDuplicationService
         ]);
 
         foreach ($deliverable->teams as $team) {
-            if ($team->pivot->unassigned_at) {
+            if ($team->pivot?->unassigned_at) {
                 continue;
             }
 
             $newDeliverable->teams()->attach($team->id, [
                 'assigned_at' => null,
                 'unassigned_at' => null,
-                'target_quantity' => $team->pivot->target_quantity,
+                'target_quantity' => $team->pivot?->target_quantity,
             ]);
         }
 
         foreach ($deliverable->users as $user) {
-            if ($user->pivot->unassigned_at) {
+            if ($user->pivot?->unassigned_at) {
                 continue;
             }
 
             $newDeliverable->users()->attach($user->id, [
                 'assigned_at' => null,
                 'unassigned_at' => null,
-                'source_team_id' => $user->pivot->source_team_id,
-                'target_quantity' => $user->pivot->target_quantity,
+                'source_team_id' => $user->pivot?->source_team_id,
+                'target_quantity' => $user->pivot?->target_quantity,
             ]);
         }
     }

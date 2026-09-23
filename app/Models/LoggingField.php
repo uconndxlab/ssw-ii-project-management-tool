@@ -5,7 +5,9 @@ namespace App\Models;
 use App\Enums\ProgramScopeMode;
 use App\Models\Concerns\HasProgramScope;
 use App\Models\Concerns\VisibleToUser;
+use App\Models\Pivots\AgreementLoggingFieldPivot;
 use Database\Factories\LoggingFieldFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -14,6 +16,9 @@ use Illuminate\Support\Str;
 /**
  * Index/view: admins only, and a listed program is in your privilege.
  * Edit: you admin a listed program. Delete: every listed program is in your admin scope. No programs: system admin only.
+ *
+ * @property ProgramScopeMode $program_scope_mode
+ * @property AgreementLoggingFieldPivot|null $pivot
  */
 class LoggingField extends Model
 {
@@ -73,22 +78,30 @@ class LoggingField extends Model
 
     /**
      * Scope to only active logging fields
+     *
+     * @param  Builder<static>  $query
+     * @return Builder<static>
      */
-    public function scopeActive($query)
+    public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);
     }
 
     /**
      * Scope to order by sort_order then name
+     *
+     * @param  Builder<static>  $query
+     * @return Builder<static>
      */
-    public function scopeOrdered($query)
+    public function scopeOrdered(Builder $query): Builder
     {
         return $query->orderBy('sort_order', 'asc')->orderBy('name', 'asc');
     }
 
     /**
      * Agreements using this logging field
+     *
+     * @return BelongsToMany<Agreement, $this>
      */
     public function agreements(): BelongsToMany
     {
@@ -99,6 +112,8 @@ class LoggingField extends Model
 
     /**
      * Contact families using this logging field
+     *
+     * @return BelongsToMany<ContactFamily, $this>
      */
     public function contactFamilies(): BelongsToMany
     {
@@ -107,6 +122,7 @@ class LoggingField extends Model
             ->withTimestamps();
     }
 
+    /** @return BelongsToMany<Program, $this> */
     public function programs(): BelongsToMany
     {
         return $this->belongsToMany(Program::class, 'logging_field_program')->withTimestamps();

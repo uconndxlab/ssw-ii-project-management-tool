@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Enums\ProgramScopeMode;
 use App\Models\Activity;
+use App\Models\ContactFamily;
 use App\Models\Organization;
+use App\Models\OrganizationContact;
 use App\Models\Program;
 use App\Models\Project;
 use App\Models\State;
@@ -13,7 +15,6 @@ use App\Support\Authorization\ScopeSync;
 use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
@@ -26,7 +27,7 @@ class OrganizationController extends Controller
         $states = State::orderBy('name', 'asc')->get(['id', 'name']);
 
         $query = Organization::query()
-            ->visibleTo(Auth::user())
+            ->visibleTo($this->actor())
             ->with([
                 'states:id,name',
                 'programs.projects:id,name',
@@ -130,6 +131,9 @@ class OrganizationController extends Controller
                     $teamMembersMap[$user->id] = clone $user;
                     $teamMembersMap[$user->id]->via_agreements = collect();
                 }
+                if ($teamMembersMap[$user->id]->via_agreements === null) {
+                    $teamMembersMap[$user->id]->via_agreements = collect();
+                }
                 $teamMembersMap[$user->id]->via_agreements->push($agreement->name);
             }
         }
@@ -146,7 +150,12 @@ class OrganizationController extends Controller
         ];
 
         // Breakdown by contact family
-        $contactFamilyBreakdown = $ytdActivities->groupBy(fn ($e) => $e->activityType->contactFamily->name)
+        $contactFamilyBreakdown = $ytdActivities
+            ->groupBy(function ($e) {
+                $contactFamily = $e->activityType?->contactFamily;
+
+                return $contactFamily instanceof ContactFamily ? $contactFamily->name : 'Unknown';
+            })
             ->map(fn ($group) => $group->count())
             ->sortDesc();
 
@@ -164,7 +173,7 @@ class OrganizationController extends Controller
     {
         $this->authorize('create', Organization::class);
         $states = State::orderBy('name', 'asc')->get();
-        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor(Auth::user());
+        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor($this->actor());
         $users = User::query()->active()->orderBy('name', 'asc')->get();
 
         return view('organizations.create', compact('states', 'projects', 'users'));
@@ -184,7 +193,7 @@ class OrganizationController extends Controller
         ]);
         $organization->states()->sync($validated['state_ids']);
         ScopeSync::applyTo(
-            Auth::user(),
+            $this->actor(),
             $organization,
             ProgramScopeMode::from($validated['program_scope_mode']),
             $validated['program_ids'] ?? [],
@@ -202,7 +211,7 @@ class OrganizationController extends Controller
         $this->authorize('update', $organization);
         $organization->load(['states', 'programs.projects', 'users', 'contacts']);
         $states = State::orderBy('name', 'asc')->get();
-        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor(Auth::user(), $organization);
+        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor($this->actor(), $organization);
         $users = User::query()->active()->orderBy('name', 'asc')->get();
 
         return view('organizations.edit', compact('organization', 'states', 'projects', 'users'));
@@ -221,7 +230,7 @@ class OrganizationController extends Controller
         ]);
         $organization->states()->sync($validated['state_ids']);
         ScopeSync::applyTo(
-            Auth::user(),
+            $this->actor(),
             $organization,
             ProgramScopeMode::from($validated['program_scope_mode']),
             $validated['program_ids'] ?? [],
@@ -290,13 +299,13 @@ class OrganizationController extends Controller
                 ?? ProgramScopeMode::Specific;
             ScopeSync::validateSubmittedMode(
                 $validator,
-                Auth::user(),
+                $this->actor(),
                 $organization?->program_scope_mode ?? ProgramScopeMode::None,
                 $submittedMode,
             );
             ScopeSync::validateSubmittedProgramsAreInAdminScope(
                 $validator,
-                Auth::user(),
+                $this->actor(),
                 ProjectProgramScope::normalizeIds($request->input('program_ids', [])),
                 $organization?->programs()->pluck('programs.id')->all() ?? [],
             );
@@ -456,7 +465,10 @@ class OrganizationController extends Controller
 
             if ($markedForDeletion) {
                 if ($rowId && $existingContacts->has($rowId)) {
-                    $existingContacts->get($rowId)->delete();
+                    $contact = $existingContacts->get($rowId);
+                    if ($contact instanceof OrganizationContact) {
+                        $contact->delete();
+                    }
                 }
 
                 continue;
@@ -481,7 +493,10 @@ class OrganizationController extends Controller
             ];
 
             if ($rowId && $existingContacts->has($rowId)) {
-                $existingContacts->get($rowId)->update($attributes);
+                $contact = $existingContacts->get($rowId);
+                if ($contact instanceof OrganizationContact) {
+                    $contact->update($attributes);
+                }
             } else {
                 $organization->contacts()->create($attributes);
             }

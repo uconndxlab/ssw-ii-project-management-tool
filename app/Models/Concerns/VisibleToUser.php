@@ -5,6 +5,8 @@ namespace App\Models\Concerns;
 use App\Models\Activity;
 use App\Models\ActivityType;
 use App\Models\Agreement;
+use App\Models\Certificate;
+use App\Models\CertificationTool;
 use App\Models\ContactFamily;
 use App\Models\LoggingField;
 use App\Models\Organization;
@@ -38,7 +40,9 @@ trait VisibleToUser
             User::class => $access->applyUserIndexVisibility($query),
             ContactFamily::class,
             LoggingField::class,
-            ActivityType::class => $access->applyScopedEntityVisibility($query),
+            ActivityType::class,
+            CertificationTool::class,
+            Certificate::class => $access->applyScopedEntityVisibility($query),
             default => $query,
         };
     }

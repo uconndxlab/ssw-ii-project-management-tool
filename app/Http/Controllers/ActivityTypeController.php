@@ -13,7 +13,6 @@ use App\Models\Project;
 use App\Support\Authorization\ScopeSync;
 use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
 class ActivityTypeController extends Controller
@@ -26,7 +25,7 @@ class ActivityTypeController extends Controller
             ->get(['id', 'name']);
 
         $query = ActivityType::query()
-            ->visibleTo(Auth::user())
+            ->visibleTo($this->actor())
             ->with(['contactFamily', 'programs.projects']);
 
         // Search
@@ -173,7 +172,7 @@ class ActivityTypeController extends Controller
             ->where('available_in_activities', true)
             ->with('programs')
             ->get();
-        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor(Auth::user());
+        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor($this->actor());
 
         return view('admin.activity-types.create', compact('contactFamilies', 'activityTypeLoggingFields', 'projects'));
     }
@@ -206,7 +205,7 @@ class ActivityTypeController extends Controller
 
         $activityType = ActivityType::create($validated);
         ScopeSync::applyTo(
-            Auth::user(),
+            $this->actor(),
             $activityType,
             ProgramScopeMode::from($validated['program_scope_mode']),
             $validated['program_ids'] ?? [],
@@ -235,7 +234,7 @@ class ActivityTypeController extends Controller
             ->where('available_in_activities', true)
             ->with('programs')
             ->get();
-        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor(Auth::user(), $activityType);
+        $projects = ProjectProgramScope::assignableProjectsWithProgramsFor($this->actor(), $activityType);
         $activityType->load(['activityTypeLoggingFields', 'programs.projects']);
 
         return view('admin.activity-types.edit', compact('activityType', 'contactFamilies', 'activityTypeLoggingFields', 'projects'));
@@ -271,7 +270,7 @@ class ActivityTypeController extends Controller
         unset($validated['program_scope_mode'], $validated['project_ids'], $validated['program_ids']);
         $activityType->update($validated);
         ScopeSync::applyTo(
-            Auth::user(),
+            $this->actor(),
             $activityType,
             ProgramScopeMode::from(ProjectProgramScope::normalizeMode($request->input('program_scope_mode'), ActivityType::class)->value),
             $request->input('program_ids', []),
@@ -409,13 +408,13 @@ class ActivityTypeController extends Controller
             $existing = $request->route('activity_type');
             ScopeSync::validateSubmittedMode(
                 $validator,
-                Auth::user(),
+                $this->actor(),
                 $existing instanceof ActivityType ? $existing->program_scope_mode : ProgramScopeMode::None,
                 $submittedMode,
             );
             ScopeSync::validateSubmittedProgramsAreInAdminScope(
                 $validator,
-                Auth::user(),
+                $this->actor(),
                 $programIds,
                 $existing instanceof ActivityType ? $existing->programs()->pluck('programs.id')->all() : [],
             );

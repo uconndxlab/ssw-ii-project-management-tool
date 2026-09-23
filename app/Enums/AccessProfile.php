@@ -8,6 +8,7 @@ enum AccessProfile: string
     case Member = 'member';
     case Input = 'input';
 
+    /** @return list<string> */
     public static function values(): array
     {
         return array_map(fn (self $case) => $case->value, self::cases());

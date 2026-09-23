@@ -35,11 +35,13 @@ class ActivityAgreementFundingSource extends Model
         ];
     }
 
+    /** @return BelongsTo<Activity, $this> */
     public function activity(): BelongsTo
     {
         return $this->belongsTo(Activity::class);
     }
 
+    /** @return BelongsTo<Agreement, $this> */
     public function agreement(): BelongsTo
     {
         return $this->belongsTo(Agreement::class);

@@ -48,56 +48,67 @@ class Activity extends Model
         ];
     }
 
+    /** @return HasMany<ActivityLoggingFieldAnswer, $this> */
     public function loggingFieldAnswers(): HasMany
     {
         return $this->hasMany(ActivityLoggingFieldAnswer::class);
     }
 
+    /** @return HasOne<ActivityContactTime, $this> */
     public function contactTime(): HasOne
     {
         return $this->hasOne(ActivityContactTime::class);
     }
 
+    /** @return HasMany<ActivityParticipantTime, $this> */
     public function participantTimes(): HasMany
     {
         return $this->hasMany(ActivityParticipantTime::class);
     }
 
+    /** @return HasMany<DeliverableContribution, $this> */
     public function deliverableContributions(): HasMany
     {
         return $this->hasMany(DeliverableContribution::class);
     }
 
+    /** @return HasMany<AgreementActivityHistory, $this> */
     public function agreementActivityHistories(): HasMany
     {
         return $this->hasMany(AgreementActivityHistory::class);
     }
 
+    /** @return HasMany<ActivityActionLog, $this> */
     public function actionLogs(): HasMany
     {
         return $this->hasMany(ActivityActionLog::class);
     }
 
+    /** @return BelongsToMany<Agreement, $this> */
     public function agreements(): BelongsToMany
     {
         return $this->belongsToMany(Agreement::class, 'activity_agreement')->withTimestamps();
     }
 
+    /** @return BelongsToMany<Organization, $this> */
     public function organizations(): BelongsToMany
     {
         return $this->belongsToMany(Organization::class, 'activity_organization')->withTimestamps();
     }
 
+    /** @return BelongsToMany<State, $this> */
     public function states(): BelongsToMany
     {
         return $this->belongsToMany(State::class, 'activity_state')->withTimestamps();
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /** @return BelongsTo<ActivityType, $this> */
     public function activityType(): BelongsTo
     {
         return $this->belongsTo(ActivityType::class);
@@ -133,21 +144,25 @@ class Activity extends Model
             ->implode(' · ') ?: 'Activity';
     }
 
+    /** @return BelongsToMany<Program, $this> */
     public function programs(): BelongsToMany
     {
         return $this->belongsToMany(Program::class, 'activity_program')->withTimestamps();
     }
 
+    /** @return BelongsToMany<User, $this> */
     public function participants(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'activity_user')->withTimestamps();
     }
 
+    /** @return HasMany<AgreementCertificationCandidate, $this> */
     public function certificationCandidates(): HasMany
     {
         return $this->hasMany(AgreementCertificationCandidate::class);
     }
 
+    /** @return HasMany<ActivityAgreementFundingSource, $this> */
     public function agreementFundingSources(): HasMany
     {
         return $this->hasMany(ActivityAgreementFundingSource::class);
@@ -155,20 +170,30 @@ class Activity extends Model
 
     /**
      * Scope: Exclude internal-only activities
+     *
+     * @param  Builder<static>  $query
+     * @return Builder<static>
      */
-    public function scopeExternalOnly($query)
+    public function scopeExternalOnly(Builder $query): Builder
     {
         return $query->where('internal_only', false);
     }
 
     /**
      * Scope: Include only internal activities
+     *
+     * @param  Builder<static>  $query
+     * @return Builder<static>
      */
-    public function scopeInternalOnly($query)
+    public function scopeInternalOnly(Builder $query): Builder
     {
         return $query->where('internal_only', true);
     }
 
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
     public function scopeOrderByRecentDisplay(Builder $query): Builder
     {
         return $query

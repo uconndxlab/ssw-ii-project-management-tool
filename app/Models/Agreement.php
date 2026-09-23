@@ -6,6 +6,9 @@ use App\Enums\AgreementTimeTrackingRequirement;
 use App\Enums\ProgramScopeMode;
 use App\Models\Concerns\HasProgramScope;
 use App\Models\Concerns\VisibleToUser;
+use App\Models\Pivots\AgreementLoggingFieldPivot;
+use App\Models\Pivots\AgreementOrganizationKfsAccountPivot;
+use App\Models\Pivots\AgreementOrganizationPivot;
 use Database\Factories\AgreementFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -17,6 +20,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * View: belong (you or your team) or a listed program is in your privilege.
  * Edit: you admin a listed program/project.
  * Delete: every listed program is in your admin scope. No programs: system admin only.
+ *
+ * @property AgreementTimeTrackingRequirement $time_tracking_mode
+ * @property ProgramScopeMode $program_scope_mode
  */
 class Agreement extends Model
 {
@@ -52,85 +58,103 @@ class Agreement extends Model
         ];
     }
 
+    /** @return BelongsToMany<Organization, $this, AgreementOrganizationPivot> */
     public function organizations(): BelongsToMany
     {
         return $this->belongsToMany(Organization::class, 'agreement_organization')
             ->withPivot(['payor_source', 'recipient'])
+            ->using(AgreementOrganizationPivot::class)
             ->withTimestamps();
     }
 
+    /** @return BelongsToMany<KfsAccount, $this> */
     public function kfsAccounts(): BelongsToMany
     {
         return $this->belongsToMany(KfsAccount::class, 'agreement_kfs_account')
             ->withTimestamps();
     }
 
+    /** @return BelongsToMany<KfsAccount, $this, AgreementOrganizationKfsAccountPivot> */
     public function organizationKfsAccounts(): BelongsToMany
     {
         return $this->belongsToMany(KfsAccount::class, 'agreement_organization_kfs_account')
             ->withPivot(['organization_id'])
+            ->using(AgreementOrganizationKfsAccountPivot::class)
             ->withTimestamps();
     }
 
+    /** @return BelongsToMany<State, $this> */
     public function states(): BelongsToMany
     {
         return $this->belongsToMany(State::class, 'agreement_state')->withTimestamps();
     }
 
+    /** @return BelongsToMany<User, $this> */
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'agreement_user')->withTimestamps();
     }
 
+    /** @return BelongsToMany<Team, $this> */
     public function teams(): BelongsToMany
     {
         return $this->belongsToMany(Team::class, 'agreement_team')->withTimestamps();
     }
 
+    /** @return BelongsToMany<User, $this> */
     public function principalInvestigators(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'agreement_principal_investigator')->withTimestamps();
     }
 
+    /** @return BelongsToMany<Activity, $this> */
     public function activities(): BelongsToMany
     {
         return $this->belongsToMany(Activity::class, 'activity_agreement')->withTimestamps();
     }
 
+    /** @return BelongsToMany<LoggingField, $this, AgreementLoggingFieldPivot> */
     public function agreementLoggingFields(): BelongsToMany
     {
         return $this->belongsToMany(LoggingField::class, 'agreement_logging_field_assignments', 'agreement_id', 'logging_field_id')
             ->withPivot('is_required', 'sort_order')
+            ->using(AgreementLoggingFieldPivot::class)
             ->withTimestamps()
             ->orderBy('agreement_logging_field_assignments.sort_order', 'asc')
             ->orderBy('name', 'asc');
     }
 
+    /** @return BelongsToMany<LoggingField, $this, AgreementLoggingFieldPivot> */
     public function loggingFields(): BelongsToMany
     {
         return $this->agreementLoggingFields();
     }
 
+    /** @return HasMany<AgreementAttachment, $this> */
     public function attachments(): HasMany
     {
         return $this->hasMany(AgreementAttachment::class);
     }
 
+    /** @return BelongsToMany<Program, $this> */
     public function programs(): BelongsToMany
     {
         return $this->belongsToMany(Program::class, 'agreement_program')->withTimestamps();
     }
 
+    /** @return HasMany<AgreementDeliverable, $this> */
     public function deliverables(): HasMany
     {
         return $this->hasMany(AgreementDeliverable::class);
     }
 
+    /** @return HasMany<AgreementActivityHistory, $this> */
     public function agreementActivityHistories(): HasMany
     {
         return $this->hasMany(AgreementActivityHistory::class);
     }
 
+    /** @return HasMany<AgreementCertificationCandidate, $this> */
     public function certificationCandidates(): HasMany
     {
         return $this->hasMany(AgreementCertificationCandidate::class)->orderBy('id');
@@ -184,7 +208,7 @@ class Agreement extends Model
                 return $team->users->contains('id', $user->id);
             });
 
-            $user->also_in_teams = $userTeams->pluck('name')->toArray();
+            $user->also_in_teams = array_values($userTeams->pluck('name')->all());
             $user->is_principal_investigator = $principalInvestigatorIds->contains($user->id);
 
             return $user;
@@ -199,19 +223,27 @@ class Agreement extends Model
     /**
      * Agreements the user may access via direct assignment or team membership.
      *
-     * @param  Builder<Agreement>  $query
-     * @return Builder<Agreement>
+     * @param  Builder<static>  $query
+     * @return Builder<static>
      */
     public function scopeAccessibleBy(Builder $query, User $user): Builder
     {
         return $query->visibleTo($user);
     }
 
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('agreements.active', true);
     }
 
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
     public function scopeWithinFundingPeriod(Builder $query): Builder
     {
         $today = now()->toDateString();
@@ -234,6 +266,10 @@ class Agreement extends Model
             });
     }
 
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
     public function scopeCurrent(Builder $query): Builder
     {
         return $this->scopeWithinFundingPeriod($query);

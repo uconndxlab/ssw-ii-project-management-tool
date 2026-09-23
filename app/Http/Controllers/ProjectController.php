@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Activity;
+use App\Models\ActivityType;
 use App\Models\Project;
 use App\Support\ProjectProgramScope;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class ProjectController extends Controller
 {
@@ -13,7 +14,7 @@ class ProjectController extends Controller
     {
         $this->authorize('viewAny', Project::class);
 
-        $query = Project::query()->visibleTo(Auth::user())->with('programs')->withCount('programs');
+        $query = Project::query()->visibleTo($this->actor())->with('programs')->withCount('programs');
 
         if ($request->filled('active')) {
             $query->where('active', $request->input('active') === '1');
@@ -91,11 +92,22 @@ class ProjectController extends Controller
 
         $recentActivities = $project->programs
             ->flatMap(fn ($p) => $p->activities)
-            ->sortBy([
-                ['engagement_date', 'desc'],
-                [fn ($activity) => mb_strtolower($activity->activityType?->name ?? ''), 'asc'],
-                ['id', 'desc'],
-            ])
+            ->sort(function (Activity $a, Activity $b): int {
+                $dateCompare = $b->engagement_date <=> $a->engagement_date;
+                if ($dateCompare !== 0) {
+                    return $dateCompare;
+                }
+
+                $nameCompare = strcasecmp(
+                    $a->activityType instanceof ActivityType ? ($a->activityType->name ?? '') : '',
+                    $b->activityType instanceof ActivityType ? ($b->activityType->name ?? '') : ''
+                );
+                if ($nameCompare !== 0) {
+                    return $nameCompare;
+                }
+
+                return $b->id <=> $a->id;
+            })
             ->take(10)
             ->values();
 
