@@ -237,6 +237,7 @@ class ProjectProgramScope
      * Whether a scoped catalog entity (e.g. certification tool) may be assigned on a certificate form,
      * using the same rules as the logging-field assignment picker.
      *
+     * @param  Collection<int, int|string>  $entityProgramIds
      * @param  array<int, int|string>  $certificateProgramIds
      */
     public static function scopedEntityVisibleToCertificatePrograms(
