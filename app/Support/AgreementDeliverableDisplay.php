@@ -3,9 +3,12 @@
 namespace App\Support;
 
 use App\Enums\DeliverableStatus;
+use App\Models\ActivityType;
 use App\Models\Agreement;
 use App\Models\AgreementDeliverable;
+use App\Models\ContactFamily;
 use App\Models\DeliverableContribution;
+use App\Models\Program;
 use App\Models\Team;
 use App\Models\User;
 use Carbon\Carbon;
@@ -13,6 +16,9 @@ use Illuminate\Support\Collection;
 
 class AgreementDeliverableDisplay
 {
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
     public static function buildGroupedProgress(
         Agreement $agreement,
         ?Carbon $from = null,
@@ -40,6 +46,8 @@ class AgreementDeliverableDisplay
 
     /**
      * Deliverable progress grouped and filtered to items the user can contribute to, with user_focus stats.
+     *
+     * @return Collection<int, array<string, mixed>>
      */
     public static function buildGroupedProgressForUser(Agreement $agreement, User $user): Collection
     {
@@ -104,11 +112,18 @@ class AgreementDeliverableDisplay
         return self::isActivelyAssignedUser($assignedUser, $deliverable, $teamLookup, $memberIds);
     }
 
+    /**
+     * @return Collection<int, int>
+     */
     public static function buildAgreementMemberUserIdsPublic(Agreement $agreement): Collection
     {
         return self::buildAgreementMemberUserIds($agreement);
     }
 
+    /**
+     * @param  Collection<int, Team>  $teamLookup
+     * @param  Collection<int, int>  $agreementMemberUserIds
+     */
     public static function isActivelyAssignedUserPublic(
         User $user,
         AgreementDeliverable $deliverable,
@@ -118,6 +133,10 @@ class AgreementDeliverableDisplay
         return self::isActivelyAssignedUser($user, $deliverable, $teamLookup, $agreementMemberUserIds);
     }
 
+    /**
+     * @param  array<string, mixed>  $progress
+     * @return array<string, mixed>
+     */
     private static function focusProgressOnUser(array $progress, int $userId): array
     {
         if ($progress['is_individual']) {
@@ -185,32 +204,63 @@ class AgreementDeliverableDisplay
         return $progress;
     }
 
+    /**
+     * @param  Collection<int, array<string, mixed>>  $items
+     * @return Collection<int, mixed>
+     */
     private static function groupProgressItems(Collection $items): Collection
     {
         return $items
             ->groupBy(fn (array $item) => (int) ($item['deliverable']->contact_family_id ?? 0))
             ->map(function (Collection $familyItems) {
-                $contactFamily = $familyItems->first()['deliverable']->contactFamily;
+                /** @var Collection<int, array<string, mixed>> $familyItems */
+                $first = $familyItems->first();
+                if ($first === null) {
+                    return [
+                        'contact_family' => null,
+                        'contact_family_label' => 'Unspecified Activity Family',
+                        'activity_groups' => collect(),
+                    ];
+                }
+                $contactFamily = $first['deliverable']->contactFamily;
 
                 return [
                     'contact_family' => $contactFamily,
-                    'contact_family_label' => $contactFamily?->name ?? 'Unspecified Activity Family',
+                    'contact_family_label' => $contactFamily instanceof ContactFamily ? $contactFamily->name : 'Unspecified Activity Family',
                     'activity_groups' => $familyItems
                         ->groupBy(fn (array $item) => (int) ($item['deliverable']->activity_type_id ?? 0))
                         ->map(function (Collection $activityItems) {
-                            $activityType = $activityItems->first()['deliverable']->activityType;
+                            /** @var Collection<int, array<string, mixed>> $activityItems */
+                            $first = $activityItems->first();
+                            if ($first === null) {
+                                return [
+                                    'activity_type' => null,
+                                    'activity_type_label' => 'Any activity type',
+                                    'program_groups' => collect(),
+                                ];
+                            }
+                            $activityType = $first['deliverable']->activityType;
 
                             return [
                                 'activity_type' => $activityType,
-                                'activity_type_label' => $activityType?->name ?? 'Any activity type',
+                                'activity_type_label' => $activityType instanceof ActivityType ? $activityType->name : 'Any activity type',
                                 'program_groups' => $activityItems
                                     ->groupBy(fn (array $item) => (int) ($item['deliverable']->program_id ?? 0))
                                     ->map(function (Collection $programItems) {
-                                        $program = $programItems->first()['deliverable']->program;
+                                        /** @var Collection<int, array<string, mixed>> $programItems */
+                                        $first = $programItems->first();
+                                        if ($first === null) {
+                                            return [
+                                                'program' => null,
+                                                'program_label' => 'Any selected agreement program',
+                                                'deliverables' => collect(),
+                                            ];
+                                        }
+                                        $program = $first['deliverable']->program;
 
                                         return [
                                             'program' => $program,
-                                            'program_label' => $program?->name ?? 'Any selected agreement program',
+                                            'program_label' => $program instanceof Program ? $program->name : 'Any selected agreement program',
                                             'deliverables' => $programItems
                                                 ->sortBy(fn (array $item) => [
                                                     $item['deliverable']->sort_order ?? 0,
@@ -231,6 +281,12 @@ class AgreementDeliverableDisplay
             ->values();
     }
 
+    /**
+     * @param  Collection<int, Team>  $teamLookup
+     * @param  Collection<int, int>  $agreementTeamIds
+     * @param  Collection<int, int>  $agreementMemberUserIds
+     * @return array<string, mixed>
+     */
     private static function buildDeliverableProgress(
         AgreementDeliverable $deliverable,
         Collection $teamLookup,
@@ -321,7 +377,7 @@ class AgreementDeliverableDisplay
                 $to
             ) {
                 $summary = $contributorByUserId->get((int) $user->id);
-                $completed = (float) ($summary['completed_value'] ?? 0);
+                $completed = (float) (is_array($summary) ? $summary['completed_value'] : 0);
                 $userTarget = (float) (self::resolveUserPivotTarget($deliverable, (int) $user->id) ?? 0);
                 $userContributions = $contributions
                     ->where('contributor_user_id', (int) $user->id)
@@ -429,7 +485,7 @@ class AgreementDeliverableDisplay
             $allocationNotices['excess_logged'] = $overTargetValue;
         }
         if ($isIndividual) {
-            $remainder = (float) ($allocationSummary['remainder'] ?? 0);
+            $remainder = (float) $allocationSummary['remainder'];
             if ($remainder > 0.009) {
                 $allocationNotices['unassigned_remainder'] = round($remainder, 2);
             }
@@ -486,6 +542,8 @@ class AgreementDeliverableDisplay
 
     /**
      * @param  Collection<int, array<string, mixed>>  $individualProgress
+     * @param  array<string, mixed>  $allocationSummary
+     * @return array<string, mixed>
      */
     private static function buildIndividualSectionedBar(
         Collection $individualProgress,
@@ -522,14 +580,14 @@ class AgreementDeliverableDisplay
         }
 
         $sectionTargetSum = $sections === [] ? 0.0 : array_sum(array_map(
-            fn (array $section) => (float) ($section['target'] ?? 0),
+            fn (array $section) => (float) $section['target'],
             $sections
         ));
         $scaleBase = max($totalTarget, $sectionTargetSum, 0.0001);
         $isOverAssigned = $allocationSummary['is_over_assigned'] ?? false;
 
         foreach ($sections as &$section) {
-            $section['width_percent'] = round(((float) ($section['target'] ?? 0) / $scaleBase) * 100, 2);
+            $section['width_percent'] = round(((float) $section['target'] / $scaleBase) * 100, 2);
         }
         unset($section);
 
@@ -540,6 +598,12 @@ class AgreementDeliverableDisplay
         ];
     }
 
+    /**
+     * @param  Collection<int, Team>  $teamLookup
+     * @param  Collection<int, int>  $agreementMemberUserIds
+     * @param  Collection<int, array<string, mixed>>  $contributorByUserId
+     * @return Collection<int, array<string, mixed>>
+     */
     private static function buildTaggedDisplayGroups(
         AgreementDeliverable $deliverable,
         Collection $teamLookup,
@@ -618,6 +682,8 @@ class AgreementDeliverableDisplay
     /**
      * Grouped assignment structure for the deliverables editor table.
      *
+     * @param  Collection<int, Team>  $teamLookup
+     * @param  Collection<int, int>  $agreementMemberUserIds
      * @return array<int, array{team: ?Team, team_name: ?string, users: Collection<int, User>}>
      */
     public static function buildTableAssignmentGroups(
@@ -637,7 +703,7 @@ class AgreementDeliverableDisplay
 
         foreach ($assignedTeams as $team) {
             $agreementTeam = $teamLookup->get((int) $team->id);
-            $members = $agreementTeam?->users ?? collect();
+            $members = $agreementTeam !== null ? $agreementTeam->users : collect();
 
             if ($deliverable->user_grouping_mode === 'joint') {
                 $teamUsers = $members->sortBy('name')->values();
@@ -680,6 +746,13 @@ class AgreementDeliverableDisplay
         return $groups;
     }
 
+    /**
+     * @param  Collection<int, Team>  $teamLookup
+     * @param  Collection<int, int>  $agreementMemberUserIds
+     * @param  Collection<int, int>  $currentlyAssignedUserIds
+     * @param  Collection<int, array<string, mixed>>  $contributorByUserId
+     * @return Collection<int, array<string, mixed>>
+     */
     private static function buildLiveAssignmentGroups(
         AgreementDeliverable $deliverable,
         Collection $teamLookup,
@@ -767,6 +840,19 @@ class AgreementDeliverableDisplay
         return $groups;
     }
 
+    /**
+     * @param  array<string, mixed>|null  $summary
+     * @return array{
+     *     user: User,
+     *     team_name: mixed,
+     *     completed_value: float,
+     *     target: float,
+     *     has_target: bool,
+     *     percent: float|int,
+     *     is_currently_assigned: bool,
+     *     status: DeliverableStatus|null
+     * }
+     */
     private static function memberRow(
         User $user,
         ?array $summary,
@@ -787,6 +873,10 @@ class AgreementDeliverableDisplay
         ];
     }
 
+    /**
+     * @param  Collection<int, Team>  $teamLookup
+     * @param  Collection<int, int>  $agreementMemberUserIds
+     */
     private static function isActivelyAssignedUser(
         User $user,
         AgreementDeliverable $deliverable,
@@ -819,13 +909,19 @@ class AgreementDeliverableDisplay
         return $teamLookup->get($sourceTeamId)?->users->contains('id', $user->id) ?? false;
     }
 
+    /**
+     * @return Collection<int, int>
+     */
     private static function buildAgreementMemberUserIds(Agreement $agreement): Collection
     {
+        /** @var Collection<int, Team> $teams */
+        $teams = $agreement->teams;
+
         return $agreement->users
             ->pluck('id')
             ->map(fn ($id) => (int) $id)
             ->merge(
-                $agreement->teams->flatMap(
+                $teams->flatMap(
                     fn (Team $team) => $team->users->pluck('id')->map(fn ($id) => (int) $id)
                 )
             )
@@ -833,6 +929,13 @@ class AgreementDeliverableDisplay
             ->values();
     }
 
+    /**
+     * @param  Collection<int, int>  $currentlyAssignedUserIds
+     * @param  Collection<int, array<string, mixed>>  $contributorByUserId
+     * @param  Collection<int, Team>  $teamLookup
+     * @param  Collection<int, DeliverableContribution>|null  $contributions
+     * @return Collection<int, mixed>
+     */
     private static function buildPastAssignees(
         AgreementDeliverable $deliverable,
         Collection $currentlyAssignedUserIds,
@@ -866,15 +969,16 @@ class AgreementDeliverableDisplay
             ) {
                 $assignedUser = $deliverable->users->firstWhere('id', $userId);
                 $summary = $contributorByUserId->get($userId);
-                $user = $summary['user'] ?? $assignedUser;
+                $user = is_array($summary) ? ($summary['user'] ?? $assignedUser) : $assignedUser;
 
                 if (! $user) {
                     return null;
                 }
 
-                $completed = (float) ($summary['completed_value'] ?? 0);
-                $teamName = $summary['team_name']
-                    ?? self::resolveFormerAssigneeTeamName($assignedUser, $teamLookup);
+                $completed = (float) (is_array($summary) ? $summary['completed_value'] : 0);
+                $teamName = is_array($summary)
+                    ? ($summary['team_name'] ?? self::resolveFormerAssigneeTeamName($assignedUser, $teamLookup))
+                    : self::resolveFormerAssigneeTeamName($assignedUser, $teamLookup);
 
                 if ($asIndividualRows) {
                     $userContributions = $contributions
@@ -903,11 +1007,14 @@ class AgreementDeliverableDisplay
                 ];
             })
             ->filter()
-            ->filter(fn (array $row) => (float) ($row['completed_value'] ?? 0) > 0)
+            ->filter(fn (array $row) => (float) $row['completed_value'] > 0)
             ->sortBy(fn (array $row) => $row['user']->name ?? '')
             ->values();
     }
 
+    /**
+     * @param  Collection<int, Team>  $teamLookup
+     */
     private static function resolveFormerAssigneeTeamName(
         ?User $assignedUser,
         Collection $teamLookup
@@ -919,6 +1026,11 @@ class AgreementDeliverableDisplay
         return $teamLookup->get((int) $assignedUser->pivot->source_team_id)?->name;
     }
 
+    /**
+     * @param  Collection<int, Team>  $teamLookup
+     * @param  Collection<int, int>  $agreementMemberUserIds
+     * @return Collection<int, int>
+     */
     private static function currentlyAssignedUserIds(
         AgreementDeliverable $deliverable,
         Collection $teamLookup,
@@ -938,13 +1050,19 @@ class AgreementDeliverableDisplay
             return $directIds->unique()->values();
         }
 
+        /** @var Collection<int, int> $activeTeamIds */
         $activeTeamIds = $deliverable->teams
             ->filter(fn (Team $team) => ! $team->pivot?->unassigned_at)
             ->pluck('id')
             ->map(fn ($id) => (int) $id);
 
         $teamMemberIds = $activeTeamIds
-            ->flatMap(fn (int $teamId) => $teamLookup->get($teamId)?->users?->pluck('id') ?? collect())
+            ->flatMap(function (int $teamId) use ($teamLookup) {
+                /** @var Collection<int, mixed> $memberIds */
+                $memberIds = $teamLookup->get($teamId)?->users?->pluck('id') ?? collect();
+
+                return $memberIds;
+            })
             ->map(fn ($id) => (int) $id)
             ->filter(fn (int $userId) => $agreementMemberUserIds->contains($userId));
 
@@ -954,6 +1072,9 @@ class AgreementDeliverableDisplay
             ->values();
     }
 
+    /**
+     * @param  Collection<int, Team>  $teamLookup
+     */
     private static function resolveDisplayTeamNameForAssignedUser(
         User $user,
         AgreementDeliverable $deliverable,
@@ -979,6 +1100,12 @@ class AgreementDeliverableDisplay
             ?->name;
     }
 
+    /**
+     * @param  Collection<int, DeliverableContribution>  $contributions
+     * @param  Collection<int, Team>  $teamLookup
+     * @param  Collection<int, int>  $agreementTeamIds
+     * @return Collection<int, mixed>
+     */
     private static function buildContributorSummaries(
         Collection $contributions,
         AgreementDeliverable $deliverable,
@@ -992,8 +1119,11 @@ class AgreementDeliverableDisplay
             ->whereNotNull('contributor_user_id')
             ->groupBy('contributor_user_id')
             ->map(function (Collection $userContributions) use ($deliverable, $teamLookup, $agreementTeamIds, $isTime, $isAllottedTime, $allottedTimeUnit) {
-                /** @var DeliverableContribution $first */
+                /** @var Collection<int, DeliverableContribution> $userContributions */
                 $first = $userContributions->first();
+                if (! $first instanceof DeliverableContribution) {
+                    return null;
+                }
                 $user = $first->contributor;
 
                 if (! $user) {
@@ -1026,13 +1156,18 @@ class AgreementDeliverableDisplay
             ->values();
     }
 
+    /**
+     * @param  Collection<int, DeliverableContribution>  $userContributions
+     * @param  Collection<int, Team>  $teamLookup
+     * @param  Collection<int, int>  $agreementTeamIds
+     */
     private static function resolveContributorTeamName(
         Collection $userContributions,
         AgreementDeliverable $deliverable,
         Collection $teamLookup,
         Collection $agreementTeamIds
     ): ?string {
-        $userId = (int) $userContributions->first()->contributor_user_id;
+        $userId = (int) $userContributions->first()?->contributor_user_id;
         $assignedUser = $deliverable->users->firstWhere('id', $userId);
 
         if ($assignedUser?->pivot?->source_team_id) {
@@ -1045,7 +1180,9 @@ class AgreementDeliverableDisplay
                 continue;
             }
 
-            $snapshotTeamIds = collect($history->team_ids_snapshot)->map(fn ($id) => (int) $id);
+            /** @var list<mixed> $snapshotTeamIdsInput */
+            $snapshotTeamIdsInput = $history->team_ids_snapshot;
+            $snapshotTeamIds = collect($snapshotTeamIdsInput)->map(fn ($id) => (int) $id);
             $matchingTeamId = $snapshotTeamIds
                 ->intersect($agreementTeamIds)
                 ->first()
@@ -1086,6 +1223,9 @@ class AgreementDeliverableDisplay
         return true;
     }
 
+    /**
+     * @param  Collection<int, DeliverableContribution>  $contributions
+     */
     private static function statusForAssignment(
         AgreementDeliverable $deliverable,
         Agreement $agreement,

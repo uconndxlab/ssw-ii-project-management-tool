@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Auth\Events\PasswordReset;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
@@ -10,12 +12,12 @@ use Illuminate\Validation\Rules\Password as PasswordRule;
 
 class PasswordResetController extends Controller
 {
-    public function create()
+    public function create(): View
     {
         return view('auth.forgot-password');
     }
 
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
         $request->validate([
             'email' => ['required', 'email'],
@@ -30,7 +32,7 @@ class PasswordResetController extends Controller
             : back()->withErrors(['email' => __($status)]);
     }
 
-    public function edit(Request $request, string $token)
+    public function edit(Request $request, string $token): View
     {
         return view('auth.reset-password', [
             'token' => $token,
@@ -38,7 +40,7 @@ class PasswordResetController extends Controller
         ]);
     }
 
-    public function update(Request $request)
+    public function update(Request $request): RedirectResponse
     {
         $request->validate([
             'token' => ['required'],

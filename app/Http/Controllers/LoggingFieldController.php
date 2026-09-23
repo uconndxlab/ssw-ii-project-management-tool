@@ -9,6 +9,9 @@ use App\Models\Program;
 use App\Models\Project;
 use App\Support\Authorization\ScopeSync;
 use App\Support\ProjectProgramScope;
+use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -24,7 +27,7 @@ class LoggingFieldController extends Controller
     /**
      * Display a listing of logging fields.
      */
-    public function index(Request $request)
+    public function index(Request $request): View
     {
         $this->authorize('viewAny', LoggingField::class);
 
@@ -108,10 +111,12 @@ class LoggingFieldController extends Controller
         ));
     }
 
-    private function applyLoggingFieldIndexSort($query, string $sort, string $direction): void
+    /**
+     * @param  Builder<LoggingField>  $query
+     * @param  'asc'|'desc'  $direction
+     */
+    private function applyLoggingFieldIndexSort(Builder $query, string $sort, string $direction): void
     {
-        $dir = $direction === 'desc' ? 'DESC' : 'ASC';
-
         match ($sort) {
             'name' => $query->orderBy('logging_fields.name', $direction),
             'field_type' => $query->orderBy('logging_fields.field_type', $direction)->orderBy('logging_fields.name'),
@@ -121,12 +126,15 @@ class LoggingFieldController extends Controller
                 ->orderBy('logging_fields.name'),
             'is_active' => $query->orderBy('logging_fields.is_active', $direction)->orderBy('logging_fields.name'),
             'sort_order' => $query->orderBy('logging_fields.sort_order', $direction)->orderBy('logging_fields.name'),
-            'projects' => $query->orderByRaw($this->minLoggingFieldProjectNameSql()." {$dir}")->orderBy('logging_fields.name'),
-            'programs' => $query->orderByRaw($this->minLoggingFieldProgramNameSql()." {$dir}")->orderBy('logging_fields.name'),
+            'projects' => $query->orderByRaw($this->minLoggingFieldProjectNameSql().($direction === 'desc' ? ' DESC' : ' ASC'))->orderBy('logging_fields.name'),
+            'programs' => $query->orderByRaw($this->minLoggingFieldProgramNameSql().($direction === 'desc' ? ' DESC' : ' ASC'))->orderBy('logging_fields.name'),
             default => $query->orderBy('logging_fields.sort_order', $direction)->orderBy('logging_fields.name'),
         };
     }
 
+    /**
+     * @return literal-string
+     */
     private function minLoggingFieldProjectNameSql(): string
     {
         return "COALESCE((
@@ -137,6 +145,9 @@ class LoggingFieldController extends Controller
         ), '')";
     }
 
+    /**
+     * @return literal-string
+     */
     private function minLoggingFieldProgramNameSql(): string
     {
         return "COALESCE((
@@ -149,7 +160,7 @@ class LoggingFieldController extends Controller
     /**
      * Show the form for creating a new logging field.
      */
-    public function create()
+    public function create(): View
     {
         $this->authorize('create', LoggingField::class);
         $fieldTypes = LoggingField::fieldTypes();
@@ -162,7 +173,7 @@ class LoggingFieldController extends Controller
     /**
      * Store a newly created logging field.
      */
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
         $this->authorize('create', LoggingField::class);
         $validator = Validator::make($request->all(), [
@@ -268,7 +279,7 @@ class LoggingFieldController extends Controller
     /**
      * Display the specified logging field.
      */
-    public function show(LoggingField $loggingField)
+    public function show(LoggingField $loggingField): View
     {
         $this->authorize('view', $loggingField);
         $loggingField->load(['agreements' => function ($query) {
@@ -283,7 +294,7 @@ class LoggingFieldController extends Controller
     /**
      * Show the form for editing the specified logging field.
      */
-    public function edit(LoggingField $loggingField)
+    public function edit(LoggingField $loggingField): View
     {
         $this->authorize('update', $loggingField);
         $fieldTypes = LoggingField::fieldTypes();
@@ -297,7 +308,7 @@ class LoggingFieldController extends Controller
     /**
      * Update the specified logging field.
      */
-    public function update(Request $request, LoggingField $loggingField)
+    public function update(Request $request, LoggingField $loggingField): RedirectResponse
     {
         $this->authorize('update', $loggingField);
         $validator = Validator::make($request->all(), [
@@ -405,6 +416,9 @@ class LoggingFieldController extends Controller
         return $this->redirectAfterSave($loggingField, 'Logging field updated successfully.');
     }
 
+    /**
+     * @return array<int, array{id: string, label: string}>|null
+     */
     private function optionPayloadForFieldType(string $fieldType, mixed $optionRows, ?string $fallbackJson): ?array
     {
         if (! in_array($fieldType, self::OPTION_FIELD_TYPES, true)) {
@@ -414,6 +428,9 @@ class LoggingFieldController extends Controller
         return $this->normalizedOptionsFromRequest($optionRows, $fallbackJson) ?? [];
     }
 
+    /**
+     * @return array<int, array{id: string, label: string}>|null
+     */
     private function normalizedOptionsFromRequest(mixed $optionRows, ?string $fallbackJson): ?array
     {
         if (is_array($optionRows) && $optionRows !== []) {
@@ -487,7 +504,7 @@ class LoggingFieldController extends Controller
     /**
      * Remove the specified logging field.
      */
-    public function destroy(LoggingField $loggingField)
+    public function destroy(LoggingField $loggingField): RedirectResponse
     {
         $this->authorize('delete', $loggingField);
         // Check if field is in use

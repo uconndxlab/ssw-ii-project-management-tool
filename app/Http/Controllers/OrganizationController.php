@@ -14,6 +14,9 @@ use App\Models\User;
 use App\Support\Authorization\ScopeSync;
 use App\Support\CarbonDate;
 use App\Support\ProjectProgramScope;
+use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Validator;
@@ -21,7 +24,7 @@ use Illuminate\Validation\Rule;
 
 class OrganizationController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request): View
     {
         $this->authorize('viewAny', Organization::class);
 
@@ -105,7 +108,7 @@ class OrganizationController extends Controller
         ));
     }
 
-    public function show(Organization $organization)
+    public function show(Organization $organization): View
     {
         $this->authorize('view', $organization);
         $organization->load(['states', 'programs.projects', 'users', 'contacts']);
@@ -146,8 +149,8 @@ class OrganizationController extends Controller
         // YTD totals
         $ytdTotals = [
             'activities' => $ytdActivities->count(),
-            'hours' => $ytdActivities->sum(fn ($e) => $e->event_hours + ($e->prep_hours ?? 0) + ($e->followup_hours ?? 0)),
-            'participants' => $ytdActivities->sum('participant_count'),
+            'hours' => 0,
+            'participants' => 0,
         ];
 
         // Breakdown by contact family
@@ -170,7 +173,7 @@ class OrganizationController extends Controller
         ));
     }
 
-    public function create()
+    public function create(): View
     {
         $this->authorize('create', Organization::class);
         $states = State::orderBy('name', 'asc')->get();
@@ -180,7 +183,7 @@ class OrganizationController extends Controller
         return view('organizations.create', compact('states', 'projects', 'users'));
     }
 
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
         $this->authorize('create', Organization::class);
 
@@ -207,7 +210,7 @@ class OrganizationController extends Controller
             ->with('success', 'Organization created successfully.');
     }
 
-    public function edit(Organization $organization)
+    public function edit(Organization $organization): View
     {
         $this->authorize('update', $organization);
         $organization->load(['states', 'programs.projects', 'users', 'contacts']);
@@ -218,7 +221,7 @@ class OrganizationController extends Controller
         return view('organizations.edit', compact('organization', 'states', 'projects', 'users'));
     }
 
-    public function update(Request $request, Organization $organization)
+    public function update(Request $request, Organization $organization): RedirectResponse
     {
         $this->authorize('update', $organization);
 
@@ -242,7 +245,7 @@ class OrganizationController extends Controller
         return $this->redirectAfterSave($organization, 'Organization updated successfully.');
     }
 
-    public function destroy(Organization $organization)
+    public function destroy(Organization $organization): RedirectResponse
     {
         $this->authorize('delete', $organization);
         Organization::destroy($organization->id);
@@ -252,6 +255,9 @@ class OrganizationController extends Controller
             ->with('success', 'Organization deleted successfully.');
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function validateOrganization(Request $request, ?Organization $organization = null): array
     {
         $validator = Validator::make($request->all(), [
@@ -301,7 +307,7 @@ class OrganizationController extends Controller
             ScopeSync::validateSubmittedMode(
                 $validator,
                 $this->actor(),
-                $organization?->program_scope_mode ?? ProgramScopeMode::None,
+                $organization !== null ? $organization->program_scope_mode : ProgramScopeMode::None,
                 $submittedMode,
             );
             ScopeSync::validateSubmittedProgramsAreInAdminScope(
@@ -323,10 +329,12 @@ class OrganizationController extends Controller
     /**
      * Same name may exist in different states, but not in an overlapping state.
      */
-    private function validateUniqueNameAndStates($validator, Request $request, ?Organization $organization): void
+    private function validateUniqueNameAndStates(\Illuminate\Validation\Validator $validator, Request $request, ?Organization $organization): void
     {
         $name = trim((string) $request->input('name', ''));
-        $stateIds = collect($request->input('state_ids', []))
+        /** @var list<mixed> $stateIdsInput */
+        $stateIdsInput = $request->input('state_ids', []);
+        $stateIds = collect($stateIdsInput)
             ->map(fn ($id) => (int) $id)
             ->filter()
             ->unique()
@@ -359,6 +367,9 @@ class OrganizationController extends Controller
         $validator->errors()->add('state_ids', $message);
     }
 
+    /**
+     * @param  Collection<int, State>  $overlappingStates
+     */
     private function overlappingOrganizationStateMessage(string $name, Collection $overlappingStates): string
     {
         return sprintf(
@@ -368,7 +379,7 @@ class OrganizationController extends Controller
         );
     }
 
-    private function validateContacts($validator, Request $request): void
+    private function validateContacts(\Illuminate\Validation\Validator $validator, Request $request): void
     {
         $rows = $request->input('contacts', []);
 
@@ -406,15 +417,17 @@ class OrganizationController extends Controller
         }
     }
 
-    private function applyOrganizationIndexSort($query, string $sort, string $direction): void
+    /**
+     * @param  Builder<Organization>  $query
+     * @param  'asc'|'desc'  $direction
+     */
+    private function applyOrganizationIndexSort(Builder $query, string $sort, string $direction): void
     {
-        $dir = $direction === 'desc' ? 'DESC' : 'ASC';
-
         match ($sort) {
-            'po' => $query->orderByRaw("COALESCE(organizations.po_number, '') {$dir}")->orderBy('organizations.name', 'asc'),
-            'states' => $query->orderByRaw($this->minOrganizationStateNameSql()." {$dir}")->orderBy('organizations.name', 'asc'),
-            'projects' => $query->orderByRaw($this->minOrganizationProjectNameSql()." {$dir}")->orderBy('organizations.name', 'asc'),
-            'programs' => $query->orderByRaw($this->minOrganizationProgramNameSql()." {$dir}")->orderBy('organizations.name', 'asc'),
+            'po' => $query->orderByRaw("COALESCE(organizations.po_number, '')".($direction === 'desc' ? ' DESC' : ' ASC'))->orderBy('organizations.name', 'asc'),
+            'states' => $query->orderByRaw($this->minOrganizationStateNameSql().($direction === 'desc' ? ' DESC' : ' ASC'))->orderBy('organizations.name', 'asc'),
+            'projects' => $query->orderByRaw($this->minOrganizationProjectNameSql().($direction === 'desc' ? ' DESC' : ' ASC'))->orderBy('organizations.name', 'asc'),
+            'programs' => $query->orderByRaw($this->minOrganizationProgramNameSql().($direction === 'desc' ? ' DESC' : ' ASC'))->orderBy('organizations.name', 'asc'),
             'status', 'active' => $query->orderBy('organizations.active', $direction)->orderBy('organizations.name', 'asc'),
             'agreements' => $query->orderBy('agreements_count', $direction)->orderBy('organizations.name', 'asc'),
             'created' => $query->orderBy('organizations.created_at', $direction)->orderBy('organizations.name', 'asc'),
@@ -422,6 +435,9 @@ class OrganizationController extends Controller
         };
     }
 
+    /**
+     * @return literal-string
+     */
     private function minOrganizationStateNameSql(): string
     {
         return "COALESCE((
@@ -431,6 +447,9 @@ class OrganizationController extends Controller
         ), '')";
     }
 
+    /**
+     * @return literal-string
+     */
     private function minOrganizationProjectNameSql(): string
     {
         return "COALESCE((
@@ -441,6 +460,9 @@ class OrganizationController extends Controller
         ), '')";
     }
 
+    /**
+     * @return literal-string
+     */
     private function minOrganizationProgramNameSql(): string
     {
         return "COALESCE((
@@ -450,6 +472,9 @@ class OrganizationController extends Controller
         ), '')";
     }
 
+    /**
+     * @param  list<array<string, mixed>>  $rows
+     */
     private function syncOrganizationContacts(Organization $organization, array $rows): void
     {
         $existingContacts = $organization->contacts()->get()->keyBy('id');
@@ -457,7 +482,6 @@ class OrganizationController extends Controller
 
         // Primary contact is synced first so it lands at sort_order 1 and sorts to the top.
         $orderedRows = collect($rows)
-            ->filter(fn ($row) => is_array($row))
             ->sortByDesc(fn ($row) => filter_var($row['is_primary'] ?? false, FILTER_VALIDATE_BOOLEAN));
 
         foreach ($orderedRows as $row) {

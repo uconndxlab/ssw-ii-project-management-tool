@@ -3,13 +3,14 @@
 namespace App\Support;
 
 use App\Models\Agreement;
+use App\Models\Team;
 use App\Models\User;
 use Illuminate\Support\Collection;
 
 class UserDeliverableReporting
 {
     /**
-     * @return Collection<int, array{agreement: Agreement, direct: bool, teams: Collection, deliverableGroups: Collection}>
+     * @return Collection<int, array{agreement: Agreement, direct: bool, teams: Collection<int, Team>, deliverableGroups: Collection<int, array<string, mixed>>}>
      */
     public static function buildAgreementReports(User $user): Collection
     {
@@ -57,7 +58,7 @@ class UserDeliverableReporting
 
     /**
      * @param  array<string, mixed>  $scope
-     * @return Collection<int, array{direct: bool, teams: Collection}>
+     * @return Collection<int, array{direct: bool, teams: Collection<int, Team>}>
      */
     private static function agreementAccessMeta(array $scope): Collection
     {

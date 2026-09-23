@@ -76,6 +76,8 @@ class Program extends Model
 
     /**
      * Active agreements linked via agreement_program, plus any linked to activities on this program.
+     *
+     * @return Collection<int, Agreement>
      */
     public function agreementsForDisplay(): Collection
     {

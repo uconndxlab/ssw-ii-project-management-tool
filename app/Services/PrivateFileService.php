@@ -67,6 +67,10 @@ class PrivateFileService
 
     public function deleteIfExists(?string $path): void
     {
+        if (! is_string($path) || $path === '') {
+            return;
+        }
+
         if ($this->exists($path)) {
             $this->disk()->delete($path);
         }

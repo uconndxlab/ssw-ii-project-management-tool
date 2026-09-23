@@ -7,6 +7,7 @@ use App\Enums\AccessProfile;
 use App\Enums\ProgramScopeMode;
 use App\Models\Concerns\HasProgramScope;
 use App\Models\Concerns\VisibleToUser;
+use App\Models\Contracts\HasPrograms;
 use App\Models\Pivots\DeliverableUserPivot;
 use App\Support\Authorization\CertificationAccess;
 use App\Support\Authorization\UserAccess;
@@ -31,7 +32,7 @@ use Illuminate\Support\Collection;
  * @property bool|null $is_principal_investigator
  * @property list<string>|null $also_in_teams
  */
-class User extends Authenticatable
+class User extends Authenticatable implements HasPrograms
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, HasProgramScope, Notifiable, VisibleToUser;
@@ -247,10 +248,13 @@ class User extends Authenticatable
      * Requires teams (with nested programs.projects and agreements) and direct relations loaded.
      *
      * @return array{
-     *     direct: array{projects: Collection, programs: Collection, agreements: Collection},
-     *     viaTeams: array{projects: Collection, programs: Collection, agreements: Collection},
+     *     direct: array{projects: Collection<int, Project>|\Illuminate\Database\Eloquent\Collection<int, Project>|mixed, programs: Collection<int, Program>|\Illuminate\Database\Eloquent\Collection<int, Program>|mixed, agreements: Collection<int, Agreement>|\Illuminate\Database\Eloquent\Collection<int, Agreement>|mixed},
+     *     viaTeams: array{projects: Collection<int, mixed>|mixed, programs: Collection<int, mixed>|mixed, agreements: Collection<int, mixed>|mixed},
      *     totals: array{projects: int, programs: int, agreements: int, teams: int},
-     *     index: array{projects: Collection, programs: Collection},
+     *     index: array{
+     *         projects: Collection<int, mixed>|mixed,
+     *         programs: Collection<int, mixed>|mixed
+     *     }
      * }
      */
     public function getScopeBySource(): array
@@ -361,8 +365,10 @@ class User extends Authenticatable
 
     /**
      * Teams this user belongs to that grant access to the given related entity.
+     *
+     * @return Collection<int, Team>
      */
-    private function teamsProvidingRelation(string $relation, int $entityId)
+    private function teamsProvidingRelation(string $relation, int $entityId): Collection
     {
         return $this->teams->filter(function ($team) use ($relation, $entityId) {
             return $team->{$relation}->contains('id', $entityId);

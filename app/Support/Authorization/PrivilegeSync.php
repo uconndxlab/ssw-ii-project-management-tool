@@ -91,6 +91,7 @@ class PrivilegeSync
     }
 
     /**
+     * @param  array<string, mixed>  $input
      * @return list<array{capability: string, scope_type: string, scope_id: ?int}>
      */
     public static function rowsFromRequest(array $input, User $actor): array

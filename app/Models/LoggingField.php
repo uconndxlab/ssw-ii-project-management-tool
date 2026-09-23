@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\ProgramScopeMode;
 use App\Models\Concerns\HasProgramScope;
 use App\Models\Concerns\VisibleToUser;
+use App\Models\Contracts\HasPrograms;
 use App\Models\Pivots\AgreementLoggingFieldPivot;
 use Database\Factories\LoggingFieldFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -21,7 +22,7 @@ use Illuminate\Support\Str;
  * @property array<int, string|array<string, mixed>>|null $options_json
  * @property AgreementLoggingFieldPivot|null $pivot
  */
-class LoggingField extends Model
+class LoggingField extends Model implements HasPrograms
 {
     /** @use HasFactory<LoggingFieldFactory> */
     use HasFactory, HasProgramScope, VisibleToUser;
@@ -129,6 +130,9 @@ class LoggingField extends Model
         return $this->belongsToMany(Program::class, 'logging_field_program')->withTimestamps();
     }
 
+    /**
+     * @return array<string, string>
+     */
     public static function availabilityOptions(): array
     {
         return [
@@ -140,6 +144,8 @@ class LoggingField extends Model
 
     /**
      * Field type options
+     *
+     * @return array<string, string>
      */
     public static function fieldTypes(): array
     {
@@ -174,6 +180,9 @@ class LoggingField extends Model
         return in_array($this->field_type, [self::FIELD_TYPE_MULTISELECT, self::FIELD_TYPE_CHECKBOX_GROUP], true);
     }
 
+    /**
+     * @return array<int, array{id: string, label: string}>
+     */
     public function normalizedOptions(): array
     {
         /** @var array<int, mixed>|null $options */
@@ -214,6 +223,9 @@ class LoggingField extends Model
             ->all();
     }
 
+    /**
+     * @return array<int, string>
+     */
     public function optionValues(): array
     {
         return collect($this->normalizedOptions())
@@ -223,6 +235,9 @@ class LoggingField extends Model
             ->all();
     }
 
+    /**
+     * @return array<string, string>
+     */
     public function optionLabelMap(): array
     {
         return collect($this->normalizedOptions())

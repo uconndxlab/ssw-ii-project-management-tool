@@ -6,6 +6,7 @@ use App\Enums\CertificateRequirementPhase;
 use App\Enums\ProgramScopeMode;
 use App\Models\Concerns\HasProgramScope;
 use App\Models\Concerns\VisibleToUser;
+use App\Models\Contracts\HasPrograms;
 use Database\Factories\CertificateFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -19,7 +20,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property ProgramScopeMode $program_scope_mode
  * @property bool $renewal_matches_initial
  */
-class Certificate extends Model
+class Certificate extends Model implements HasPrograms
 {
     /** @use HasFactory<CertificateFactory> */
     use HasFactory, HasProgramScope, VisibleToUser;

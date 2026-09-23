@@ -56,8 +56,11 @@ class DeliverableAssignmentTargets
     }
 
     /**
+     * @param  array<int, int>  $userIds
+     * @param  array<int, int>  $teamIds
      * @param  array<int|string, mixed>  $userTargets
      * @param  array<int|string, mixed>  $teamTargets
+     * @param  Collection<int, Team>  $teamLookup
      * @return array{
      *     allocated: float,
      *     remainder: float,
@@ -122,6 +125,14 @@ class DeliverableAssignmentTargets
     /**
      * @param  Collection<int, User>  $liveUsers
      * @param  Collection<int, Team>  $liveTeams
+     * @param  Collection<int, Team>  $teamLookup
+     * @return array{
+     *     allocated: float,
+     *     remainder: float,
+     *     is_balanced: bool,
+     *     is_over_assigned: bool,
+     *     team_warnings: array<int, array{team_id: int, team_name: string, team_target: ?float, member_sum: float}>
+     * }
      */
     public static function summarizeFromDeliverable(
         AgreementDeliverable $deliverable,
@@ -149,14 +160,17 @@ class DeliverableAssignmentTargets
         );
     }
 
+    /**
+     * @param  array{is_balanced?: bool, team_warnings?: array<int, mixed>}  $summary
+     */
     public static function hasAllocationMismatch(AgreementDeliverable $deliverable, array $summary): bool
     {
         if (self::isIndividual($deliverable)) {
-            return ! $summary['is_balanced'];
+            return ! ($summary['is_balanced'] ?? false);
         }
 
         if (self::usesRecommendedTargets($deliverable)) {
-            return ! $summary['is_balanced'] || ! empty($summary['team_warnings']);
+            return ! ($summary['is_balanced'] ?? false) || ! empty($summary['team_warnings']);
         }
 
         return false;
@@ -183,11 +197,13 @@ class DeliverableAssignmentTargets
             DeliverableStatus::NotApplicable->value => -1,
         ];
 
-        return $scored->sortByDesc(fn (?DeliverableStatus $status) => $priority[$status?->value ?? ''] ?? -2)->first();
+        /** @var Collection<int, DeliverableStatus> $scored */
+        return $scored->sortByDesc(fn (DeliverableStatus $status) => $priority[$status->value])->first();
     }
 
     /**
      * @param  Collection<int, DeliverableStatus|null>  $statuses
+     * @return array{on_track: int, total: int}
      */
     public static function countOnTrackStatuses(Collection $statuses): array
     {

@@ -6,6 +6,7 @@ use App\Enums\ProgramScopeMode;
 use App\Models\Program;
 use App\Models\Team;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
 
@@ -37,12 +38,12 @@ class ProgramParticipantDirectory
 
         $teams = Team::query()
             ->where('active', true)
-            ->where(function ($query) use ($programIds) {
+            ->where(function (Builder $query) use ($programIds) {
                 $query->where('program_scope_mode', ProgramScopeMode::All->value)
-                    ->orWhere(function ($specificQuery) use ($programIds) {
+                    ->orWhere(function (Builder $specificQuery) use ($programIds) {
                         $specificQuery
                             ->where('program_scope_mode', ProgramScopeMode::Specific->value)
-                            ->whereHas('programs', fn ($relation) => $relation->whereIn('programs.id', $programIds));
+                            ->whereHas('programs', fn (Builder $relation) => $relation->whereIn('programs.id', $programIds));
                     });
             })
             ->with(['users:id,name,email,access_profile,active', 'programs:id'])
@@ -101,7 +102,7 @@ class ProgramParticipantDirectory
     }
 
     /**
-     * @param  array<int, int|string>  $programIds
+     * @param  array<int, mixed>  $programIds
      * @return list<int>
      */
     public static function allowedUserIdsForProgramIds(array $programIds): array
@@ -114,11 +115,11 @@ class ProgramParticipantDirectory
 
         $directory = self::build(Program::query()->whereKey($programIds)->get(['id']));
 
-        return collect($programIds)
+        return array_values(collect($programIds)
             ->flatMap(fn ($id) => $directory['user_ids_by_program_id'][(string) $id] ?? [])
             ->map(fn ($id) => (int) $id)
             ->unique()
             ->values()
-            ->all();
+            ->all());
     }
 }

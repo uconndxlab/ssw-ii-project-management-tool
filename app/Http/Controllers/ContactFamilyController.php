@@ -9,12 +9,15 @@ use App\Models\Program;
 use App\Models\Project;
 use App\Support\Authorization\ScopeSync;
 use App\Support\ProjectProgramScope;
+use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class ContactFamilyController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request): View
     {
         $this->authorize('viewAny', ContactFamily::class);
 
@@ -66,20 +69,25 @@ class ContactFamilyController extends Controller
         ));
     }
 
-    private function applyContactFamilyIndexSort($query, string $sort, string $direction): void
+    /**
+     * @param  Builder<ContactFamily>  $query
+     * @param  'asc'|'desc'  $direction
+     */
+    private function applyContactFamilyIndexSort(Builder $query, string $sort, string $direction): void
     {
-        $dir = $direction === 'desc' ? 'DESC' : 'ASC';
-
         match ($sort) {
             'name' => $query->orderBy('contact_families.name', $direction),
             'activity_types' => $query->orderBy('activity_types_count', $direction)->orderBy('contact_families.name'),
             'active' => $query->orderBy('contact_families.active', $direction)->orderBy('contact_families.name'),
-            'projects' => $query->orderByRaw($this->minContactFamilyProjectNameSql()." {$dir}")->orderBy('contact_families.name'),
-            'programs' => $query->orderByRaw($this->minContactFamilyProgramNameSql()." {$dir}")->orderBy('contact_families.name'),
+            'projects' => $query->orderByRaw($this->minContactFamilyProjectNameSql().($direction === 'desc' ? ' DESC' : ' ASC'))->orderBy('contact_families.name'),
+            'programs' => $query->orderByRaw($this->minContactFamilyProgramNameSql().($direction === 'desc' ? ' DESC' : ' ASC'))->orderBy('contact_families.name'),
             default => $query->orderBy('contact_families.sort_order', $direction)->orderBy('contact_families.name'),
         };
     }
 
+    /**
+     * @return literal-string
+     */
     private function minContactFamilyProjectNameSql(): string
     {
         return "COALESCE((
@@ -90,6 +98,9 @@ class ContactFamilyController extends Controller
         ), '')";
     }
 
+    /**
+     * @return literal-string
+     */
     private function minContactFamilyProgramNameSql(): string
     {
         return "COALESCE((
@@ -99,7 +110,7 @@ class ContactFamilyController extends Controller
         ), '')";
     }
 
-    public function create()
+    public function create(): View
     {
         $this->authorize('create', ContactFamily::class);
         $contactFamilyLoggingFields = LoggingField::active()
@@ -112,7 +123,7 @@ class ContactFamilyController extends Controller
         return view('admin.contact-families.create', compact('contactFamilyLoggingFields', 'projects'));
     }
 
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
         $this->authorize('create', ContactFamily::class);
         $validator = Validator::make($request->all(), [
@@ -190,7 +201,7 @@ class ContactFamilyController extends Controller
             ->with('success', 'Activity family created successfully.');
     }
 
-    public function edit(ContactFamily $contactFamily)
+    public function edit(ContactFamily $contactFamily): View
     {
         $this->authorize('update', $contactFamily);
         $contactFamilyLoggingFields = LoggingField::active()
@@ -204,7 +215,7 @@ class ContactFamilyController extends Controller
         return view('admin.contact-families.edit', compact('contactFamily', 'contactFamilyLoggingFields', 'projects'));
     }
 
-    public function update(Request $request, ContactFamily $contactFamily)
+    public function update(Request $request, ContactFamily $contactFamily): RedirectResponse
     {
         $this->authorize('update', $contactFamily);
         $validator = Validator::make($request->all(), [
@@ -278,7 +289,7 @@ class ContactFamilyController extends Controller
         return $this->redirectAfterSave($contactFamily, 'Activity family updated successfully.');
     }
 
-    public function destroy(ContactFamily $contactFamily)
+    public function destroy(ContactFamily $contactFamily): RedirectResponse
     {
         $this->authorize('delete', $contactFamily);
         if ($contactFamily->activityTypes()->count() > 0) {

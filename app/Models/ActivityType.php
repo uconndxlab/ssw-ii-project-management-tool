@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\ProgramScopeMode;
 use App\Models\Concerns\HasProgramScope;
 use App\Models\Concerns\VisibleToUser;
+use App\Models\Contracts\HasPrograms;
 use Database\Factories\ActivityTypeFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -19,7 +20,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  *
  * @property ProgramScopeMode $program_scope_mode
  */
-class ActivityType extends Model
+class ActivityType extends Model implements HasPrograms
 {
     /** @use HasFactory<ActivityTypeFactory> */
     use HasFactory, HasProgramScope, VisibleToUser;

@@ -78,7 +78,7 @@ class AgreementDuplicationService
             $clipped = ScopeSync::clipProgramsForDuplicate(
                 $actor,
                 $source->program_scope_mode,
-                $source->programs->pluck('id')->all(),
+                array_values($source->programs->pluck('id')->all()),
             );
             $copy->program_scope_mode = $clipped['mode'];
             $copy->save();
@@ -110,7 +110,7 @@ class AgreementDuplicationService
                 $this->copyDeliverable($copy, $deliverable);
             }
 
-            return $copy->fresh([
+            $fresh = $copy->fresh([
                 'organizations',
                 'states',
                 'programs.projects',
@@ -118,6 +118,9 @@ class AgreementDuplicationService
                 'teams',
                 'deliverables',
             ]);
+            assert($fresh instanceof Agreement);
+
+            return $fresh;
         });
     }
 

@@ -2,16 +2,21 @@
 
 namespace App\Models\Concerns;
 
+use App\Enums\ProgramScopeMode;
 use App\Models\Program;
 use App\Models\Project;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Collection;
 
 /**
+ * @property ProgramScopeMode|string|null $program_scope_mode
  * @property-read EloquentCollection<int, Program> $programs
  */
 trait HasProgramScope
 {
+    abstract public function programs(): BelongsToMany;
+
     /**
      * Projects are display/filter context inferred from the persisted programs.
      *

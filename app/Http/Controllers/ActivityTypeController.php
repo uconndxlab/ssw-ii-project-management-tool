@@ -12,12 +12,16 @@ use App\Models\Program;
 use App\Models\Project;
 use App\Support\Authorization\ScopeSync;
 use App\Support\ProjectProgramScope;
+use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Validator;
 
 class ActivityTypeController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request): View
     {
         $this->authorize('viewAny', ActivityType::class);
         $contactFamilies = ContactFamily::query()->orderBy('sort_order', 'asc')
@@ -99,10 +103,12 @@ class ActivityTypeController extends Controller
         ));
     }
 
-    private function applyActivityTypeIndexSort($query, string $sort, string $direction): void
+    /**
+     * @param  Builder<ActivityType>  $query
+     * @param  'asc'|'desc'  $direction
+     */
+    private function applyActivityTypeIndexSort(Builder $query, string $sort, string $direction): void
     {
-        $dir = $direction === 'desc' ? 'DESC' : 'ASC';
-
         switch ($sort) {
             case 'contact_family':
                 $query->join('contact_families', 'activity_types.contact_family_id', '=', 'contact_families.id')
@@ -128,12 +134,12 @@ class ActivityTypeController extends Controller
                 break;
 
             case 'projects':
-                $query->orderByRaw($this->minActivityTypeProjectNameSql()." {$dir}")
+                $query->orderByRaw($this->minActivityTypeProjectNameSql().($direction === 'desc' ? ' DESC' : ' ASC'))
                     ->orderBy('activity_types.name');
                 break;
 
             case 'programs':
-                $query->orderByRaw($this->minActivityTypeProgramNameSql()." {$dir}")
+                $query->orderByRaw($this->minActivityTypeProgramNameSql().($direction === 'desc' ? ' DESC' : ' ASC'))
                     ->orderBy('activity_types.name');
                 break;
 
@@ -144,6 +150,9 @@ class ActivityTypeController extends Controller
         }
     }
 
+    /**
+     * @return literal-string
+     */
     private function minActivityTypeProjectNameSql(): string
     {
         return "COALESCE((
@@ -154,6 +163,9 @@ class ActivityTypeController extends Controller
         ), '')";
     }
 
+    /**
+     * @return literal-string
+     */
     private function minActivityTypeProgramNameSql(): string
     {
         return "COALESCE((
@@ -163,7 +175,7 @@ class ActivityTypeController extends Controller
         ), '')";
     }
 
-    public function create()
+    public function create(): View
     {
         $this->authorize('create', ActivityType::class);
         $contactFamilies = ContactFamily::query()->orderBy('sort_order', 'asc')->orderBy('name', 'asc')->get();
@@ -177,7 +189,7 @@ class ActivityTypeController extends Controller
         return view('admin.activity-types.create', compact('contactFamilies', 'activityTypeLoggingFields', 'projects'));
     }
 
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
         $this->authorize('create', ActivityType::class);
         $validator = Validator::make($request->all(), $this->activityTypeValidationRules());
@@ -225,7 +237,7 @@ class ActivityTypeController extends Controller
             ->with('success', 'Activity type created successfully.');
     }
 
-    public function edit(ActivityType $activityType)
+    public function edit(ActivityType $activityType): View
     {
         $this->authorize('update', $activityType);
         $contactFamilies = ContactFamily::query()->orderBy('sort_order', 'asc')->orderBy('name', 'asc')->get();
@@ -240,7 +252,7 @@ class ActivityTypeController extends Controller
         return view('admin.activity-types.edit', compact('activityType', 'contactFamilies', 'activityTypeLoggingFields', 'projects'));
     }
 
-    public function update(Request $request, ActivityType $activityType)
+    public function update(Request $request, ActivityType $activityType): RedirectResponse
     {
         $this->authorize('update', $activityType);
         $validator = Validator::make($request->all(), $this->activityTypeValidationRules());
@@ -288,7 +300,7 @@ class ActivityTypeController extends Controller
         return $this->redirectAfterSave($activityType, 'Activity type updated successfully.');
     }
 
-    public function destroy(ActivityType $activityType)
+    public function destroy(ActivityType $activityType): RedirectResponse
     {
         $this->authorize('delete', $activityType);
         $isUsedInActivities = Activity::query()
@@ -308,12 +320,14 @@ class ActivityTypeController extends Controller
             ->with('success', 'Activity type deleted successfully.');
     }
 
-    public function getByFamily(Request $request)
+    public function getByFamily(Request $request): Response
     {
         $this->authorize('create', Activity::class);
         $contactFamilyId = $request->input('contact_family_id');
         $selectedActivityTypeId = (int) $request->input('activity_type_id');
-        $agreementIds = collect($request->input('agreement_ids', []))
+        /** @var list<mixed> $agreementIdsInput */
+        $agreementIdsInput = $request->input('agreement_ids', []);
+        $agreementIds = collect($agreementIdsInput)
             ->filter()
             ->map(fn ($id) => (int) $id)
             ->unique()
@@ -374,6 +388,9 @@ class ActivityTypeController extends Controller
         return response($html);
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function activityTypeValidationRules(): array
     {
         return [
@@ -396,7 +413,7 @@ class ActivityTypeController extends Controller
         ];
     }
 
-    private function addActivityTypeValidatorAfter($validator, Request $request): void
+    private function addActivityTypeValidatorAfter(\Illuminate\Validation\Validator $validator, Request $request): void
     {
         $validator->after(function ($validator) use ($request) {
             $mode = $request->input('program_scope_mode', ProgramScopeMode::All->value);
@@ -438,6 +455,10 @@ class ActivityTypeController extends Controller
         });
     }
 
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
     private function normalizeValidatedDuration(array $validated): array
     {
         $unit = $validated['duration_unit'] ?? 'none';

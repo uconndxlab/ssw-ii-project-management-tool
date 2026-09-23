@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Database\Connection;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -154,19 +155,19 @@ class ImportSqliteDatabase extends Command
      */
     private function listTables(string $connection): array
     {
-        return collect(Schema::connection($connection)->getTableListing())
+        return array_values(collect(Schema::connection($connection)->getTableListing())
             ->map(function (string $table) {
                 return str_contains($table, '.') ? substr($table, strrpos($table, '.') + 1) : $table;
             })
             ->sort()
             ->values()
-            ->all();
+            ->all());
     }
 
     /**
      * @param  list<string>  $tables
      */
-    private function truncateTables($connection, array $tables): void
+    private function truncateTables(Connection $connection, array $tables): void
     {
         $quoted = implode(', ', array_map(
             fn (string $table) => $connection->getQueryGrammar()->wrapTable($table),
@@ -180,7 +181,7 @@ class ImportSqliteDatabase extends Command
      * @param  list<string>  $tables
      * @return list<string>
      */
-    private function sortedInsertOrder($connection, array $tables): array
+    private function sortedInsertOrder(Connection $connection, array $tables): array
     {
         $remaining = array_fill_keys($tables, true);
         $parentsByChild = array_fill_keys($tables, []);
@@ -230,7 +231,7 @@ class ImportSqliteDatabase extends Command
     /**
      * @return list<array{child: string, parent: string, columns: list<string>}>
      */
-    private function foreignKeys($connection): array
+    private function foreignKeys(Connection $connection): array
     {
         $rows = $connection->select("
             SELECT
@@ -261,8 +262,9 @@ class ImportSqliteDatabase extends Command
         return array_values($grouped);
     }
 
-    private function copyTable($connection, string $table): void
+    private function copyTable(Connection $connection, string $table): void
     {
+        /** @var Collection<string, array<string, mixed>> $columns */
         $columns = collect(Schema::connection($connection->getName())->getColumns($table))
             ->keyBy('name');
         $selfReferences = $this->selfReferenceColumns($connection, $table);
@@ -287,7 +289,7 @@ class ImportSqliteDatabase extends Command
     /**
      * @return list<string>
      */
-    private function selfReferenceColumns($connection, string $table): array
+    private function selfReferenceColumns(Connection $connection, string $table): array
     {
         $columns = [];
 
@@ -350,7 +352,7 @@ class ImportSqliteDatabase extends Command
     /**
      * @param  list<string>  $tables
      */
-    private function restoreSelfReferences($connection, array $tables): void
+    private function restoreSelfReferences(Connection $connection, array $tables): void
     {
         foreach ($tables as $table) {
             $selfReferences = $this->selfReferenceColumns($connection, $table);
@@ -381,7 +383,7 @@ class ImportSqliteDatabase extends Command
     /**
      * @param  list<string>  $tables
      */
-    private function resetSequences($connection, array $tables): void
+    private function resetSequences(Connection $connection, array $tables): void
     {
         foreach ($tables as $table) {
             $columns = collect(Schema::connection($connection->getName())->getColumns($table));

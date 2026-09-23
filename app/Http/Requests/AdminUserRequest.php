@@ -39,6 +39,9 @@ class AdminUserRequest extends FormRequest
         ];
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function rules(): array
     {
         $user = $this->route('user');
@@ -117,8 +120,12 @@ class AdminUserRequest extends FormRequest
                 if ($coverage === 'system' && ! $access->isSystemAdmin()) {
                     $validator->errors()->add('privilege_coverage', 'Only a system administrator can assign system-wide access.');
                 }
-                if ($coverage === 'specific' && collect($this->input('privilege_entries', []))->filter(fn ($row) => ! empty($row['scope_id']))->isEmpty()) {
-                    $validator->errors()->add('privilege_entries', 'Add at least one project or program to the access ledger.');
+                if ($coverage === 'specific') {
+                    /** @var list<mixed> $privilegeEntries */
+                    $privilegeEntries = $this->input('privilege_entries', []);
+                    if (collect($privilegeEntries)->filter(fn ($row) => ! empty($row['scope_id']))->isEmpty()) {
+                        $validator->errors()->add('privilege_entries', 'Add at least one project or program to the access ledger.');
+                    }
                 }
             }
 
@@ -132,13 +139,17 @@ class AdminUserRequest extends FormRequest
                 }
             }
 
-            $projectIds = collect($this->input('project_ids', []))
+            /** @var list<mixed> $projectIdsInput */
+            $projectIdsInput = $this->input('project_ids', []);
+            $projectIds = collect($projectIdsInput)
                 ->filter(fn ($id) => $id !== null && $id !== '')
                 ->map(fn ($id) => (int) $id)
                 ->unique()
                 ->values();
 
-            $programIds = collect($this->input('program_ids', []))
+            /** @var list<mixed> $programIdsInput */
+            $programIdsInput = $this->input('program_ids', []);
+            $programIds = collect($programIdsInput)
                 ->filter(fn ($id) => $id !== null && $id !== '')
                 ->map(fn ($id) => (int) $id)
                 ->unique()
@@ -171,7 +182,9 @@ class AdminUserRequest extends FormRequest
             );
 
             if (! $user instanceof User) {
-                $teamIds = collect($this->input('team_ids', []))->filter()->all();
+                /** @var list<mixed> $teamIdsInput */
+                $teamIdsInput = $this->input('team_ids', []);
+                $teamIds = collect($teamIdsInput)->filter()->all();
                 $hasProgram = $programIds->isNotEmpty()
                     || $this->input('program_scope_mode') === ProgramScopeMode::All->value;
                 if (! $hasProgram && $teamIds === []) {

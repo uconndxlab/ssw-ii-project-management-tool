@@ -12,6 +12,7 @@ use App\Models\Agreement;
 use App\Models\Certificate;
 use App\Models\CertificationTool;
 use App\Models\ContactFamily;
+use App\Models\Contracts\HasPrograms;
 use App\Models\LoggingField;
 use App\Models\Organization;
 use App\Models\Program;
@@ -29,16 +30,22 @@ class UserAccess
     /** @var \WeakMap<User, self>|null */
     private static ?\WeakMap $cache = null;
 
+    /** @var list<int>|null */
     private ?array $adminProjectIds = null;
 
+    /** @var list<int>|null */
     private ?array $adminProgramIds = null;
 
+    /** @var list<int>|null */
     private ?array $viewProjectIds = null;
 
+    /** @var list<int>|null */
     private ?array $viewProgramIds = null;
 
+    /** @var array<int, int>|null */
     private ?array $directReportIds = null;
 
+    /** @var Collection<int, UserPrivilege>|null */
     private ?Collection $privileges = null;
 
     /** @var array<string, bool> */
@@ -127,7 +134,7 @@ class UserAccess
     {
         $this->hydratePrivilegeIds();
 
-        return $this->adminProjectIds;
+        return $this->adminProjectIds ?? [];
     }
 
     /**
@@ -137,7 +144,7 @@ class UserAccess
     {
         $this->hydratePrivilegeIds();
 
-        return $this->adminProgramIds;
+        return $this->adminProgramIds ?? [];
     }
 
     /**
@@ -147,7 +154,7 @@ class UserAccess
     {
         $this->hydratePrivilegeIds();
 
-        return $this->viewProjectIds;
+        return $this->viewProjectIds ?? [];
     }
 
     /**
@@ -157,13 +164,14 @@ class UserAccess
     {
         $this->hydratePrivilegeIds();
 
-        return $this->viewProgramIds;
+        return $this->viewProgramIds ?? [];
     }
 
     /**
-     * @return list<int>
+     * Get report ids for supervisor, cache.
+     *
+     * @return array<int, int>
      */
-    // get report ids for supervisor, cache
     public function directReportIds(): array
     {
         if ($this->directReportIds !== null) {
@@ -174,11 +182,11 @@ class UserAccess
             return $this->directReportIds = [];
         }
 
-        return $this->directReportIds = User::query()
+        return $this->directReportIds = array_values(User::query()
             ->where('supervisor_id', $this->user->id)
             ->pluck('id')
             ->map(fn ($id) => (int) $id)
-            ->all();
+            ->all());
     }
 
     /**
@@ -417,6 +425,10 @@ class UserAccess
         return true;
     }
 
+    /**
+     * @param  Builder<covariant Model>  $query
+     * @return Builder<covariant Model>
+     */
     public function applyProjectVisibility(Builder $query): Builder
     {
         if ($this->isInput()) {
@@ -433,6 +445,10 @@ class UserAccess
         });
     }
 
+    /**
+     * @param  Builder<covariant Model>  $query
+     * @return Builder<covariant Model>
+     */
     public function applyProgramVisibility(Builder $query): Builder
     {
         if ($this->isInput()) {
@@ -449,6 +465,10 @@ class UserAccess
         });
     }
 
+    /**
+     * @param  Builder<covariant Model>  $query
+     * @return Builder<covariant Model>
+     */
     public function applyScopedEntityVisibility(Builder $query, string $programsRelation = 'programs'): Builder
     {
         if ($this->isInput()) {
@@ -475,6 +495,10 @@ class UserAccess
         });
     }
 
+    /**
+     * @param  Builder<covariant Model>  $query
+     * @return Builder<covariant Model>
+     */
     public function applyTeamVisibility(Builder $query): Builder
     {
         if ($this->isInput()) {
@@ -494,8 +518,13 @@ class UserAccess
         });
     }
 
-    // Agreements you belong to (self/team) or that list a program in your view/admin privilege.
-    // or agreements supervisees belong to
+    /**
+     * Agreements you belong to (self/team) or that list a program in your view/admin privilege.
+     * or agreements supervisees belong to
+     *
+     * @param  Builder<covariant Model>  $query
+     * @return Builder<covariant Model>
+     */
     public function applyAgreementVisibility(Builder $query): Builder
     {
         if ($this->isInput()) {
@@ -516,6 +545,10 @@ class UserAccess
         });
     }
 
+    /**
+     * @param  Builder<covariant Model>  $query
+     * @return Builder<covariant Model>
+     */
     public function applyOrganizationVisibility(Builder $query): Builder
     {
         if ($this->isInput()) {
@@ -535,6 +568,10 @@ class UserAccess
         });
     }
 
+    /**
+     * @param  Builder<covariant Model>  $query
+     * @return Builder<covariant Model>
+     */
     public function applyStateVisibility(Builder $query): Builder
     {
         if ($this->isInput()) {
@@ -552,6 +589,10 @@ class UserAccess
         });
     }
 
+    /**
+     * @param  Builder<covariant Model>  $query
+     * @return Builder<covariant Model>
+     */
     public function applyActivityVisibility(Builder $query): Builder
     {
         if ($this->hasSystemView()) {
@@ -570,6 +611,10 @@ class UserAccess
         });
     }
 
+    /**
+     * @param  Builder<covariant Model>  $query
+     * @return Builder<covariant Model>
+     */
     public function applyUserIndexVisibility(Builder $query): Builder
     {
         if ($this->isInput()) {
@@ -587,6 +632,10 @@ class UserAccess
         return $this->applyUsersInViewMembership($query);
     }
 
+    /**
+     * @param  Builder<covariant Model>  $query
+     * @return Builder<covariant Model>
+     */
     public function applySuperviseesVisibility(Builder $query): Builder
     {
         if (! $this->isSupervisor()) {
@@ -596,6 +645,10 @@ class UserAccess
         return $query->where('supervisor_id', $this->user->id);
     }
 
+    /**
+     * @param  Builder<covariant Model>  $query
+     * @return Builder<covariant Model>
+     */
     public function applyUsersInViewMembership(Builder $query): Builder
     {
         if ($this->hasSystemView()) {
@@ -859,16 +912,17 @@ class UserAccess
         if ($record instanceof Program) {
             $record->loadMissing('projects');
 
-            return [null, [], $record->projects->pluck('id')->map(fn ($id) => (int) $id)->all()];
+            return [null, [], array_values($record->projects->pluck('id')->map(fn ($id) => (int) $id)->all())];
         }
 
         if ($record instanceof Project) {
             return [null, [], [(int) $record->id]];
         }
 
+        /** @var Model&HasPrograms $record */
         $mode = $record->program_scope_mode ?? null;
         $record->loadMissing('programs');
-        $programIds = $record->programs->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $programIds = array_values($record->programs->pluck('id')->map(fn ($id) => (int) $id)->all());
 
         return [$mode, $programIds, []];
     }
@@ -909,6 +963,12 @@ class UserAccess
         });
     }
 
+    /**
+     * @phpstan-assert list<int> $this->adminProjectIds
+     * @phpstan-assert list<int> $this->adminProgramIds
+     * @phpstan-assert list<int> $this->viewProjectIds
+     * @phpstan-assert list<int> $this->viewProgramIds
+     */
     private function hydratePrivilegeIds(): void
     {
         if ($this->adminProjectIds !== null) {
@@ -967,13 +1027,16 @@ class UserAccess
             return [];
         }
 
-        return Program::query()
+        return array_values(Program::query()
             ->whereHas('projects', fn (Builder $query) => $query->whereIn('projects.id', $projectIds))
             ->pluck('id')
             ->map(fn ($id) => (int) $id)
-            ->all();
+            ->all());
     }
 
+    /**
+     * @param  Builder<covariant Model>  $builder
+     */
     private function orPrivilegeProjectOverlap(Builder $builder): void
     {
         if (! $this->hasView()) {
@@ -992,6 +1055,9 @@ class UserAccess
         }
     }
 
+    /**
+     * @param  Builder<covariant Model>  $builder
+     */
     private function orPrivilegeProgramOverlap(Builder $builder): void
     {
         if (! $this->hasView()) {
@@ -1010,7 +1076,11 @@ class UserAccess
         }
     }
 
-    // Privilege overlap on assigned programs only. "All programs" is not an overlap for every viewer.
+    /**
+     * Privilege overlap on assigned programs only. "All programs" is not an overlap for every viewer.
+     *
+     * @param  Builder<covariant Model>  $builder
+     */
     private function orPrivilegeScopedOverlap(Builder $builder): void
     {
         if (! $this->hasView()) {
@@ -1024,6 +1094,9 @@ class UserAccess
         }
     }
 
+    /**
+     * @param  Builder<covariant Model>  $builder
+     */
     private function orMembershipProjectOverlap(Builder $builder): void
     {
         $memberIds = $this->membershipVisibilityUserIds();
@@ -1036,6 +1109,9 @@ class UserAccess
         });
     }
 
+    /**
+     * @param  Builder<covariant Model>  $builder
+     */
     private function orMembershipProgramOverlap(Builder $builder): void
     {
         $memberIds = $this->membershipVisibilityUserIds();
@@ -1046,6 +1122,10 @@ class UserAccess
         $this->constrainProgramsByMembership($builder, $memberIds, or: true);
     }
 
+    /**
+     * @param  Builder<covariant Model>  $builder
+     * @param  list<int>  $memberIds
+     */
     private function constrainProgramsByMembership(Builder $builder, array $memberIds, bool $or = false): void
     {
         $constraint = function (Builder $q) use ($memberIds) {
@@ -1071,6 +1151,9 @@ class UserAccess
         }
     }
 
+    /**
+     * @param  Builder<covariant Model>  $builder
+     */
     private function orMembershipForScopedEntity(Builder $builder, Model $model): void
     {
         $memberIds = $this->membershipVisibilityUserIds();
@@ -1083,7 +1166,12 @@ class UserAccess
         }
     }
 
-    // get all activities that reference list of users
+    /**
+     * Get all activities that reference list of users.
+     *
+     * @param  Builder<covariant Model>  $builder
+     * @param  list<int>  $userIds
+     */
     private function orActivityReferencedBy(Builder $builder, array $userIds): void
     {
         if ($userIds === []) {

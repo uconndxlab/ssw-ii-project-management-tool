@@ -6,6 +6,7 @@ use App\Enums\ProgramScopeMode;
 use App\Models\ActivityType;
 use App\Models\Certificate;
 use App\Models\ContactFamily;
+use App\Models\Contracts\HasPrograms;
 use App\Models\LoggingField;
 use App\Models\Program;
 use App\Models\Project;
@@ -13,6 +14,7 @@ use App\Models\User;
 use App\Support\Authorization\UserAccess;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\Validator;
 
 class ProjectProgramScope
 {
@@ -39,7 +41,10 @@ class ProjectProgramScope
         return self::defaultModeForModel($modelClass);
     }
 
-    public static function activeProjectsWithPrograms()
+    /**
+     * @return Collection<int, Project>
+     */
+    public static function activeProjectsWithPrograms(): Collection
     {
         return Project::query()
             ->where('active', true)
@@ -55,8 +60,9 @@ class ProjectProgramScope
     /**
      * Projects and programs the actor may assign, plus any already on the entity.
      *
-     * @param  list<int>  $existingProjectIds
-     * @param  list<int>  $existingProgramIds
+     * @param  array<int, int>  $existingProjectIds
+     * @param  array<int, int>  $existingProgramIds
+     * @return Collection<int, Project>
      */
     public static function assignableProjectsWithPrograms(
         User $actor,
@@ -99,7 +105,10 @@ class ProjectProgramScope
             )));
 
             if ($allowedProjectIds === []) {
-                return collect();
+                /** @var Collection<int, Project> $none */
+                $none = collect();
+
+                return $none;
             }
 
             $projectQuery->whereIn('id', $allowedProjectIds);
@@ -127,10 +136,14 @@ class ProjectProgramScope
             ->get();
     }
 
+    /**
+     * @param  (Model&HasPrograms)|null  $entity
+     * @return Collection<int, Project>
+     */
     public static function assignableProjectsWithProgramsFor(User $actor, ?Model $entity = null): Collection
     {
         $existingProgramIds = $entity?->exists
-            ? $entity->programs()->pluck('programs.id')->all()
+            ? array_values($entity->programs()->pluck('programs.id')->all())
             : [];
         $existingProjectIds = $entity?->exists && method_exists($entity, 'projects')
             ? $entity->projects()->pluck('projects.id')->all()
@@ -139,17 +152,25 @@ class ProjectProgramScope
         return self::assignableProjectsWithPrograms($actor, $existingProjectIds, $existingProgramIds);
     }
 
+    /**
+     * @param  array<int, mixed>  $ids
+     * @return list<int>
+     */
     public static function normalizeIds(array $ids): array
     {
-        return collect($ids)
+        return array_values(collect($ids)
             ->filter(fn ($id) => $id !== null && $id !== '')
             ->map(fn ($id) => (int) $id)
             ->unique()
             ->values()
-            ->all();
+            ->all());
     }
 
-    public static function validateSelection($validator, array $projectIds, array $programIds, string $projectKey = 'project_ids', string $programKey = 'program_ids'): void
+    /**
+     * @param  array<int, int>  $projectIds
+     * @param  array<int, int>  $programIds
+     */
+    public static function validateSelection(Validator $validator, array $projectIds, array $programIds, string $projectKey = 'project_ids', string $programKey = 'program_ids'): void
     {
         if (! empty($programIds) && empty($projectIds)) {
             $validator->errors()->add($projectKey, 'Select at least one project before assigning programs.');
@@ -181,6 +202,10 @@ class ProjectProgramScope
 
     /**
      * Program IDs implied by project/program scope when the form leaves programs empty (all programs in scope).
+     *
+     * @param  array<int, int>  $projectIds
+     * @param  array<int, int>  $programIds
+     * @return array<int, int>
      */
     public static function effectiveProgramIds(array $projectIds, array $programIds): array
     {
@@ -202,6 +227,10 @@ class ProjectProgramScope
             ->all();
     }
 
+    /**
+     * @param  array<int, int>  $programIds
+     * @return array<int, int>
+     */
     public static function projectIdsForPrograms(array $programIds): array
     {
         $programIds = self::normalizeIds($programIds);
@@ -217,6 +246,10 @@ class ProjectProgramScope
             ->all();
     }
 
+    /**
+     * @param  Collection<int, int|string>  $scopedProgramIds
+     * @param  array<int, int>  $selectedProgramIds
+     */
     public static function matchesSelectedPrograms(Collection $scopedProgramIds, array $selectedProgramIds, bool $allowGlobal): bool
     {
         if ($scopedProgramIds->isEmpty()) {
@@ -238,7 +271,7 @@ class ProjectProgramScope
      * using the same rules as the logging-field assignment picker.
      *
      * @param  Collection<int, int|string>  $entityProgramIds
-     * @param  array<int, int|string>  $certificateProgramIds
+     * @param  array<int, int>  $certificateProgramIds
      */
     public static function scopedEntityVisibleToCertificatePrograms(
         ProgramScopeMode|string|null $entityMode,
@@ -270,6 +303,11 @@ class ProjectProgramScope
         return self::matchesSelectedPrograms($entityProgramIds, $certificateProgramIds, false);
     }
 
+    /**
+     * @param  array<int, int>  $projectIds
+     * @param  array<int, int>  $programIds
+     * @return list<int>
+     */
     public static function modeAwareProgramIds(ProgramScopeMode|string|null $mode, string $modelClass, array $projectIds, array $programIds): array
     {
         $normalizedMode = self::normalizeMode($mode, $modelClass);
@@ -285,8 +323,12 @@ class ProjectProgramScope
         return self::normalizeMode($mode, $modelClass) !== ProgramScopeMode::None;
     }
 
+    /**
+     * @param  array<int, int>  $projectIds
+     * @param  array<int, int>  $programIds
+     */
     public static function validateModeSelection(
-        $validator,
+        Validator $validator,
         ProgramScopeMode|string|null $mode,
         string $modelClass,
         array $projectIds,
@@ -309,8 +351,12 @@ class ProjectProgramScope
         self::validateSelection($validator, $projectIds, $programIds, $projectKey, $programKey);
     }
 
+    /**
+     * @param  array<int, int>  $selectedProgramIds
+     * @param  array<int, int>  $selectedEntityIds
+     */
     public static function validateScopedAssignments(
-        $validator,
+        Validator $validator,
         array $selectedProgramIds,
         array $selectedEntityIds,
         string $modelClass,
@@ -329,11 +375,14 @@ class ProjectProgramScope
             ->get();
 
         $invalidEntityIds = $entities
-            ->filter(fn (Model $entity) => ! self::matchesSelectedPrograms(
-                $entity->programs->pluck('id'),
-                $selectedProgramIds,
-                $allowGlobal
-            ))
+            ->filter(function (Model $entity) use ($selectedProgramIds, $allowGlobal) {
+                /** @var HasPrograms&Model $entity */
+                return ! self::matchesSelectedPrograms(
+                    $entity->programs->pluck('id'),
+                    $selectedProgramIds,
+                    $allowGlobal
+                );
+            })
             ->pluck('id');
 
         if ($invalidEntityIds->isNotEmpty()) {
@@ -359,6 +408,8 @@ class ProjectProgramScope
      * View data for the project/program scope picker Blade component.
      *
      * @param  Collection<int, Project>  $projects
+     * @param  list<int>  $selectedProjectIds
+     * @param  list<int>  $selectedProgramIds
      * @return array{
      *     scopeProjects: Collection<int, Project>,
      *     selectedProjectIds: array<int, string>,

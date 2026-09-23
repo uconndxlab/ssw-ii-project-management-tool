@@ -86,6 +86,9 @@ class SessionBackTargetService
         return null;
     }
 
+    /**
+     * @return array{url: string, label: string}|null
+     */
     public function resolve(Request $request): ?array
     {
         if (! $request->hasSession() || ! $request->user()) {
@@ -215,6 +218,9 @@ class SessionBackTargetService
     }
 
     // build crumb info
+    /**
+     * @return array{url: string, route: string|null, crumb_label: string, recorded_at: int}|null
+     */
     private function makeEntry(Request $request): ?array
     {
         $route = $request->route();
@@ -229,7 +235,7 @@ class SessionBackTargetService
             'url' => $this->normalizeUrl($request->fullUrl()),
             'route' => $routeName,
             'crumb_label' => $this->routeCrumbLabel($route),
-            'recorded_at' => Carbon::now()->timestamp,
+            'recorded_at' => (int) Carbon::now()->timestamp,
         ];
     }
 
@@ -295,6 +301,9 @@ class SessionBackTargetService
         return $trail;
     }
 
+    /**
+     * @param  array<string, mixed>  $entry
+     */
     private function isValidEntry(Request $request, array $entry): bool
     {
         $url = $entry['url'] ?? null;
@@ -349,6 +358,9 @@ class SessionBackTargetService
         return $user->can('view', $activity);
     }
 
+    /**
+     * @param  array<string, mixed>  $entry
+     */
     private function backLabelForEntry(array $entry): string
     {
         return match ($entry['route'] ?? null) {
@@ -380,6 +392,9 @@ class SessionBackTargetService
         };
     }
 
+    /**
+     * @param  array<string, mixed>  $entry
+     */
     private function crumbLabelForEntry(array $entry): string
     {
         $crumbLabel = $entry['crumb_label'] ?? null;
@@ -397,7 +412,7 @@ class SessionBackTargetService
             'dashboard' => 'Dashboard',
             'search' => 'Search',
             'profile' => 'Profile',
-            'agreements.show' => $this->resolveAgreement($route->parameter('agreement'))?->name ?? 'Agreement',
+            'agreements.show' => $this->parameterName($this->resolveAgreement($route->parameter('agreement')), 'Agreement'),
             'activities.show' => $this->activityCrumbLabel($this->resolveActivity($route->parameter('activity'))),
             'organizations.show' => $this->parameterName($route->parameter('organization'), 'Organization'),
             'projects.show' => $this->parameterName($route->parameter('project'), 'Project'),
@@ -411,7 +426,8 @@ class SessionBackTargetService
 
     private function parameterName(mixed $value, string $fallback): string
     {
-        if ($value instanceof Organization
+        if ($value instanceof Agreement
+            || $value instanceof Organization
             || $value instanceof Program
             || $value instanceof Project
             || $value instanceof State

@@ -37,6 +37,8 @@ class AppServiceProvider extends ServiceProvider
         $this->registerAuthorization();
 
         ResetPassword::createUrlUsing(function (object $user, string $token) {
+            assert($user instanceof User);
+
             return route('password.reset', [
                 'token' => $token,
                 'email' => $user->getEmailForPasswordReset(),
@@ -94,7 +96,7 @@ class AppServiceProvider extends ServiceProvider
             $request->ip = '';
 
             if ($request->headers->has('referer')) {
-                $request->headers->set('referer', Str::before($request->headers->get('referer'), '?'));
+                $request->headers->set('referer', Str::before($request->headers->get('referer') ?? '', '?'));
             }
         });
 

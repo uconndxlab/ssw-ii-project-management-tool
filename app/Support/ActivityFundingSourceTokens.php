@@ -158,6 +158,7 @@ class ActivityFundingSourceTokens
     }
 
     /**
+     * @param  array{source_type: string, source_id: int}  $parsed
      * @return array{kfs_numbers_snapshot: array<int, string>|null, po_number_snapshot: string|null}
      */
     public static function snapshotForSelection(Agreement $agreement, string $role, array $parsed): array
