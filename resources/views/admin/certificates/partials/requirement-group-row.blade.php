@@ -3,7 +3,7 @@
     $isExisting = filled($rowId);
     $satisfyMode = $row['satisfy_mode'] ?? \App\Enums\CertificateGroupSatisfyMode::All->value;
 @endphp
-<div class="repeater-row-card repeater-row-inline is-labeled" data-repeater-row data-existing="{{ $isExisting ? '1' : '0' }}">
+<div class="repeater-row-card repeater-row-inline is-labeled" data-repeater-row data-requirement-group-row data-group-index="{{ $groupIndex }}" data-existing="{{ $isExisting ? '1' : '0' }}">
     @if($isExisting)
         <input type="hidden" name="requirement_groups[{{ $groupIndex }}][id]" value="{{ $rowId }}">
     @endif

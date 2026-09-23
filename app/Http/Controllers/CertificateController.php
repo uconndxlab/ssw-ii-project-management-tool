@@ -117,6 +117,7 @@ class CertificateController extends Controller
                 'validity_months' => $validated['validity_months'] ?? null,
                 'default_window_months' => $validated['default_window_months'] ?? null,
                 'prerequisite_mode' => $validated['prerequisite_mode'],
+                'renewal_matches_initial' => $validated['renewal_matches_initial'] ?? false,
             ]);
 
             ScopeSync::applyTo(
@@ -129,8 +130,9 @@ class CertificateController extends Controller
             $certificate->prerequisites()->sync($validated['prerequisite_certificate_ids'] ?? []);
 
             $this->syncRoles($certificate, $validated['roles'] ?? []);
-            $groupIndexToId = $this->syncRequirementGroups($certificate, $validated['requirement_groups'] ?? []);
-            $this->syncRequirements($certificate, $validated['requirements'] ?? [], $groupIndexToId);
+            [$groupRows, $requirementRows] = $this->requirementPayloadForSync($validated);
+            $groupIndexToId = $this->syncRequirementGroups($certificate, $groupRows);
+            $this->syncRequirements($certificate, $requirementRows, $groupIndexToId);
 
             return $certificate;
         });
@@ -174,6 +176,7 @@ class CertificateController extends Controller
                 'validity_months' => $validated['validity_months'] ?? null,
                 'default_window_months' => $validated['default_window_months'] ?? null,
                 'prerequisite_mode' => $validated['prerequisite_mode'],
+                'renewal_matches_initial' => $validated['renewal_matches_initial'] ?? false,
             ]);
 
             ScopeSync::applyTo(
@@ -186,8 +189,9 @@ class CertificateController extends Controller
             $certificate->prerequisites()->sync($validated['prerequisite_certificate_ids'] ?? []);
 
             $this->syncRoles($certificate, $validated['roles'] ?? []);
-            $groupIndexToId = $this->syncRequirementGroups($certificate, $validated['requirement_groups'] ?? []);
-            $this->syncRequirements($certificate, $validated['requirements'] ?? [], $groupIndexToId);
+            [$groupRows, $requirementRows] = $this->requirementPayloadForSync($validated);
+            $groupIndexToId = $this->syncRequirementGroups($certificate, $groupRows);
+            $this->syncRequirements($certificate, $requirementRows, $groupIndexToId);
         });
 
         return $this->redirectAfterSave($certificate, 'Certificate updated successfully.');
@@ -224,7 +228,7 @@ class CertificateController extends Controller
         $certificationTools = CertificationTool::query()
             ->notRetired()
             ->visibleTo($this->actor())
-            ->with('dimensions.options')
+            ->with(['dimensions.options', 'programs:id'])
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
@@ -258,6 +262,7 @@ class CertificateController extends Controller
             'prerequisite_mode' => ['required', 'in:all,any'],
             'prerequisite_certificate_ids' => ['nullable', 'array'],
             'prerequisite_certificate_ids.*' => ['distinct', 'exists:certificates,id'],
+            'renewal_matches_initial' => ['nullable', 'boolean'],
 
             'roles' => ['nullable', 'array'],
             'roles.*.id' => ['nullable', 'integer'],
@@ -324,10 +329,37 @@ class CertificateController extends Controller
         $validated = $validator->validate();
 
         $validated['active'] = $request->boolean('active');
+        $validated['renewal_matches_initial'] = $request->boolean('renewal_matches_initial');
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
         $validated['program_scope_mode'] = ProjectProgramScope::normalizeMode($validated['program_scope_mode'] ?? null, Certificate::class)->value;
 
         return $validated;
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array{0: array<int|string, mixed>, 1: array<int|string, mixed>}
+     */
+    private function requirementPayloadForSync(array $validated): array
+    {
+        $groupRows = $validated['requirement_groups'] ?? [];
+        $requirementRows = $validated['requirements'] ?? [];
+
+        if (! ($validated['renewal_matches_initial'] ?? false)) {
+            return [$groupRows, $requirementRows];
+        }
+
+        $renewal = CertificateRequirementPhase::Renewal->value;
+
+        $groupRows = array_filter($groupRows, function ($row) use ($renewal) {
+            return is_array($row) && ($row['phase'] ?? CertificateRequirementPhase::Initial->value) !== $renewal;
+        });
+
+        $requirementRows = array_filter($requirementRows, function ($row) use ($renewal) {
+            return is_array($row) && ($row['phase'] ?? CertificateRequirementPhase::Initial->value) !== $renewal;
+        });
+
+        return [$groupRows, $requirementRows];
     }
 
     private function validatePrerequisites(ValidatorInstance $validator, Request $request, ?Certificate $certificate): void
@@ -427,6 +459,17 @@ class CertificateController extends Controller
         $groupRows = $request->input('requirement_groups', []);
         $requirementRows = $request->input('requirements', []);
 
+        $certificateMode = ProjectProgramScope::normalizeMode(
+            $request->input('program_scope_mode', ProgramScopeMode::Specific->value),
+            Certificate::class,
+        );
+        $certificateProgramIds = ProjectProgramScope::modeAwareProgramIds(
+            $certificateMode,
+            Certificate::class,
+            ProjectProgramScope::normalizeIds($request->input('project_ids', [])),
+            ProjectProgramScope::normalizeIds($request->input('program_ids', [])),
+        );
+
         $groupRequirementCounts = [];
 
         foreach ($requirementRows as $index => $row) {
@@ -445,6 +488,22 @@ class CertificateController extends Controller
             }
 
             $toolId = ! empty($row['certification_tool_id']) ? (int) $row['certification_tool_id'] : null;
+
+            if ($kind === CertificateRequirementKind::ToolSubmission && $toolId) {
+                $tool = CertificationTool::query()->with('programs:id')->find($toolId);
+
+                if ($tool instanceof CertificationTool && ! ProjectProgramScope::scopedEntityVisibleToCertificatePrograms(
+                    $tool->program_scope_mode,
+                    $tool->programs->pluck('id'),
+                    $certificateMode,
+                    $certificateProgramIds,
+                )) {
+                    $validator->errors()->add(
+                        "requirements.{$index}.certification_tool_id",
+                        'The selected tool must be global or share at least one program with this certificate.',
+                    );
+                }
+            }
 
             foreach ($row['dimension_rules'] ?? [] as $ruleIndex => $rule) {
                 if (! is_array($rule) || filter_var($rule['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN)) {

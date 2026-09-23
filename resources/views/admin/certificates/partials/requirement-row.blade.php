@@ -6,7 +6,7 @@
     $selectedGroupIndex = $row['group_index'] ?? '';
     $kindLabel = \App\Enums\CertificateRequirementKind::tryFrom($kind)?->label() ?? 'Requirement';
 @endphp
-<div class="repeater-row-card" data-repeater-row data-requirement-row data-repeater-collapsible
+<div class="repeater-row-card" data-repeater-row data-requirement-row data-requirement-index="{{ $reqIndex }}" data-repeater-collapsible
      data-existing="{{ $isExisting ? '1' : '0' }}"
      data-repeater-mode="{{ $isExisting ? 'display' : 'edit' }}">
     @if($isExisting)
@@ -66,17 +66,15 @@
                 <input type="number" class="form-control" min="1" data-summary-source="target_count"
                        name="requirements[{{ $reqIndex }}][target_count]" value="{{ $row['target_count'] ?? 1 }}">
             </div>
-            @if($groupOptions->isNotEmpty())
-                <div class="col-md-6">
-                    <label class="form-label mb-1">Group</label>
-                    <select class="form-select" name="requirements[{{ $reqIndex }}][group_index]">
-                        <option value="">No group</option>
-                        @foreach($groupOptions as $groupIndex => $groupLabel)
-                            <option value="{{ $groupIndex }}" @selected((string) $selectedGroupIndex === (string) $groupIndex)>{{ $groupLabel }}</option>
-                        @endforeach
-                    </select>
-                </div>
-            @endif
+            <div class="col-md-6">
+                <label class="form-label mb-1">Group</label>
+                <select class="form-select" data-requirement-group-select name="requirements[{{ $reqIndex }}][group_index]">
+                    <option value="">No group</option>
+                    @foreach($groupOptions as $groupIndex => $groupLabel)
+                        <option value="{{ $groupIndex }}" @selected((string) $selectedGroupIndex === (string) $groupIndex)>{{ $groupLabel !== '' ? $groupLabel : 'Group' }}</option>
+                    @endforeach
+                </select>
+            </div>
         </div>
 
         <div class="kind-field" data-kind-field="activity_count" style="{{ $kind === 'activity_count' ? '' : 'display:none;' }}">
@@ -112,11 +110,14 @@
             <div class="row g-3">
                 <div class="col-md-8">
                     <label class="form-label mb-1">Tool</label>
-                    <select class="form-select"
+                    <select class="form-select" data-certification-tool-select
                             name="requirements[{{ $reqIndex }}][certification_tool_id]">
                         <option value="">Select tool…</option>
                         @foreach($certificationTools as $tool)
-                            <option value="{{ $tool->id }}" @selected((string) ($row['certification_tool_id'] ?? '') === (string) $tool->id)>{{ $tool->name }}</option>
+                            <option value="{{ $tool->id }}"
+                                    data-scope-mode="{{ $tool->program_scope_mode?->value ?? 'specific' }}"
+                                    data-program-ids="{{ $tool->programs->pluck('id')->implode(',') }}"
+                                    @selected((string) ($row['certification_tool_id'] ?? '') === (string) $tool->id)>{{ $tool->name }}</option>
                         @endforeach
                     </select>
                 </div>

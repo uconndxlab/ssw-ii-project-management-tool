@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * Catalog entry pursued by candidates. Requirements are computed against live activity work, never materialized.
  *
  * @property ProgramScopeMode $program_scope_mode
+ * @property bool $renewal_matches_initial
  */
 class Certificate extends Model
 {
@@ -32,6 +33,7 @@ class Certificate extends Model
         'validity_months',
         'default_window_months',
         'prerequisite_mode',
+        'renewal_matches_initial',
         'retired_at',
     ];
 
@@ -43,6 +45,7 @@ class Certificate extends Model
             'program_scope_mode' => ProgramScopeMode::class,
             'validity_months' => 'integer',
             'default_window_months' => 'integer',
+            'renewal_matches_initial' => 'boolean',
             'retired_at' => 'datetime',
         ];
     }

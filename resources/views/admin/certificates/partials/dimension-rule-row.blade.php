@@ -49,7 +49,7 @@
                     <option value="">Select dimension…</option>
                     @foreach($certificationTools as $tool)
                         @if($tool->dimensions->isNotEmpty())
-                            <optgroup label="{{ $tool->name }}">
+                            <optgroup label="{{ $tool->name }}" data-tool-id="{{ $tool->id }}">
                                 @foreach($tool->dimensions as $dimension)
                                     <option value="{{ $dimension->id }}" data-tool-id="{{ $tool->id }}"
                                             @selected((string) $selectedDimensionId === (string) $dimension->id)>

@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Enums\ProgramScopeMode;
 use App\Models\ActivityType;
+use App\Models\Certificate;
 use App\Models\ContactFamily;
 use App\Models\LoggingField;
 use App\Models\Program;
@@ -230,6 +231,42 @@ class ProjectProgramScope
             ->map(fn ($id) => (int) $id)
             ->intersect(collect($selectedProgramIds)->map(fn ($id) => (int) $id))
             ->isNotEmpty();
+    }
+
+    /**
+     * Whether a scoped catalog entity (e.g. certification tool) may be assigned on a certificate form,
+     * using the same rules as the logging-field assignment picker.
+     *
+     * @param  array<int, int|string>  $certificateProgramIds
+     */
+    public static function scopedEntityVisibleToCertificatePrograms(
+        ProgramScopeMode|string|null $entityMode,
+        Collection $entityProgramIds,
+        ProgramScopeMode|string|null $certificateMode,
+        array $certificateProgramIds,
+    ): bool {
+        $certificateMode = self::normalizeMode($certificateMode, Certificate::class);
+        $entityMode = $entityMode instanceof ProgramScopeMode
+            ? $entityMode
+            : (ProgramScopeMode::tryFrom((string) $entityMode) ?? ProgramScopeMode::Specific);
+
+        if ($certificateMode === ProgramScopeMode::All) {
+            return $entityMode !== ProgramScopeMode::None;
+        }
+
+        if ($certificateMode === ProgramScopeMode::None || $certificateProgramIds === []) {
+            return false;
+        }
+
+        if ($entityMode === ProgramScopeMode::All) {
+            return true;
+        }
+
+        if ($entityMode === ProgramScopeMode::None || $entityProgramIds->isEmpty()) {
+            return false;
+        }
+
+        return self::matchesSelectedPrograms($entityProgramIds, $certificateProgramIds, false);
     }
 
     public static function modeAwareProgramIds(ProgramScopeMode|string|null $mode, string $modelClass, array $projectIds, array $programIds): array
