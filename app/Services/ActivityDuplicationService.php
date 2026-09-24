@@ -80,7 +80,7 @@ class ActivityDuplicationService
 
             $this->deliverableContributionService->syncForActivity($copy);
 
-            return $copy->fresh([
+            $fresh = $copy->fresh([
                 'agreements',
                 'states',
                 'organizations',
@@ -93,6 +93,9 @@ class ActivityDuplicationService
                 'user',
                 'activityType',
             ]);
+            assert($fresh instanceof Activity);
+
+            return $fresh;
         });
     }
 

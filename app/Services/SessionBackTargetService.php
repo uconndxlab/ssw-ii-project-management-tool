@@ -4,7 +4,13 @@ namespace App\Services;
 
 use App\Models\Activity;
 use App\Models\Agreement;
+use App\Models\Organization;
+use App\Models\Program;
+use App\Models\Project;
+use App\Models\State;
+use App\Models\Team;
 use App\Models\User;
+use App\Support\CarbonDate;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Carbon;
@@ -80,6 +86,9 @@ class SessionBackTargetService
         return null;
     }
 
+    /**
+     * @return array{url: string, label: string}|null
+     */
     public function resolve(Request $request): ?array
     {
         if (! $request->hasSession() || ! $request->user()) {
@@ -209,6 +218,9 @@ class SessionBackTargetService
     }
 
     // build crumb info
+    /**
+     * @return array{url: string, route: string|null, crumb_label: string, recorded_at: int}|null
+     */
     private function makeEntry(Request $request): ?array
     {
         $route = $request->route();
@@ -223,7 +235,7 @@ class SessionBackTargetService
             'url' => $this->normalizeUrl($request->fullUrl()),
             'route' => $routeName,
             'crumb_label' => $this->routeCrumbLabel($route),
-            'recorded_at' => Carbon::now()->timestamp,
+            'recorded_at' => (int) Carbon::now()->timestamp,
         ];
     }
 
@@ -266,11 +278,7 @@ class SessionBackTargetService
         $cutoff = Carbon::now()->subSeconds(self::MAX_AGE_SECONDS)->timestamp;
         $appHost = parse_url(config('app.url') ?: $request->getSchemeAndHttpHost(), PHP_URL_HOST);
 
-        $trail = array_values(array_filter($trail, function ($entry) use ($cutoff, $appHost) {
-            if (! is_array($entry)) {
-                return false;
-            }
-
+        $trail = array_values(array_filter($trail, function (array $entry) use ($cutoff, $appHost) {
             $url = $entry['url'] ?? null;
             $recordedAt = (int) ($entry['recorded_at'] ?? 0);
             $host = parse_url((string) $url, PHP_URL_HOST);
@@ -293,6 +301,9 @@ class SessionBackTargetService
         return $trail;
     }
 
+    /**
+     * @param  array<string, mixed>  $entry
+     */
     private function isValidEntry(Request $request, array $entry): bool
     {
         $url = $entry['url'] ?? null;
@@ -308,7 +319,7 @@ class SessionBackTargetService
             return false;
         }
 
-        if (! $route instanceof RoutingRoute || ! $this->isTrackableRouteName($route->getName())) {
+        if (! $this->isTrackableRouteName($route->getName())) {
             return false;
         }
 
@@ -347,6 +358,9 @@ class SessionBackTargetService
         return $user->can('view', $activity);
     }
 
+    /**
+     * @param  array<string, mixed>  $entry
+     */
     private function backLabelForEntry(array $entry): string
     {
         return match ($entry['route'] ?? null) {
@@ -378,6 +392,9 @@ class SessionBackTargetService
         };
     }
 
+    /**
+     * @param  array<string, mixed>  $entry
+     */
     private function crumbLabelForEntry(array $entry): string
     {
         $crumbLabel = $entry['crumb_label'] ?? null;
@@ -395,16 +412,31 @@ class SessionBackTargetService
             'dashboard' => 'Dashboard',
             'search' => 'Search',
             'profile' => 'Profile',
-            'agreements.show' => $this->resolveAgreement($route->parameter('agreement'))?->name ?? 'Agreement',
+            'agreements.show' => $this->parameterName($this->resolveAgreement($route->parameter('agreement')), 'Agreement'),
             'activities.show' => $this->activityCrumbLabel($this->resolveActivity($route->parameter('activity'))),
-            'organizations.show' => $route->parameter('organization')?->name ?? 'Organization',
-            'projects.show' => $route->parameter('project')?->name ?? 'Project',
-            'programs.show' => $route->parameter('program')?->name ?? 'Program',
-            'states.show' => $route->parameter('state')?->name ?? 'State',
-            'teams.show' => $route->parameter('team')?->name ?? 'Team',
-            'users.show' => $route->parameter('user')?->name ?? 'User',
+            'organizations.show' => $this->parameterName($route->parameter('organization'), 'Organization'),
+            'projects.show' => $this->parameterName($route->parameter('project'), 'Project'),
+            'programs.show' => $this->parameterName($route->parameter('program'), 'Program'),
+            'states.show' => $this->parameterName($route->parameter('state'), 'State'),
+            'teams.show' => $this->parameterName($route->parameter('team'), 'Team'),
+            'users.show' => $this->parameterName($route->parameter('user'), 'User'),
             default => $this->fallbackCrumbLabel($route->getName()),
         };
+    }
+
+    private function parameterName(mixed $value, string $fallback): string
+    {
+        if ($value instanceof Agreement
+            || $value instanceof Organization
+            || $value instanceof Program
+            || $value instanceof Project
+            || $value instanceof State
+            || $value instanceof Team
+            || $value instanceof User) {
+            return $value->name !== '' ? $value->name : $fallback;
+        }
+
+        return $fallback;
     }
 
     private function fallbackCrumbLabel(?string $routeName): string
@@ -448,7 +480,7 @@ class SessionBackTargetService
 
         $name = $activity->activityType?->name
             ?: $activity->activityType?->contactFamily?->name;
-        $dateLabel = $activity->engagement_date?->format('M j, Y');
+        $dateLabel = CarbonDate::parse($activity->engagement_date)?->format('M j, Y');
 
         return collect([$name, $dateLabel])
             ->filter(fn ($value) => is_string($value) && $value !== '')
@@ -488,7 +520,8 @@ class SessionBackTargetService
      */
     private function trail(Request $request): array
     {
-        $trail = $request->session()->get(self::SESSION_KEY, []);
+        /** @var mixed $trail */
+        $trail = $request->session()->get(self::SESSION_KEY);
 
         return is_array($trail) ? $trail : [];
     }

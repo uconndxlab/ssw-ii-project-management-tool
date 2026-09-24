@@ -151,6 +151,9 @@ class AppNav
         ];
     }
 
+    /**
+     * @param  list<string>  $patterns
+     */
     public static function isActive(array $patterns): bool
     {
         foreach ($patterns as $pattern) {

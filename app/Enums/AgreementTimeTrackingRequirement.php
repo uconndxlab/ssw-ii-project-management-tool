@@ -7,6 +7,9 @@ enum AgreementTimeTrackingRequirement: string
     case ByContact = 'by_contact';
     case ByUser = 'by_user';
 
+    /**
+     * @return list<array{value: string, label: string, description: string}>
+     */
     public static function options(): array
     {
         return array_merge([

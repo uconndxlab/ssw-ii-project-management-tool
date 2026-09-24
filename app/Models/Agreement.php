@@ -6,6 +6,7 @@ use App\Enums\AgreementTimeTrackingRequirement;
 use App\Enums\ProgramScopeMode;
 use App\Models\Concerns\HasProgramScope;
 use App\Models\Concerns\VisibleToUser;
+use App\Models\Contracts\HasPrograms;
 use App\Models\Pivots\AgreementLoggingFieldPivot;
 use App\Models\Pivots\AgreementOrganizationKfsAccountPivot;
 use App\Models\Pivots\AgreementOrganizationPivot;
@@ -15,6 +16,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 
 /**
  * View: belong (you or your team) or a listed program is in your privilege.
@@ -24,7 +26,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property AgreementTimeTrackingRequirement $time_tracking_mode
  * @property ProgramScopeMode $program_scope_mode
  */
-class Agreement extends Model
+class Agreement extends Model implements HasPrograms
 {
     /** @use HasFactory<AgreementFactory> */
     use HasFactory, HasProgramScope, VisibleToUser;
@@ -162,8 +164,10 @@ class Agreement extends Model
 
     /**
      * Get all users assigned to this agreement (both directly and via teams).
+     *
+     * @return Collection<int, User>
      */
-    public function allUsers()
+    public function allUsers(): Collection
     {
         $directUsers = $this->users;
         $teamUsers = $this->teams->flatMap(function ($team) {
@@ -177,6 +181,8 @@ class Agreement extends Model
      * Get users grouped by source (direct assignment vs team membership).
      * Returns array with 'direct' => Collection and 'teams' => ['Team Name' => Collection].
      * Users assigned both directly and via teams appear only in 'direct' with team info.
+     *
+     * @return array{direct: Collection<int, User>, teams: array<string, Collection<int, User>>}
      */
     public function getUsersBySource(): array
     {

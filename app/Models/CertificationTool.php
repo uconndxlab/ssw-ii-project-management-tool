@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\ProgramScopeMode;
 use App\Models\Concerns\HasProgramScope;
 use App\Models\Concerns\VisibleToUser;
+use App\Models\Contracts\HasPrograms;
 use Database\Factories\CertificationToolFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -18,7 +19,7 @@ use Illuminate\Support\Str;
  *
  * @property ProgramScopeMode $program_scope_mode
  */
-class CertificationTool extends Model
+class CertificationTool extends Model implements HasPrograms
 {
     /** @use HasFactory<CertificationToolFactory> */
     use HasFactory, HasProgramScope, VisibleToUser;

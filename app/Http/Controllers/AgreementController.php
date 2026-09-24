@@ -6,6 +6,7 @@ use App\Enums\ProgramScopeMode;
 use App\Http\Requests\AgreementRequest;
 use App\Models\ActivityType;
 use App\Models\Agreement;
+use App\Models\AgreementActivityHistory;
 use App\Models\AgreementAttachment;
 use App\Models\AgreementCertificationCandidate;
 use App\Models\AgreementDeliverable;
@@ -24,16 +25,20 @@ use App\Services\PrivateFileService;
 use App\Support\ActivityTypeDuration;
 use App\Support\AgreementDeliverableDisplay;
 use App\Support\Authorization\ScopeSync;
+use App\Support\CarbonDate;
 use App\Support\DeliverableActivityHistogram;
 use App\Support\DeliverableAssignmentTargets;
 use App\Support\DeliverableHistoryScope;
 use App\Support\ProjectProgramScope;
 use Carbon\Carbon;
+use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\Response;
 
 class AgreementController extends Controller
 {
@@ -43,7 +48,7 @@ class AgreementController extends Controller
         private PrivateFileService $privateFiles,
     ) {}
 
-    public function index(Request $request)
+    public function index(Request $request): View
     {
         $this->authorize('viewAny', Agreement::class);
 
@@ -127,22 +132,27 @@ class AgreementController extends Controller
         ));
     }
 
-    private function applyAgreementIndexSort($query, string $sort, string $direction): void
+    /**
+     * @param  Builder<Agreement>  $query
+     * @param  'asc'|'desc'  $direction
+     */
+    private function applyAgreementIndexSort(Builder $query, string $sort, string $direction): void
     {
-        $dir = $direction === 'desc' ? 'DESC' : 'ASC';
-
         match ($sort) {
             'start_date' => $query->orderBy('agreements.start_date', $direction),
             'end_date' => $query->orderBy('agreements.end_date', $direction),
             'active' => $query->orderBy('agreements.active', $direction)->orderBy('agreements.name', 'asc'),
-            'projects' => $query->orderByRaw($this->minAgreementProjectNameSql()." {$dir}"),
-            'programs' => $query->orderByRaw($this->minAgreementProgramNameSql()." {$dir}"),
-            'states' => $query->orderByRaw($this->minAgreementStateNameSql()." {$dir}"),
-            'principal_investigators' => $query->orderByRaw($this->minAgreementPrincipalInvestigatorNameSql()." {$dir}"),
+            'projects' => $query->orderByRaw($this->minAgreementProjectNameSql().($direction === 'desc' ? ' DESC' : ' ASC')),
+            'programs' => $query->orderByRaw($this->minAgreementProgramNameSql().($direction === 'desc' ? ' DESC' : ' ASC')),
+            'states' => $query->orderByRaw($this->minAgreementStateNameSql().($direction === 'desc' ? ' DESC' : ' ASC')),
+            'principal_investigators' => $query->orderByRaw($this->minAgreementPrincipalInvestigatorNameSql().($direction === 'desc' ? ' DESC' : ' ASC')),
             default => $query->orderBy('agreements.name', $direction),
         };
     }
 
+    /**
+     * @return literal-string
+     */
     private function minAgreementProjectNameSql(): string
     {
         return "COALESCE((
@@ -153,6 +163,9 @@ class AgreementController extends Controller
         ), '')";
     }
 
+    /**
+     * @return literal-string
+     */
     private function minAgreementProgramNameSql(): string
     {
         return "COALESCE((
@@ -162,6 +175,9 @@ class AgreementController extends Controller
         ), '')";
     }
 
+    /**
+     * @return literal-string
+     */
     private function minAgreementStateNameSql(): string
     {
         return "COALESCE((
@@ -171,6 +187,9 @@ class AgreementController extends Controller
         ), '')";
     }
 
+    /**
+     * @return literal-string
+     */
     private function minAgreementPrincipalInvestigatorNameSql(): string
     {
         return "COALESCE((
@@ -180,7 +199,7 @@ class AgreementController extends Controller
         ), '')";
     }
 
-    public function create()
+    public function create(): View
     {
         // Admin-only authorization
         $this->authorize('create', Agreement::class);
@@ -188,7 +207,7 @@ class AgreementController extends Controller
         return view('agreements.create', $this->agreementFormData());
     }
 
-    public function store(AgreementRequest $request)
+    public function store(AgreementRequest $request): RedirectResponse
     {
         $validated = $request->validated();
         $validated['active'] = $request->boolean('active', true);
@@ -212,7 +231,9 @@ class AgreementController extends Controller
             $this->softUnassignDeliverableUsersOutsideAgreementMembership($agreement);
             $this->syncAgreementCertificationCandidates($agreement, $validated['certification_candidates'] ?? []);
             $allocationWarnings = $this->syncAgreementDeliverables($agreement, $validated['deliverables'] ?? []);
-            $this->deliverableContributionService->syncForAgreement($agreement->fresh());
+            $freshAgreement = $agreement->fresh();
+            assert($freshAgreement instanceof Agreement);
+            $this->deliverableContributionService->syncForAgreement($freshAgreement);
 
             return [$agreement, $allocationWarnings];
         });
@@ -222,10 +243,10 @@ class AgreementController extends Controller
         return redirect()
             ->route('agreements.edit', $agreement)
             ->with('success', 'Agreement created. You can now add deliverables below.')
-            ->with('allocation_warnings', $allocationWarnings ?? []);
+            ->with('allocation_warnings', $allocationWarnings);
     }
 
-    public function show(Request $request, Agreement $agreement)
+    public function show(Request $request, Agreement $agreement): View
     {
         $this->authorize('view', $agreement);
 
@@ -279,10 +300,12 @@ class AgreementController extends Controller
             $deliverableTo
         );
         $deliverableActivityBuckets = DeliverableActivityHistogram::buildAgreementBuckets($agreement);
-        $effectiveEnd = $agreement->extension_end_date ?? $agreement->end_date;
-        $usingExtendedEnd = $agreement->extension_end_date
+        $startDate = CarbonDate::parse($agreement->start_date);
+        $effectiveEnd = CarbonDate::parse($agreement->extension_end_date ?? $agreement->end_date);
+        $extensionEnd = CarbonDate::parse($agreement->extension_end_date);
+        $usingExtendedEnd = $extensionEnd
             && $deliverableTo
-            && $deliverableTo->toDateString() === $agreement->extension_end_date->toDateString();
+            && $deliverableTo->toDateString() === $extensionEnd->toDateString();
 
         return view('agreements.show', compact(
             'agreement',
@@ -296,13 +319,13 @@ class AgreementController extends Controller
             'deliverableTo',
             'usingExtendedEnd',
         ) + [
-            'missingAgreementDates' => ! $agreement->start_date || ! $effectiveEnd,
-            'startDateAfterToday' => $agreement->start_date
-                && $agreement->start_date->toDateString() > now()->toDateString(),
+            'missingAgreementDates' => ! $startDate || ! $effectiveEnd,
+            'startDateAfterToday' => $startDate
+                && $startDate->toDateString() > now()->toDateString(),
         ]);
     }
 
-    public function edit(Agreement $agreement)
+    public function edit(Agreement $agreement): View
     {
         // Admin-only authorization
         $this->authorize('update', $agreement);
@@ -310,7 +333,7 @@ class AgreementController extends Controller
         return view('agreements.edit', $this->agreementFormData($agreement));
     }
 
-    public function duplicate(Agreement $agreement)
+    public function duplicate(Agreement $agreement): RedirectResponse
     {
         $this->authorize('duplicate', $agreement);
 
@@ -321,7 +344,7 @@ class AgreementController extends Controller
             ->with('success', 'Agreement duplicated. Review the copy and save any changes.');
     }
 
-    public function update(AgreementRequest $request, Agreement $agreement)
+    public function update(AgreementRequest $request, Agreement $agreement): RedirectResponse
     {
         $validated = $request->validated();
         $validated['active'] = $request->boolean('active');
@@ -348,7 +371,9 @@ class AgreementController extends Controller
             return $this->syncAgreementDeliverables($agreement, $validated['deliverables'] ?? []);
         });
 
-        $this->deliverableContributionService->syncForAgreement($agreement->fresh());
+        $freshAgreement = $agreement->fresh();
+        assert($freshAgreement instanceof Agreement);
+        $this->deliverableContributionService->syncForAgreement($freshAgreement);
         $this->syncAgreementAttachments($agreement, $request);
 
         $redirect = $this->redirectAfterSave($agreement, 'Agreement updated successfully.');
@@ -362,7 +387,9 @@ class AgreementController extends Controller
 
     private function syncAgreementAttachments(Agreement $agreement, Request $request): void
     {
-        $deletedAttachmentIds = collect($request->input('deleted_attachment_ids', []))
+        /** @var list<mixed> $deletedAttachmentIdsInput */
+        $deletedAttachmentIdsInput = $request->input('deleted_attachment_ids', []);
+        $deletedAttachmentIds = collect($deletedAttachmentIdsInput)
             ->filter()
             ->map(fn ($id) => (int) $id)
             ->all();
@@ -378,7 +405,7 @@ class AgreementController extends Controller
 
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
-                if (! $file instanceof UploadedFile || ! $file->isValid()) {
+                if (! $file->isValid()) {
                     throw ValidationException::withMessages([
                         'attachments' => 'One or more attachments failed to upload. Check the file size and try again.',
                     ]);
@@ -394,6 +421,9 @@ class AgreementController extends Controller
         }
     }
 
+    /**
+     * @param  array<string, mixed>  $validated
+     */
     private function syncAgreementRelations(Agreement $agreement, array $validated): void
     {
         ScopeSync::applyTo(
@@ -403,14 +433,20 @@ class AgreementController extends Controller
             $validated['program_ids'] ?? [],
         );
 
-        $organizationIds = collect($validated['organization_ids'] ?? [])
+        /** @var list<mixed> $organizationIdsInput */
+        $organizationIdsInput = $validated['organization_ids'] ?? [];
+        $organizationIds = collect($organizationIdsInput)
             ->map(fn ($id) => (int) $id)
             ->unique()
             ->values();
-        $payorSourceIds = collect($validated['organization_payor_source_ids'] ?? [])
+        /** @var list<mixed> $payorSourceIdsInput */
+        $payorSourceIdsInput = $validated['organization_payor_source_ids'] ?? [];
+        $payorSourceIds = collect($payorSourceIdsInput)
             ->map(fn ($id) => (int) $id)
             ->unique();
-        $recipientIds = collect($validated['organization_recipient_ids'] ?? [])
+        /** @var list<mixed> $recipientIdsInput */
+        $recipientIdsInput = $validated['organization_recipient_ids'] ?? [];
+        $recipientIds = collect($recipientIdsInput)
             ->map(fn ($id) => (int) $id)
             ->unique();
 
@@ -449,7 +485,9 @@ class AgreementController extends Controller
                 ->values();
         }
 
-        $directUserIds = collect($validated['user_ids'] ?? [])
+        /** @var list<mixed> $directUserIdsInput */
+        $directUserIdsInput = $validated['user_ids'] ?? [];
+        $directUserIds = collect($directUserIdsInput)
             ->map(fn ($id) => (int) $id)
             ->filter(fn ($id) => ! $teamUserIds->contains($id))
             ->unique()
@@ -580,6 +618,7 @@ class AgreementController extends Controller
     }
 
     /**
+     * @param  list<array<string, mixed>>  $deliverables
      * @return list<string>
      */
     private function syncAgreementDeliverables(Agreement $agreement, array $deliverables): array
@@ -597,10 +636,6 @@ class AgreementController extends Controller
         $allocationWarnings = [];
 
         foreach ($deliverables as $row) {
-            if (! is_array($row)) {
-                continue;
-            }
-
             $rowId = isset($row['id']) && $row['id'] !== '' ? (int) $row['id'] : null;
             $markedForDeletion = filter_var($row['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN);
             $rowHasContent = $this->deliverableRowHasContent($row);
@@ -714,6 +749,9 @@ class AgreementController extends Controller
         return $allocationWarnings;
     }
 
+    /**
+     * @param  array<string, mixed>  $row
+     */
     private function syncDeliverableParticipants(AgreementDeliverable $deliverable, array $row, bool $isNewDeliverable): void
     {
         $contributionBasis = $row['contribution_basis'] ?? null;
@@ -723,15 +761,19 @@ class AgreementController extends Controller
         $userTargets = $row['user_targets'] ?? [];
         $teamTargets = $row['team_targets'] ?? [];
 
-        $directUserIds = collect($row['user_ids'] ?? [])
+        /** @var list<mixed> $directUserIdsInput */
+        $directUserIdsInput = $row['user_ids'] ?? [];
+        $directUserIds = collect($directUserIdsInput)
             ->filter(fn ($id) => $id !== null && $id !== '')
             ->map(fn ($id) => (int) $id)
             ->unique()
             ->values();
 
         $usesTeamExpansion = $contributionBasis === 'contact' || $groupingMode === 'joint';
+        /** @var list<mixed> $teamIdsInput */
+        $teamIdsInput = $row['team_ids'] ?? [];
         $teamIds = $usesTeamExpansion
-            ? collect($row['team_ids'] ?? [])
+            ? collect($teamIdsInput)
                 ->filter(fn ($id) => $id !== null && $id !== '')
                 ->map(fn ($id) => (int) $id)
                 ->unique()
@@ -887,8 +929,10 @@ class AgreementController extends Controller
             return null;
         }
 
-        $label = $deliverable->activityType?->name
-            ?? $deliverable->contactFamily?->name
+        $activityType = $deliverable->activityType;
+        $contactFamily = $deliverable->contactFamily;
+        $label = ($activityType !== null ? $activityType->name : null)
+            ?? ($contactFamily !== null ? $contactFamily->name : null)
             ?? 'Deliverable';
 
         $parts = [];
@@ -924,11 +968,15 @@ class AgreementController extends Controller
         return $isNewDeliverable ? null : now();
     }
 
-    private function retireOrDeleteDeliverable(AgreementDeliverable $deliverable, $histories = null): void
+    /**
+     * @param  Collection<int, AgreementActivityHistory>|null  $histories
+     */
+    private function retireOrDeleteDeliverable(AgreementDeliverable $deliverable, ?Collection $histories = null): void
     {
         if ($histories === null) {
             $deliverable->loadMissing('agreement.agreementActivityHistories');
-            $histories = $deliverable->agreement?->agreementActivityHistories ?? collect();
+            $agreement = $deliverable->agreement;
+            $histories = $agreement !== null ? $agreement->agreementActivityHistories : collect();
         }
 
         if (DeliverableHistoryScope::hasMatchingHistory($histories, $deliverable)) {
@@ -940,15 +988,14 @@ class AgreementController extends Controller
         AgreementDeliverable::query()->whereKey($deliverable->id)->delete();
     }
 
+    /**
+     * @param  list<array<string, mixed>>  $rows
+     */
     private function syncAgreementCertificationCandidates(Agreement $agreement, array $rows): void
     {
         $existingCandidates = $agreement->certificationCandidates()->get()->keyBy('id');
 
         foreach ($rows as $row) {
-            if (! is_array($row)) {
-                continue;
-            }
-
             $rowId = isset($row['id']) && $row['id'] !== '' ? (int) $row['id'] : null;
             $markedForDeletion = filter_var($row['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN);
             $value = trim((string) ($row['value'] ?? ''));
@@ -983,6 +1030,9 @@ class AgreementController extends Controller
         }
     }
 
+    /**
+     * @param  array<string, mixed>  $row
+     */
     private function deliverableRowHasContent(array $row): bool
     {
         $fields = [
@@ -1014,6 +1064,9 @@ class AgreementController extends Controller
         return array_key_exists('include_additional_time', $row);
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function agreementFormData(?Agreement $agreement = null): array
     {
         $states = State::query()->get()->sortBy('name')->values();
@@ -1120,7 +1173,7 @@ class AgreementController extends Controller
         );
     }
 
-    public function destroy(Agreement $agreement)
+    public function destroy(Agreement $agreement): RedirectResponse
     {
         // Admin-only authorization
         $this->authorize('delete', $agreement);
@@ -1135,7 +1188,7 @@ class AgreementController extends Controller
     /**
      * Download an agreement attachment.
      */
-    public function downloadAttachment(Agreement $agreement, AgreementAttachment $attachment)
+    public function downloadAttachment(Agreement $agreement, AgreementAttachment $attachment): Response
     {
         $this->authorize('view', $agreement);
 
@@ -1160,10 +1213,10 @@ class AgreementController extends Controller
             ];
         }
 
-        $end = $agreement->extension_end_date ?? $agreement->end_date;
+        $end = CarbonDate::parse($agreement->extension_end_date ?? $agreement->end_date);
 
         return [
-            $agreement->start_date?->copy()->startOfDay(),
+            CarbonDate::parse($agreement->start_date)?->copy()->startOfDay(),
             $end?->copy()->startOfDay(),
         ];
     }

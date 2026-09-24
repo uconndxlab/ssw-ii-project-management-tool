@@ -23,7 +23,11 @@ class DeliverableHistoryScope
             }
 
             if ($deliverable->program_id) {
-                return collect($history->program_ids_snapshot ?? [])
+                /** @var array<int, mixed>|string $programIdsSnapshot */
+                $programIdsSnapshot = $history->program_ids_snapshot ?? [];
+                $programIds = is_array($programIdsSnapshot) ? collect($programIdsSnapshot) : collect([]);
+
+                return $programIds
                     ->map(fn ($id) => (int) $id)
                     ->contains((int) $deliverable->program_id);
             }

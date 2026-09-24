@@ -5,11 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Agreement;
 use App\Models\Organization;
 use App\Models\User;
+use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 
 class SearchController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request): View
     {
         $user = $this->actor();
 

@@ -7,11 +7,13 @@ use App\Models\ActivityType;
 use App\Models\Agreement;
 use App\Models\ContactFamily;
 use App\Models\Program;
+use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\Request;
 
 class ReportController extends Controller
 {
-    public function activities(Request $request)
+    public function activities(Request $request): View
     {
         // Default dates
         $defaultStart = now()->startOfMonth()->format('Y-m-d');
@@ -93,8 +95,9 @@ class ReportController extends Controller
         $agreementData = [];
         foreach ($activities as $activity) {
             // Get first agreement for grouping (activities can have multiple)
+            /** @var Agreement|null $firstAgreement */
             $firstAgreement = $activity->agreements->first();
-            $aid = $firstAgreement?->id ?? 0;
+            $aid = $firstAgreement !== null ? $firstAgreement->id : 0;
 
             if (! isset($agreementData[$aid])) {
                 $agreementData[$aid] = [
@@ -127,7 +130,10 @@ class ReportController extends Controller
             ));
         }
 
-        return view('reports.activities', compact(
+        /** @var view-string $view */
+        $view = 'reports.activities';
+
+        return view($view, compact(
             'agreementData',
             'visibleAgreements',
             'programs',
@@ -142,7 +148,10 @@ class ReportController extends Controller
         ));
     }
 
-    private function getVisibleAgreements()
+    /**
+     * @return EloquentCollection<int, Agreement>
+     */
+    private function getVisibleAgreements(): EloquentCollection
     {
         return Agreement::query()
             ->visibleTo($this->actor())

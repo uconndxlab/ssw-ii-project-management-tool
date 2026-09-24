@@ -4,17 +4,20 @@ namespace App\Http\Controllers;
 
 use App\Models\Activity;
 use App\Models\ActivityType;
+use App\Models\Organization;
 use App\Models\Program;
 use App\Models\Project;
 use App\Support\Authorization\ScopeSync;
 use App\Support\Authorization\UserAccess;
 use App\Support\ProjectProgramScope;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 
 class ProgramController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request): View
     {
         $this->authorize('viewAny', Program::class);
 
@@ -59,7 +62,7 @@ class ProgramController extends Controller
         return view('programs.index', compact('programs', 'sort', 'direction'));
     }
 
-    public function create()
+    public function create(): View
     {
         $this->authorize('create', Program::class);
 
@@ -68,7 +71,7 @@ class ProgramController extends Controller
         return view('programs.create', compact('projects'));
     }
 
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
         $this->authorize('create', Program::class);
         $validated = $request->validate([
@@ -102,7 +105,7 @@ class ProgramController extends Controller
             ->with('success', 'Program created successfully.');
     }
 
-    public function show(Program $program)
+    public function show(Program $program): View
     {
         $this->authorize('view', $program);
         $program->load([
@@ -135,7 +138,9 @@ class ProgramController extends Controller
 
         $agreements = $program->agreementsForDisplay();
 
-        $states = $program->organizations
+        /** @var Collection<int, Organization> $programOrganizations */
+        $programOrganizations = $program->organizations;
+        $states = $programOrganizations
             ->flatMap(fn ($o) => $o->states)
             ->merge($agreements->flatMap(fn ($a) => $a->states))
             ->unique('id')
@@ -155,7 +160,7 @@ class ProgramController extends Controller
         ));
     }
 
-    public function edit(Program $program)
+    public function edit(Program $program): View
     {
         $this->authorize('update', $program);
 
@@ -166,7 +171,7 @@ class ProgramController extends Controller
         return view('programs.edit', compact('program', 'projects'));
     }
 
-    public function update(Request $request, Program $program)
+    public function update(Request $request, Program $program): RedirectResponse
     {
         $this->authorize('update', $program);
         $validated = $request->validate([
@@ -184,9 +189,11 @@ class ProgramController extends Controller
         ]);
 
         $program->loadMissing('projects');
+        /** @var list<int> $existingProjectIds */
+        $existingProjectIds = array_values($program->projects->pluck('id')->all());
         $projectIds = ScopeSync::mergeProjectIds(
             $this->actor(),
-            $program->projects->pluck('id')->all(),
+            $existingProjectIds,
             ProjectProgramScope::normalizeIds($validated['project_ids'] ?? []),
         );
 
@@ -199,7 +206,7 @@ class ProgramController extends Controller
         return $this->redirectAfterSave($program, 'Program updated successfully.');
     }
 
-    public function destroy(Program $program)
+    public function destroy(Program $program): RedirectResponse
     {
         $this->authorize('delete', $program);
         $program->delete();
@@ -212,17 +219,19 @@ class ProgramController extends Controller
     /**
      * @return Collection<int, Project>
      */
-    private function assignableProjects(?Program $program = null)
+    private function assignableProjects(?Program $program = null): Collection
     {
         $access = UserAccess::for($this->actor());
 
         $query = Project::query()->orderBy('name');
 
         if ($access->isSystemAdmin()) {
+            $programId = $program?->id;
+
             return $query
                 ->when(
-                    $program,
-                    fn ($q) => $q->where(fn ($inner) => $inner->where('active', true)->orWhereHas('programs', fn ($rel) => $rel->whereKey($program->id))),
+                    $programId !== null,
+                    fn ($q) => $q->where(fn ($inner) => $inner->where('active', true)->orWhereHas('programs', fn ($rel) => $rel->whereKey($programId))),
                     fn ($q) => $q->where('active', true),
                 )
                 ->get();

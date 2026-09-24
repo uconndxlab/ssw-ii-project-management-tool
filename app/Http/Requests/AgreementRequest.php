@@ -6,6 +6,7 @@ use App\Enums\AgreementTimeTrackingRequirement;
 use App\Enums\ProgramScopeMode;
 use App\Models\ActivityType;
 use App\Models\Agreement;
+use App\Models\AgreementActivityHistory;
 use App\Models\AgreementDeliverable;
 use App\Models\ContactFamily;
 use App\Models\LoggingField;
@@ -50,6 +51,9 @@ class AgreementRequest extends FormRequest
         ];
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function rules(): array
     {
         return [
@@ -138,13 +142,17 @@ class AgreementRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator) {
-            $projectIds = collect($this->input('project_ids', []))
+            /** @var list<mixed> $projectIdsInput */
+            $projectIdsInput = $this->input('project_ids', []);
+            $projectIds = collect($projectIdsInput)
                 ->filter(fn ($id) => $id !== null && $id !== '')
                 ->map(fn ($id) => (int) $id)
                 ->unique()
                 ->values();
 
-            $programIds = collect($this->input('program_ids', []))
+            /** @var list<mixed> $programIdsInput */
+            $programIdsInput = $this->input('program_ids', []);
+            $programIds = collect($programIdsInput)
                 ->filter(fn ($id) => $id !== null && $id !== '')
                 ->map(fn ($id) => (int) $id)
                 ->unique()
@@ -154,7 +162,9 @@ class AgreementRequest extends FormRequest
                 Agreement::class
             );
 
-            $stateIds = collect($this->input('state_ids', []))
+            /** @var list<mixed> $stateIdsInput */
+            $stateIdsInput = $this->input('state_ids', []);
+            $stateIds = collect($stateIdsInput)
                 ->filter(fn ($id) => $id !== null && $id !== '')
                 ->map(fn ($id) => (int) $id)
                 ->unique()
@@ -180,9 +190,7 @@ class AgreementRequest extends FormRequest
                 $validator,
                 $actor,
                 $existingMode,
-                $programScopeMode instanceof ProgramScopeMode
-                    ? $programScopeMode
-                    : ProgramScopeMode::from((string) $this->input('program_scope_mode', ProgramScopeMode::Specific->value)),
+                $programScopeMode,
             );
             ScopeSync::validateSubmittedProgramsAreInAdminScope(
                 $validator,
@@ -249,7 +257,9 @@ class AgreementRequest extends FormRequest
                 return $matchesSelectedScope($scopedStateIds, $allowGlobal, $selectedStateIdSet);
             };
 
-            $organizationIds = collect($this->input('organization_ids', []))
+            /** @var list<mixed> $organizationIdsInput */
+            $organizationIdsInput = $this->input('organization_ids', []);
+            $organizationIds = collect($organizationIdsInput)
                 ->filter(fn ($id) => $id !== null && $id !== '')
                 ->map(fn ($id) => (int) $id)
                 ->unique()
@@ -295,7 +305,9 @@ class AgreementRequest extends FormRequest
 
             $selectedOrganizationIdSet = $organizationIds->all();
 
-            $orphanPayorSourceIds = collect($this->input('organization_payor_source_ids', []))
+            /** @var list<mixed> $payorSourceIdsInput */
+            $payorSourceIdsInput = $this->input('organization_payor_source_ids', []);
+            $orphanPayorSourceIds = collect($payorSourceIdsInput)
                 ->filter(fn ($id) => $id !== null && $id !== '')
                 ->map(fn ($id) => (int) $id)
                 ->unique()
@@ -305,7 +317,9 @@ class AgreementRequest extends FormRequest
                 $validator->errors()->add('organization_payor_source_ids', 'Payor source organizations must be selected on the agreement.');
             }
 
-            $orphanRecipientIds = collect($this->input('organization_recipient_ids', []))
+            /** @var list<mixed> $recipientIdsInput */
+            $recipientIdsInput = $this->input('organization_recipient_ids', []);
+            $orphanRecipientIds = collect($recipientIdsInput)
                 ->filter(fn ($id) => $id !== null && $id !== '')
                 ->map(fn ($id) => (int) $id)
                 ->unique()
@@ -316,7 +330,10 @@ class AgreementRequest extends FormRequest
             }
 
             $normalizeKfsNumbers = function ($values): Collection {
-                return collect($values ?? [])
+                /** @var array<int, mixed> $items */
+                $items = $values ?? [];
+
+                return collect($items)
                     ->filter(fn ($value) => is_string($value) || is_numeric($value))
                     ->map(fn ($value) => strtoupper(trim((string) $value)))
                     ->filter()
@@ -352,7 +369,9 @@ class AgreementRequest extends FormRequest
                 }
             }
 
-            $directUserIds = collect($this->input('user_ids', []))
+            /** @var list<mixed> $directUserIdsInput */
+            $directUserIdsInput = $this->input('user_ids', []);
+            $directUserIds = collect($directUserIdsInput)
                 ->filter(fn ($id) => $id !== null && $id !== '')
                 ->map(fn ($id) => (int) $id)
                 ->unique()
@@ -369,7 +388,9 @@ class AgreementRequest extends FormRequest
                 }
             }
 
-            $teamIds = collect($this->input('team_ids', []))
+            /** @var list<mixed> $teamIdsInput */
+            $teamIdsInput = $this->input('team_ids', []);
+            $teamIds = collect($teamIdsInput)
                 ->filter(fn ($id) => $id !== null && $id !== '')
                 ->map(fn ($id) => (int) $id)
                 ->unique()
@@ -427,7 +448,9 @@ class AgreementRequest extends FormRequest
                 $validator->errors()->add('membership', 'Add at least one user or team to the agreement.');
             }
 
-            $principalInvestigatorIds = collect($this->input('principal_investigator_ids', []))
+            /** @var list<mixed> $principalInvestigatorIdsInput */
+            $principalInvestigatorIdsInput = $this->input('principal_investigator_ids', []);
+            $principalInvestigatorIds = collect($principalInvestigatorIdsInput)
                 ->filter(fn ($id) => $id !== null && $id !== '')
                 ->map(fn ($id) => (int) $id)
                 ->unique()
@@ -454,7 +477,9 @@ class AgreementRequest extends FormRequest
                 $validator->errors()->add('principal_investigator_ids', 'Principal investigators must be selected from the users assigned to this agreement.');
             }
 
-            $agreementLoggingFieldIds = collect($this->input('agreement_logging_field_ids', []))
+            /** @var list<mixed> $agreementLoggingFieldIdsInput */
+            $agreementLoggingFieldIdsInput = $this->input('agreement_logging_field_ids', []);
+            $agreementLoggingFieldIds = collect($agreementLoggingFieldIdsInput)
                 ->filter(fn ($id) => $id !== null && $id !== '')
                 ->map(fn ($id) => (int) $id)
                 ->unique()
@@ -477,7 +502,9 @@ class AgreementRequest extends FormRequest
                 }
             }
 
-            $deliverables = collect($this->input('deliverables', []))
+            /** @var list<mixed> $deliverablesInput */
+            $deliverablesInput = $this->input('deliverables', []);
+            $deliverables = collect($deliverablesInput)
                 ->filter(fn ($row) => is_array($row) && empty($row['_delete']))
                 ->values();
 
@@ -604,19 +631,26 @@ class AgreementRequest extends FormRequest
 
                 $deliverableClassificationChanged = $existingDeliverable
                     && $this->deliverableClassificationChanged($existingDeliverable, $row);
+                $existingHistories = $existingAgreement instanceof Agreement
+                    ? $existingAgreement->agreementActivityHistories
+                    : collect();
                 $deliverableScopeHasHistory = $existingDeliverable
-                    && $this->deliverableScopeHasHistory($existingAgreement?->agreementActivityHistories ?? collect(), $existingDeliverable);
+                    && $this->deliverableScopeHasHistory($existingHistories, $existingDeliverable);
 
                 $metricType = $row['metric_type'] ?? null;
                 $timeBasis = $row['time_basis'] ?? null;
                 $contributionBasis = $row['contribution_basis'] ?? null;
                 $groupingMode = $row['user_grouping_mode'] ?? null;
-                $deliverableUserIds = collect($row['user_ids'] ?? [])
+                /** @var list<mixed> $deliverableUserIdsInput */
+                $deliverableUserIdsInput = $row['user_ids'] ?? [];
+                $deliverableUserIds = collect($deliverableUserIdsInput)
                     ->filter(fn ($id) => $id !== null && $id !== '')
                     ->map(fn ($id) => (int) $id)
                     ->unique()
                     ->values();
-                $deliverableTeamIds = collect($row['team_ids'] ?? [])
+                /** @var list<mixed> $deliverableTeamIdsInput */
+                $deliverableTeamIdsInput = $row['team_ids'] ?? [];
+                $deliverableTeamIds = collect($deliverableTeamIdsInput)
                     ->filter(fn ($id) => $id !== null && $id !== '')
                     ->map(fn ($id) => (int) $id)
                     ->unique()
@@ -775,6 +809,9 @@ class AgreementRequest extends FormRequest
         });
     }
 
+    /**
+     * @param  array<string, mixed>  $row
+     */
     private function deliverableClassificationChanged(AgreementDeliverable $deliverable, array $row): bool
     {
         return (int) ($deliverable->contact_family_id ?? 0) !== (int) ($row['contact_family_id'] ?? 0)
@@ -782,11 +819,17 @@ class AgreementRequest extends FormRequest
             || (int) ($deliverable->program_id ?? 0) !== (int) ($row['program_id'] ?? 0);
     }
 
+    /**
+     * @param  Collection<int, AgreementActivityHistory>  $histories
+     */
     private function deliverableScopeHasHistory(Collection $histories, AgreementDeliverable $deliverable): bool
     {
         return DeliverableHistoryScope::hasMatchingHistory($histories, $deliverable);
     }
 
+    /**
+     * @param  array<string, mixed>  $row
+     */
     private function deliverableSemanticFieldsChanged(AgreementDeliverable $deliverable, array $row): bool
     {
         $existingMetric = $this->nullableString($deliverable->metric_type);
@@ -815,10 +858,5 @@ class AgreementRequest extends FormRequest
         }
 
         return (string) $value;
-    }
-
-    private function isDeletedRow(array $row): bool
-    {
-        return filter_var($row['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN);
     }
 }

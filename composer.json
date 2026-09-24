@@ -74,12 +74,15 @@
         "lint:check": "pint --test",
         "audit": "composer audit --no-dev",
         "analyse": "phpstan analyse --memory-limit=2G",
+        "security": "semgrep scan --config p/default --config p/php --error",
+        "security:new": "semgrep scan --config p/default --config p/php --error --baseline-commit main",
         "check": [
             "composer install --prefer-dist --no-interaction",
             "npm install",
             "@audit",
             "@lint:check",
             "@analyse",
+            "@security",
             "@test"
         ]
     },

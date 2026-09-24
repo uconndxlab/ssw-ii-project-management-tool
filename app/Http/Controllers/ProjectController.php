@@ -4,13 +4,19 @@ namespace App\Http\Controllers;
 
 use App\Models\Activity;
 use App\Models\ActivityType;
+use App\Models\Agreement;
+use App\Models\Organization;
+use App\Models\Program;
 use App\Models\Project;
 use App\Support\ProjectProgramScope;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 
 class ProjectController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request): View
     {
         $this->authorize('viewAny', Project::class);
 
@@ -55,14 +61,14 @@ class ProjectController extends Controller
         return view('projects.index', compact('projects', 'sort', 'direction'));
     }
 
-    public function create()
+    public function create(): View
     {
         $this->authorize('create', Project::class);
 
         return view('projects.create');
     }
 
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
         $this->authorize('create', Project::class);
 
@@ -79,7 +85,7 @@ class ProjectController extends Controller
             ->with('success', 'Project created successfully.');
     }
 
-    public function show(Project $project)
+    public function show(Project $project): View
     {
         $this->authorize('view', $project);
         $project->load([
@@ -90,7 +96,10 @@ class ProjectController extends Controller
             'programs.organizations.states',
         ]);
 
-        $recentActivities = $project->programs
+        /** @var Collection<int, Program> $programs */
+        $programs = $project->programs;
+
+        $recentActivities = $programs
             ->flatMap(fn ($p) => $p->activities)
             ->sort(function (Activity $a, Activity $b): int {
                 $dateCompare = $b->engagement_date <=> $a->engagement_date;
@@ -111,13 +120,16 @@ class ProjectController extends Controller
             ->take(10)
             ->values();
 
-        $agreements = $project->programs
+        /** @var Collection<int, Agreement> $agreements */
+        $agreements = $programs
             ->flatMap(fn ($program) => $program->agreementsForDisplay())
             ->unique('id')
             ->sortBy('name')
             ->values();
 
-        $states = $project->organizations
+        /** @var Collection<int, Organization> $organizations */
+        $organizations = $project->organizations;
+        $states = $organizations
             ->flatMap(fn ($o) => $o->states)
             ->merge($agreements->flatMap(fn ($a) => $a->states))
             ->unique('id')
@@ -126,14 +138,14 @@ class ProjectController extends Controller
         return view('projects.show', compact('project', 'recentActivities', 'agreements', 'states'));
     }
 
-    public function edit(Project $project)
+    public function edit(Project $project): View
     {
         $this->authorize('update', $project);
 
         return view('projects.edit', compact('project'));
     }
 
-    public function update(Request $request, Project $project)
+    public function update(Request $request, Project $project): RedirectResponse
     {
         $this->authorize('update', $project);
 
@@ -148,7 +160,7 @@ class ProjectController extends Controller
         return $this->redirectAfterSave($project, 'Project updated successfully.');
     }
 
-    public function destroy(Project $project)
+    public function destroy(Project $project): RedirectResponse
     {
         $this->authorize('delete', $project);
 

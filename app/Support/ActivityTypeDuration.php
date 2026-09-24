@@ -27,7 +27,7 @@ class ActivityTypeDuration
         array $selectedProgramIds
     ): Collection {
         $selectedProgramIdSet = collect($selectedProgramIds)
-            ->filter(fn ($id) => $id !== null && $id !== '')
+            ->filter(fn ($id) => $id !== '')
             ->map(fn ($id) => (int) $id)
             ->unique()
             ->values();
@@ -222,6 +222,9 @@ class ActivityTypeDuration
         return new self(self::UNIT_NONE, null);
     }
 
+    /**
+     * @return array{allotted_duration_hours: float|null, allotted_duration_days: float|null}
+     */
     public static function snapshotFromActivityType(ActivityType $activityType): array
     {
         $duration = self::fromActivityType($activityType);
@@ -252,6 +255,9 @@ class ActivityTypeDuration
         return $this->value;
     }
 
+    /**
+     * @return array{allotted_hours: float|null, allotted_days: float|null}
+     */
     public function totalForCompletionCount(int $completionCount): array
     {
         if (! $this->hasDuration()) {
@@ -271,7 +277,7 @@ class ActivityTypeDuration
 
     public function formatLabel(): ?string
     {
-        if (! $this->hasDuration()) {
+        if (! $this->hasDuration() || $this->value === null) {
             return null;
         }
 

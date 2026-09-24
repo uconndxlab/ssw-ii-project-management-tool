@@ -3,15 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Models\State;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class StateController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request): View
     {
         $this->authorize('viewAny', State::class);
 
-        $query = State::query()->visibleTo($request->user())->withCount(['organizations', 'agreements']);
+        $query = State::query()->visibleTo($this->actor())->withCount(['organizations', 'agreements']);
 
         // Search
         $search = trim((string) $request->input('search', ''));
@@ -51,14 +53,14 @@ class StateController extends Controller
         return view('states.index', compact('states', 'sort', 'direction'));
     }
 
-    public function create()
+    public function create(): View
     {
         $this->authorize('create', State::class);
 
         return view('states.create');
     }
 
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
         $this->authorize('create', State::class);
         $validated = $request->validate([
@@ -72,7 +74,7 @@ class StateController extends Controller
             ->with('success', 'State created successfully.');
     }
 
-    public function show(State $state)
+    public function show(State $state): View
     {
         $this->authorize('view', $state);
         $state->load(['organizations.agreements', 'agreements.organizations', 'agreements.users']);
@@ -107,14 +109,14 @@ class StateController extends Controller
         return view('states.show', compact('state', 'staffMembers', 'recentActivities'));
     }
 
-    public function edit(State $state)
+    public function edit(State $state): View
     {
         $this->authorize('update', $state);
 
         return view('states.edit', compact('state'));
     }
 
-    public function update(Request $request, State $state)
+    public function update(Request $request, State $state): RedirectResponse
     {
         $this->authorize('update', $state);
         $validated = $request->validate([
@@ -126,7 +128,7 @@ class StateController extends Controller
         return $this->redirectAfterSave($state, 'State updated successfully.');
     }
 
-    public function destroy(State $state)
+    public function destroy(State $state): RedirectResponse
     {
         $this->authorize('delete', $state);
         $state->delete();

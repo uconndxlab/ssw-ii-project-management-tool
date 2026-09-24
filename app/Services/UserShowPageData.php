@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\Activity;
+use App\Models\Agreement;
+use App\Models\Team;
 use App\Models\User;
 use App\Support\UserDeliverableReporting;
 use Illuminate\Support\Collection;
@@ -9,7 +12,12 @@ use Illuminate\Support\Collection;
 class UserShowPageData
 {
     /**
-     * @return array{user: User, recentActivities: Collection, scopeBySource: array, agreementReports: Collection}
+     * @return array{
+     *     user: User,
+     *     recentActivities: Collection<int, Activity>|\Illuminate\Database\Eloquent\Collection<int, Activity>|mixed,
+     *     scopeBySource: array<string, mixed>,
+     *     agreementReports: Collection<int, array{agreement: Agreement, direct: bool, teams: Collection<int, Team>, deliverableGroups: Collection<int, array<string, mixed>>}>
+     * }
      */
     public static function for(User $user): array
     {

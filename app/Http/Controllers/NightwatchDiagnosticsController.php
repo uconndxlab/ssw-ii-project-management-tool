@@ -36,7 +36,7 @@ class NightwatchDiagnosticsController extends Controller
         Nightwatch::report(new RuntimeException('Nightwatch probe: handled exception'), handled: true);
         $checks[] = 'Handled exception reported via Nightwatch::report().';
 
-        $this->probeQueryException($request);
+        $this->probeQueryException();
         $checks[] = 'Duplicate-key QueryException triggered and rolled back.';
 
         $this->probeMail();
@@ -60,13 +60,13 @@ class NightwatchDiagnosticsController extends Controller
         Log::error('Nightwatch probe: error level', $context);
     }
 
-    private function probeQueryException(Request $request): void
+    private function probeQueryException(): void
     {
         try {
-            DB::transaction(function () use ($request) {
+            DB::transaction(function () {
                 DB::table('users')->insert([
                     'name' => 'Nightwatch Probe Duplicate',
-                    'email' => $request->user()->email,
+                    'email' => $this->actor()->email,
                     'password' => Hash::make(Str::random(32)),
                 ]);
             });

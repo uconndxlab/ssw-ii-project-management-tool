@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\User;
 use App\Services\SessionBackTargetService;
+use App\Support\NightwatchSqlMessage;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
@@ -36,6 +37,8 @@ class AppServiceProvider extends ServiceProvider
         $this->registerAuthorization();
 
         ResetPassword::createUrlUsing(function (object $user, string $token) {
+            assert($user instanceof User);
+
             return route('password.reset', [
                 'token' => $token,
                 'email' => $user->getEmailForPasswordReset(),
@@ -93,7 +96,7 @@ class AppServiceProvider extends ServiceProvider
             $request->ip = '';
 
             if ($request->headers->has('referer')) {
-                $request->headers->set('referer', Str::before($request->headers->get('referer'), '?'));
+                $request->headers->set('referer', Str::before($request->headers->get('referer') ?? '', '?'));
             }
         });
 
@@ -101,10 +104,7 @@ class AppServiceProvider extends ServiceProvider
         //    and Postgres adds a DETAIL line like "Key (email)=(jane@...)"
         Nightwatch::redactExceptions(function (ExceptionRecord $exception) {
             if (str_starts_with($exception->message, 'SQLSTATE')) {
-                $exception->message = preg_split(
-                    '/\s+DETAIL:|\s+\(Connection:/',
-                    $exception->message
-                )[0];
+                $exception->message = NightwatchSqlMessage::trim($exception->message);
             }
         });
 

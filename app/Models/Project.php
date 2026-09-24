@@ -37,21 +37,33 @@ class Project extends Model
         return $this->belongsToMany(Program::class, 'program_project')->withTimestamps();
     }
 
+    /**
+     * @return Collection<int, Activity|Organization|User>
+     */
     public function getActivitiesAttribute(): Collection
     {
         return $this->collectProgramRelation('activities');
     }
 
+    /**
+     * @return Collection<int, Activity|Organization|User>
+     */
     public function getOrganizationsAttribute(): Collection
     {
         return $this->collectProgramRelation('organizations');
     }
 
+    /**
+     * @return Collection<int, Activity|Organization|User>
+     */
     public function getUsersAttribute(): Collection
     {
         return $this->collectProgramRelation('users');
     }
 
+    /**
+     * @return Collection<int, Activity|Organization|User>
+     */
     private function collectProgramRelation(string $relation): Collection
     {
         $programs = $this->relationLoaded('programs')

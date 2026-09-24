@@ -21,8 +21,8 @@ use Illuminate\Database\Eloquent\Builder;
 trait VisibleToUser
 {
     /**
-     * @param  Builder<static>  $query
-     * @return Builder<static>
+     * @param  Builder<covariant \Illuminate\Database\Eloquent\Model>  $query
+     * @return Builder<covariant \Illuminate\Database\Eloquent\Model>
      */
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {

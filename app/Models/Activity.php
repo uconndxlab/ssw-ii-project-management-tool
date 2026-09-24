@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Models\Concerns\HasProgramScope;
 use App\Models\Concerns\VisibleToUser;
+use App\Models\Contracts\HasPrograms;
+use App\Support\CarbonDate;
 use Database\Factories\ActivityFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -18,7 +20,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * Edit: logger, participant, or admin on the activity's programs.
  * Delete: logger or that admin, if admin covers all programs.
  */
-class Activity extends Model
+class Activity extends Model implements HasPrograms
 {
     /** @use HasFactory<ActivityFactory> */
     use HasFactory, HasProgramScope, VisibleToUser;
@@ -117,7 +119,7 @@ class Activity extends Model
     /**
      * Convenience accessor to get contact family through activity type
      */
-    public function contactFamily()
+    public function contactFamily(): ?ContactFamily
     {
         return $this->activityType?->contactFamily;
     }
@@ -133,7 +135,7 @@ class Activity extends Model
         }
 
         $parts[] = $this->activityType?->contactFamily?->name;
-        $parts[] = $this->engagement_date?->format('M j, Y');
+        $parts[] = CarbonDate::parse($this->engagement_date)?->format('M j, Y');
 
         if (filled($this->user?->name)) {
             $parts[] = 'Logged by '.$this->user->name;
@@ -204,16 +206,25 @@ class Activity extends Model
             ->orderByDesc('activities.id');
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     public function getAgreementLoggingValuesAttribute(): array
     {
         return $this->buildLoggingFieldValueMap('agreement');
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     public function getContactFamilyLoggingValuesAttribute(): array
     {
         return $this->buildLoggingFieldValueMap('contact_family');
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     public function getActivityTypeLoggingValuesAttribute(): array
     {
         return $this->buildLoggingFieldValueMap('activity_type');
@@ -253,6 +264,10 @@ class Activity extends Model
 
     /**
      * File inputs are not flashed, so merge stored document paths back into submitted logging values.
+     *
+     * @param  array<string, mixed>  $submitted
+     * @param  array<string, mixed>  $stored
+     * @return array<string, mixed>
      */
     public static function mergePreservedLoggingValues(array $submitted, array $stored): array
     {
@@ -278,6 +293,9 @@ class Activity extends Model
         return $merged;
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     private function buildLoggingFieldValueMap(string $contextType): array
     {
         $answers = $this->relationLoaded('loggingFieldAnswers')

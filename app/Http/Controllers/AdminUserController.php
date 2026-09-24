@@ -15,7 +15,11 @@ use App\Support\Authorization\PrivilegeSync;
 use App\Support\Authorization\ScopeSync;
 use App\Support\Authorization\UserAccess;
 use App\Support\ProjectProgramScope;
+use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 
 class AdminUserController extends Controller
 {
@@ -23,7 +27,7 @@ class AdminUserController extends Controller
         private UserDeactivationService $userDeactivationService,
     ) {}
 
-    public function index(Request $request)
+    public function index(Request $request): View
     {
         $this->authorize('viewAny', User::class);
 
@@ -95,25 +99,30 @@ class AdminUserController extends Controller
         return view('admin.users.index', compact('users', 'sort', 'direction', 'filterProjects', 'filterPrograms'));
     }
 
-    private function applyUserIndexSort($query, string $sort, string $direction): void
+    /**
+     * @param  Builder<User>  $query
+     * @param  'asc'|'desc'  $direction
+     */
+    private function applyUserIndexSort(Builder $query, string $sort, string $direction): void
     {
-        $dir = $direction === 'desc' ? 'DESC' : 'ASC';
-
         match ($sort) {
             'email' => $query->orderBy('users.email', $direction),
-            'po' => $query->orderByRaw("COALESCE(users.po_number, '') {$dir}")->orderBy('users.name', 'asc'),
+            'po' => $query->orderByRaw("COALESCE(users.po_number, '')".($direction === 'desc' ? ' DESC' : ' ASC'))->orderBy('users.name', 'asc'),
             'access_profile' => $query->orderBy('users.access_profile', $direction),
             'supervisor' => $query->orderBy(
                 User::query()->select('name')->whereColumn('id', 'users.supervisor_id'),
                 $direction
             ),
             'active' => $query->orderBy('users.active', $direction)->orderBy('users.name', $direction),
-            'projects' => $query->orderByRaw($this->minAssignedProjectNameSql()." {$dir}"),
-            'programs' => $query->orderByRaw($this->minAssignedProgramNameSql()." {$dir}"),
+            'projects' => $query->orderByRaw($this->minAssignedProjectNameSql().($direction === 'desc' ? ' DESC' : ' ASC')),
+            'programs' => $query->orderByRaw($this->minAssignedProgramNameSql().($direction === 'desc' ? ' DESC' : ' ASC')),
             default => $query->orderBy('users.name', $direction),
         };
     }
 
+    /**
+     * @return literal-string
+     */
     private function minAssignedProjectNameSql(): string
     {
         return "COALESCE((
@@ -132,6 +141,9 @@ class AdminUserController extends Controller
         ), '')";
     }
 
+    /**
+     * @return literal-string
+     */
     private function minAssignedProgramNameSql(): string
     {
         return "COALESCE((
@@ -148,7 +160,7 @@ class AdminUserController extends Controller
         ), '')";
     }
 
-    public function supervisees(Request $request)
+    public function supervisees(Request $request): View
     {
         $this->authorize('viewSupervisees', User::class);
 
@@ -184,14 +196,14 @@ class AdminUserController extends Controller
         return view('admin.users.index', compact('users', 'sort', 'direction', 'filterProjects', 'filterPrograms', 'superviseesIndex'));
     }
 
-    public function create()
+    public function create(): View
     {
         $this->authorize('create', User::class);
 
         return view('admin.users.create', $this->userFormData(new User));
     }
 
-    public function store(AdminUserRequest $request)
+    public function store(AdminUserRequest $request): RedirectResponse
     {
         $validated = $request->validated();
         $isActive = $request->boolean('active');
@@ -224,14 +236,14 @@ class AdminUserController extends Controller
             ->with('success', 'User created successfully.');
     }
 
-    public function edit(User $user)
+    public function edit(User $user): View
     {
         $this->authorize('update', $user);
 
         return view('admin.users.edit', $this->userFormData($user));
     }
 
-    public function update(AdminUserRequest $request, User $user)
+    public function update(AdminUserRequest $request, User $user): RedirectResponse
     {
         $validated = $request->validated();
         $wasActive = $user->isActive();
@@ -264,7 +276,7 @@ class AdminUserController extends Controller
         return $this->redirectAfterSave($user, 'User updated successfully.');
     }
 
-    public function show(User $user)
+    public function show(User $user): View
     {
         $this->authorize('view', $user);
 
@@ -275,7 +287,7 @@ class AdminUserController extends Controller
         ]);
     }
 
-    public function destroy(User $user)
+    public function destroy(User $user): RedirectResponse
     {
         $this->authorize('delete', $user);
 
@@ -286,7 +298,10 @@ class AdminUserController extends Controller
             ->with('success', 'User deleted successfully.');
     }
 
-    private function supervisorOptions(?User $user = null)
+    /**
+     * @return Collection<int, User>
+     */
+    private function supervisorOptions(?User $user = null): Collection
     {
         $query = User::query()->active()->where('is_supervisor', true)->orderBy('name', 'asc');
 
@@ -297,6 +312,9 @@ class AdminUserController extends Controller
         return $query->get();
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function userFormData(User $user): array
     {
         $user->loadMissing(['programs.projects', 'privileges']);
@@ -322,6 +340,9 @@ class AdminUserController extends Controller
         ];
     }
 
+    /**
+     * @param  array<string, mixed>  $validated
+     */
     private function syncScopeAssignments(User $user, array $validated): void
     {
         ScopeSync::applyTo(
@@ -332,6 +353,9 @@ class AdminUserController extends Controller
         );
     }
 
+    /**
+     * @param  array<string, mixed>  $validated
+     */
     private function syncPrivileges(User $user, array $validated, Request $request): void
     {
         $user->load('privileges');

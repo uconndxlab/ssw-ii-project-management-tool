@@ -3,6 +3,7 @@
 namespace App\Support\Authorization;
 
 use App\Enums\ProgramScopeMode;
+use App\Models\Contracts\HasPrograms;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\Validator;
@@ -219,6 +220,10 @@ class ScopeSync
         }
     }
 
+    /**
+     * @param  Model&HasPrograms  $entity
+     * @param  list<int>  $submittedProgramIds
+     */
     public static function applyTo(
         User $actor,
         Model $entity,
@@ -227,7 +232,7 @@ class ScopeSync
     ): void {
         $existingMode = $entity->exists ? ($entity->program_scope_mode ?? ProgramScopeMode::None) : ProgramScopeMode::None;
         $existingIds = $entity->exists
-            ? $entity->programs()->pluck('programs.id')->all()
+            ? array_values($entity->programs()->pluck('programs.id')->all())
             : [];
 
         $merged = self::mergePrograms(
@@ -249,11 +254,11 @@ class ScopeSync
      */
     private static function normalizeIds(iterable $ids): array
     {
-        return collect($ids)
+        return array_values(collect($ids)
             ->filter(fn ($id) => $id !== null && $id !== '')
             ->map(fn ($id) => (int) $id)
             ->unique()
             ->values()
-            ->all();
+            ->all());
     }
 }

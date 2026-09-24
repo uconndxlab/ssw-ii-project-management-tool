@@ -9,12 +9,15 @@ use App\Models\Team;
 use App\Models\User;
 use App\Support\Authorization\ScopeSync;
 use App\Support\ProjectProgramScope;
+use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class TeamController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request): View
     {
         $this->authorize('viewAny', Team::class);
 
@@ -69,19 +72,24 @@ class TeamController extends Controller
         return view('teams.index', compact('teams', 'sort', 'direction', 'filterProjects', 'filterPrograms'));
     }
 
-    private function applyTeamIndexSort($query, string $sort, string $direction): void
+    /**
+     * @param  Builder<Team>  $query
+     * @param  'asc'|'desc'  $direction
+     */
+    private function applyTeamIndexSort(Builder $query, string $sort, string $direction): void
     {
-        $dir = $direction === 'desc' ? 'DESC' : 'ASC';
-
         match ($sort) {
             'members' => $query->orderBy('users_count', $direction),
             'active' => $query->orderBy('teams.active', $direction)->orderBy('teams.name', 'asc'),
-            'projects' => $query->orderByRaw($this->minTeamProjectNameSql()." {$dir}"),
-            'programs' => $query->orderByRaw($this->minTeamProgramNameSql()." {$dir}"),
+            'projects' => $query->orderByRaw($this->minTeamProjectNameSql().($direction === 'desc' ? ' DESC' : ' ASC')),
+            'programs' => $query->orderByRaw($this->minTeamProgramNameSql().($direction === 'desc' ? ' DESC' : ' ASC')),
             default => $query->orderBy('teams.name', $direction),
         };
     }
 
+    /**
+     * @return literal-string
+     */
     private function minTeamProjectNameSql(): string
     {
         return "COALESCE((
@@ -92,6 +100,9 @@ class TeamController extends Controller
         ), '')";
     }
 
+    /**
+     * @return literal-string
+     */
     private function minTeamProgramNameSql(): string
     {
         return "COALESCE((
@@ -101,7 +112,7 @@ class TeamController extends Controller
         ), '')";
     }
 
-    public function create()
+    public function create(): View
     {
         // Admin-only authorization
         $this->authorize('create', Team::class);
@@ -112,7 +123,7 @@ class TeamController extends Controller
         return view('teams.create', compact('users', 'projects'));
     }
 
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
         // Admin-only authorization
         $this->authorize('create', Team::class);
@@ -172,7 +183,7 @@ class TeamController extends Controller
             ->with('success', 'Team created successfully.');
     }
 
-    public function show(Team $team)
+    public function show(Team $team): View
     {
         // Admin-only authorization
         $this->authorize('view', $team);
@@ -218,7 +229,7 @@ class TeamController extends Controller
         return view('teams.show', compact('team', 'memberDeliverables'));
     }
 
-    public function edit(Team $team)
+    public function edit(Team $team): View
     {
         // Admin-only authorization
         $this->authorize('update', $team);
@@ -230,7 +241,7 @@ class TeamController extends Controller
         return view('teams.edit', compact('team', 'users', 'projects'));
     }
 
-    public function update(Request $request, Team $team)
+    public function update(Request $request, Team $team): RedirectResponse
     {
         // Admin-only authorization
         $this->authorize('update', $team);
@@ -288,7 +299,7 @@ class TeamController extends Controller
         return $this->redirectAfterSave($team, 'Team updated successfully.');
     }
 
-    public function destroy(Team $team)
+    public function destroy(Team $team): RedirectResponse
     {
         // Admin-only authorization
         $this->authorize('delete', $team);

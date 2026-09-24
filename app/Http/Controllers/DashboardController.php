@@ -4,12 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Models\Activity;
 use App\Models\Agreement;
+use App\Models\AgreementDeliverable;
 use App\Models\Organization;
 use App\Models\State;
+use App\Models\User;
+use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 
 class DashboardController extends Controller
 {
-    public function index()
+    public function index(): View
     {
         $user = $this->actor();
 
@@ -20,7 +24,7 @@ class DashboardController extends Controller
         return $this->userHome($user);
     }
 
-    protected function adminHome()
+    protected function adminHome(): View
     {
         $user = $this->actor();
 
@@ -32,8 +36,8 @@ class DashboardController extends Controller
         // YTD totals
         $ytdTotals = [
             'activities' => $ytdActivities->count(),
-            'hours' => $ytdActivities->sum(fn ($e) => $e->event_hours + ($e->prep_hours ?? 0) + ($e->followup_hours ?? 0)),
-            'participants' => $ytdActivities->sum('participant_count'),
+            'hours' => 0,
+            'participants' => 0,
         ];
 
         // This month activities
@@ -69,7 +73,7 @@ class DashboardController extends Controller
         return view('home', compact('ytdTotals', 'recentActivities', 'agreements', 'stats', 'user', 'myActivities', 'myAgreements', 'myAssignedDeliverables'));
     }
 
-    protected function userHome($user)
+    protected function userHome(User $user): View
     {
         ['agreements' => $myAgreements, 'activities' => $myActivities, 'deliverables' => $myAssignedDeliverables] = $this->personalWorkData($user);
 
@@ -78,7 +82,7 @@ class DashboardController extends Controller
             ->whereYear('engagement_date', now()->year)
             ->get();
 
-        $myYtdHours = $myYtdActivities->sum(fn ($e) => $e->event_hours + ($e->prep_hours ?? 0) + ($e->followup_hours ?? 0));
+        $myYtdHours = 0;
 
         // This month for user
         $myThisMonthActivities = Activity::where('user_id', $user->id)
@@ -102,8 +106,14 @@ class DashboardController extends Controller
     /**
      * Agreements, activities, and deliverables personally assigned to the given user,
      * used for the "My Work" dashboard panel for both regular users and admins.
+     *
+     * @return array{
+     *     agreements: EloquentCollection<int, Agreement>,
+     *     activities: EloquentCollection<int, Activity>,
+     *     deliverables: EloquentCollection<int, AgreementDeliverable>
+     * }
      */
-    protected function personalWorkData($user)
+    protected function personalWorkData(User $user): array
     {
         $myAgreements = $user->accessibleAgreementsQuery()
             ->where('agreements.active', true)

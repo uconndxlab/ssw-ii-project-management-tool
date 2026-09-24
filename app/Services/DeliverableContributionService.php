@@ -8,6 +8,8 @@ use App\Models\Agreement;
 use App\Models\AgreementActivityHistory;
 use App\Models\AgreementDeliverable;
 use App\Models\DeliverableContribution;
+use App\Models\Team;
+use App\Models\User;
 use App\Support\ActivityTypeDuration;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -290,7 +292,9 @@ class DeliverableContributionService
     }
 
     /**
+     * @param  array<int, int>  $programIds
      * @param  array<int, int>|null  $teamIdsSnapshot
+     * @return array<string, mixed>
      */
     private function buildHistoryRow(
         int $agreementId,
@@ -340,7 +344,7 @@ class DeliverableContributionService
         AgreementDeliverable $deliverable
     ): array {
         $basis = $deliverable->contribution_basis;
-        $metric = $deliverable->metric_type;
+        $metric = $deliverable->metric_type ?? '';
         $timeBasis = $metric === 'time' ? ($deliverable->time_basis ?? 'observed') : null;
         $includeAdditional = (bool) $deliverable->include_additional_time;
         $fingerprint = sha1(implode('|', [
@@ -361,8 +365,14 @@ class DeliverableContributionService
                 return false;
             }
 
-            if ($deliverable->program_id && ! collect($history->program_ids_snapshot ?? [])->contains((int) $deliverable->program_id)) {
-                return false;
+            if ($deliverable->program_id) {
+                /** @var array<int, mixed>|string $programIdsSnapshot */
+                $programIdsSnapshot = $history->program_ids_snapshot ?? [];
+                $programIds = is_array($programIdsSnapshot) ? collect($programIdsSnapshot) : collect([]);
+
+                if (! $programIds->contains((int) $deliverable->program_id)) {
+                    return false;
+                }
             }
 
             return true;
@@ -391,8 +401,12 @@ class DeliverableContributionService
         );
     }
 
+    /**
+     * @param  Collection<int, AgreementActivityHistory>  $matchingHistory
+     * @return array<int, array<string, mixed>>
+     */
     private function buildContactContributionRows(
-        $matchingHistory,
+        Collection $matchingHistory,
         int $agreementId,
         int $deliverableId,
         string $metric,
@@ -497,8 +511,12 @@ class DeliverableContributionService
         })->all();
     }
 
+    /**
+     * @param  Collection<int, AgreementActivityHistory>  $matchingHistory
+     * @return array<int, array<string, mixed>>
+     */
     private function buildUserContributionRows(
-        $matchingHistory,
+        Collection $matchingHistory,
         int $agreementId,
         AgreementDeliverable $deliverable,
         string $metric,
@@ -633,6 +651,10 @@ class DeliverableContributionService
         return (float) ($history->completion_units ?? 0);
     }
 
+    /**
+     * @param  Collection<int, User>  $eligibleUsersById
+     * @param  Collection<int, Team>  $deliverableTeamsById
+     */
     private function resolveUserHistoryMatch(
         AgreementActivityHistory $history,
         Collection $eligibleUsersById,
@@ -645,7 +667,9 @@ class DeliverableContributionService
             return null;
         }
 
-        $historyTeamIds = collect($history->team_ids_snapshot ?? [])
+        /** @var array<int, mixed>|string $teamIdsSnapshot */
+        $teamIdsSnapshot = $history->team_ids_snapshot ?? [];
+        $historyTeamIds = (is_array($teamIdsSnapshot) ? collect($teamIdsSnapshot) : collect([]))
             ->map(fn ($id) => (int) $id)
             ->values();
 

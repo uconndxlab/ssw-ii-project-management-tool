@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\ProgramScopeMode;
 use App\Models\Concerns\HasProgramScope;
 use App\Models\Concerns\VisibleToUser;
+use App\Models\Contracts\HasPrograms;
 use App\Models\Pivots\DeliverableTeamPivot;
 use Database\Factories\TeamFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -18,7 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * @property ProgramScopeMode $program_scope_mode
  * @property DeliverableTeamPivot|null $pivot
  */
-class Team extends Model
+class Team extends Model implements HasPrograms
 {
     /** @use HasFactory<TeamFactory> */
     use HasFactory, HasProgramScope, VisibleToUser;
