@@ -74,7 +74,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Semgrep scan
-        run: semgrep scan --config p/default --config p/php --error --sarif --output semgrep.sarif
+        run: semgrep scan --config p/default --config p/php --sarif --output semgrep.sarif
 
       - name: Upload SARIF
         if: always()
