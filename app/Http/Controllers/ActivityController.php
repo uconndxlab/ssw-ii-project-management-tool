@@ -173,12 +173,8 @@ class ActivityController extends Controller
 
         switch ($sort) {
             case 'agreement':
-                // Sort by first agreement name via pivot table
-                $query->leftJoin('activity_agreement', 'activities.id', '=', 'activity_agreement.activity_id')
-                    ->leftJoin('agreements', 'activity_agreement.agreement_id', '=', 'agreements.id')
-                    ->select('activities.*')
-                    ->groupBy('activities.id')
-                    ->orderBy('agreements.name', $direction);
+                $dir = $direction === 'desc' ? 'DESC' : 'ASC';
+                $query->orderByRaw($this->minActivityAgreementNameSql()." {$dir}");
                 break;
 
             case 'activity_type':
@@ -667,6 +663,16 @@ class ActivityController extends Controller
             'actionLogs' => $actionLogs,
             'linkActivity' => $activity->isLinkable() && ! $request->boolean('current'),
         ]);
+    }
+
+    private function minActivityAgreementNameSql(): string
+    {
+        return "COALESCE((
+            SELECT MIN(agreements.name)
+            FROM agreements
+            INNER JOIN activity_agreement ON activity_agreement.agreement_id = agreements.id
+                AND activity_agreement.activity_id = activities.id
+        ), '')";
     }
 
     /**
