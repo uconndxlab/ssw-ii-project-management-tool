@@ -173,8 +173,7 @@ class ActivityController extends Controller
 
         switch ($sort) {
             case 'agreement':
-                $dir = $direction === 'desc' ? 'DESC' : 'ASC';
-                $query->orderByRaw($this->minActivityAgreementNameSql()." {$dir}");
+                $query->orderByRaw($this->minActivityAgreementNameSql().($direction === 'desc' ? ' DESC' : ' ASC'));
                 break;
 
             case 'activity_type':
@@ -665,6 +664,9 @@ class ActivityController extends Controller
         ]);
     }
 
+    /**
+     * @return literal-string
+     */
     private function minActivityAgreementNameSql(): string
     {
         return "COALESCE((
