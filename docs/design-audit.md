@@ -5,7 +5,7 @@
 **Benchmarks:** [`DESIGN.md`](../DESIGN.md) ("The Working Ledger"), [`form-conventions.md`](form-conventions.md), WCAG 2.2 AA, and current conventions for operational web apps.
 **Method:** I read every shared Blade component, `resources/css/app.css`, `app/Support/EntityBadge.php`, and the layout. I loaded `/agreements` (at 1440px and 390px), `/agreements/4`, and `/agreements/create` locally with Playwright, measuring contrast, accessible names, and element sizes in the browser. I also ran the impeccable detector over components, layouts, and CSS.
 
-This is documentation only. Nothing in the app was changed.
+The original audit was documentation only. Resolution statuses below track subsequent implementation work; unchecked findings remain open. Severity counts and health scores describe the original audit, not a new assessment.
 
 ## Severity
 
@@ -43,24 +43,30 @@ What makes it feel dated:
 
 `layouts/app.blade.php`, `components/app-navbar.blade.php`, `resources/css/app.css`
 
+**Status: resolved, except dark theme (intentionally deferred).** Both BLOCKERs, all five SHOULD-FIX items, and the two implementation NITs are fixed. The original findings are retained below as a checklist.
+
+Implemented: named navigation and dismiss controls; a keyboard skip link to focusable main content; a 50%-white search border, 65%-white placeholder, and visible focus outline; the shorter “Search…” placeholder; shared navbar/content containers; SRI and anonymous CORS on all four pinned CDN assets; a flex shell using `100dvh`; and Bootstrap button hover/focus states. Mobile navigation controls have 44px minimum heights, dropdown triggers are native buttons, and Log Activity exposes its current-page state.
+
+Verification: Playwright checked aligned desktop edges, mobile expansion, keyboard skip-link focus, Space-key dropdown activation, activity-button focus, and absence of shell overflow. The final production-built browser pass had no console errors or failed requests. The Impeccable detector reported no findings. Component props and slots were preserved.
+
 ### BLOCKER
 
-- **The mobile menu toggle has no accessible name.** `app-navbar.blade.php:4`: the `.navbar-toggler` button contains only an icon span, and measured `aria-label` is `null`. On mobile it is the only way into navigation, and screen readers announce "button". *WCAG 4.1.2 (A).* **Fix:** `aria-label="Toggle navigation" aria-controls="appNavbar" aria-expanded="false"`.
-- **The flash-message close buttons have no accessible name.** `layouts/app.blade.php:30, 42, 49`: `<button class="btn-close">` with no `aria-label`. *WCAG 4.1.2 (A).* **Fix:** `aria-label="Close"`.
+- [x] **The mobile menu toggle has no accessible name.** `app-navbar.blade.php:4`: the `.navbar-toggler` button contains only an icon span, and measured `aria-label` is `null`. On mobile it is the only way into navigation, and screen readers announce "button". *WCAG 4.1.2 (A).* **Fix:** `aria-label="Toggle navigation" aria-controls="appNavbar" aria-expanded="false"`.
+- [x] **The flash-message close buttons have no accessible name.** `layouts/app.blade.php:30, 42, 49`: `<button class="btn-close">` with no `aria-label`. *WCAG 4.1.2 (A).* **Fix:** `aria-label="Close"`.
 
 ### SHOULD-FIX
 
-- **There's no skip link.** Every page repeats 8 or more nav stops before the content. *WCAG 2.4.1 (A, partly met by the `<nav>`/`<main>` landmarks).* **Fix:** add a `visually-hidden-focusable` "Skip to content" link targeting `<main id="main">`.
-- **The navbar search input's boundary is invisible.** `app.css:215`: a `rgba(255,255,255,.1)` border on `#212529` is about 1.3:1, and the placeholder at 40% white is about 3.9:1. *WCAG 1.4.11 (AA).* **Fix:** use a border of at least 30% white and a placeholder of at least 60%.
-- **The search placeholder is truncated.** At 1440px it reads "Search agreements, o". Shorten it to "Search…" or widen the field. It's also the field's only visible label.
-- **Navbar and content edges don't align.** The navbar uses `container-fluid` (brand at x≈12px) and content uses `container` (x≈65px at 1440), so the shell looks unanchored. **Fix:** use the same container for both, or make both fluid with a shared max width.
-- **Frameworks come from public CDNs, unpinned to integrity hashes.** `app.blade.php:10–18`: Bootstrap 5.3.2, Icons 1.11.3, and htmx 1.9.10 are loaded from jsDelivr and unpkg without `integrity`, while app CSS goes through Vite. That's a supply-chain risk, three render-blocking origins, and versions that lag. **Fix:** move to npm plus Vite, or at least add SRI hashes.
+- [x] **There's no skip link.** Every page repeats 8 or more nav stops before the content. *WCAG 2.4.1 (A, partly met by the `<nav>`/`<main>` landmarks).* **Fix:** add a `visually-hidden-focusable` "Skip to content" link targeting `<main id="main">`.
+- [x] **The navbar search input's boundary is invisible.** `app.css:215`: a `rgba(255,255,255,.1)` border on `#212529` is about 1.3:1, and the placeholder at 40% white is about 3.9:1. *WCAG 1.4.11 (AA).* **Fix:** use a border of at least 30% white and a placeholder of at least 60%.
+- [x] **The search placeholder is truncated.** At 1440px it reads "Search agreements, o". Shorten it to "Search…" or widen the field. It's also the field's only visible label.
+- [x] **Navbar and content edges don't align.** The navbar uses `container-fluid` (brand at x≈12px) and content uses `container` (x≈65px at 1440), so the shell looks unanchored. **Fix:** use the same container for both, or make both fluid with a shared max width.
+- [x] **Frameworks come from public CDNs, unpinned to integrity hashes.** `app.blade.php:10–18`: Bootstrap 5.3.2, Icons 1.11.3, and htmx 1.9.10 are loaded from jsDelivr and unpkg without `integrity`, while app CSS goes through Vite. That's a supply-chain risk, three render-blocking origins, and versions that lag. **Fix:** move to npm plus Vite, or at least add SRI hashes.
 
 ### NIT
 
-- `main { min-height: calc(100vh - 56px) }` hard-codes the navbar height. Use `100dvh` with a flex column layout.
-- `.app-navbar-cta` reimplements a small primary button, using `filter: brightness` on hover and no `.btn` focus ring. Prefer `btn btn-primary btn-sm` plus a modifier.
-- No dark theme. That's acceptable for this product, so note it as a conscious choice in DESIGN.md.
+- [x] `main { min-height: calc(100vh - 56px) }` hard-codes the navbar height. Use `100dvh` with a flex column layout.
+- [x] `.app-navbar-cta` reimplements a small primary button, using `filter: brightness` on hover and no `.btn` focus ring. Prefer `btn btn-primary btn-sm` plus a modifier.
+- [ ] **Deferred:** No dark theme. That's acceptable for this product, so note it as a conscious choice in DESIGN.md.
 
 ## 2. Page headers and breadcrumbs
 
@@ -177,11 +183,11 @@ What makes it feel dated:
 
 ## Recommended order
 
-1. **[BLOCKER] `$impeccable harden`:** Label the token picker and add combobox ARIA, add drawer focus management (or switch to `<dialog>`), and name the navbar toggler and alert close buttons. This is a small diff with the biggest user impact.
+1. **[BLOCKER] `$impeccable harden`:** Label the token picker and add combobox ARIA, add drawer focus management (or switch to `<dialog>`). Navbar toggler and alert close-button naming are resolved. This is a small diff with the biggest user impact.
 2. **[SHOULD-FIX] `$impeccable harden`:** Link field errors and help text, add required semantics, group radio choices with fieldsets, label filters, and add `aria-sort` and pagination names.
 3. **[SHOULD-FIX] `$impeccable shape`, then `$impeccable distill`:** Decide the modernization direction for tokens (accent, neutrals, radius, type scale, control border contrast), then cut badge density and table columns. This is where the app stops looking like stock Bootstrap.
 4. **[SHOULD-FIX] `$impeccable adapt`:** Fix the embedded activity table width, collapse mobile filters, and size touch targets.
-5. **[SHOULD-FIX] `$impeccable layout`:** Base breadcrumbs on hierarchy, use one card-header language, align the save bar and navbar edges.
+5. **[SHOULD-FIX] `$impeccable layout`:** Base breadcrumbs on hierarchy, use one card-header language, align the save bar edges. Navbar/content alignment is resolved.
 6. **[NIT] `$impeccable polish`:** Clean up tokens, consolidate component CSS, tabular numbers, and remaining nits.
 
 ## What's working, so keep it

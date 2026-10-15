@@ -146,7 +146,7 @@ The palette combines Action Blue with cool neutrals and functional status and en
 
 ### Primary
 - **Action Blue** (`primary`): primary buttons, links, selected radio-card borders, and the navigation activity action.
-- **Deep Action Blue** (`primary-hover`, `primary-active`): progressively darker Bootstrap button interaction states. The custom navigation action instead brightens on hover and focus.
+- **Deep Action Blue** (`primary-hover`, `primary-active`): progressively darker Bootstrap button interaction states. Log Activity uses the same Bootstrap hover and keyboard-focus treatment.
 - **Pale Blue / Blue Ink** (`primary-subtle`, `primary-emphasis`): project relationship badges and KFS metadata.
 
 ### Secondary
@@ -188,7 +188,7 @@ The palette combines Action Blue with cool neutrals and functional status and en
 
 ## Layout
 
-The app uses Bootstrap's responsive, twelve-column grid. The main container has horizontal padding (0.75rem per side) and vertical page padding (1.5rem). Container maximum widths are (540px), (720px), (960px), (1140px), and (1320px) at the respective (576px), (768px), (992px), (1200px), and (1400px) breakpoints.
+The app uses Bootstrap's responsive, twelve-column grid. The navbar and main content use the same centered container so their edges align. The body is a flex column with a minimum height of `100dvh` (and a `100vh` fallback); main content fills the remaining space without assuming a navbar height. The main container has horizontal padding (0.75rem per side) and vertical page padding (1.5rem). Container maximum widths are (540px), (720px), (960px), (1140px), and (1320px) at the respective (576px), (768px), (992px), (1200px), and (1400px) breakpoints.
 
 Create/edit forms use the shared centered ten-column shell at large widths, expanding to the available width below (992px). Section cards have body padding (1rem) and bottom spacing (1.5rem). Field groups generally use bottom spacing (1rem). Subsections have a left rule (4px), inset (1rem), and separation (1.25rem). Reuse the existing grid and gap utilities rather than inventing per-page spacing scales.
 
@@ -220,7 +220,7 @@ Borders are generally (1px). Exceptions carry structure: subsection rules (4px) 
 
 Practical actions with familiar filled and outline variants. Primary actions use Action Blue and white text; editing uses an outline-blue action in the shared page header. Cancel and supporting actions commonly use outline gray. Standard buttons use the medium radius and padding (0.375rem 0.75rem); compact buttons use the small radius and padding (0.25rem 0.5rem), with text (0.875rem).
 
-Bootstrap buttons darken or fill on hover, show a focus ring for keyboard focus, and reduce opacity when disabled. Their state transitions last (0.15s), with Bootstrap reduced-motion handling. Preserve the custom navigation action's distinct hover brightening and outlined current state.
+Bootstrap buttons darken or fill on hover, show a focus ring for keyboard focus, and reduce opacity when disabled. Their state transitions last (0.15s), with Bootstrap reduced-motion handling. Log Activity reuses `btn btn-primary btn-sm` and retains an outlined current-page state; do not add a brightness filter that reduces text contrast.
 
 ### Cards / Containers
 
@@ -238,7 +238,11 @@ Compact, bold labels that distinguish record kind, metadata, counts, and status.
 
 ### Navigation
 
-A dark horizontal bar with muted white links and a white brand label. The current primary destination uses white semibold text and a thin inset underline. Current dropdown destinations use Inset Gray and a blue left rule. Search is a compact translucent field with a maximum width (15rem); Log Activity is a small blue action. Preserve the shared collapsed-menu behavior at the large breakpoint.
+A dark horizontal bar with muted white links and a white brand label. The current primary destination uses white semibold text and a thin inset underline. Current dropdown destinations use Inset Gray and a blue left rule. Search is a compact translucent field with a maximum width (15rem) on desktop, a “Search…” placeholder, an accessible Search label, a 50%-white border, and a 65%-white placeholder. Keyboard focus shows a white outline. Log Activity is a small Bootstrap primary button with its normal hover/focus states and an outlined current-page state. Admin and user dropdown triggers are native buttons. Preserve the shared collapsed-menu behavior below (992px): search expands within the full-width tools row, and navigation links, dropdown items, the toggle, search, and Log Activity have a minimum height of (44px).
+
+A “Skip to content” link is the first keyboard stop and becomes visible on focus; it targets the focusable main landmark. The primary navigation has an accessible landmark name, the mobile toggle exposes its label and expanded state, and flash-message dismiss buttons are named “Close”. Bootstrap, Bootstrap Icons, and htmx retain their pinned CDN versions with SRI hashes and anonymous CORS attributes.
+
+The app uses a light content theme with a dark navigation bar. A separate dark theme is intentionally deferred.
 
 ### Relationship Ledger Rows and Tables
 
