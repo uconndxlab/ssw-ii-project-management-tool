@@ -1,7 +1,7 @@
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark app-navbar">
-    <div class="container-fluid">
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark app-navbar" aria-label="Primary navigation">
+    <div class="container">
         <a class="navbar-brand" href="{{ route('dashboard') }}">{{ config('app.name') }}</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#appNavbar">
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#appNavbar" aria-label="Toggle navigation" aria-controls="appNavbar" aria-expanded="false">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="appNavbar">
@@ -21,17 +21,18 @@
             <ul class="navbar-nav align-items-lg-center ms-lg-2">
                 <li class="nav-item app-navbar-tools">
                     @if (App\Support\AppNav::showSearch())
-                        <form action="{{ route('search') }}" method="get" class="d-flex flex-grow-1" style="min-width: 0; max-width: 15rem;">
+                        <form action="{{ route('search') }}" method="get" class="app-navbar-search" role="search">
                             <input type="search"
                                    name="q"
                                    class="app-navbar-search-input"
-                                   placeholder="Search agreements, organizations, people…"
+                                   placeholder="Search…"
                                    value="{{ request('q') }}"
                                    aria-label="Search">
                         </form>
                     @endif
                     <a href="{{ route('activities.create') }}"
-                       @class(['app-navbar-cta', 'is-active' => request()->routeIs('activities.create')])>
+                       @class(['btn btn-primary btn-sm app-navbar-cta', 'is-active' => request()->routeIs('activities.create')])
+                       @if(request()->routeIs('activities.create')) aria-current="page" @endif>
                         Log Activity
                     </a>
                 </li>
@@ -39,14 +40,13 @@
                 @if (count(App\Support\AppNav::adminSections()) > 0)
                     @php($adminIsActive = App\Support\AppNav::adminIsActive())
                     <li class="nav-item dropdown">
-                        <a @class(['nav-link dropdown-toggle', 'active' => $adminIsActive])
-                           href="#"
+                        <button @class(['nav-link dropdown-toggle', 'active' => $adminIsActive])
+                           type="button"
                            id="adminDropdown"
-                           role="button"
                            data-bs-toggle="dropdown"
                            aria-expanded="false">
                             Admin
-                        </a>
+                        </button>
                         <ul class="dropdown-menu dropdown-menu-lg-end">
                             @foreach (App\Support\AppNav::adminSections() as $sectionIndex => $section)
                                 @if ($sectionIndex > 0)
@@ -70,14 +70,13 @@
 
                 @php($userMenuIsActive = request()->routeIs('profile', 'profile.*'))
                 <li class="nav-item dropdown">
-                    <a @class(['nav-link dropdown-toggle', 'active' => $userMenuIsActive])
-                       href="#"
+                    <button @class(['nav-link dropdown-toggle', 'active' => $userMenuIsActive])
+                       type="button"
                        id="userDropdown"
-                       role="button"
                        data-bs-toggle="dropdown"
                        aria-expanded="false">
                         {{ auth()->user()->name }}
-                    </a>
+                    </button>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li>
                             <a class="dropdown-item {{ request()->routeIs('profile', 'profile.*') ? 'is-current' : '' }}"
