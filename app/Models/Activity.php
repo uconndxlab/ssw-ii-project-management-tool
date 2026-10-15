@@ -333,16 +333,14 @@ class Activity extends Model implements HasPrograms
             ->groupBy('agreement_id')
             ->map(function ($group) {
                 return [
-                    ActivityAgreementFundingSource::ROLE_PAYOR => $group
+                    ActivityAgreementFundingSource::ROLE_PAYOR => array_values($group
                         ->where('role', ActivityAgreementFundingSource::ROLE_PAYOR)
                         ->map(fn ($row) => $row->token())
-                        ->values()
-                        ->all(),
-                    ActivityAgreementFundingSource::ROLE_PAYEE => $group
+                        ->all()),
+                    ActivityAgreementFundingSource::ROLE_PAYEE => array_values($group
                         ->where('role', ActivityAgreementFundingSource::ROLE_PAYEE)
                         ->map(fn ($row) => $row->token())
-                        ->values()
-                        ->all(),
+                        ->all()),
                 ];
             })
             ->all();
