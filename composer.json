@@ -51,7 +51,7 @@
         ],
         "test": [
             "@php artisan config:clear --ansi",
-            "./vendor/bin/sail artisan test"
+            "@php artisan test"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
@@ -83,7 +83,6 @@
             "@audit",
             "@lint:check",
             "@analyse",
-            "@security",
             "@test"
         ]
     },

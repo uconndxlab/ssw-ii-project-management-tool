@@ -23,3 +23,7 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 /client
+
+.artifacts/
+.playwright-mcp/
+.claude/settings.local.json
