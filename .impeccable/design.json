@@ -1,0 +1,589 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-15T21:31:39.250Z",
+  "title": "Design System: TA Tracker",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Action Blue",
+        "tonalRamp": [
+          "oklch(0.15 0.2282 260.03)",
+          "oklch(0.26 0.2282 260.03)",
+          "oklch(0.38 0.2282 260.03)",
+          "oklch(0.49 0.2282 260.03)",
+          "oklch(0.61 0.2282 260.03)",
+          "oklch(0.72 0.2282 260.03)",
+          "oklch(0.84 0.2282 260.03)",
+          "oklch(0.95 0.2282 260.03)"
+        ]
+      },
+      "primary-hover": {
+        "role": "primary",
+        "displayName": "Primary Hover",
+        "tonalRamp": [
+          "oklch(0.15 0.1997 259.80)",
+          "oklch(0.26 0.1997 259.80)",
+          "oklch(0.38 0.1997 259.80)",
+          "oklch(0.49 0.1997 259.80)",
+          "oklch(0.61 0.1997 259.80)",
+          "oklch(0.72 0.1997 259.80)",
+          "oklch(0.84 0.1997 259.80)",
+          "oklch(0.95 0.1997 259.80)"
+        ]
+      },
+      "primary-active": {
+        "role": "primary",
+        "displayName": "Primary Active",
+        "tonalRamp": [
+          "oklch(0.15 0.1904 259.80)",
+          "oklch(0.26 0.1904 259.80)",
+          "oklch(0.38 0.1904 259.80)",
+          "oklch(0.49 0.1904 259.80)",
+          "oklch(0.61 0.1904 259.80)",
+          "oklch(0.72 0.1904 259.80)",
+          "oklch(0.84 0.1904 259.80)",
+          "oklch(0.95 0.1904 259.80)"
+        ]
+      },
+      "primary-subtle": {
+        "role": "primary",
+        "displayName": "Primary Subtle",
+        "tonalRamp": [
+          "oklch(0.15 0.0448 258.76)",
+          "oklch(0.26 0.0448 258.76)",
+          "oklch(0.38 0.0448 258.76)",
+          "oklch(0.49 0.0448 258.76)",
+          "oklch(0.61 0.0448 258.76)",
+          "oklch(0.72 0.0448 258.76)",
+          "oklch(0.84 0.0448 258.76)",
+          "oklch(0.95 0.0448 258.76)"
+        ]
+      },
+      "primary-emphasis": {
+        "role": "primary",
+        "displayName": "Primary Emphasis",
+        "tonalRamp": [
+          "oklch(0.15 0.1092 258.93)",
+          "oklch(0.26 0.1092 258.93)",
+          "oklch(0.38 0.1092 258.93)",
+          "oklch(0.49 0.1092 258.93)",
+          "oklch(0.61 0.1092 258.93)",
+          "oklch(0.72 0.1092 258.93)",
+          "oklch(0.84 0.1092 258.93)",
+          "oklch(0.95 0.1092 258.93)"
+        ]
+      },
+      "page-bg": {
+        "role": "neutral",
+        "displayName": "Cool Slate",
+        "tonalRamp": [
+          "oklch(0.15 0.0081 253.86)",
+          "oklch(0.26 0.0081 253.86)",
+          "oklch(0.38 0.0081 253.86)",
+          "oklch(0.49 0.0081 253.86)",
+          "oklch(0.61 0.0081 253.86)",
+          "oklch(0.72 0.0081 253.86)",
+          "oklch(0.84 0.0081 253.86)",
+          "oklch(0.95 0.0081 253.86)"
+        ]
+      },
+      "surface-inset": {
+        "role": "neutral",
+        "displayName": "Surface Inset",
+        "tonalRamp": [
+          "oklch(0.15 0.0046 258.33)",
+          "oklch(0.26 0.0046 258.33)",
+          "oklch(0.38 0.0046 258.33)",
+          "oklch(0.49 0.0046 258.33)",
+          "oklch(0.61 0.0046 258.33)",
+          "oklch(0.72 0.0046 258.33)",
+          "oklch(0.84 0.0046 258.33)",
+          "oklch(0.95 0.0046 258.33)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface",
+        "tonalRamp": [
+          "oklch(0.15 0.0000 89.88)",
+          "oklch(0.26 0.0000 89.88)",
+          "oklch(0.38 0.0000 89.88)",
+          "oklch(0.49 0.0000 89.88)",
+          "oklch(0.61 0.0000 89.88)",
+          "oklch(0.72 0.0000 89.88)",
+          "oklch(0.84 0.0000 89.88)",
+          "oklch(0.95 0.0000 89.88)"
+        ]
+      },
+      "light": {
+        "role": "neutral",
+        "displayName": "Light",
+        "tonalRamp": [
+          "oklch(0.15 0.0017 247.84)",
+          "oklch(0.26 0.0017 247.84)",
+          "oklch(0.38 0.0017 247.84)",
+          "oklch(0.49 0.0017 247.84)",
+          "oklch(0.61 0.0017 247.84)",
+          "oklch(0.72 0.0017 247.84)",
+          "oklch(0.84 0.0017 247.84)",
+          "oklch(0.95 0.0017 247.84)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "tonalRamp": [
+          "oklch(0.15 0.0095 248.19)",
+          "oklch(0.26 0.0095 248.19)",
+          "oklch(0.38 0.0095 248.19)",
+          "oklch(0.49 0.0095 248.19)",
+          "oklch(0.61 0.0095 248.19)",
+          "oklch(0.72 0.0095 248.19)",
+          "oklch(0.84 0.0095 248.19)",
+          "oklch(0.95 0.0095 248.19)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted",
+        "tonalRamp": [
+          "oklch(0.15 0.0095 248.19)",
+          "oklch(0.26 0.0095 248.19)",
+          "oklch(0.38 0.0095 248.19)",
+          "oklch(0.49 0.0095 248.19)",
+          "oklch(0.61 0.0095 248.19)",
+          "oklch(0.72 0.0095 248.19)",
+          "oklch(0.84 0.0095 248.19)",
+          "oklch(0.95 0.0095 248.19)"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Border",
+        "tonalRamp": [
+          "oklch(0.15 0.0070 247.90)",
+          "oklch(0.26 0.0070 247.90)",
+          "oklch(0.38 0.0070 247.90)",
+          "oklch(0.49 0.0070 247.90)",
+          "oklch(0.61 0.0070 247.90)",
+          "oklch(0.72 0.0070 247.90)",
+          "oklch(0.84 0.0070 247.90)",
+          "oklch(0.95 0.0070 247.90)"
+        ]
+      },
+      "secondary": {
+        "role": "neutral",
+        "displayName": "Secondary",
+        "tonalRamp": [
+          "oklch(0.15 0.0165 244.89)",
+          "oklch(0.26 0.0165 244.89)",
+          "oklch(0.38 0.0165 244.89)",
+          "oklch(0.49 0.0165 244.89)",
+          "oklch(0.61 0.0165 244.89)",
+          "oklch(0.72 0.0165 244.89)",
+          "oklch(0.84 0.0165 244.89)",
+          "oklch(0.95 0.0165 244.89)"
+        ]
+      },
+      "secondary-subtle": {
+        "role": "neutral",
+        "displayName": "Secondary Subtle",
+        "tonalRamp": [
+          "oklch(0.15 0.0029 264.54)",
+          "oklch(0.26 0.0029 264.54)",
+          "oklch(0.38 0.0029 264.54)",
+          "oklch(0.49 0.0029 264.54)",
+          "oklch(0.61 0.0029 264.54)",
+          "oklch(0.72 0.0029 264.54)",
+          "oklch(0.84 0.0029 264.54)",
+          "oklch(0.95 0.0029 264.54)"
+        ]
+      },
+      "secondary-emphasis": {
+        "role": "neutral",
+        "displayName": "Secondary Emphasis",
+        "tonalRamp": [
+          "oklch(0.15 0.0078 240.10)",
+          "oklch(0.26 0.0078 240.10)",
+          "oklch(0.38 0.0078 240.10)",
+          "oklch(0.49 0.0078 240.10)",
+          "oklch(0.61 0.0078 240.10)",
+          "oklch(0.72 0.0078 240.10)",
+          "oklch(0.84 0.0078 240.10)",
+          "oklch(0.95 0.0078 240.10)"
+        ]
+      },
+      "success": {
+        "role": "secondary",
+        "displayName": "Success",
+        "tonalRamp": [
+          "oklch(0.15 0.1234 157.01)",
+          "oklch(0.26 0.1234 157.01)",
+          "oklch(0.38 0.1234 157.01)",
+          "oklch(0.49 0.1234 157.01)",
+          "oklch(0.61 0.1234 157.01)",
+          "oklch(0.72 0.1234 157.01)",
+          "oklch(0.84 0.1234 157.01)",
+          "oklch(0.95 0.1234 157.01)"
+        ]
+      },
+      "success-subtle": {
+        "role": "secondary",
+        "displayName": "Success Subtle",
+        "tonalRamp": [
+          "oklch(0.15 0.0269 166.73)",
+          "oklch(0.26 0.0269 166.73)",
+          "oklch(0.38 0.0269 166.73)",
+          "oklch(0.49 0.0269 166.73)",
+          "oklch(0.61 0.0269 166.73)",
+          "oklch(0.72 0.0269 166.73)",
+          "oklch(0.84 0.0269 166.73)",
+          "oklch(0.95 0.0269 166.73)"
+        ]
+      },
+      "success-emphasis": {
+        "role": "secondary",
+        "displayName": "Success Emphasis",
+        "tonalRamp": [
+          "oklch(0.15 0.0598 159.19)",
+          "oklch(0.26 0.0598 159.19)",
+          "oklch(0.38 0.0598 159.19)",
+          "oklch(0.49 0.0598 159.19)",
+          "oklch(0.61 0.0598 159.19)",
+          "oklch(0.72 0.0598 159.19)",
+          "oklch(0.84 0.0598 159.19)",
+          "oklch(0.95 0.0598 159.19)"
+        ]
+      },
+      "warning": {
+        "role": "secondary",
+        "displayName": "Warning",
+        "tonalRamp": [
+          "oklch(0.15 0.1722 84.93)",
+          "oklch(0.26 0.1722 84.93)",
+          "oklch(0.38 0.1722 84.93)",
+          "oklch(0.49 0.1722 84.93)",
+          "oklch(0.61 0.1722 84.93)",
+          "oklch(0.72 0.1722 84.93)",
+          "oklch(0.84 0.1722 84.93)",
+          "oklch(0.95 0.1722 84.93)"
+        ]
+      },
+      "warning-subtle": {
+        "role": "secondary",
+        "displayName": "Warning Subtle",
+        "tonalRamp": [
+          "oklch(0.15 0.0509 92.55)",
+          "oklch(0.26 0.0509 92.55)",
+          "oklch(0.38 0.0509 92.55)",
+          "oklch(0.49 0.0509 92.55)",
+          "oklch(0.61 0.0509 92.55)",
+          "oklch(0.72 0.0509 92.55)",
+          "oklch(0.84 0.0509 92.55)",
+          "oklch(0.95 0.0509 92.55)"
+        ]
+      },
+      "warning-emphasis": {
+        "role": "secondary",
+        "displayName": "Warning Emphasis",
+        "tonalRamp": [
+          "oklch(0.15 0.0876 86.65)",
+          "oklch(0.26 0.0876 86.65)",
+          "oklch(0.38 0.0876 86.65)",
+          "oklch(0.49 0.0876 86.65)",
+          "oklch(0.61 0.0876 86.65)",
+          "oklch(0.72 0.0876 86.65)",
+          "oklch(0.84 0.0876 86.65)",
+          "oklch(0.95 0.0876 86.65)"
+        ]
+      },
+      "danger": {
+        "role": "secondary",
+        "displayName": "Danger",
+        "tonalRamp": [
+          "oklch(0.15 0.2020 21.24)",
+          "oklch(0.26 0.2020 21.24)",
+          "oklch(0.38 0.2020 21.24)",
+          "oklch(0.49 0.2020 21.24)",
+          "oklch(0.61 0.2020 21.24)",
+          "oklch(0.72 0.2020 21.24)",
+          "oklch(0.84 0.2020 21.24)",
+          "oklch(0.95 0.2020 21.24)"
+        ]
+      },
+      "info": {
+        "role": "secondary",
+        "displayName": "Info",
+        "tonalRamp": [
+          "oklch(0.15 0.1380 218.05)",
+          "oklch(0.26 0.1380 218.05)",
+          "oklch(0.38 0.1380 218.05)",
+          "oklch(0.49 0.1380 218.05)",
+          "oklch(0.61 0.1380 218.05)",
+          "oklch(0.72 0.1380 218.05)",
+          "oklch(0.84 0.1380 218.05)",
+          "oklch(0.95 0.1380 218.05)"
+        ]
+      },
+      "info-subtle": {
+        "role": "secondary",
+        "displayName": "Info Subtle",
+        "tonalRamp": [
+          "oklch(0.15 0.0398 212.23)",
+          "oklch(0.26 0.0398 212.23)",
+          "oklch(0.38 0.0398 212.23)",
+          "oklch(0.49 0.0398 212.23)",
+          "oklch(0.61 0.0398 212.23)",
+          "oklch(0.72 0.0398 212.23)",
+          "oklch(0.84 0.0398 212.23)",
+          "oklch(0.95 0.0398 212.23)"
+        ]
+      },
+      "info-emphasis": {
+        "role": "secondary",
+        "displayName": "Info Emphasis",
+        "tonalRamp": [
+          "oklch(0.15 0.0695 216.21)",
+          "oklch(0.26 0.0695 216.21)",
+          "oklch(0.38 0.0695 216.21)",
+          "oklch(0.49 0.0695 216.21)",
+          "oklch(0.61 0.0695 216.21)",
+          "oklch(0.72 0.0695 216.21)",
+          "oklch(0.84 0.0695 216.21)",
+          "oklch(0.95 0.0695 216.21)"
+        ]
+      },
+      "organization-bg": {
+        "role": "neutral",
+        "displayName": "Organization Bg",
+        "tonalRamp": [
+          "oklch(0.15 0.0074 260.73)",
+          "oklch(0.26 0.0074 260.73)",
+          "oklch(0.38 0.0074 260.73)",
+          "oklch(0.49 0.0074 260.73)",
+          "oklch(0.61 0.0074 260.73)",
+          "oklch(0.72 0.0074 260.73)",
+          "oklch(0.84 0.0074 260.73)",
+          "oklch(0.95 0.0074 260.73)"
+        ]
+      },
+      "organization-text": {
+        "role": "neutral",
+        "displayName": "Organization Text",
+        "tonalRamp": [
+          "oklch(0.15 0.0343 261.32)",
+          "oklch(0.26 0.0343 261.32)",
+          "oklch(0.38 0.0343 261.32)",
+          "oklch(0.49 0.0343 261.32)",
+          "oklch(0.61 0.0343 261.32)",
+          "oklch(0.72 0.0343 261.32)",
+          "oklch(0.84 0.0343 261.32)",
+          "oklch(0.95 0.0343 261.32)"
+        ]
+      },
+      "organization-border": {
+        "role": "neutral",
+        "displayName": "Organization Border",
+        "tonalRamp": [
+          "oklch(0.15 0.0164 262.75)",
+          "oklch(0.26 0.0164 262.75)",
+          "oklch(0.38 0.0164 262.75)",
+          "oklch(0.49 0.0164 262.75)",
+          "oklch(0.61 0.0164 262.75)",
+          "oklch(0.72 0.0164 262.75)",
+          "oklch(0.84 0.0164 262.75)",
+          "oklch(0.95 0.0164 262.75)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Dashboard Display",
+        "purpose": "Responsive dashboard title; capped at 2.5rem from 1200px."
+      },
+      "headline": {
+        "displayName": "Page Headline",
+        "purpose": "Responsive ordinary page title; capped at 2rem from 1200px."
+      },
+      "body": {
+        "displayName": "System Body",
+        "purpose": "Inherited system font stack for the entire interface."
+      },
+      "subsection": {
+        "displayName": "Subsection Label",
+        "purpose": "Muted uppercase subgroup labels."
+      }
+    },
+    "shadows": [
+      {
+        "name": "card",
+        "value": "0 0.125rem 0.25rem rgba(0, 0, 0, 0.075)",
+        "purpose": "Section and index cards."
+      },
+      {
+        "name": "entity-detail",
+        "value": "0 0.2rem 0.75rem rgba(0, 0, 0, 0.07)",
+        "purpose": "Entity detail cards."
+      },
+      {
+        "name": "save-bar",
+        "value": "0 -2px 12px rgba(0,0,0,.08)",
+        "purpose": "Fixed form actions."
+      },
+      {
+        "name": "drawer",
+        "value": "-0.5rem 0 1.5rem rgba(0, 0, 0, 0.12)",
+        "purpose": "Right-side form drawer."
+      }
+    ],
+    "motion": [
+      {
+        "name": "control-state",
+        "value": "0.15s ease-in-out",
+        "purpose": "Bootstrap button and input state transitions; suppressed by its reduced-motion rules."
+      },
+      {
+        "name": "drawer",
+        "value": "0.2s ease",
+        "purpose": "Panel transform and backdrop opacity. Custom CSS has no reduced-motion override."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "576px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "992px"
+      },
+      {
+        "name": "xl",
+        "value": "1200px"
+      },
+      {
+        "name": "xxl",
+        "value": "1400px"
+      }
+    ],
+    "rampNote": "Tonal ramps are synthesized OKLCH exploration strips, not additional implemented tokens; alpha is ignored when deriving hue and chroma."
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Existing Bootstrap action variant.",
+      "html": "<button class=\"ds-button ds-primary\">Save</button>",
+      "css": ".ds-button{font-family:var(--bs-font-sans-serif,system-ui,sans-serif);font-size:1rem;font-weight:400;line-height:1.5;padding:.375rem .75rem;border:1px solid;border-radius:.375rem;cursor:pointer;transition:color .15s ease-in-out,background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out}.ds-button:disabled{opacity:.65;pointer-events:none}@media(prefers-reduced-motion:reduce){.ds-button{transition:none}}.ds-primary{background:var(--bs-primary,#0d6efd);border-color:var(--bs-primary,#0d6efd);color:#fff}.ds-primary:hover,.ds-primary:focus-visible{background:#0b5ed7;border-color:#0a58ca;color:#fff}.ds-primary:focus-visible{outline:0;box-shadow:0 0 0 .25rem rgba(49,132,253,.5)}.ds-primary:active{background:#0a58ca;border-color:#0a53be}"
+    },
+    {
+      "name": "Outline Primary Button",
+      "kind": "button",
+      "refersTo": "button-outline-primary",
+      "description": "Existing Bootstrap action variant.",
+      "html": "<button class=\"ds-button ds-outline-primary\">Edit</button>",
+      "css": ".ds-button{font-family:var(--bs-font-sans-serif,system-ui,sans-serif);font-size:1rem;font-weight:400;line-height:1.5;padding:.375rem .75rem;border:1px solid;border-radius:.375rem;cursor:pointer;transition:color .15s ease-in-out,background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out}.ds-button:disabled{opacity:.65;pointer-events:none}@media(prefers-reduced-motion:reduce){.ds-button{transition:none}}.ds-outline-primary{background:transparent;color:var(--bs-primary,#0d6efd);border-color:var(--bs-primary,#0d6efd)}.ds-outline-primary:hover,.ds-outline-primary:focus-visible{background:var(--bs-primary,#0d6efd);border-color:var(--bs-primary,#0d6efd);color:#fff}.ds-outline-primary:focus-visible{outline:0;box-shadow:0 0 0 .25rem rgba(13,110,253,.5)}.ds-outline-primary:active{background:var(--bs-primary,#0d6efd);color:#fff}"
+    },
+    {
+      "name": "Outline Secondary Button",
+      "kind": "button",
+      "refersTo": "button-outline-secondary",
+      "description": "Existing Bootstrap action variant.",
+      "html": "<button class=\"ds-button ds-outline-secondary\">Cancel</button>",
+      "css": ".ds-button{font-family:var(--bs-font-sans-serif,system-ui,sans-serif);font-size:1rem;font-weight:400;line-height:1.5;padding:.375rem .75rem;border:1px solid;border-radius:.375rem;cursor:pointer;transition:color .15s ease-in-out,background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out}.ds-button:disabled{opacity:.65;pointer-events:none}@media(prefers-reduced-motion:reduce){.ds-button{transition:none}}.ds-outline-secondary{background:transparent;color:var(--bs-secondary,#6c757d);border-color:var(--bs-secondary,#6c757d)}.ds-outline-secondary:hover,.ds-outline-secondary:focus-visible{background:var(--bs-secondary,#6c757d);color:#fff;border-color:var(--bs-secondary,#6c757d)}.ds-outline-secondary:focus-visible{outline:0;box-shadow:0 0 0 .25rem rgba(108,117,125,.5)}.ds-outline-secondary:active{background:var(--bs-secondary,#6c757d);color:#fff}"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Semibold label with a standard field and subordinate help.",
+      "html": "<label class=\"ds-label\" for=\"ds-name\">Name</label><input class=\"ds-input\" id=\"ds-name\" placeholder=\"Enter a name\"><div class=\"ds-help\">Use a short, recognizable name.</div>",
+      "css": ".ds-label{display:block;font-family:var(--bs-font-sans-serif,system-ui,sans-serif);font-size:1rem;font-weight:600;line-height:1.5;margin-bottom:.5rem}.ds-input{font-family:var(--bs-font-sans-serif,system-ui,sans-serif);font-size:1rem;line-height:1.5;padding:.375rem .75rem;border:1px solid var(--bs-border-color,#dee2e6);border-radius:.375rem;background:var(--bs-body-bg,#fff);color:var(--bs-body-color,#212529);transition:border-color .15s ease-in-out,box-shadow .15s ease-in-out}.ds-input:focus{border-color:#86b7fe;outline:0;box-shadow:0 0 0 .25rem rgba(13,110,253,.25)}.ds-input:disabled{background:var(--bs-secondary-bg,#e9ecef);opacity:1}.ds-help{font-family:var(--bs-font-sans-serif,system-ui,sans-serif);font-size:.875rem;color:var(--bs-secondary-color,rgba(33,37,41,.75));margin-top:.25rem}@media(prefers-reduced-motion:reduce){.ds-input{transition:none}}"
+    },
+    {
+      "name": "Organization Relationship Chip",
+      "kind": "chip",
+      "refersTo": "organization-chip",
+      "description": "Custom organization colors; linked relationship badges are underlined.",
+      "html": "<a class=\"ds-org\" href=\"#organization\">Organization</a>",
+      "css": ".ds-org{font-family:var(--bs-font-sans-serif,system-ui,sans-serif);display:inline-block;padding:.35em .65em;font-size:.75rem;font-weight:700;line-height:1;color:var(--entity-org-text,#4a5568);background:var(--entity-org-bg,#eef1f6);border:1px solid var(--entity-org-border,#d8dee9);border-radius:.375rem;text-decoration:underline}.ds-org:hover,.ds-org:active{color:var(--entity-org-text,#4a5568)}.ds-org:focus-visible{outline:2px solid var(--bs-primary,#0d6efd);outline-offset:2px}"
+    },
+    {
+      "name": "Section Card",
+      "kind": "card",
+      "refersTo": "section-card",
+      "description": "Shared white working surface with a subtle structural shadow.",
+      "html": "<section class=\"ds-card\"><h2 class=\"ds-card-title\">Details</h2><p class=\"ds-card-subtitle\">Related information</p><p class=\"ds-card-body\">Section content</p></section>",
+      "css": ".ds-card{font-family:var(--bs-font-sans-serif,system-ui,sans-serif);padding:1rem;background:var(--bs-body-bg,#fff);color:var(--bs-body-color,#212529);border:1px solid rgba(0,0,0,.175);border-radius:.375rem;box-shadow:0 .125rem .25rem rgba(0,0,0,.075)}.ds-card-title{margin:0;font-size:1.25rem;font-weight:500;line-height:1.2}.ds-card-subtitle{margin:.25rem 0 1rem;color:var(--bs-secondary-color,rgba(33,37,41,.75));font-size:.875rem;line-height:1.5}.ds-card-body{margin:0;font-size:1rem;line-height:1.5}"
+    },
+    {
+      "name": "Primary Navigation",
+      "kind": "nav",
+      "refersTo": "navigation",
+      "description": "Dark navigation with a thin underline for the current destination; condensed sample of desktop links.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Primary\"><a class=\"ds-brand\" href=\"#home\">TA Tracker</a><a class=\"ds-nav-link ds-current\" aria-current=\"page\" href=\"#home\">Home</a><a class=\"ds-nav-link\" href=\"#agreements\">Agreements</a><a class=\"ds-nav-link\" href=\"#activities\">Activities</a></nav>",
+      "css": ".ds-nav{font-family:var(--bs-font-sans-serif,system-ui,sans-serif);display:flex;flex-wrap:wrap;align-items:center;background:#212529;padding:.5rem .75rem}.ds-brand{font-size:1.25rem;line-height:1.5;color:#fff;text-decoration:none;margin-right:1rem}.ds-nav-link{color:rgba(255,255,255,.55);padding:.5rem;font-size:1rem;line-height:1.5;text-decoration:none}.ds-nav-link:hover,.ds-nav-link:focus-visible{color:rgba(255,255,255,.75)}.ds-current{color:#fff;font-weight:600;box-shadow:inset 0 -1px 0 rgba(255,255,255,.75)}.ds-nav-link:focus-visible,.ds-brand:focus-visible{outline:2px solid #fff;outline-offset:2px}.ds-nav-link:active{color:#fff}"
+    },
+    {
+      "name": "Relationship Ledger Row",
+      "kind": "custom",
+      "description": "Bordered row with a linked record title and muted subordinate metadata.",
+      "html": "<article class=\"ds-ledger\"><a class=\"ds-ledger-title\" href=\"#record\">Agreement name</a><div class=\"ds-ledger-meta\">Related organization</div></article>",
+      "css": ".ds-ledger{font-family:var(--bs-font-sans-serif,system-ui,sans-serif);padding:.5rem 1rem;background:var(--bs-body-bg,#fff);border:1px solid var(--bs-border-color,#dee2e6);border-radius:.375rem}.ds-ledger-title{font-size:.875rem;font-weight:600;line-height:1.5;color:var(--bs-link-color,#0d6efd);text-decoration:underline}.ds-ledger-title:hover,.ds-ledger-title:active{color:var(--bs-link-hover-color,#0a58ca)}.ds-ledger-title:focus-visible{outline:2px solid var(--bs-primary,#0d6efd);outline-offset:2px}.ds-ledger-meta{margin-top:.25rem;font-size:.875rem;line-height:1.5;color:var(--bs-secondary-color,rgba(33,37,41,.75))}"
+    },
+    {
+      "name": "Save Bar",
+      "kind": "custom",
+      "description": "Static preview of the fixed form footer in its unsaved state; production behavior lives in x-save-bar.",
+      "html": "<div class=\"ds-save\"><span class=\"ds-save-status\">● Unsaved changes</span><div class=\"ds-save-actions\"><button class=\"ds-button ds-save-cancel\">Cancel</button><button class=\"ds-button ds-save-button\">Save</button></div></div>",
+      "css": ".ds-button{font-family:var(--bs-font-sans-serif,system-ui,sans-serif);font-size:1rem;font-weight:400;line-height:1.5;padding:.375rem .75rem;border:1px solid;border-radius:.375rem;cursor:pointer;transition:color .15s ease-in-out,background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out}.ds-button:disabled{opacity:.65;pointer-events:none}@media(prefers-reduced-motion:reduce){.ds-button{transition:none}}.ds-save{font-family:var(--bs-font-sans-serif,system-ui,sans-serif);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem;padding:.5rem .75rem;min-height:54px;background:#fff;border-top:1px solid #dee2e6;box-shadow:0 -2px 12px rgba(0,0,0,.08)}.ds-save-status{font-size:.875rem;font-weight:600;color:var(--bs-warning,#ffc107)}.ds-save-actions{display:flex;gap:.5rem}.ds-save .ds-button{font-size:.875rem;padding:.25rem .5rem;border-radius:.25rem}.ds-save-button{color:#fff;background:var(--bs-primary,#0d6efd);border-color:var(--bs-primary,#0d6efd)}.ds-save-button:hover,.ds-save-button:focus-visible{background:#0b5ed7;border-color:#0a58ca}.ds-save-button:active{background:#0a58ca}.ds-save-cancel{color:var(--bs-secondary,#6c757d);background:transparent;border-color:var(--bs-secondary,#6c757d)}.ds-save-cancel:hover,.ds-save-cancel:focus-visible,.ds-save-cancel:active{color:#fff;background:var(--bs-secondary,#6c757d)}.ds-save-button:focus-visible,.ds-save-cancel:focus-visible{outline:0;box-shadow:0 0 0 .25rem rgba(49,132,253,.5)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Working Ledger",
+    "overview": "A practical, orderly, restrained interface for working with agreements, activities, organizations, and related records. Familiar controls and a stable visual hierarchy keep attention on the work. White working surfaces sit over Cool Slate; Action Blue identifies primary actions and links.\n\nComponents are practical and restrained. Depth is layered: subtle shadows separate working surfaces, while borders, headings, and compact badges organize the information inside them. The system uses a single system sans-serif family, clear labels, and responsive Bootstrap grids.",
+    "keyCharacteristics": [
+      "Cool neutral canvas, white working surfaces, and blue actions.",
+      "Compact metadata and tables alongside clearly grouped forms.",
+      "Consistent entity colors and labeled status indicators.",
+      "Small corner radii, thin borders, and subtle structural shadows."
+    ],
+    "rules": [
+      {
+        "name": "The Entity Color Rule",
+        "body": "Reuse `EntityBadge` mappings across related records, type labels, and counts. Entity color conveys record kind; labeled status pills convey active or inactive state.",
+        "section": "colors"
+      },
+      {
+        "name": "The Label Hierarchy Rule",
+        "body": "Keep ordinary labels in sentence case; reserve tracked uppercase for subsection titles and entity-type labels.",
+        "section": "typography"
+      },
+      {
+        "name": "The Working Surface Rule",
+        "body": "Use existing card, drawer, and save-bar treatments for their respective layers; keep internal relationship rows visually subordinate.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** reuse the shared page header, form shell, section card, field, and save bar components.",
+      "**Do** use the existing entity palette consistently for record kinds and labeled status pills for state.",
+      "**Do** keep help and metadata subordinate with small text and muted color.",
+      "**Do** retain responsive table wrappers, wrapping metadata, and drawer body scrolling.",
+      "**Do** preserve visible focus treatments and the shared save-status announcement."
+    ],
+    "donts": [
+      "**Don't** put Active switches, filters, or form controls in the page header.",
+      "**Don't** mix header-style cards with section-card form sections on the same form.",
+      "**Don't** add in-card submit/cancel controls to forms that use the sticky save bar.",
+      "**Don't** introduce a new per-page form shell or remap entity colors independently.",
+      "**Don't** replace ordinary sentence-case labels with tracked uppercase metadata styling."
+    ]
+  }
+}
