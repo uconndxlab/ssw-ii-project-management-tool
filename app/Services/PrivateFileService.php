@@ -99,11 +99,8 @@ class PrivateFileService
         if ($disk instanceof FilesystemAdapter && $disk->providesTemporaryUrls()) {
             $options = [
                 'ResponseContentDisposition' => $disposition,
+                'ResponseContentType' => $responseMime,
             ];
-
-            if ($responseMime !== '') {
-                $options['ResponseContentType'] = $responseMime;
-            }
 
             return redirect()->away(
                 $disk->temporaryUrl($path, now()->addMinutes($ttlMinutes), $options)

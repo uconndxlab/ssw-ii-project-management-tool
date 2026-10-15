@@ -216,6 +216,9 @@ class DeliverableContributionService
                 $teamIdsSnapshot = $existingTeamSnapshotsByAgreementUser->has($snapshotKey)
                     ? $existingTeamSnapshotsByAgreementUser->get($snapshotKey)
                     : $agreementTeamIdsByUser->get($userId, []);
+                $teamIdsSnapshot = is_array($teamIdsSnapshot)
+                    ? array_map(intval(...), $teamIdsSnapshot)
+                    : null;
 
                 // row for participant completion
                 $rows[] = $this->buildHistoryRow(
