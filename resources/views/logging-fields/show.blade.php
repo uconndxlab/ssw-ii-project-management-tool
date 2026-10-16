@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="row mb-4">
-    <div class="col-12">
+    <div class="col-lg-6">
         <x-page-header
             context="show"
             :title="$loggingField->name"

@@ -14,9 +14,9 @@
         <script>
             (function () {
                 var state = null;
-                try { state = localStorage.getItem('ta-rail-{{ auth()->id() }}'); } catch (e) {}
-                if (state !== 'collapsed' && state !== 'expanded') {
-                    state = window.innerWidth < 1200 ? 'collapsed' : 'expanded';
+                try { state = localStorage.getItem('ta-rail-pin-{{ auth()->id() }}'); } catch (e) {}
+                if (state !== 'pinned' && state !== 'unpinned') {
+                    state = window.innerWidth < 1200 ? 'unpinned' : 'pinned';
                 }
                 document.documentElement.setAttribute('data-rail', state);
             })();

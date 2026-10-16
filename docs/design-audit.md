@@ -28,7 +28,7 @@ The original audit was documentation only. Resolution statuses below track subse
 
 ## The short answer to "are my designs OK?"
 
-The **system** is better than you think. Shared page headers, a single form shell, section cards, a sticky save bar, and a central `EntityBadge` color map are exactly how mature operational apps are built. DESIGN.md describes what is actually implemented, and the detector found very little drift.
+The **system** is better than you think. Shared page headers, a single form shell, section cards, a sticky header that carries the form actions, and a central `EntityBadge` color map are exactly how mature operational apps are built. DESIGN.md describes what is actually implemented, and the detector found very little drift.
 
 What makes it feel dated:
 
@@ -74,7 +74,7 @@ Verification: Playwright checked aligned desktop edges, mobile expansion, keyboa
 
 **Status: resolved, except the component API refactor (deferred) and agreement type badge (intentionally unchanged).** All three in-scope SHOULD-FIX findings and the four approved NITs are fixed. Existing props and slots are preserved.
 
-Implemented: `RouteBreadcrumbs` derives location from named routes, including record ancestors for edit pages with a show route and Profile for profile editing. Breadcrumbs no longer read session history, and the current item exposes `aria-current="page"`; form Cancel returns to the parent crumb (`RouteBreadcrumbs::parentUrl`). Show-card titles are sentence-case `h2` elements using the same 1.25rem medium-weight style as form section cards. Page titles use a fixed 1.75rem scale (2rem for dashboards), and header actions align with the title's top edge. Active/Inactive stays in header metadata; duplicate Summary status rows were removed from agreements, organizations, projects, programs, and teams. A single card loop preserves both `activityFirst` orders and every existing content/meta/action slot.
+Implemented: `RouteBreadcrumbs` derives location from named routes, including record ancestors for edit pages with a show route and Profile for profile editing. Breadcrumbs no longer read session history, and the current item exposes `aria-current="page"`; form Cancel returns to the previous record or list page, else the parent crumb (`RouteBreadcrumbs::cancelUrl`). Show-card titles are sentence-case `h2` elements using the same 1.25rem medium-weight style as form section cards. Page titles use a fixed 1.75rem scale (2rem for dashboards), and header actions align with the title's top edge. Active/Inactive stays in header metadata; duplicate Summary status rows were removed from agreements, organizations, projects, programs, and teams. A single card loop preserves both `activityFirst` orders and every existing content/meta/action slot.
 
 Verification: focused feature tests cover hierarchy after record visits, direct create visits, edit ancestors, and preserved Cancel history. Playwright checked the agreement show/create/edit pages at desktop/mobile widths, fixed heading sizes, semantic section headings, action alignment, and no page overflow. Production-built pages had no console errors. One screenshot pair is saved in `.artifacts/page-header-before.png` and `.artifacts/page-header-after.png`. Impeccable critique used independent design and detector assessments: no remaining in-scope BLOCKERs or SHOULD-FIX findings; the documentation NIT was addressed here. The detector returned zero findings for the three shared components. `vendor/bin/sail composer check` passed (including all 130 tests), as did Pint and the production build. Ponytail review removed unused history-breadcrumb code and confirmed the shared-card and status-row cuts.
 
@@ -200,7 +200,7 @@ The original findings remain below as a resolution checklist.
 
 ## What's working, so keep it
 
-- **One form shell, section cards, and a sticky save bar**, documented in `form-conventions.md`. That level of consistency is rare in internal tools.
+- **One form shell, section cards, and a sticky header that carries the form actions**, documented in `form-conventions.md`. That level of consistency is rare in internal tools.
 - **Central color mapping** through `EntityBadge`, so a palette change is one file.
 - **The save bar's state model** (idle, dirty, saving, saved, error) with `aria-live` and a `beforeunload` guard is better than most commercial apps.
 - **Server-rendered htmx tables with `hx-push-url`**, so filtered and sorted views are shareable and back-button safe.

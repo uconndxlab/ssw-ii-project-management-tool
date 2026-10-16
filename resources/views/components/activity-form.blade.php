@@ -361,7 +361,7 @@
                 @method('PUT')
             @endif
 
-            <x-page-header
+            <x-page-header :form-id="$formId" :save-label="$saveLabel" :last-saved-at="$activity?->updated_at"
                 context="form"
                 :title="$isEditMode ? $recordName : null"
                 entity-type="Activity"
@@ -815,12 +815,6 @@
                     </div>
         </form>
 </x-form-shell>
-
-<x-save-bar
-    :form-id="$formId"
-    :save-label="$saveLabel"
-    :last-saved-at="$activity?->updated_at"
-/>
 
 <script>
 (function () {

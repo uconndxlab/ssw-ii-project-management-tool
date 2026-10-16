@@ -9,7 +9,7 @@
     <form method="POST" action="{{ route('programs.update', $program) }}" id="programs-edit-form">
         @csrf
         @method('PUT')
-        <x-page-header context="form" :title="old('name', $program->name)" entity-type="Program" mode="edit" />
+        <x-page-header form-id="programs-edit-form" save-label="Save Program" :last-saved-at="$program->updated_at" context="form" :title="old('name', $program->name)" entity-type="Program" mode="edit" />
 
         <x-section-card title="Information">
             <x-form-field label="Name" for="name" name="name" :required="true">
@@ -52,5 +52,4 @@
         </x-section-card>
     </form>
 </x-form-shell>
-<x-save-bar form-id="programs-edit-form" save-label="Save Program" :last-saved-at="$program->updated_at" />
 @endsection

@@ -22,7 +22,7 @@
     <form method="POST" action="{{ route('teams.update', $team) }}" id="teams-edit-form">
         @csrf
         @method('PUT')
-        <x-page-header context="form" :title="old('name', $team->name)" entity-type="Team" mode="edit" />
+        <x-page-header form-id="teams-edit-form" save-label="Save Team" :last-saved-at="$team->updated_at" context="form" :title="old('name', $team->name)" entity-type="Team" mode="edit" />
 
         <x-section-card title="Information">
             <x-form-field label="Name" for="name" name="name" :required="true">
@@ -75,8 +75,6 @@
         </x-section-card>
     </form>
 </x-form-shell>
-<x-save-bar form-id="teams-edit-form" save-label="Save Team" :last-saved-at="$team->updated_at" />
-
 @once
 <script>
 (function () {

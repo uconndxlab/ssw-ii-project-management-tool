@@ -8,7 +8,7 @@
 
     <form method="POST" action="{{ route('programs.store') }}" id="programs-create-form">
         @csrf
-        <x-page-header context="form" entity-type="Program" />
+        <x-page-header form-id="programs-create-form" save-label="Create Program" context="form" entity-type="Program" />
 
         <x-section-card title="Information">
             <x-form-field label="Name" for="name" name="name" :required="true">
@@ -51,5 +51,4 @@
         </x-section-card>
     </form>
 </x-form-shell>
-<x-save-bar form-id="programs-create-form" save-label="Create Program" />
 @endsection

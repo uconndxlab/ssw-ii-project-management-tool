@@ -9,7 +9,7 @@
     <form method="POST" action="{{ route('activity-types.update', $activityType) }}" id="activity-types-edit-form">
         @csrf
         @method('PUT')
-        <x-page-header
+        <x-page-header form-id="activity-types-edit-form" save-label="Save Activity Type" :last-saved-at="$activityType->updated_at"
             context="form"
             :title="old('name', $activityType->name)"
             entity-type="Activity Type"
@@ -18,5 +18,4 @@
         @include('admin.activity-types.partials.form-fields')
     </form>
 </x-form-shell>
-<x-save-bar form-id="activity-types-edit-form" save-label="Save Activity Type" :last-saved-at="$activityType->updated_at" />
 @endsection

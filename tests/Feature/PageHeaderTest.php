@@ -1,9 +1,11 @@
 <?php
 
+use App\Enums\RecentRecordType;
+use App\Models\Activity;
 use App\Models\Agreement;
 use App\Models\User;
 
-test('create breadcrumbs ignore visited records and Cancel returns to the index', function () {
+test('create breadcrumbs ignore visited records while Cancel returns to the page the user came from', function () {
     $admin = createSystemAdmin();
     $agreement = Agreement::factory()->create(['name' => 'Previously visited agreement']);
     $showUrl = route('agreements.show', $agreement);
@@ -15,7 +17,7 @@ test('create breadcrumbs ignore visited records and Cancel returns to the index'
         ->assertSee('<a href="'.route('agreements.index').'" class="text-decoration-none">Agreements</a>', false)
         ->assertSee('aria-current="page">Create Agreement</span>', false)
         ->assertDontSee('Previously visited agreement')
-        ->assertSee('<a href="'.route('agreements.index').'" class="btn btn-sm btn-outline-secondary" id="save-bar-cancel">Cancel</a>', false);
+        ->assertSee('href="'.$showUrl.'" class="btn btn-outline-secondary app-header-btn" data-form-cancel', false);
 });
 
 test('direct create visits include the resource index without navigation history', function () {
@@ -45,29 +47,47 @@ test('Cancel on a create form keeps the filters of the index the user came from'
 
     $this->get(route('agreements.create'))
         ->assertOk()
-        ->assertSee('<a href="'.$filteredIndex.'" class="btn btn-sm btn-outline-secondary" id="save-bar-cancel">Cancel</a>', false);
+        ->assertSee('href="'.$filteredIndex.'" class="btn btn-outline-secondary app-header-btn" data-form-cancel', false);
 });
 
-test('Cancel on an edit form returns to the record', function () {
+test('Cancel on an edit form opened directly returns to the record', function () {
     $agreement = Agreement::factory()->create();
 
-    $this->actingAs(createSystemAdmin())->get(route('dashboard'))->assertOk();
-
-    $this->get(route('agreements.edit', $agreement))
+    $this->actingAs(createSystemAdmin())->get(route('agreements.edit', $agreement))
         ->assertOk()
-        ->assertSee('<a href="'.route('agreements.show', $agreement).'" class="btn btn-sm btn-outline-secondary" id="save-bar-cancel">Cancel</a>', false);
+        ->assertSee('href="'.route('agreements.show', $agreement).'" class="btn btn-outline-secondary app-header-btn" data-form-cancel', false);
+});
+
+test('Cancel on an edit form returns to the page whose edit button was used', function () {
+    $agreement = Agreement::factory()->create();
+    $admin = createSystemAdmin();
+    $cancel = fn (string $url) => 'href="'.$url.'" class="btn btn-outline-secondary app-header-btn" data-form-cancel';
+
+    $this->actingAs($admin)->get(route('agreements.show', $agreement))->assertOk();
+    $this->get(route('agreements.edit', $agreement))->assertOk()->assertSee($cancel(route('agreements.show', $agreement)), false);
+
+    $this->get(route('agreements.index'))->assertOk();
+    $this->get(route('agreements.edit', $agreement))->assertOk()->assertSee($cancel(route('agreements.index')), false);
 });
 
 test('Cancel ignores a previous page from another site', function () {
     $this->actingAs(createSystemAdmin())
         ->get(route('programs.create'), ['Referer' => 'https://evil.example'.parse_url(route('programs.index'), PHP_URL_PATH)])
         ->assertOk()
-        ->assertSee('<a href="'.route('programs.index').'" class="btn btn-sm btn-outline-secondary" id="save-bar-cancel">Cancel</a>', false);
+        ->assertSee('href="'.route('programs.index').'" class="btn btn-outline-secondary app-header-btn" data-form-cancel', false);
 });
 
 test('Cancel on the profile form returns to the profile', function () {
     $this->actingAs(User::factory()->create())
         ->get(route('profile.edit'))
         ->assertOk()
-        ->assertSee('<a href="'.route('profile').'" class="btn btn-sm btn-outline-secondary" id="save-bar-cancel">Cancel</a>', false);
+        ->assertSee('href="'.route('profile').'" class="btn btn-outline-secondary app-header-btn" data-form-cancel', false);
+});
+
+test('edit breadcrumbs name an activity the way the rest of the app does', function () {
+    $activity = Activity::factory()->create();
+
+    $this->actingAs(createSystemAdmin())->get(route('activities.edit', $activity))
+        ->assertOk()
+        ->assertSee('href="'.route('activities.show', $activity).'" class="text-decoration-none">'.RecentRecordType::Activity->titleFor($activity).'</a>', false);
 });

@@ -2,11 +2,13 @@
 
 namespace App\Support;
 
+use App\Enums\RecentRecordType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
+use Throwable;
 
 class RouteBreadcrumbs
 {
@@ -35,7 +37,9 @@ class RouteBreadcrumbs
 
             if ($record instanceof Model) {
                 $items[] = [
-                    'label' => $record->getAttributes()['name'] ?? Str::headline(Str::singular($resource)),
+                    'label' => RecentRecordType::fromRouteName($resource.'.show')?->titleFor($record)
+                        ?? $record->getAttributes()['name']
+                        ?? Str::headline(Str::singular($resource)),
                     'url' => route($resource.'.show', $record),
                     'current' => false,
                 ];
@@ -50,22 +54,34 @@ class RouteBreadcrumbs
     }
 
     /**
-     * Where Cancel goes: the parent crumb. When the user came from that same page, their own URL
-     * is returned instead so index filters and sorting survive.
+     * Where Cancel goes: the page the user came from when it is a record or list page on this site
+     * (so index filters and the edit button on a record both return them there), otherwise the
+     * parent crumb.
      */
-    public function parentUrl(Request $request): ?string
+    public function cancelUrl(Request $request): ?string
     {
-        $parentUrl = Arr::last($this->items($request, null))['url'] ?? null;
+        return $this->previousPage($request)
+            ?? Arr::last($this->items($request, null))['url'] ?? null;
+    }
 
-        if ($parentUrl === null) {
+    private function previousPage(Request $request): ?string
+    {
+        $previous = $request->headers->get('referer') ?: $request->session()->previousUrl();
+        $parts = parse_url((string) $previous);
+
+        if ($previous === null || ($parts['host'] ?? null) !== $request->getHost() || ($parts['path'] ?? null) === $request->getPathInfo()) {
             return null;
         }
 
-        $previous = parse_url(url()->previous());
+        try {
+            $routeName = (string) app('router')->getRoutes()->match(Request::create($previous))->getName();
+        } catch (Throwable) {
+            return null;
+        }
 
-        $cameFromParent = ($previous['host'] ?? null) === $request->getHost()
-            && ($previous['path'] ?? null) === parse_url($parentUrl, PHP_URL_PATH);
+        $isViable = in_array($routeName, ['dashboard', 'search', 'profile'], true)
+            || Str::endsWith($routeName, ['.index', '.show']);
 
-        return $cameFromParent ? url()->previous() : $parentUrl;
+        return $isViable ? $previous : null;
     }
 }

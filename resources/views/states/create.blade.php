@@ -8,7 +8,7 @@
 
     <form method="POST" action="{{ route('states.store') }}" id="states-create-form">
         @csrf
-        <x-page-header context="form" entity-type="State" />
+        <x-page-header form-id="states-create-form" save-label="Create State" context="form" entity-type="State" />
 
         <x-section-card title="Information">
             <x-form-field label="Name" for="name" name="name" :required="true" class="mb-0">
@@ -22,5 +22,4 @@
         </x-section-card>
     </form>
 </x-form-shell>
-<x-save-bar form-id="states-create-form" save-label="Create State" />
 @endsection

@@ -15,7 +15,7 @@ test('certification tool create and edit breadcrumbs link back to the tools inde
     $create->assertOk();
     $create->assertSee($indexCrumb, false);
     $create->assertDontSee('Current Page', false);
-    $create->assertSee('id="save-bar-cancel"', false);
+    $create->assertSee('data-form-cancel', false);
     $create->assertSee('href="'.$indexUrl.'"', false);
 
     $edit = $this->actingAs($admin)->get(route('certification-tools.edit', $tool));
@@ -36,7 +36,7 @@ test('certificate create and edit breadcrumbs link back to the certificates inde
     $create->assertOk();
     $create->assertSee($indexCrumb, false);
     $create->assertDontSee('Current Page', false);
-    $create->assertSee('id="save-bar-cancel"', false);
+    $create->assertSee('data-form-cancel', false);
     $create->assertSee('href="'.$indexUrl.'"', false);
 
     $edit = $this->actingAs($admin)->get(route('certificates.edit', $certificate));

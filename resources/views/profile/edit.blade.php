@@ -10,7 +10,7 @@
         @csrf
         @method('PUT')
 
-        <x-page-header context="form" title="Edit Profile" />
+        <x-page-header form-id="profile-edit-form" save-label="Save" context="form" title="Edit Profile" />
 
         <x-section-card title="Account">
             <x-form-field label="Name" for="name">
@@ -62,5 +62,4 @@
         </x-section-card>
     </form>
 </x-form-shell>
-<x-save-bar form-id="profile-edit-form" :resolve-cancel="true" save-label="Save" />
 @endsection

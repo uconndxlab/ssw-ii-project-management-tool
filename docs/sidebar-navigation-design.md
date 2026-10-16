@@ -1,6 +1,6 @@
 # Floating navigation and Recent records
 
-**Status:** Superseded in part. A docked, click-to-expand sidebar and the Recent panel are implemented and recorded in [DESIGN.md](../DESIGN.md) (Navigation). The floating hover-to-expand rail described below was not built, and Recent is stored in a `recent_records` table. The rest (hierarchy-based active state, route breadcrumbs, retention rules, deferred connection diagrams) stands.
+**Status:** Superseded in part. The shell is implemented and recorded in [DESIGN.md](../DESIGN.md) (Navigation): a floating sidebar that is pinned open or peeks open on hover with a pin button, no desktop top bar, search, Log Activity and the account menu inside the sidebar, and Recent stored in a `recent_records` table. The rest (hierarchy-based active state, route breadcrumbs, retention rules, deferred connection diagrams) stands.
 **Date:** 2026-10-16
 **Mode:** Operate — help clients and staff move between connected records and return to earlier work.
 **Visual reference:** The supplied compact floating icon rail that reveals navigation labels when expanded. Keep TA Tracker's existing Working Ledger colors, type, buttons, and restrained surfaces from [DESIGN.md](../DESIGN.md).
@@ -72,7 +72,7 @@ Retain the `RouteBreadcrumbs` helper and its connection to `x-page-header`. For 
 
 Breadcrumbs do not include an unrelated record just because it was visited earlier. The current item exposes `aria-current="page"`. A destination must remain authorized when followed; the breadcrumb is not an authorization mechanism.
 
-Form Cancel uses `RouteBreadcrumbs::parentUrl` (the parent crumb, or the user's own URL when they came from that page); there is no session back trail. Preserve the page-header props and slots; the proposed component API refactor remains deferred. Preserve the agreement type badge and the other completed header/section-heading improvements.
+Form Cancel uses `RouteBreadcrumbs::cancelUrl` (the previous record or list page, else the parent crumb); there is no session back trail. Preserve the page-header props and slots; the proposed component API refactor remains deferred. Preserve the agreement type badge and the other completed header/section-heading improvements.
 
 ## Recent panel
 

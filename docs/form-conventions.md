@@ -3,7 +3,7 @@
 Create/edit forms share one shell and the same components. Do not invent a per-page layout.
 
 ## Shell
-- `col-lg-10` centered. `x-form-errors` above the `<form>`. `x-page-header` inside the form. `x-section-card` for every section. Sticky `x-save-bar` only — no in-card submit/cancel.
+- `col-lg-10` centered. `x-form-errors` above the `<form>`. `x-page-header` inside the form. `x-section-card` for every section. Save, Cancel, and status live in the sticky page header (`save-label`, `form-id`, `last-saved-at` props) — no in-card submit/cancel and no bottom bar.
 - Section by user job: identity → coverage/scope → people/orgs → rules/options → related records.
 
 ## Fields
