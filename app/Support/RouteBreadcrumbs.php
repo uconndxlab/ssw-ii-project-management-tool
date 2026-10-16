@@ -4,6 +4,7 @@ namespace App\Support;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 
@@ -46,5 +47,25 @@ class RouteBreadcrumbs
         }
 
         return $items;
+    }
+
+    /**
+     * Where Cancel goes: the parent crumb. When the user came from that same page, their own URL
+     * is returned instead so index filters and sorting survive.
+     */
+    public function parentUrl(Request $request): ?string
+    {
+        $parentUrl = Arr::last($this->items($request, null))['url'] ?? null;
+
+        if ($parentUrl === null) {
+            return null;
+        }
+
+        $previous = parse_url(url()->previous());
+
+        $cameFromParent = ($previous['host'] ?? null) === $request->getHost()
+            && ($previous['path'] ?? null) === parse_url($parentUrl, PHP_URL_PATH);
+
+        return $cameFromParent ? url()->previous() : $parentUrl;
     }
 }

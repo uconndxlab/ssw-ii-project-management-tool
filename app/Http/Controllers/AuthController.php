@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
-use App\Services\SessionBackTargetService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -12,8 +11,6 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
-    public function __construct(private readonly SessionBackTargetService $backTargetService) {}
-
     public function showLogin(): View|RedirectResponse
     {
         if (Auth::check()) {
@@ -54,7 +51,6 @@ class AuthController extends Controller
             }
 
             $request->session()->regenerate();
-            $this->backTargetService->clear($request);
 
             return redirect()->intended('/');
         }
@@ -66,7 +62,6 @@ class AuthController extends Controller
 
     public function logout(Request $request): RedirectResponse
     {
-        $this->backTargetService->clear($request);
         Auth::logout();
 
         $request->session()->invalidate();

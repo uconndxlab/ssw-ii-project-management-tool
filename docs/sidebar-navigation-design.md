@@ -15,7 +15,7 @@ The floating rail uses the left gutter without permanently taking a full sidebar
 
 - Expand desktop navigation when the mouse enters the rail. A click is not required to reveal labels.
 - Highlight navigation from the current route hierarchy, regardless of the entry point. An agreement show page highlights Agreements, even when reached from a project or Recent.
-- Keep breadcrumbs as route hierarchy on show, create, and edit pages. Keep history-based Back/Cancel behavior separate.
+- Keep breadcrumbs as route hierarchy on show, create, and edit pages. Cancel goes to the parent crumb.
 - Recent contains at most 30 unique records visited within the last seven days. Revisiting a record moves it to the top and refreshes its last-opened time.
 - Ship a searchable list first. A graph, branching exploration trail, and per-click history are outside the initial proposal.
 
@@ -72,7 +72,7 @@ Retain the `RouteBreadcrumbs` helper and its connection to `x-page-header`. For 
 
 Breadcrumbs do not include an unrelated record just because it was visited earlier. The current item exposes `aria-current="page"`. A destination must remain authorized when followed; the breadcrumb is not an authorization mechanism.
 
-`SessionBackTargetService` continues to supply the user's previous valid context for Back/Cancel. Its existing behavior is independent of Recent. Preserve the page-header props and slots; the proposed component API refactor remains deferred. Preserve the agreement type badge and the other completed header/section-heading improvements.
+Form Cancel uses `RouteBreadcrumbs::parentUrl` (the parent crumb, or the user's own URL when they came from that page); there is no session back trail. Preserve the page-header props and slots; the proposed component API refactor remains deferred. Preserve the agreement type badge and the other completed header/section-heading improvements.
 
 ## Recent panel
 
@@ -91,9 +91,9 @@ Show a helpful first-use message when the list is empty, and a distinct "No rece
 - Remove entries older than seven days, using the latest visit time. Sort newest first and trim to 30 entries after deduplication and expiry.
 - Scope storage to the signed-in user. Recent must not expose a previous user's entries on a shared browser or after an account switch.
 - Recheck access before displaying entries, and keep the normal destination authorization checks. Hide deleted or inaccessible records according to the application's access rules. An inactive record that remains viewable need not be hidden merely for being inactive.
-- Clear recent removes this user's retained Recent entries, including any loaded UI copy. It does not clear unrelated application state or alter Back/Cancel history.
+- Clear recent removes this user's retained Recent entries, including any loaded UI copy. It does not clear unrelated application state.
 
-The future implementation must choose a bounded user-scoped store that supports the seven-day window. The existing Back service is not that store: it resets at index destinations and uses a 12-entry, four-hour trail. Do not silently change Back/Cancel semantics to make it serve Recent. The persistence mechanism and whether history follows a user across devices must be settled before implementation; this proposal does not introduce a database migration or a dependency.
+The future implementation must choose a bounded user-scoped store that supports the seven-day window. The persistence mechanism and whether history follows a user across devices must be settled before implementation; this proposal does not introduce a database migration or a dependency.
 
 ## Responsive behavior
 

@@ -12,10 +12,7 @@
     $savedTime    = $lastSavedAt
         ? \Carbon\Carbon::parse($lastSavedAt)->format('g:i A')
         : '';
-    $resolvedBackTarget = $resolveCancel
-        ? app(\App\Services\SessionBackTargetService::class)->resolve(request())
-        : null;
-    $cancelUrl = $resolveCancel ? ($resolvedBackTarget['url'] ?? null) : $cancelUrl;
+    $cancelUrl = $resolveCancel ? app(\App\Support\RouteBreadcrumbs::class)->parentUrl(request()) : $cancelUrl;
 @endphp
 
 {{-- Sticky bottom save bar --}}
