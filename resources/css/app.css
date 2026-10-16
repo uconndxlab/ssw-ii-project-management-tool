@@ -7,11 +7,31 @@
 }
 
 body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
     background-color: var(--app-page-bg);
 }
 
 main {
-    min-height: calc(100vh - 56px);
+    flex: 1 0 auto;
+}
+
+.app-skip-link {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.75rem;
+    z-index: 1080;
+    padding: 0.5rem 0.75rem;
+    color: var(--bs-primary);
+    background-color: var(--bs-body-bg);
+    border-radius: var(--bs-border-radius-sm);
+}
+
+.app-skip-link:focus-visible {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: 2px;
 }
 
 .entity-show-card {
@@ -201,24 +221,33 @@ body.form-drawer-open {
     padding: 0.625rem 0;
 }
 
+.app-navbar-search {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
 .app-navbar-search-input {
     flex: 1 1 auto;
     min-width: 0;
     width: 100%;
-    max-width: 15rem;
     padding: 0.3125rem 0.625rem;
     font-size: 0.875rem;
     font-weight: 400;
     line-height: 1.5;
     color: rgba(255, 255, 255, 0.9);
     background-color: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.5);
     border-radius: 0.25rem;
     box-shadow: none;
 }
 
 .app-navbar-search-input::placeholder {
-    color: rgba(255, 255, 255, 0.4);
+    color: rgba(255, 255, 255, 0.65);
+}
+
+.app-navbar-search-input:focus-visible {
+    outline: 2px solid var(--bs-white);
+    outline-offset: 2px;
 }
 
 .app-navbar-search-input:disabled {
@@ -231,31 +260,31 @@ body.form-drawer-open {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    padding: 0.3125rem 0.75rem;
-    font-size: 0.875rem;
     font-weight: 500;
-    line-height: 1.5;
-    color: #fff;
-    text-decoration: none;
     white-space: nowrap;
-    background-color: var(--bs-primary);
-    border: 1px solid var(--bs-primary);
-    border-radius: 0.25rem;
-}
-
-.app-navbar-cta:hover,
-.app-navbar-cta:focus {
-    color: #fff;
-    filter: brightness(1.08);
 }
 
 .app-navbar-cta.is-active {
     color: rgba(255, 255, 255, 0.85);
     background-color: transparent;
-    border-color: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+@media (max-width: 991.98px) {
+    .app-navbar .nav-link,
+    .app-navbar .dropdown-item,
+    .app-navbar .navbar-toggler,
+    .app-navbar-search-input,
+    .app-navbar-cta {
+        min-height: 44px;
+    }
 }
 
 @media (min-width: 992px) {
+    .app-navbar-search {
+        max-width: 15rem;
+    }
+
     .app-navbar-tools {
         width: auto;
         padding: 0;
