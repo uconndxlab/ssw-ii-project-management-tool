@@ -18,15 +18,6 @@
             <dt class="col-5 text-muted fw-normal small">Name</dt>
             <dd class="col-7 mb-2 fw-semibold">{{ $organization->name }}</dd>
 
-            <dt class="col-5 text-muted fw-normal small">Status</dt>
-            <dd class="col-7 mb-2">
-                @if($organization->active)
-                    <span class="badge bg-success">Active</span>
-                @else
-                    <span class="badge bg-secondary">Inactive</span>
-                @endif
-            </dd>
-
             <dt class="col-5 text-muted fw-normal small">PO Number</dt>
             <dd class="col-7 mb-2">{{ $organization->po_number ?: '—' }}</dd>
 

@@ -10,6 +10,19 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" integrity="sha384-XGjxtQfXaH2tnPFa9x+ruJTuLE3Aa6LhHSWRr1XeTyhezb4abCG4ccI5AkVDxqC+" crossorigin="anonymous">
 
+    @auth
+        <script>
+            (function () {
+                var state = null;
+                try { state = localStorage.getItem('ta-rail-{{ auth()->id() }}'); } catch (e) {}
+                if (state !== 'collapsed' && state !== 'expanded') {
+                    state = window.innerWidth < 1200 ? 'collapsed' : 'expanded';
+                }
+                document.documentElement.setAttribute('data-rail', state);
+            })();
+        </script>
+    @endauth
+
     @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     @endif
@@ -21,9 +34,11 @@
     <a href="#main" class="visually-hidden-focusable app-skip-link">Skip to content</a>
     @auth
         <x-app-navbar />
+        <div class="app-body">
+            <x-app-sidebar />
     @endauth
 
-    <main id="main" class="py-4" tabindex="-1">
+    <main id="main" @class(['py-4', 'app-main' => auth()->check()]) tabindex="-1">
         <div class="container">
             @if(session('success') || session('status'))
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -54,6 +69,9 @@
             @yield('content')
         </div>
     </main>
+    @auth
+        </div>
+    @endauth
 
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>

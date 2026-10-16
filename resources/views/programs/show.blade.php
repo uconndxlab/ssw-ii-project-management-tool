@@ -15,15 +15,6 @@
     {{-- ── Summary ─────────────────────────────────────────────────────── --}}
     <x-slot:summary>
         <dl class="row mb-0">
-            <dt class="col-5 text-muted fw-normal small">Status</dt>
-            <dd class="col-7 mb-2">
-                @if($program->active)
-                    <span class="badge bg-success">Active</span>
-                @else
-                    <span class="badge bg-secondary">Inactive</span>
-                @endif
-            </dd>
-
             <dt class="col-5 text-muted fw-normal small">Projects</dt>
             <dd class="col-7 mb-2">
                 @if($program->projects->isNotEmpty())

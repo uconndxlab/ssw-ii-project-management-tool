@@ -8,7 +8,7 @@ use App\Support\Authorization\UserAccess;
 class AppNav
 {
     /**
-     * @return list<array{label: string, route: string, active: list<string>}>
+     * @return list<array{label: string, route: string, active: list<string>, icon: string, group: string}>
      */
     public static function primaryLinks(?User $user = null): array
     {
@@ -19,90 +19,39 @@ class AppNav
 
         $access = UserAccess::for($user);
 
-        if ($access->isInput()) {
-            return [
-                [
-                    'label' => 'Home',
-                    'route' => 'dashboard',
-                    'active' => ['dashboard'],
-                ],
-                [
-                    'label' => 'Activities',
-                    'route' => 'activities.index',
-                    'active' => ['activities.*'],
-                ],
-            ];
-        }
-
         $links = [
-            [
-                'label' => 'Home',
-                'route' => 'dashboard',
-                'active' => ['dashboard'],
-            ],
-            [
-                'label' => 'Agreements',
-                'route' => 'agreements.index',
-                'active' => ['agreements.*'],
-            ],
-            [
-                'label' => 'Activities',
-                'route' => 'activities.index',
-                'active' => ['activities.*'],
-            ],
+            self::link('Home', 'dashboard', ['dashboard'], 'bi-house', 'work'),
         ];
 
-        if (! $access->hasAdmin()) {
-            $links = array_merge($links, [
-                [
-                    'label' => 'Organizations',
-                    'route' => 'organizations.index',
-                    'active' => ['organizations.*'],
-                ],
-                [
-                    'label' => 'States',
-                    'route' => 'states.index',
-                    'active' => ['states.*'],
-                ],
-                [
-                    'label' => 'Projects',
-                    'route' => 'projects.index',
-                    'active' => ['projects.*'],
-                ],
-                [
-                    'label' => 'Programs',
-                    'route' => 'programs.index',
-                    'active' => ['programs.*'],
-                ],
-                [
-                    'label' => 'Teams',
-                    'route' => 'teams.index',
-                    'active' => ['teams.*'],
-                ],
-            ]);
+        if (! $access->isInput()) {
+            $links[] = self::link('Agreements', 'agreements.index', ['agreements.*'], 'bi-file-earmark-text', 'work');
         }
 
-        if ($access->hasView() && ! $access->hasAdmin()) {
-            $links[] = [
-                'label' => 'Users',
-                'route' => 'admin.users.index',
-                'active' => ['admin.users.*', 'users.show'],
-            ];
-        }
+        $links[] = self::link('Activities', 'activities.index', ['activities.*'], 'bi-journal-check', 'work');
 
         if ($access->isSupervisor()) {
-            $links[] = [
-                'label' => 'Supervisees',
-                'route' => 'supervisees.index',
-                'active' => ['supervisees.*'],
-            ];
+            $links[] = self::link('Supervisees', 'supervisees.index', ['supervisees.*'], 'bi-person-check', 'work');
+        }
+
+        if (! $access->isInput() && ! $access->hasAdmin()) {
+            $links = array_merge($links, [
+                self::link('Organizations', 'organizations.index', ['organizations.*'], 'bi-building', 'directory'),
+                self::link('States', 'states.index', ['states.*'], 'bi-geo-alt', 'directory'),
+                self::link('Projects', 'projects.index', ['projects.*'], 'bi-kanban', 'directory'),
+                self::link('Programs', 'programs.index', ['programs.*'], 'bi-diagram-3', 'directory'),
+                self::link('Teams', 'teams.index', ['teams.*'], 'bi-people', 'directory'),
+            ]);
+
+            if ($access->hasView()) {
+                $links[] = self::link('Users', 'admin.users.index', ['admin.users.*', 'users.show'], 'bi-person-lines-fill', 'directory');
+            }
         }
 
         return $links;
     }
 
     /**
-     * @return list<array{header: string, items: list<array{label: string, route: string, active: list<string>}>}>
+     * @return list<array{header: string, items: list<array{label: string, route: string, active: list<string>, icon: string}>}>
      */
     public static function adminSections(?User $user = null): array
     {
@@ -115,40 +64,62 @@ class AppNav
             [
                 'header' => 'Reference Data',
                 'items' => [
-                    ['label' => 'Organizations', 'route' => 'organizations.index', 'active' => ['organizations.*']],
-                    ['label' => 'States', 'route' => 'states.index', 'active' => ['states.*']],
+                    self::item('Organizations', 'organizations.index', ['organizations.*'], 'bi-building'),
+                    self::item('States', 'states.index', ['states.*'], 'bi-geo-alt'),
                 ],
             ],
             [
                 'header' => 'Agreement Setup',
                 'items' => [
-                    ['label' => 'Projects', 'route' => 'projects.index', 'active' => ['projects.*']],
-                    ['label' => 'Programs', 'route' => 'programs.index', 'active' => ['programs.*']],
+                    self::item('Projects', 'projects.index', ['projects.*'], 'bi-kanban'),
+                    self::item('Programs', 'programs.index', ['programs.*'], 'bi-diagram-3'),
                 ],
             ],
             [
                 'header' => 'Activity Setup',
                 'items' => [
-                    ['label' => 'Activity Families', 'route' => 'contact-families.index', 'active' => ['contact-families.*']],
-                    ['label' => 'Activity Types', 'route' => 'activity-types.index', 'active' => ['activity-types.*']],
-                    ['label' => 'Logging Fields', 'route' => 'logging-fields.index', 'active' => ['logging-fields.*']],
+                    self::item('Activity Families', 'contact-families.index', ['contact-families.*'], 'bi-collection'),
+                    self::item('Activity Types', 'activity-types.index', ['activity-types.*'], 'bi-tags'),
+                    self::item('Logging Fields', 'logging-fields.index', ['logging-fields.*'], 'bi-input-cursor-text'),
                 ],
             ],
             [
                 'header' => 'Certification Setup',
                 'items' => [
-                    ['label' => 'Certification Tools', 'route' => 'certification-tools.index', 'active' => ['certification-tools.*']],
-                    ['label' => 'Certificates', 'route' => 'certificates.index', 'active' => ['certificates.*']],
+                    self::item('Certification Tools', 'certification-tools.index', ['certification-tools.*'], 'bi-tools'),
+                    self::item('Certificates', 'certificates.index', ['certificates.*'], 'bi-award'),
                 ],
             ],
             [
                 'header' => 'People',
                 'items' => [
-                    ['label' => 'Teams', 'route' => 'teams.index', 'active' => ['teams.*']],
-                    ['label' => 'Users', 'route' => 'admin.users.index', 'active' => ['admin.users.*', 'users.show']],
+                    self::item('Teams', 'teams.index', ['teams.*'], 'bi-people'),
+                    self::item('Users', 'admin.users.index', ['admin.users.*', 'users.show'], 'bi-person-lines-fill'),
                 ],
             ],
         ];
+    }
+
+    /**
+     * Sidebar groups: Work and Directory from the primary links, then each admin setup section.
+     * Both sources already apply the role rules, so the sidebar adds no permission logic of its own.
+     *
+     * @return list<array{header: string, items: list<array{label: string, route: string, active: list<string>, icon: string}>}>
+     */
+    public static function railGroups(?User $user = null): array
+    {
+        $links = self::primaryLinks($user);
+        $groups = [];
+
+        foreach (['work' => 'Work', 'directory' => 'Directory'] as $key => $header) {
+            $items = array_values(array_filter($links, fn (array $link) => $link['group'] === $key));
+
+            if ($items !== []) {
+                $groups[] = ['header' => $header, 'items' => $items];
+            }
+        }
+
+        return array_merge($groups, self::adminSections($user));
     }
 
     /**
@@ -165,23 +136,28 @@ class AppNav
         return false;
     }
 
-    public static function adminIsActive(): bool
-    {
-        foreach (self::adminSections() as $section) {
-            foreach ($section['items'] as $item) {
-                if (self::isActive($item['active'])) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
     public static function showSearch(?User $user = null): bool
     {
         $user = $user ?? auth()->user();
 
         return $user !== null && ! UserAccess::for($user)->isInput();
+    }
+
+    /**
+     * @param  list<string>  $active
+     * @return array{label: string, route: string, active: list<string>, icon: string, group: string}
+     */
+    private static function link(string $label, string $route, array $active, string $icon, string $group): array
+    {
+        return [...self::item($label, $route, $active, $icon), 'group' => $group];
+    }
+
+    /**
+     * @param  list<string>  $active
+     * @return array{label: string, route: string, active: list<string>, icon: string}
+     */
+    private static function item(string $label, string $route, array $active, string $icon): array
+    {
+        return ['label' => $label, 'route' => $route, 'active' => $active, 'icon' => $icon];
     }
 }

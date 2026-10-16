@@ -45,7 +45,7 @@
     .save-bar {
         position: fixed;
         bottom: 0;
-        left: 0;
+        left: var(--app-rail-offset, 0px);
         right: 0;
         background: #fff;
         border-top: 1px solid #dee2e6;

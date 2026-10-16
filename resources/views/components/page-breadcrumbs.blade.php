@@ -21,7 +21,9 @@
                     @if(!empty($item['ellipsis']))
                         <span aria-hidden="true">&hellip;</span>
                         <span class="visually-hidden">More breadcrumbs</span>
-                    @elseif(!empty($item['current']) || empty($item['url']))
+                    @elseif(!empty($item['current']))
+                        <span aria-current="page">{{ $item['label'] }}</span>
+                    @elseif(empty($item['url']))
                         <span>{{ $item['label'] }}</span>
                     @else
                         <a href="{{ $item['url'] }}" class="text-decoration-none">{{ $item['label'] }}</a>

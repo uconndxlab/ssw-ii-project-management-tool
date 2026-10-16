@@ -37,11 +37,6 @@
     {{-- ── Summary ─────────────────────────────────────────────────────── --}}
     <x-slot:summary>
         <dl class="row mb-0" style="min-width: 0;">
-            <dt class="col-5 text-muted fw-normal small">Status</dt>
-            <dd class="col-7 mb-2">
-                <x-status-badge :active="$agreement->active" />
-            </dd>
-
             <dt class="col-5 text-muted fw-normal small">Start Date</dt>
             <dd class="col-7 mb-2">{{ $agreement->start_date?->format('M d, Y') ?? '—' }}</dd>
 

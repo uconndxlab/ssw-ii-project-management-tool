@@ -3,6 +3,7 @@
 use App\Http\Middleware\Authenticate;
 use App\Http\Middleware\EnsurePasswordResetEnabled;
 use App\Http\Middleware\EnsureUserIsActive;
+use App\Http\Middleware\RecordRecentVisit;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\TrackBackTrail;
 use Illuminate\Foundation\Application;
@@ -19,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             SecurityHeaders::class,
             TrackBackTrail::class,
+            RecordRecentVisit::class,
         ]);
 
         $middleware->alias([

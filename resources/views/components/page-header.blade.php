@@ -75,12 +75,12 @@
         default => 'mb-3',
     };
 
-    $resolvedTitleClass = $titleClass ?? ($context === 'dashboard' ? 'display-6' : 'h2');
+    $resolvedTitleClass = $titleClass ?? ($context === 'dashboard' ? 'app-dashboard-title' : 'app-page-title');
     $resolvedTitleMarginClass = $titleMarginClass ?? 'mb-0';
     $resolvedTitleWeightClass = $titleWeightClass ?? ($context === 'dashboard' ? 'fw-semibold' : 'fw-bold');
     $resolvedDescriptionClass = $descriptionClass ?? 'text-muted small mb-0 mt-1';
     $resolvedMetaClass = $metaClass ?? 'd-flex flex-wrap align-items-center gap-2 text-muted small mt-2';
-    $resolvedControlsClass = $controlsClass ?? 'flex-shrink-0 ms-sm-auto align-self-end';
+    $resolvedControlsClass = $controlsClass ?? 'flex-shrink-0 ms-sm-auto align-self-start';
     $resolvedActionKind = $actionKind;
 
     if (blank($resolvedActionKind) && filled($actionUrl)) {
@@ -128,8 +128,8 @@
     $breadcrumbItems = [];
 
     if ($resolvedShowBreadcrumbs) {
-        $breadcrumbItems = app(\App\Services\SessionBackTargetService::class)
-            ->breadcrumbs(request(), $resolvedBreadcrumbLabel ?: $resolvedTitle);
+        $breadcrumbItems = app(\App\Support\RouteBreadcrumbs::class)
+            ->items(request(), $resolvedBreadcrumbLabel ?: $resolvedTitle);
     }
 
     $hasBadgeAugment = isset($badges) && filled(trim((string) $badges));
@@ -148,8 +148,8 @@
         <x-page-breadcrumbs :items="$breadcrumbItems" />
     @endif
 
-    <div class="d-flex justify-content-between align-items-end flex-wrap gap-3">
-        <div class="flex-grow-1 min-w-0">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+        <div class="page-header-heading min-w-0">
             <h1 class="{{ $resolvedTitleClass }} {{ $resolvedTitleMarginClass }} {{ $resolvedTitleWeightClass }}">{{ $resolvedTitle }}</h1>
 
             @if(filled($description) && ! $inlineDescription)

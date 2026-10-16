@@ -4,13 +4,7 @@ namespace App\Services;
 
 use App\Models\Activity;
 use App\Models\Agreement;
-use App\Models\Organization;
-use App\Models\Program;
-use App\Models\Project;
-use App\Models\State;
-use App\Models\Team;
 use App\Models\User;
-use App\Support\CarbonDate;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Carbon;
@@ -131,64 +125,6 @@ class SessionBackTargetService
         return null;
     }
 
-    /**
-     * @return array<int, array{label: string, url: ?string, current: bool}>
-     */
-    public function breadcrumbs(Request $request, ?string $currentLabel = null): array
-    {
-        if (! $request->hasSession() || ! $request->user()) {
-            return $currentLabel ? [[
-                'label' => $currentLabel,
-                'url' => null,
-                'current' => true,
-            ]] : [];
-        }
-
-        $trail = $this->pruneTrail($request, $this->trail($request));
-        $currentUrl = $this->normalizeUrl($request->fullUrl());
-        $items = [];
-        $changed = false;
-
-        foreach ($trail as $index => $entry) {
-            $entryUrl = $entry['url'] ?? null;
-
-            if (! $entryUrl || $entryUrl === $currentUrl) {
-                continue;
-            }
-
-            if (! $this->isValidEntry($request, $entry)) {
-                unset($trail[$index]);
-                $changed = true;
-
-                continue;
-            }
-
-            $items[] = [
-                'label' => $this->crumbLabelForEntry($entry),
-                'url' => $entryUrl,
-                'current' => false,
-            ];
-        }
-
-        if ($currentLabel) {
-            $items[] = [
-                'label' => $currentLabel,
-                'url' => null,
-                'current' => true,
-            ];
-        } elseif ($items !== []) {
-            $lastIndex = array_key_last($items);
-            $items[$lastIndex]['url'] = null;
-            $items[$lastIndex]['current'] = true;
-        }
-
-        if ($changed) {
-            $this->storeTrail($request, array_values($trail));
-        }
-
-        return $items;
-    }
-
     private function shouldTrack(Request $request): bool
     {
         if (! $request->hasSession() || ! $request->user()) {
@@ -217,9 +153,9 @@ class SessionBackTargetService
         return $route instanceof RoutingRoute && $this->isTrackableRouteName($routeName);
     }
 
-    // build crumb info
+    // Build navigation history.
     /**
-     * @return array{url: string, route: string|null, crumb_label: string, recorded_at: int}|null
+     * @return array{url: string, route: string|null, recorded_at: int}|null
      */
     private function makeEntry(Request $request): ?array
     {
@@ -234,7 +170,6 @@ class SessionBackTargetService
         return [
             'url' => $this->normalizeUrl($request->fullUrl()),
             'route' => $routeName,
-            'crumb_label' => $this->routeCrumbLabel($route),
             'recorded_at' => (int) Carbon::now()->timestamp,
         ];
     }
@@ -253,7 +188,7 @@ class SessionBackTargetService
         return Str::endsWith($routeName, ['.index', '.show']);
     }
 
-    // reset breadcrumbs on arrival to dashboard, search, profile, and all index routes
+    // Reset navigation history on arrival to dashboard, search, profile, and all index routes
     private function shouldResetOnArrival(?string $routeName): bool
     {
         if (blank($routeName)) {
@@ -268,7 +203,7 @@ class SessionBackTargetService
     }
 
     /**
-     * remove invalid crumbs form trail
+     * Remove invalid entries from the trail.
      *
      * @param  array<int, array<string, mixed>>  $trail
      * @return array<int, array<string, mixed>>
@@ -390,101 +325,6 @@ class SessionBackTargetService
             'certificates.index' => 'Back to certificates',
             default => 'Back',
         };
-    }
-
-    /**
-     * @param  array<string, mixed>  $entry
-     */
-    private function crumbLabelForEntry(array $entry): string
-    {
-        $crumbLabel = $entry['crumb_label'] ?? null;
-
-        if (is_string($crumbLabel) && $crumbLabel !== '') {
-            return $crumbLabel;
-        }
-
-        return $this->fallbackCrumbLabel($entry['route'] ?? null);
-    }
-
-    private function routeCrumbLabel(RoutingRoute $route): string
-    {
-        return match ($route->getName()) {
-            'dashboard' => 'Dashboard',
-            'search' => 'Search',
-            'profile' => 'Profile',
-            'agreements.show' => $this->parameterName($this->resolveAgreement($route->parameter('agreement')), 'Agreement'),
-            'activities.show' => $this->activityCrumbLabel($this->resolveActivity($route->parameter('activity'))),
-            'organizations.show' => $this->parameterName($route->parameter('organization'), 'Organization'),
-            'projects.show' => $this->parameterName($route->parameter('project'), 'Project'),
-            'programs.show' => $this->parameterName($route->parameter('program'), 'Program'),
-            'states.show' => $this->parameterName($route->parameter('state'), 'State'),
-            'teams.show' => $this->parameterName($route->parameter('team'), 'Team'),
-            'users.show' => $this->parameterName($route->parameter('user'), 'User'),
-            default => $this->fallbackCrumbLabel($route->getName()),
-        };
-    }
-
-    private function parameterName(mixed $value, string $fallback): string
-    {
-        if ($value instanceof Agreement
-            || $value instanceof Organization
-            || $value instanceof Program
-            || $value instanceof Project
-            || $value instanceof State
-            || $value instanceof Team
-            || $value instanceof User) {
-            return $value->name !== '' ? $value->name : $fallback;
-        }
-
-        return $fallback;
-    }
-
-    private function fallbackCrumbLabel(?string $routeName): string
-    {
-        return match ($routeName) {
-            'dashboard' => 'Dashboard',
-            'search' => 'Search',
-            'profile' => 'Profile',
-            'agreements.index' => 'Agreements',
-            'agreements.show' => 'Agreement',
-            'activities.index' => 'Activities',
-            'activities.show' => 'Activity',
-            'organizations.index' => 'Organizations',
-            'organizations.show' => 'Organization',
-            'projects.index' => 'Projects',
-            'projects.show' => 'Project',
-            'programs.index' => 'Programs',
-            'programs.show' => 'Program',
-            'states.index' => 'States',
-            'states.show' => 'State',
-            'teams.index' => 'Teams',
-            'teams.show' => 'Team',
-            'users.show' => 'User',
-            'admin.users.index' => 'Users',
-            'logging-fields.index' => 'Logging Fields',
-            'contact-families.index' => 'Activity Families',
-            'activity-types.index' => 'Activity Types',
-            'certification-tools.index' => 'Certification Tools',
-            'certificates.index' => 'Certificates',
-            default => 'Current Page',
-        };
-    }
-
-    private function activityCrumbLabel(?Activity $activity): string
-    {
-        if (! $activity instanceof Activity) {
-            return 'Activity';
-        }
-
-        $activity->loadMissing(['activityType.contactFamily']);
-
-        $name = $activity->activityType?->name
-            ?: $activity->activityType?->contactFamily?->name;
-        $dateLabel = CarbonDate::parse($activity->engagement_date)?->format('M j, Y');
-
-        return collect([$name, $dateLabel])
-            ->filter(fn ($value) => is_string($value) && $value !== '')
-            ->implode(' · ') ?: 'Activity';
     }
 
     private function resolveAgreement(mixed $agreement): ?Agreement
