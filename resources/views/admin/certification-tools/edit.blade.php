@@ -9,9 +9,8 @@
     <form method="POST" action="{{ route('certification-tools.update', $certificationTool) }}" id="certification-tools-edit-form">
         @csrf
         @method('PUT')
-        <x-page-header context="form" entity-type="Certification Tool" mode="edit" />
+        <x-page-header form-id="certification-tools-edit-form" save-label="Save Tool" context="form" entity-type="Certification Tool" mode="edit" />
         @include('admin.certification-tools.partials.form-fields')
     </form>
 </x-form-shell>
-<x-save-bar form-id="certification-tools-edit-form" save-label="Save Tool" />
 @endsection

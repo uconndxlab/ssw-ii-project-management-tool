@@ -8,12 +8,13 @@
     $canViewActionLog = auth()->user()->can('viewActionLog', $activity);
 @endphp
 <div class="row mb-4">
-    <div class="col-12">
+    <div class="col-lg-8">
         <x-page-header
             context="show"
             :title="$activity->activityType->name"
             entity-type="Activity"
             :description="$activity->identityLabel(includeType: false)"
+            :action-url="$canManageActivity ? route('activities.edit', $activity) : null"
         >
             <x-slot:badges>
                 @if($activity->internal_only)
@@ -25,20 +26,36 @@
                     <span class="badge bg-info">Not yet complete</span>
                 @endif
             </x-slot:badges>
-            @if($canViewActionLog || $canManageActivity)
-                <x-slot:controls>
-                    <div class="d-flex gap-2">
-                        <x-activity-action-log-button :activity="$activity" :labeled="true" :link-activity="false" />
-                        @if($canManageActivity)
-                            <a href="{{ route('activities.edit', $activity) }}" class="btn btn-outline-primary">
-                                <i class="bi bi-pencil-square me-1"></i>
-                                Edit
-                            </a>
-                        @endif
-                    </div>
-                </x-slot:controls>
-            @endif
+            <x-slot:more>
+                @if($canViewActionLog)
+                    <li>
+                        <button type="button"
+                                class="dropdown-item"
+                                hx-get="{{ route('activities.action-logs', ['activity' => $activity, 'current' => 1]) }}"
+                                hx-target="#activity-action-log-modal-body"
+                                hx-swap="innerHTML"
+                                onclick="window.showActivityActionLogModal()">
+                            <i class="bi bi-journal-text me-2" aria-hidden="true"></i>View log
+                        </button>
+                    </li>
+                @endif
+                @can('duplicate', $activity)
+                    <li>
+                        <button type="submit"
+                                form="activity-duplicate-form"
+                                class="dropdown-item"
+                                onclick="return confirm('Duplicate this activity? A new activity will be created with the same details.')">
+                            <i class="bi bi-files me-2" aria-hidden="true"></i>Duplicate
+                        </button>
+                    </li>
+                @endcan
+            </x-slot:more>
         </x-page-header>
+        @can('duplicate', $activity)
+            <form id="activity-duplicate-form" method="POST" action="{{ route('activities.duplicate', $activity) }}" class="d-none">
+                @csrf
+            </form>
+        @endcan
     </div>
 </div>
 

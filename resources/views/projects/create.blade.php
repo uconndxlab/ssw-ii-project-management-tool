@@ -8,7 +8,7 @@
 
     <form method="POST" action="{{ route('projects.store') }}" id="projects-create-form">
         @csrf
-        <x-page-header context="form" entity-type="Project" />
+        <x-page-header form-id="projects-create-form" save-label="Create Project" context="form" entity-type="Project" />
 
         <x-section-card title="Information">
             <x-form-field label="Name" for="name" name="name" :required="true">
@@ -39,5 +39,4 @@
         </x-section-card>
     </form>
 </x-form-shell>
-<x-save-bar form-id="projects-create-form" save-label="Create Project" />
 @endsection

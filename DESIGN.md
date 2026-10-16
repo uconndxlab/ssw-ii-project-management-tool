@@ -32,11 +32,11 @@ colors:
   organization-border: "#d8dee9"
 typography:
   display:
-    fontSize: "calc(1.375rem + 1.5vw)"
+    fontSize: "2rem"
     fontWeight: 600
     lineHeight: 1.2
   headline:
-    fontSize: "calc(1.325rem + 0.9vw)"
+    fontSize: "1.75rem"
     fontWeight: 700
     lineHeight: 1.2
   title:
@@ -158,7 +158,7 @@ The palette combines Action Blue with cool neutrals and functional status and en
 ### Neutral
 - **Cool Slate** (`page-bg`): the page canvas, distinct from white content surfaces.
 - **Inset Gray** (`surface-inset`): current dropdown destinations.
-- **White Surface** (`surface`): cards, fields, drawers, relationship rows, and the save bar.
+- **White Surface** (`surface`): cards, fields, drawers, relationship rows, and the action buttons' raised layer.
 - **Light Gray** (`light`): quiet metadata, selected radio cards, and supporting regions.
 - **Charcoal Ink** (`ink`): body text and the dark navigation background.
 - **Muted Ink** (`muted`): secondary text, help, and subsection labels.
@@ -175,9 +175,9 @@ The palette combines Action Blue with cool neutrals and functional status and en
 **Character:** familiar and utilitarian. Weight, size, spacing, and muted metadata establish hierarchy without decorative typography.
 
 ### Hierarchy
-- **Display:** dashboard heading, semibold (600), responsive size capped at (2.5rem) from (1200px), line height (1.2).
-- **Headline:** ordinary page headings, bold (700), responsive size capped at (2rem) from (1200px), line height (1.2).
-- **Title:** section-card headings (1.25rem), medium (500), line height (1.2).
+- **Display:** dashboard heading, semibold (600), fixed size (2rem), line height (1.2).
+- **Headline:** ordinary page headings, bold (700), fixed size (1.75rem), line height (1.2).
+- **Title:** form-section and entity-detail card headings (1.25rem), medium (500), line height (1.2).
 - **Body:** ordinary controls and content (1rem), regular (400), line height (1.5).
 - **Label:** field labels (1rem), semibold (600); required markers are appended in Error Red.
 - **Small:** help, compact actions, descriptions, and relationship metadata (0.875rem). Nested small text can inherit an em-based scale from Bootstrap.
@@ -188,25 +188,26 @@ The palette combines Action Blue with cool neutrals and functional status and en
 
 ## Layout
 
-The app uses Bootstrap's responsive, twelve-column grid. The navbar and main content use the same centered container so their edges align. The body is a flex column with a minimum height of `100dvh` (and a `100vh` fallback); main content fills the remaining space without assuming a navbar height. The main container has horizontal padding (0.75rem per side) and vertical page padding (1.5rem). Container maximum widths are (540px), (720px), (960px), (1140px), and (1320px) at the respective (576px), (768px), (992px), (1200px), and (1400px) breakpoints.
+The app uses Bootstrap's responsive, twelve-column grid. Signed-in pages use a shell: on desktop a left sidebar beside the main content with no top bar; below (992px) a sticky phone top bar (3.5rem) over the main content. The body is a flex column with a minimum height of `100dvh` (and a `100vh` fallback); main content fills the remaining width and does not assume a navbar height. Beside the sidebar the main container has horizontal padding (1.5rem per side); vertical page padding is (1.5rem). Container maximum widths are (540px), (720px), (960px), (1140px), and (1320px) at the respective (576px), (768px), (992px), (1200px), and (1400px) breakpoints.
 
 Create/edit forms use the shared centered ten-column shell at large widths, expanding to the available width below (992px). Section cards have body padding (1rem) and bottom spacing (1.5rem). Field groups generally use bottom spacing (1rem). Subsections have a left rule (4px), inset (1rem), and separation (1.25rem). Reuse the existing grid and gap utilities rather than inventing per-page spacing scales.
 
-Page headers wrap their title, metadata, and action areas with a gap (1rem). Tables remain horizontally scrollable in their responsive wrapper. The top navigation collapses below (992px); its search and activity action become a full-width tools row in the collapsed menu. Radio-card rows use two equal columns with a gap (0.5rem).
+Page headers wrap their title/metadata block and action area with a gap (1rem). Actions align with the top of the title, including when long record names wrap; the title block can shrink and break long unspaced names. Tables remain horizontally scrollable in their responsive wrapper. Below (992px) the sidebar becomes a slide-in menu opened from the phone top bar. Radio-card rows use two equal columns with a gap (0.5rem).
 
-Drawers attach to the right edge at a maximum width (52rem), filling narrower viewports. Their bodies scroll independently. Forms reserve bottom space (70px) for the fixed save bar, whose minimum height is (54px).
+Drawers attach to the right edge at a maximum width (52rem), filling narrower viewports. Their bodies scroll independently.
 
 ## Elevation & Depth
 
-Depth is layered and functional. White cards separate from the Cool Slate canvas with thin borders and subtle shadows. Relationship rows use borders rather than individual shadows. Drawers add a stronger lateral shadow and a translucent charcoal backdrop; the fixed save bar casts a small upward shadow.
+Depth is layered and functional. White cards separate from the Cool Slate canvas with thin borders and subtle shadows. Relationship rows use borders rather than individual shadows. Drawers add a stronger lateral shadow and a translucent charcoal backdrop; the compact header bar casts a deeper downward shadow.
 
 ### Shadow Vocabulary
 - **Section/card:** `0 0.125rem 0.25rem rgba(0, 0, 0, 0.075)`.
 - **Entity detail card:** `0 0.2rem 0.75rem rgba(0, 0, 0, 0.07)`, paired with a translucent border.
-- **Save bar:** `0 -2px 12px rgba(0,0,0,.08)`.
+- **Buttons:** solid buttons cast `0 1px 3px` in their own color at 45% opacity; outline buttons use a white fill with `0 1px 2px rgba(33,37,41,.08)`. No gloss or gradients. Grouped, link, close, and disabled buttons stay flat.
+- **Compact header bar:** `0 0.75rem 2rem rgba(33,37,41,.28)`.
 - **Drawer:** `-0.5rem 0 1.5rem rgba(0, 0, 0, 0.12)`.
 
-**The Working Surface Rule.** Use existing card, drawer, and save-bar treatments for their respective layers; keep internal relationship rows visually subordinate.
+**The Working Surface Rule.** Use existing card, drawer, and header-bar treatments for their respective layers; keep internal relationship rows visually subordinate.
 
 ## Shapes
 
@@ -220,11 +221,21 @@ Borders are generally (1px). Exceptions carry structure: subsection rules (4px) 
 
 Practical actions with familiar filled and outline variants. Primary actions use Action Blue and white text; editing uses an outline-blue action in the shared page header. Cancel and supporting actions commonly use outline gray. Standard buttons use the medium radius and padding (0.375rem 0.75rem); compact buttons use the small radius and padding (0.25rem 0.5rem), with text (0.875rem).
 
-Bootstrap buttons darken or fill on hover, show a focus ring for keyboard focus, and reduce opacity when disabled. Their state transitions last (0.15s), with Bootstrap reduced-motion handling. Log Activity reuses `btn btn-primary btn-sm` and retains an outlined current-page state; do not add a brightness filter that reduces text contrast.
+Buttons are medium weight and sit on the soft lift described in the Shadow Vocabulary, so they stand above the slate canvas by default. Bootstrap buttons darken or fill on hover, show a focus ring for keyboard focus, and reduce opacity when disabled. Their state transitions last (0.15s), with Bootstrap reduced-motion handling. Log Activity reuses `btn btn-primary btn-sm` and retains an outlined current-page state; do not add a brightness filter that reduces text contrast.
+
+### Page Headers and Breadcrumbs
+
+Reuse `x-page-header` with its existing props and `badges`, `meta`, `controls`, and `more` slots. Default page headings use `.app-page-title` (1.75rem); dashboard headings use `.app-dashboard-title` (2rem). Explicit title and control classes remain supported. Keep the record's Active/Inactive badge in the header metadata for immediate scanning; do not repeat it in Summary. Agreement type labels remain unchanged.
+
+Header actions are captured once and repeated in the compact bar. In the full header the form status sits under the buttons; in the compact bar it sits beside them. Icon-only buttons and Save (with its shortcut) get tooltips; a button that already shows its text gets none. A `more` slot adds an overflow menu (three dots) to the right of the main actions; it is left out when empty. The main action keeps its label in the full header and in the compact bar only Save keeps its label (Cancel and Edit become icons whose names stay available); on phones Save is an icon too.
+
+Form headers are sticky: pass `sticky` to override (`true` for other contexts, `false` to turn off). Once the full header scrolls out of view a compact bar slides in at the top of the form column without moving the page: back link to the parent crumb, title, status, and actions. The compact bar is dark on purpose (an experiment): it reads as chrome, not as another white card. The full header itself never shifts. Form headers take `save-label`, `form-id`, and `last-saved-at`.
+
+Breadcrumbs show route hierarchy, independent of navigation history: resource index → record on show pages, resource index → Create on create pages, and resource index → record → Edit where a show route exists. Resources without show pages link directly from their index to Edit; profile editing links to Profile. The current crumb exposes `aria-current="page"`. `RouteBreadcrumbs` supplies this hierarchy and also the form Cancel target: the page the user came from when it is a record or list page on this site (so index filters and a record's Edit button both return them there), otherwise the parent crumb. The proposed page-header prop/inference API refactor is deferred.
 
 ### Cards / Containers
 
-White, thin-bordered working surfaces. Use `x-section-card` for form sections: medium corners, subtle card shadow, a medium-weight title, optional muted subtitle, and body padding (1rem). Entity detail cards use the distinct shadow above. Index table cards clip overflow around their responsive table and footer.
+White, thin-bordered working surfaces. Use `x-section-card` for form sections: medium corners, subtle card shadow, a medium-weight title, optional muted subtitle, and body padding (1rem). Entity detail cards use the distinct shadow above and the same sentence-case, medium-weight (1.25rem) `h2` title style as form sections. Their light header strip remains; counts and actions wrap alongside the heading. Recent activity and the main card render in the requested `activityFirst` order, including in heading and keyboard navigation. Index table cards clip overflow around their responsive table and footer.
 
 ### Inputs / Fields
 
@@ -238,9 +249,15 @@ Compact, bold labels that distinguish record kind, metadata, counts, and status.
 
 ### Navigation
 
-A dark horizontal bar with muted white links and a white brand label. The current primary destination uses white semibold text and a thin inset underline. Current dropdown destinations use Inset Gray and a blue left rule. Search is a compact translucent field with a maximum width (15rem) on desktop, a “Search…” placeholder, an accessible Search label, a 50%-white border, and a 65%-white placeholder. Keyboard focus shows a white outline. Log Activity is a small Bootstrap primary button with its normal hover/focus states and an outlined current-page state. Admin and user dropdown triggers are native buttons. Preserve the shared collapsed-menu behavior below (992px): search expands within the full-width tools row, and navigation links, dropdown items, the toggle, search, and Log Activity have a minimum height of (44px).
+One floating sidebar holds everything global; there is no desktop top bar. Below (992px) a slim dark top bar carries only the menu button, the brand, and Log Activity.
 
-A “Skip to content” link is the first keyboard stop and becomes visible on focus; it targets the focusable main landmark. The primary navigation has an accessible landmark name, the mobile toggle exposes its label and expanded state, and flash-message dismiss buttons are named “Close”. Bootstrap, Bootstrap Icons, and htmx retain their pinned CDN versions with SRI hashes and anonymous CORS attributes.
+The sidebar is a floating white card (radius 0.75rem, inset 0.75rem from the viewport edge) lifted off the slate canvas with the entity-card border and shadow, so the layers read canvas, then chrome and cards. It has three zones. **Actions** at the top: the brand mark and name with a pin button, a search field (a “/” hint; pressing “/” focuses it) and a solid Action Blue Log Activity button, so actions look different from destinations. **Destinations** in the middle: links come from `AppNav::railGroups()`, which reuses the role rules in `primaryLinks()` and `adminSections()`: Work, then Directory (members) or the admin setup groups (admins). Every group is always listed; none collapses. Each link is a Bootstrap Icon plus a label. The section that owns the current route gets a Primary Subtle fill, semibold Primary Emphasis text, and `aria-current` (`page` on the index, `true` on child pages), whatever the entry point. **Personal** at the bottom: Recent, then an account row (initials avatar, name, access profile) whose menu opens upward with Profile and Log out. An open Recent button turns solid Action Blue, distinct from the tinted current section.
+
+The sidebar is pinned open (15rem, docked, the page makes room) or unpinned (4.25rem icons, the page does not move). Unpinned, it peeks open over the page on pointer hover (120ms in, 250ms out), keyboard focus, the search shortcut, or while the Recent panel or account menu is showing; Escape dismisses a peek. The pin choice is remembered per user in `localStorage` and new users start pinned at 1200px and wider. Touch devices and narrow screens do not hover: below (992px) the same markup is a Bootstrap offcanvas menu with the search field, the groups and the account row; links are at least (44px) high.
+
+Recent is a floating card (same radius, with a larger shadow) beside the sidebar, sized to its content and scrolling past the viewport, listing up to 30 records opened in the last seven days (newest first under a “Last opened” label, a record-type icon per row, and a “Current” tag). It has a labeled search with a leading icon, a Clear action, empty, no-match, and load-error states, closes on Escape or an outside click, and returns focus to its button. Entries are stored per user in `recent_records` and rechecked with the `view` policy each time the panel opens.
+
+A “Skip to content” link is the first keyboard stop and becomes visible on focus; it targets the focusable main landmark. The sidebar navigation has an accessible landmark name, the pin is a toggle button with `aria-pressed`, collapsed links keep their labels as accessible names, and flash-message dismiss buttons are named “Close”. Bootstrap, Bootstrap Icons, and htmx retain their pinned CDN versions with SRI hashes and anonymous CORS attributes.
 
 The app uses a light content theme with a dark navigation bar. A separate dark theme is intentionally deferred.
 
@@ -248,16 +265,16 @@ The app uses a light content theme with a dark navigation bar. A separate dark t
 
 Rows group an underlined linked title, muted metadata, optional entity badges, and trailing actions inside a bordered white rounded surface with padding (0.5rem 1rem). Optional details sit below a divider. Index tables use light headers, vertically centered cells, row hover feedback, and compact right-aligned action groups. Reuse the shared sort, badge-list, and pagination components.
 
-### Save Bar and Drawers
+### Form Actions and Drawers
 
-The save bar keeps form actions at the viewport bottom, with status on the left and cancel/save on the right. It distinguishes idle, unsaved, saving, saved, and error states through text and button treatment. Keep its live status announcement and reserved page space.
+Form actions live in the page header, not in a bottom bar: a status line (idle, unsaved, saving, saved, error through text and icon, announced politely once), Cancel, and the primary Save/Create button. Save does not use implicit submit: it calls `requestSubmit()`, so Enter inside token pickers keeps its own behavior. Ctrl/⌘ + S saves, and a `beforeunload` guard protects unsaved edits. Cancel returns to the previous record or list page, else the parent crumb.
 
 Drawers place related forms in a white panel over a translucent backdrop, with bordered header/footer, body padding (1.25rem), and horizontal padding (1.25rem) around the header/footer. The panel slides and the backdrop fades over (0.2s ease). The existing custom drawer CSS does not establish a reduced-motion override; this document does not imply one exists.
 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** reuse the shared page header, form shell, section card, field, and save bar components.
+- **Do** reuse the shared page header, form shell, section card, and field components.
 - **Do** use the existing entity palette consistently for record kinds and labeled status pills for state.
 - **Do** keep help and metadata subordinate with small text and muted color.
 - **Do** retain responsive table wrappers, wrapping metadata, and drawer body scrolling.
@@ -266,6 +283,6 @@ Drawers place related forms in a white panel over a translucent backdrop, with b
 ### Don't:
 - **Don't** put Active switches, filters, or form controls in the page header.
 - **Don't** mix header-style cards with section-card form sections on the same form.
-- **Don't** add in-card submit/cancel controls to forms that use the sticky save bar.
+- **Don't** add in-card submit/cancel controls to forms; the header owns them.
 - **Don't** introduce a new per-page form shell or remap entity colors independently.
 - **Don't** replace ordinary sentence-case labels with tracked uppercase metadata styling.

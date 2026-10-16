@@ -24,7 +24,26 @@
     entity-type="Agreement"
     :active="$agreement->active"
     :action-url="auth()->user()->can('update', $agreement) ? route('agreements.edit', $agreement) : null"
-/>
+>
+    <x-slot:more>
+        @can('duplicate', $agreement)
+            <li>
+                <button type="submit"
+                        form="agreement-duplicate-form"
+                        class="dropdown-item"
+                        onclick="return confirm('Duplicate {{ addslashes($agreement->name) }}? Activities and logged progress will not be copied.')">
+                    <i class="bi bi-files me-2" aria-hidden="true"></i>Duplicate
+                </button>
+            </li>
+        @endcan
+    </x-slot:more>
+</x-page-header>
+
+@can('duplicate', $agreement)
+    <form id="agreement-duplicate-form" method="POST" action="{{ route('agreements.duplicate', $agreement) }}" class="d-none">
+        @csrf
+    </form>
+@endcan
 
 <x-entity-show mainCardTitle="Deliverables" :activityFirst="true">
     <x-slot:activityHeaderMeta>
@@ -37,11 +56,6 @@
     {{-- ── Summary ─────────────────────────────────────────────────────── --}}
     <x-slot:summary>
         <dl class="row mb-0" style="min-width: 0;">
-            <dt class="col-5 text-muted fw-normal small">Status</dt>
-            <dd class="col-7 mb-2">
-                <x-status-badge :active="$agreement->active" />
-            </dd>
-
             <dt class="col-5 text-muted fw-normal small">Start Date</dt>
             <dd class="col-7 mb-2">{{ $agreement->start_date?->format('M d, Y') ?? '—' }}</dd>
 

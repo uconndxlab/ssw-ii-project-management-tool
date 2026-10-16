@@ -28,7 +28,7 @@ The original audit was documentation only. Resolution statuses below track subse
 
 ## The short answer to "are my designs OK?"
 
-The **system** is better than you think. Shared page headers, a single form shell, section cards, a sticky save bar, and a central `EntityBadge` color map are exactly how mature operational apps are built. DESIGN.md describes what is actually implemented, and the detector found very little drift.
+The **system** is better than you think. Shared page headers, a single form shell, section cards, a sticky header that carries the form actions, and a central `EntityBadge` color map are exactly how mature operational apps are built. DESIGN.md describes what is actually implemented, and the detector found very little drift.
 
 What makes it feel dated:
 
@@ -72,20 +72,28 @@ Verification: Playwright checked aligned desktop edges, mobile expansion, keyboa
 
 `components/page-header.blade.php`, `components/page-breadcrumbs.blade.php`, `components/entity-show.blade.php`
 
+**Status: resolved, except the component API refactor (deferred) and agreement type badge (intentionally unchanged).** All three in-scope SHOULD-FIX findings and the four approved NITs are fixed. Existing props and slots are preserved.
+
+Implemented: `RouteBreadcrumbs` derives location from named routes, including record ancestors for edit pages with a show route and Profile for profile editing. Breadcrumbs no longer read session history, and the current item exposes `aria-current="page"`; form Cancel returns to the previous record or list page, else the parent crumb (`RouteBreadcrumbs::cancelUrl`). Show-card titles are sentence-case `h2` elements using the same 1.25rem medium-weight style as form section cards. Page titles use a fixed 1.75rem scale (2rem for dashboards), and header actions align with the title's top edge. Active/Inactive stays in header metadata; duplicate Summary status rows were removed from agreements, organizations, projects, programs, and teams. A single card loop preserves both `activityFirst` orders and every existing content/meta/action slot.
+
+Verification: focused feature tests cover hierarchy after record visits, direct create visits, edit ancestors, and preserved Cancel history. Playwright checked the agreement show/create/edit pages at desktop/mobile widths, fixed heading sizes, semantic section headings, action alignment, and no page overflow. Production-built pages had no console errors. One screenshot pair is saved in `.artifacts/page-header-before.png` and `.artifacts/page-header-after.png`. Impeccable critique used independent design and detector assessments: no remaining in-scope BLOCKERs or SHOULD-FIX findings; the documentation NIT was addressed here. The detector returned zero findings for the three shared components. `vendor/bin/sail composer check` passed (including all 130 tests), as did Pint and the production build. Ponytail review removed unused history-breadcrumb code and confirmed the shared-card and status-row cuts.
+
+The original findings remain below as a resolution checklist.
+
 ### SHOULD-FIX
 
-- **Breadcrumbs describe history, not hierarchy.** On `/agreements/create`, coming from an agreement, the trail reads *Agreements / Connecticut TAN2 Technical Assistance / Create Agreement*, which implies the new agreement belongs to that one. Breadcrumbs are expected to show location, and a "Back" link shows history. **Fix:** derive breadcrumbs from the route hierarchy, and keep `SessionBackTargetService` for Cancel/Back only.
-- **Show pages have no section headings.** `entity-show.blade.php:30, 44, 62, 80, 98`: "Summary", "Recent Activity", and "Relationships" are `<span>`s, so the page outline is one `<h1>` and nothing else. *WCAG 1.3.1 (A-adjacent; heading navigation).* **Fix:** use `<h2 class="…">` with the same styling.
-- **There are two card-header languages.** Show pages use tracked uppercase 0.875rem muted labels in a gray `card-header`. Forms use `x-section-card` with a sentence-case `h5`. DESIGN.md's Label Hierarchy Rule reserves uppercase for subsections and entity types, so the show pages break it. **Fix:** pick one card-title style for both.
-- **`page-header` has 27 props and nested ternaries.** Title, breadcrumb label, and action label each have three-level fallbacks (lines 41–126). It works, but it is hard to predict, and it's why variants creep in. **Fix:** collapse it to `context`, `title`, `entityKind`, `active`, `actionUrl`, and slots, and move the inference into a small PHP class with tests.
+- [x] **Breadcrumbs describe history, not hierarchy.** On `/agreements/create`, coming from an agreement, the trail reads *Agreements / Connecticut TAN2 Technical Assistance / Create Agreement*, which implies the new agreement belongs to that one. Breadcrumbs are expected to show location, and a "Back" link shows history. **Fix:** derive breadcrumbs from the route hierarchy, and let Cancel use the parent crumb.
+- [x] **Show pages have no section headings.** `entity-show.blade.php:30, 44, 62, 80, 98`: "Summary", "Recent Activity", and "Relationships" are `<span>`s, so the page outline is one `<h1>` and nothing else. *WCAG 1.3.1 (A-adjacent; heading navigation).* **Fix:** use `<h2 class="…">` with the same styling.
+- [x] **There are two card-header languages.** Show pages use tracked uppercase 0.875rem muted labels in a gray `card-header`. Forms use `x-section-card` with a sentence-case `h5`. DESIGN.md's Label Hierarchy Rule reserves uppercase for subsections and entity types, so the show pages break it. **Fix:** pick one card-title style for both.
+- [ ] **Deferred by request:** **`page-header` has 27 props and nested ternaries.** Title, breadcrumb label, and action label each have three-level fallbacks (lines 41–126). It works, but it is hard to predict, and it's why variants creep in. **Fix:** collapse it to `context`, `title`, `entityKind`, `active`, `actionUrl`, and slots, and move the inference into a small PHP class with tests.
 
 ### NIT
 
-- On show pages "Active" appears twice: as a header badge and as the Status row in Summary.
-- The `AGREEMENT` type badge under the title of an agreement page repeats what the breadcrumb and URL already say. It helps on mixed lists (search results), but adds little here.
-- Headings use Bootstrap's fluid `calc()` sizes. Product UI reads better on a fixed rem scale (for example 1.75 / 1.25 / 1rem).
-- The header action is `align-self-end` against a variable-height title block, so Edit floats beside the badges rather than the title.
-- `entity-show.blade.php` duplicates the two card blocks for `activityFirst`. Render them in a loop or use `order-*` classes.
+- [x] On show pages "Active" appears twice: as a header badge and as the Status row in Summary.
+- [ ] **Intentionally unchanged by request:** The `AGREEMENT` type badge under the title of an agreement page repeats what the breadcrumb and URL already say. It helps on mixed lists (search results), but adds little here.
+- [x] Headings use Bootstrap's fluid `calc()` sizes. Product UI reads better on a fixed rem scale (for example 1.75 / 1.25 / 1rem).
+- [x] The header action is `align-self-end` against a variable-height title block, so Edit floats beside the badges rather than the title.
+- [x] `entity-show.blade.php` duplicates the two card blocks for `activityFirst`. Render them in a loop or use `order-*` classes.
 
 ## 3. Badge system
 
@@ -192,7 +200,7 @@ Verification: Playwright checked aligned desktop edges, mobile expansion, keyboa
 
 ## What's working, so keep it
 
-- **One form shell, section cards, and a sticky save bar**, documented in `form-conventions.md`. That level of consistency is rare in internal tools.
+- **One form shell, section cards, and a sticky header that carries the form actions**, documented in `form-conventions.md`. That level of consistency is rare in internal tools.
 - **Central color mapping** through `EntityBadge`, so a palette change is one file.
 - **The save bar's state model** (idle, dirty, saving, saved, error) with `aria-live` and a `beforeunload` guard is better than most commercial apps.
 - **Server-rendered htmx tables with `hx-push-url`**, so filtered and sorted views are shareable and back-button safe.

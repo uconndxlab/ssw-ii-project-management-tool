@@ -18,15 +18,6 @@
             </div>
             <div class="card-body">
                 <dl class="row mb-0">
-                    <dt class="col-sm-4">Status:</dt>
-                    <dd class="col-sm-8">
-                        @if($team->active)
-                            <span class="badge bg-success">Active</span>
-                        @else
-                            <span class="badge bg-secondary">Inactive</span>
-                        @endif
-                    </dd>
-
                     <dt class="col-sm-4">Members:</dt>
                     <dd class="col-sm-8">{{ $team->users->count() }}</dd>
 

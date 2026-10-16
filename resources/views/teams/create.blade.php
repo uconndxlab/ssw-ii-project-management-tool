@@ -21,7 +21,7 @@
 
     <form method="POST" action="{{ route('teams.store') }}" id="teams-create-form">
         @csrf
-        <x-page-header context="form" entity-type="Team" />
+        <x-page-header form-id="teams-create-form" save-label="Create Team" context="form" entity-type="Team" />
 
         <x-section-card title="Information">
             <x-form-field label="Name" for="name" name="name" :required="true">
@@ -73,8 +73,6 @@
         </x-section-card>
     </form>
 </x-form-shell>
-<x-save-bar form-id="teams-create-form" save-label="Create Team" />
-
 @once
 <script>
 (function () {

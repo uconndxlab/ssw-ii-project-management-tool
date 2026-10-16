@@ -9,7 +9,7 @@
     <form method="POST" action="{{ route('contact-families.update', $contactFamily) }}" id="contact-families-edit-form">
         @csrf
         @method('PUT')
-        <x-page-header
+        <x-page-header form-id="contact-families-edit-form" save-label="Save Activity Family" :last-saved-at="$contactFamily->updated_at"
             context="form"
             :title="old('name', $contactFamily->name)"
             entity-type="Activity Family"
@@ -18,5 +18,4 @@
         @include('admin.contact-families.partials.form-fields', ['contactFamily' => $contactFamily])
     </form>
 </x-form-shell>
-<x-save-bar form-id="contact-families-edit-form" save-label="Save Activity Family" :last-saved-at="$contactFamily->updated_at" />
 @endsection

@@ -9,7 +9,7 @@
     <form method="POST" action="{{ route('logging-fields.update', $loggingField) }}" id="logging-field-edit-form">
         @csrf
         @method('PUT')
-        <x-page-header
+        <x-page-header form-id="logging-field-edit-form" save-label="Save Changes" :last-saved-at="$loggingField->updated_at"
             context="form"
             :title="old('name', $loggingField->name)"
             entity-type="Logging Field"
@@ -19,5 +19,4 @@
     </form>
 </x-form-shell>
 
-<x-save-bar form-id="logging-field-edit-form" save-label="Save Changes" :last-saved-at="$loggingField->updated_at" />
 @endsection

@@ -27,3 +27,4 @@ Thumbs.db
 .artifacts/
 .playwright-mcp/
 .claude/settings.local.json
+lsp*

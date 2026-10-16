@@ -3,7 +3,6 @@
 namespace App\Providers;
 
 use App\Models\User;
-use App\Services\SessionBackTargetService;
 use App\Support\NightwatchSqlMessage;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
@@ -18,14 +17,6 @@ use Laravel\Nightwatch\Records\Request as RequestRecord;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
-    public function register(): void
-    {
-        $this->app->singleton(SessionBackTargetService::class);
-    }
-
     /**
      * Bootstrap any application services.
      */

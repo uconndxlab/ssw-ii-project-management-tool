@@ -27,9 +27,7 @@
     <div class="col-lg-4">
         <div class="card shadow-sm entity-show-card">
             <div class="card-header bg-light py-2 px-3">
-                <span class="text-muted fw-semibold small text-uppercase mb-0" style="letter-spacing:.05em;">
-                    Summary
-                </span>
+                <h2 class="h5 mb-0">Summary</h2>
             </div>
             <div class="card-body">
                 {{ $summary }}
@@ -38,77 +36,26 @@
     </div>
 
     <div class="col-lg-8 d-flex flex-column gap-4">
-        @if($activityFirst)
+        @foreach($activityFirst ? ['activity', 'relationships'] : ['relationships', 'activity'] as $section)
+            @php
+                $isActivity = $section === 'activity';
+                $headerMetaFilled = $isActivity ? $activityHeaderMetaFilled : $relationshipsHeaderMetaFilled;
+                $headerActionsFilled = $isActivity ? $activityHeaderActionsFilled : $relationshipsHeaderActionsFilled;
+            @endphp
             <div class="card shadow-sm entity-show-card">
                 <div class="card-header bg-light py-2 px-3 d-flex align-items-center gap-2 flex-wrap">
-                    <span class="text-muted fw-semibold small text-uppercase mb-0" style="letter-spacing:.05em;">
-                        Recent Activity
-                    </span>
-                    @if($activityHeaderMetaFilled)
-                        <div class="d-flex align-items-center gap-2 flex-wrap">{{ $activityHeaderMeta }}</div>
+                    <h2 class="h5 mb-0">{{ $isActivity ? 'Recent activity' : $mainCardTitle }}</h2>
+                    @if($headerMetaFilled)
+                        <div class="d-flex align-items-center gap-2 flex-wrap">{{ $isActivity ? $activityHeaderMeta : $relationshipsHeaderMeta }}</div>
                     @endif
-                    @if($activityHeaderActionsFilled)
-                        <div class="ms-auto d-flex align-items-center gap-2 flex-wrap">{{ $activityHeaderActions }}</div>
+                    @if($headerActionsFilled)
+                        <div class="ms-auto d-flex align-items-center gap-2 flex-wrap">{{ $isActivity ? $activityHeaderActions : $relationshipsHeaderActions }}</div>
                     @endif
                 </div>
                 <div class="card-body">
-                    {{ $activity }}
+                    {{ $isActivity ? $activity : $relationships }}
                 </div>
             </div>
-
-            {{-- Main content card --}}
-            <div class="card shadow-sm entity-show-card">
-                <div class="card-header bg-light py-2 px-3 d-flex align-items-center gap-2 flex-wrap">
-                    <span class="text-muted fw-semibold small text-uppercase mb-0" style="letter-spacing:.05em;">
-                        {{ $mainCardTitle }}
-                    </span>
-                    @if($relationshipsHeaderMetaFilled)
-                        <div class="d-flex align-items-center gap-2 flex-wrap">{{ $relationshipsHeaderMeta }}</div>
-                    @endif
-                    @if($relationshipsHeaderActionsFilled)
-                        <div class="ms-auto d-flex align-items-center gap-2 flex-wrap">{{ $relationshipsHeaderActions }}</div>
-                    @endif
-                </div>
-                <div class="card-body">
-                    {{ $relationships }}
-                </div>
-            </div>
-        @else
-            {{-- Relationships card --}}
-            <div class="card shadow-sm entity-show-card">
-                <div class="card-header bg-light py-2 px-3 d-flex align-items-center gap-2 flex-wrap">
-                    <span class="text-muted fw-semibold small text-uppercase mb-0" style="letter-spacing:.05em;">
-                        {{ $mainCardTitle }}
-                    </span>
-                    @if($relationshipsHeaderMetaFilled)
-                        <div class="d-flex align-items-center gap-2 flex-wrap">{{ $relationshipsHeaderMeta }}</div>
-                    @endif
-                    @if($relationshipsHeaderActionsFilled)
-                        <div class="ms-auto d-flex align-items-center gap-2 flex-wrap">{{ $relationshipsHeaderActions }}</div>
-                    @endif
-                </div>
-                <div class="card-body">
-                    {{ $relationships }}
-                </div>
-            </div>
-
-            {{-- Recent Activity card --}}
-            <div class="card shadow-sm entity-show-card">
-                <div class="card-header bg-light py-2 px-3 d-flex align-items-center gap-2 flex-wrap">
-                    <span class="text-muted fw-semibold small text-uppercase mb-0" style="letter-spacing:.05em;">
-                        Recent Activity
-                    </span>
-                    @if($activityHeaderMetaFilled)
-                        <div class="d-flex align-items-center gap-2 flex-wrap">{{ $activityHeaderMeta }}</div>
-                    @endif
-                    @if($activityHeaderActionsFilled)
-                        <div class="ms-auto d-flex align-items-center gap-2 flex-wrap">{{ $activityHeaderActions }}</div>
-                    @endif
-                </div>
-                <div class="card-body">
-                    {{ $activity }}
-                </div>
-            </div>
-        @endif
+        @endforeach
     </div>
 </div>

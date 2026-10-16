@@ -16,6 +16,7 @@ use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProgramController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\RecentRecordController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\StateController;
 use App\Http\Controllers\TeamController;
@@ -36,6 +37,9 @@ Route::middleware('guest')->group(function () {
 Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/search', [SearchController::class, 'index'])->name('search');
+
+    Route::get('/recent', [RecentRecordController::class, 'panel'])->name('recent.panel');
+    Route::delete('/recent', [RecentRecordController::class, 'clear'])->name('recent.clear');
 
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
