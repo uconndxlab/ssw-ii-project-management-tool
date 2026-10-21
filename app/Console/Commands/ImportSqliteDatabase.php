@@ -38,6 +38,13 @@ class ImportSqliteDatabase extends Command
     public function handle(): int
     {
         $path = $this->argument('path');
+
+        if (! is_string($path)) {
+            $this->error('A SQLite file path is required.');
+
+            return self::FAILURE;
+        }
+
         $absolutePath = str_starts_with($path, DIRECTORY_SEPARATOR)
             ? $path
             : base_path($path);
