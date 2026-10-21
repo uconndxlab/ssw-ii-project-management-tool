@@ -104,7 +104,7 @@
 </x-section-card>
 
 <x-section-card title="Permissions">
-    <x-form-field label="Role" name="access_profile" :required="true">
+    <x-form-field label="Role" name="access_profile" :required="true" group>
         <div class="d-grid gap-2" data-access-profile-cards>
             <x-form-radio-card
                 name="access_profile"

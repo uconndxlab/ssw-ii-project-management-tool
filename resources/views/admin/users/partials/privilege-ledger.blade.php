@@ -22,8 +22,8 @@
 
 <div data-privilege-ledger>
     @if($actorIsSystemAdmin)
-        <div class="mb-3">
-            <div class="form-label">Coverage</div>
+        <fieldset class="mb-3">
+            <legend class="form-label float-none w-auto p-0 fs-6">Coverage</legend>
             <div class="d-flex flex-wrap gap-3">
                 <div class="form-check">
                     <input class="form-check-input" type="radio" id="privilege-coverage-system" name="privilege_coverage" value="system" {{ $coverage === 'system' ? 'checked' : '' }}>
@@ -34,7 +34,7 @@
                     <label class="form-check-label" for="privilege-coverage-specific">Specific</label>
                 </div>
             </div>
-        </div>
+        </fieldset>
     @else
         <input type="hidden" name="privilege_coverage" value="specific">
     @endif

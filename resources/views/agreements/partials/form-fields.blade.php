@@ -209,7 +209,7 @@
 </x-section-card>
 
 <x-section-card title="Time Tracking">
-    <div class="d-grid gap-2">
+    <div class="d-grid gap-2" role="radiogroup" aria-label="Time tracking"@error('time_tracking_mode') aria-describedby="time-tracking-error"@enderror>
         @foreach ($timeTrackingRequirements as $requirement)
             <x-form-radio-card
                 name="time_tracking_mode"
@@ -222,7 +222,7 @@
         @endforeach
     </div>
     @error('time_tracking_mode')
-        <div class="text-danger small mt-1">{{ $message }}</div>
+        <div class="text-danger small mt-1" id="time-tracking-error">{{ $message }}</div>
     @enderror
 </x-section-card>
 

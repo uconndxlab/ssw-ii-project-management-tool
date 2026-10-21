@@ -3,12 +3,14 @@
 Create/edit forms share one shell and the same components. Do not invent a per-page layout.
 
 ## Shell
-- `col-lg-10` centered. `x-form-errors` above the `<form>`. `x-page-header` inside the form. `x-section-card` for every section. Save, Cancel, and status live in the sticky page header (`save-label`, `form-id`, `last-saved-at` props) — no in-card submit/cancel and no bottom bar.
+- `x-form-shell` (a centered column, 68rem max) wraps the form. `x-form-errors` above the `<form>`. `x-page-header` inside the form. `x-section-card` for every section. Save, Cancel, and status live in the sticky page header (`save-label`, `form-id`, `last-saved-at` props) — no in-card submit/cancel and no bottom bar.
 - Section by user job: identity → coverage/scope → people/orgs → rules/options → related records.
 
 ## Fields
 - `x-form-field` for labeled controls. Short noun labels (`Information`, `Logging Fields`, `Details`). Required uses `required-label` (no extra `*`, no "(Optional)" unless surprising, e.g. edit password).
 - Labels use `.form-label` at `font-weight: 600`.
+- Pass `for` when the control has an id. Help and error text get ids and `form-fields.js` links them to the control (`aria-describedby`, `aria-invalid`, `aria-required`), and names a control whose label has no `for`. A set of radios sharing one question uses `<x-form-field group ...>` (a fieldset with a legend); a radio list without a field label uses `role="radiogroup"` and an `aria-label`.
+- Token pickers are comboboxes: pass `labelled-by` (or `aria-label`) when the picker is not inside an `x-form-field`. Index filters need an `aria-label` on every control.
 - Help is one `form-text` line under the control, only when the label is not enough. No implementation essays ("inferred and not saved") on every picker — the scope picker already explains that.
 - Booleans: `x-form-switch` (hidden `0` + checkbox `1`) inside `x-form-options` (left-bar subsection titled Options). Controllers use `$request->boolean('name')`, never `has('name')`.
 - Active belongs in the identity section Options, never in `x-page-header`, never a Status `<select>`.

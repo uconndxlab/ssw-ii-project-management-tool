@@ -9,9 +9,11 @@
 
 @php
     $active = $sort === $column;
+    $sortState = $active ? ($direction === 'asc' ? 'ascending' : 'descending') : 'none';
 @endphp
 
 <a href="{{ $url }}"
+   data-sort-state="{{ $sortState }}"
    class="text-decoration-none text-dark fw-semibold d-inline-flex align-items-center gap-1"
    hx-get="{{ $url }}"
    hx-target="{{ $target }}"

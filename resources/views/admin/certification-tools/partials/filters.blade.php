@@ -6,7 +6,7 @@
       hx-push-url="true">
     <div class="row g-2 align-items-center">
         <div class="col-md-3">
-            <input type="text" name="search" class="form-control form-control-sm"
+            <input aria-label="Search tools" type="text" name="search" class="form-control form-control-sm"
                    placeholder="Search tools…" value="{{ request('search') }}"
                    hx-get="{{ route('certification-tools.index') }}"
                    hx-trigger="keyup changed delay:400ms, search"
@@ -14,7 +14,7 @@
                    hx-push-url="true" hx-include="#certification-tool-filters">
         </div>
         <div class="col-md-3">
-            <select name="project_id" class="form-select form-select-sm"
+            <select aria-label="Filter by project" name="project_id" class="form-select form-select-sm"
                     hx-get="{{ route('certification-tools.index') }}" hx-trigger="change"
                     hx-target="#certification-tools-table" hx-swap="innerHTML"
                     hx-push-url="true" hx-include="#certification-tool-filters">
@@ -27,7 +27,7 @@
             </select>
         </div>
         <div class="col-md-3">
-            <select name="program_id" class="form-select form-select-sm"
+            <select aria-label="Filter by program" name="program_id" class="form-select form-select-sm"
                     hx-get="{{ route('certification-tools.index') }}" hx-trigger="change"
                     hx-target="#certification-tools-table" hx-swap="innerHTML"
                     hx-push-url="true" hx-include="#certification-tool-filters">
@@ -40,7 +40,7 @@
             </select>
         </div>
         <div class="col-md-2">
-            <select name="active" class="form-select form-select-sm"
+            <select aria-label="Filter by status" name="active" class="form-select form-select-sm"
                     hx-get="{{ route('certification-tools.index') }}" hx-trigger="change"
                     hx-target="#certification-tools-table" hx-swap="innerHTML"
                     hx-push-url="true" hx-include="#certification-tool-filters">

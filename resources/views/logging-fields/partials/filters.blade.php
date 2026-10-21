@@ -7,7 +7,7 @@
 
     <div class="row g-2 align-items-center">
         <div class="col-md-3">
-            <input type="text" name="search" class="form-control form-control-sm"
+            <input aria-label="Search fields" type="text" name="search" class="form-control form-control-sm"
                    placeholder="Search fields…" value="{{ request('search') }}"
                    hx-get="{{ route('logging-fields.index') }}"
                    hx-trigger="keyup changed delay:400ms"
@@ -17,7 +17,7 @@
                    hx-include="#logging-field-filters">
         </div>
         <div class="col-md-2">
-            <select name="project_id" class="form-select form-select-sm"
+            <select aria-label="Filter by project" name="project_id" class="form-select form-select-sm"
                     hx-get="{{ route('logging-fields.index') }}"
                     hx-trigger="change"
                     hx-target="#logging-fields-table"
@@ -33,7 +33,7 @@
             </select>
         </div>
         <div class="col-md-2">
-            <select name="program_id" class="form-select form-select-sm"
+            <select aria-label="Filter by program" name="program_id" class="form-select form-select-sm"
                     hx-get="{{ route('logging-fields.index') }}"
                     hx-trigger="change"
                     hx-target="#logging-fields-table"
@@ -49,7 +49,7 @@
             </select>
         </div>
         <div class="col-md-2">
-            <select name="contact_family_id" class="form-select form-select-sm"
+            <select aria-label="Filter by activity family" name="contact_family_id" class="form-select form-select-sm"
                     hx-get="{{ route('logging-fields.index') }}"
                     hx-trigger="change"
                     hx-target="#logging-fields-table"
@@ -65,7 +65,7 @@
             </select>
         </div>
         <div class="col-md-2">
-            <select name="status" class="form-select form-select-sm"
+            <select aria-label="Filter by status" name="status" class="form-select form-select-sm"
                     hx-get="{{ route('logging-fields.index') }}"
                     hx-trigger="change"
                     hx-target="#logging-fields-table"
@@ -78,7 +78,7 @@
             </select>
         </div>
         <div class="col-md-2">
-            <select name="field_type" class="form-select form-select-sm"
+            <select aria-label="Filter by field type" name="field_type" class="form-select form-select-sm"
                     hx-get="{{ route('logging-fields.index') }}"
                     hx-trigger="change"
                     hx-target="#logging-fields-table"
@@ -97,7 +97,7 @@
             </select>
         </div>
         <div class="col-md-2">
-            <select name="availability" class="form-select form-select-sm"
+            <select aria-label="Filter by availability" name="availability" class="form-select form-select-sm"
                     hx-get="{{ route('logging-fields.index') }}"
                     hx-trigger="change"
                     hx-target="#logging-fields-table"

@@ -6,7 +6,7 @@
       hx-push-url="true">
     <div class="row g-2 align-items-center">
         <div class="col">
-            <input type="text" name="search" class="form-control form-control-sm"
+            <input aria-label="Search programs" type="text" name="search" class="form-control form-control-sm"
                    placeholder="Search programs…" value="{{ request('search') }}"
                    hx-get="{{ route('programs.index') }}"
                    hx-trigger="keyup changed delay:400ms, search"
@@ -14,7 +14,7 @@
                    hx-push-url="true" hx-include="#program-filters">
         </div>
         <div class="col-md-3">
-            <select name="status" class="form-select form-select-sm"
+            <select aria-label="Filter by status" name="status" class="form-select form-select-sm"
                     hx-get="{{ route('programs.index') }}" hx-trigger="change"
                     hx-target="#programs-table" hx-swap="innerHTML"
                     hx-push-url="true" hx-include="#program-filters">

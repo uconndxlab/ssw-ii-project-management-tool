@@ -14,10 +14,11 @@ colors:
   ink: "#212529"
   muted: "rgba(33, 37, 41, 0.75)"
   border: "#dee2e6"
+  control-border: "#8c959f"
   secondary: "#6c757d"
   secondary-subtle: "#e2e3e5"
   secondary-emphasis: "#2b2f32"
-  success: "#198754"
+  success: "#157347"
   success-subtle: "#d1e7dd"
   success-emphasis: "#0a3622"
   warning: "#ffc107"
@@ -158,7 +159,7 @@ The palette combines Action Blue with cool neutrals and functional status and en
 - **Pale Blue / Blue Ink** (`primary-subtle`, `primary-emphasis`): project relationship badges and KFS metadata.
 
 ### Secondary
-- **Status Green** (`success`): active status pills and success feedback; its subtle background and emphasis text identify agreements.
+- **Status Green** (`success`, a darker green so white text clears 4.5:1): active status pills and success feedback; its subtle background and emphasis text identify agreements.
 - **Attention Amber** (`warning`): warnings and unsaved changes; its subtle background and emphasis text identify programs and PI metadata.
 - **Information Cyan** (`info`): activity-type badges in activity tables; its subtle background and emphasis text identify states.
 - **Error Red** (`danger`): validation errors, required markers, and destructive actions.
@@ -196,9 +197,9 @@ The palette combines Action Blue with cool neutrals and functional status and en
 
 ## Layout
 
-The app uses Bootstrap's responsive, twelve-column grid. Signed-in pages use a shell: on desktop a left sidebar beside the main content with no top bar; below (992px) a sticky phone top bar (3.5rem) over the main content. The body is a flex column with a minimum height of `100dvh` (and a `100vh` fallback); main content fills the remaining width and does not assume a navbar height. Beside the sidebar the main container has horizontal padding (1.5rem per side); vertical page padding is (1.5rem). Container maximum widths are (540px), (720px), (960px), (1140px), and (1320px) at the respective (576px), (768px), (992px), (1200px), and (1400px) breakpoints.
+The app uses Bootstrap's responsive, twelve-column grid. Signed-in pages use a shell: on desktop a left sidebar beside the main content with no top bar; below (992px) a sticky phone top bar (3.5rem) over the main content. The body is a flex column with a minimum height of `100dvh` (and a `100vh` fallback); main content fills the remaining width and does not assume a navbar height. Beside the sidebar the main container has horizontal padding (1.5rem per side); vertical page padding is (1.5rem). Lists and record pages use the room beside the sidebar up to a maximum container width of (1680px); the main container no longer follows Bootstrap's smaller maximums.
 
-Create/edit forms use the shared centered ten-column shell at large widths, expanding to the available width below (992px). Section cards have body padding (1rem) and bottom spacing (1.5rem). Field groups generally use bottom spacing (1rem). Subsections have a left rule (4px), inset (1rem), and separation (1.25rem). Reuse the existing grid and gap utilities rather than inventing per-page spacing scales.
+Create/edit forms use the shared centered form column (maximum 68rem), filling the available width on narrower screens. Section cards have body padding (1rem) and bottom spacing (1.5rem). Field groups generally use bottom spacing (1rem). Subsections have a left rule (4px), inset (1rem), and separation (1.25rem). Reuse the existing grid and gap utilities rather than inventing per-page spacing scales.
 
 Page headers wrap their title/metadata block and action area with a gap (1rem). Actions align with the top of the title, including when long record names wrap; the title block can shrink and break long unspaced names. Tables remain horizontally scrollable in their responsive wrapper. Below (992px) the sidebar becomes a slide-in menu opened from the phone top bar. Radio-card rows use two equal columns with a gap (0.5rem).
 
@@ -247,7 +248,7 @@ White, thin-bordered working surfaces. Use `x-section-card` for form sections: m
 
 ### Inputs / Fields
 
-White fields with a thin Divider Gray outline, medium corners, body-size text, and padding (0.375rem 0.75rem). Focus uses Bootstrap's pale blue border and blue ring (0.25rem). Invalid fields use Error Red and associated feedback; disabled fields use the framework's secondary background.
+White fields with a Control Outline (`control-border`, 3:1 on white) so every field, select, checkbox and radio is visible, medium corners, body-size text, and padding (0.375rem 0.75rem). Focus uses Bootstrap's pale blue border and blue ring (0.25rem). Invalid fields use Error Red and associated feedback; disabled fields use the framework's secondary background. Help and error text are linked to their field (`aria-describedby`, `aria-invalid`, `aria-required`), a set of radios is a fieldset with a legend (or a named radio group), and token pickers are named comboboxes with arrow-key and Enter selection and a live "added" or "removed" announcement.
 
 Reuse `x-form-field` for semibold labels, required markers, one-line help, and inline errors. Token pickers wrap selected relationship badges and a search field in a control with minimum height (42px) and compact vertical padding (0.25rem). Disabled token pickers preserve opacity and show a not-allowed cursor. Use switches inside Options subsections and radio cards for choices with consequences. Selected radio cards use a blue border and Light Gray background.
 
@@ -276,6 +277,8 @@ Rows group an underlined linked title, muted metadata, optional entity badges, a
 ### Form Actions and Drawers
 
 Form actions live in the page header, not in a bottom bar: a status line (idle, unsaved, saving, saved, error through text and icon, announced politely once), Cancel, and the primary Save/Create button. Save does not use implicit submit: it calls `requestSubmit()`, so Enter inside token pickers keeps its own behavior. Ctrl/⌘ + S saves, and a `beforeunload` guard protects unsaved edits. Cancel returns to the previous record or list page, else the parent crumb.
+
+Drawers behave as modals: while one is open the rest of the page (sidebar, header, content) is inert, Escape closes it, and focus returns to the control that opened it.
 
 Drawers place related forms in a white panel over a translucent backdrop, with bordered header/footer, body padding (1.25rem), and horizontal padding (1.25rem) around the header/footer. The panel slides and the backdrop fades over (0.2s ease). The existing custom drawer CSS does not establish a reduced-motion override; this document does not imply one exists.
 

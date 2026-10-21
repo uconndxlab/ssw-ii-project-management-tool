@@ -151,7 +151,7 @@
 
     <div class="{{ $semanticLocked ? 'd-none' : '' }}" data-deliverable-requirement-editor>
         <x-form-subsection title="Metric">
-            <x-form-field label="Metric" required>
+            <x-form-field label="Metric" required group>
                 <div class="form-radio-row">
                     @foreach($metricOptions as $value => $label)
                         <x-form-radio-card
@@ -166,7 +166,7 @@
             </x-form-field>
 
             <div class="{{ ($row['metric_type'] ?? '') === 'time' ? '' : 'd-none' }}" data-time-basis-wrapper>
-                <x-form-field label="Time Measurement">
+                <x-form-field label="Time Measurement" group>
                     <div class="form-radio-row">
                         @foreach($timeBasisOptions as $value => $option)
                             <x-form-radio-card
@@ -204,7 +204,7 @@
                            data-deliverable-target>
                     <div class="form-text">Leave this at 0 to remove target requirement.</div>
                     <div class="mt-2 {{ $showTargetUnitPicker ? '' : 'd-none' }}" data-target-unit-wrapper>
-                        <div class="d-flex gap-3">
+                        <div class="d-flex gap-3" role="radiogroup" aria-label="Target unit">
                             <label class="form-check mb-0">
                                 <input class="form-check-input"
                                        type="radio"
@@ -253,7 +253,7 @@
         </x-form-subsection>
 
         <x-form-subsection title="Assignment">
-            <x-form-field label="Contribution Basis" required>
+            <x-form-field label="Contribution Basis" required group>
                 <div class="form-radio-row">
                     @foreach($basisOptions as $value => $option)
                         <x-form-radio-card
@@ -269,7 +269,7 @@
             </x-form-field>
 
             <div class="{{ ($row['contribution_basis'] ?? '') === 'user' ? '' : 'd-none' }}" data-grouping-wrapper>
-                <x-form-field label="Grouping" required class="mb-0">
+                <x-form-field label="Grouping" required class="mb-0" group>
                     <div class="form-radio-row">
                         @foreach($groupingOptions as $value => $option)
                             <x-form-radio-card

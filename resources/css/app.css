@@ -1,4 +1,9 @@
 :root {
+    /* Darker than Bootstrap's success so white text on it clears 4.5:1 with margin. */
+    --bs-success: #157347;
+    --bs-success-rgb: 21, 115, 71;
+    /* Control outlines at 3:1 on white (WCAG 1.4.11). */
+    --app-control-border: #8c959f;
     --app-page-bg: #dde1e6;
     --app-surface-inset: #e8eaed;
     --entity-org-bg: #eef1f6;
@@ -330,7 +335,15 @@ html[data-rail="unpinned"] {
 }
 
 .app-main > .container {
+    max-width: 1680px;
     padding-inline: 1.5rem;
+}
+
+/* Lists and record pages use the room beside the sidebar; forms stay a readable column. */
+.app-form-shell {
+    min-width: 0;
+    max-width: 68rem;
+    margin-inline: auto;
 }
 
 /* Floating chrome: white cards lifted off the slate canvas, same elevation as entity cards. */
@@ -1198,4 +1211,15 @@ html[data-rail="unpinned"] .app-rail-pin-on {
     .app-header-bar .app-header-btn-label--keep {
         display: none;
     }
+}
+
+/* Form controls: outlines you can see (3:1), numerals that line up in tables. */
+.form-control,
+.form-select,
+.form-check-input {
+    border-color: var(--app-control-border);
+}
+
+.table {
+    font-variant-numeric: tabular-nums;
 }
