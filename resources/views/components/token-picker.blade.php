@@ -219,7 +219,7 @@
             renderSelected();
             renderList(true);
             writeHiddenInputs();
-            picker.dispatchEvent(new CustomEvent('token-picker:change', { bubbles: true }));
+            picker.dispatchEvent(new CustomEvent('token-picker:change', { bubbles: true, detail: { user: true } }));
             announce(label + ' added');
             searchInput.focus();
         }
@@ -367,7 +367,7 @@
                     renderSelected();
                     renderList();
                     writeHiddenInputs();
-                    picker.dispatchEvent(new CustomEvent('token-picker:change', { bubbles: true }));
+                    picker.dispatchEvent(new CustomEvent('token-picker:change', { bubbles: true, detail: { user: true } }));
                     announce(option.label + ' removed');
                 });
                 selectedWrap.appendChild(badge);

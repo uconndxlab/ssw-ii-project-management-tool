@@ -105,3 +105,24 @@ test('forms use the capped form column', function () {
 
     expect($html)->toContain('app-form-shell')->not->toContain('col-lg-10');
 });
+
+test('pages carry a polite live region for table result announcements', function () {
+    $xpath = pageDom($this->actingAs(createSystemAdmin())->get(route('states.index'))->getContent());
+
+    $live = $xpath->query('//*[@id="app-live"]')->item(0);
+
+    expect($live?->getAttribute('role'))->toBe('status')
+        ->and($live->getAttribute('aria-live'))->toBe('polite');
+});
+
+test('the result summary is marked so it can be announced', function () {
+    $paginated = Blade::render('<x-htmx-pagination :paginator="$paginator" target="#table" />', [
+        'paginator' => (new LengthAwarePaginator([], 100, 20, 1))->withPath('/example'),
+    ]);
+    $single = Blade::render('<x-htmx-pagination :paginator="$paginator" target="#table" />', [
+        'paginator' => (new LengthAwarePaginator([], 5, 20, 1))->withPath('/example'),
+    ]);
+
+    expect($paginated)->toContain('data-result-count')
+        ->and($single)->toContain('data-result-count');
+});

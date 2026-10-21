@@ -10,7 +10,7 @@ if (rail) {
     const searchForm = rail.querySelector('[data-rail-search]');
     const searchInput = rail.querySelector('#railSearch');
     const storageKey = rail.dataset.railKey;
-    const state = { hover: false, forced: false, dismissed: false, held: {} };
+    const state = { hover: false, forced: false, dismissed: false, suppressHover: false, held: {} };
     let enterTimer;
     let leaveTimer;
 
@@ -57,10 +57,29 @@ if (rail) {
 
     setPinned(isPinned(), false);
 
-    pin?.addEventListener('click', () => setPinned(!isPinned(), true));
+    pin?.addEventListener('click', (event) => {
+        const unpinning = isPinned();
+
+        setPinned(!unpinning, true);
+
+        // A mouse unpin collapses right away. The pointer has to leave and come back to peek again,
+        // otherwise the sidebar hangs open under the cursor. (A keyboard unpin keeps its focus peek.)
+        if (unpinning && event.detail > 0) {
+            clearTimeout(enterTimer);
+            state.hover = false;
+            state.forced = false;
+            state.suppressHover = true;
+            pin.blur();
+            sync();
+        }
+    });
 
     rail.addEventListener('pointerenter', (event) => {
         if (event.pointerType === 'touch') {
+            return;
+        }
+
+        if (state.suppressHover) {
             return;
         }
 
@@ -76,6 +95,8 @@ if (rail) {
         if (event.pointerType === 'touch') {
             return;
         }
+
+        state.suppressHover = false;
 
         clearTimeout(enterTimer);
         leaveTimer = setTimeout(() => {

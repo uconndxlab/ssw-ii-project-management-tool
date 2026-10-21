@@ -53,5 +53,48 @@ function findControl(field) {
     return candidates.length === 1 ? candidates[0] : null;
 }
 
-document.addEventListener('DOMContentLoaded', () => enhanceFields());
-document.addEventListener('htmx:afterSettle', (event) => enhanceFields(event.target));
+// Labels with no `for` outside an x-form-field (the certificate requirement rows, for one): when the label's
+// parent holds exactly one control, point the control at the label.
+let bareLabelCount = 0;
+
+function linkBareLabels(root = document) {
+    root.querySelectorAll('label.form-label:not([for])').forEach((label) => {
+        if (label.closest('[data-form-field]')) {
+            return;
+        }
+
+        const controls = label.parentElement?.querySelectorAll(
+            'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]), select, textarea',
+        ) ?? [];
+
+        if (controls.length !== 1) {
+            return;
+        }
+
+        const control = controls[0];
+
+        if (control.hasAttribute('aria-labelledby') || control.labels?.length) {
+            return;
+        }
+
+        label.id ||= `bare-label-${++bareLabelCount}`;
+        control.setAttribute('aria-labelledby', label.id);
+    });
+}
+
+function enhanceAll(root = document) {
+    enhanceFields(root);
+    linkBareLabels(root);
+}
+
+document.addEventListener('DOMContentLoaded', () => enhanceAll());
+document.addEventListener('htmx:afterSettle', (event) => enhanceAll(event.target));
+
+// Rows added by scripts (repeaters, cloned templates) need the same treatment.
+new MutationObserver((records) => {
+    records.forEach((record) => record.addedNodes.forEach((node) => {
+        if (node.nodeType === 1 && (node.matches('label, [data-form-field]') || node.querySelector('label.form-label, [data-form-field]'))) {
+            enhanceAll(node);
+        }
+    }));
+}).observe(document.body, { childList: true, subtree: true });

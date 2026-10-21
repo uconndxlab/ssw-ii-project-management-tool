@@ -121,7 +121,7 @@ The original findings remain below as a resolution checklist.
 
 ## 4. Fields and form controls
 
-**Status: mostly resolved.** Both BLOCKERs are fixed: token pickers are named comboboxes with a listbox, arrow-key and Enter selection, named remove buttons and a live announcement; open drawers make the rest of the page inert and return focus. Also fixed: errors and help are linked to their fields (with `aria-invalid` and `aria-required`), radio groups are fieldsets or named radio groups, index filters have accessible names, control outlines are 3:1, and the two save bar findings (the bar is gone). Still open: the drawer's open and close logic lives in one partial, the picker's fixed 42px height, the NITs, and raw (unlinked) labels in the certificate requirement rows.
+**Status: mostly resolved.** Both BLOCKERs are fixed: token pickers are named comboboxes with a listbox, arrow-key and Enter selection, named remove buttons and a live announcement; open drawers make the rest of the page inert and return focus. Also fixed: errors and help are linked to their fields (with `aria-invalid` and `aria-required`), radio groups are fieldsets or named radio groups, index filters have accessible names, control outlines are 3:1, and the two save bar findings (the bar is gone). Also fixed: the drawer's focus, page lock, close buttons and Escape now live in the shared `form-drawer.js` (a page only toggles `.is-open`), labels without a `for` are linked to the control beside them (the certificate requirement rows, including rows added by script), and editing only a token picker now marks the form as having unsaved changes. Still open: the picker's fixed 42px height and the NITs.
 
 `form-field`, `form-switch`, `form-radio-card`, `form-subsection`, `form-options`, `form-errors`, `token-picker`, `save-bar`, `form-drawer`
 
@@ -139,7 +139,7 @@ The original findings remain below as a resolution checklist.
 - [x] **Index filters have no labels.** On `/agreements`, all 7 filter controls have no label. The selects rely on their first option ("All States"). **Fix:** add `visually-hidden` labels, or visible small labels above the controls.
 - [x] **The save bar's primary action is undersized and misaligned.** "Create Agreement" is `btn-sm` (31px high) in a 54px bar, and the bar uses `.container` while the form uses the narrower `col-lg-10` shell, so Cancel and Save sit off the form's right edge. **Fix:** use the default button size, and match the bar's inner width to the form shell.
 - [x] **Save bar status relies on symbol glyphs and color.** `save-bar.blade.php:83–86`: `●`, `✓`, and `⚠` are typed characters inside colored spans. They're announced literally ("black circle"), and "Unsaved changes" is `text-warning` amber on white at about 1.6:1. **Fix:** use Bootstrap Icons with `aria-hidden` and `text-warning-emphasis` for text.
-- **Drawer behavior lives in one feature partial.** The only open/close/Escape implementation is inside `deliverables-section`, so the next drawer will copy it. **Fix:** ship the behavior with `x-form-drawer`, covered by the BLOCKER above.
+- [x] **Drawer behavior lives in one feature partial.** The only open/close/Escape implementation is inside `deliverables-section`, so the next drawer will copy it. **Fix:** ship the behavior with `x-form-drawer`, covered by the BLOCKER above.
 
 ### NIT
 
@@ -162,7 +162,7 @@ The original findings remain below as a resolution checklist.
 - **Mobile is sideways-scroll only.** At 390px, filters fill the first screen and the table shows 1.5 of 9 columns, with no sticky first column and no cue that more columns exist. **Fix:** collapse filters behind a "Filters (n)" button below `md`, make the name column sticky, or render rows as stacked cards below `md`.
 - [x] **Sort state isn't exposed.** `table-sort-link` changes only the icon, and there are 0 `aria-sort` attributes in views. **Fix:** set `aria-sort="ascending|descending"` on the active `<th>`, and give the link a visually-hidden "sort by …" hint.
 - [x] **Pagination arrows are unnamed.** `htmx-pagination.blade.php:19, 27, 91, 94` use the bare glyphs `‹ ›`. **Fix:** `aria-label="Previous page" / "Next page"`, and `aria-current="page"` on the active item.
-- **htmx updates give no feedback.** Filter typing (400ms debounce) and sort clicks swap the table with no loading state, and the result count isn't announced. **Fix:** add `hx-indicator` with a subtle table opacity or progress bar, plus an `aria-live="polite"` region for "Showing 1–14 of 14".
+- [x] **htmx updates give no feedback.** Filter typing (400ms debounce) and sort clicks swap the table with no loading state, and the result count isn't announced. **Fix:** add `hx-indicator` with a subtle table opacity or progress bar, plus an `aria-live="polite"` region for "Showing 1–14 of 14".
 - **Link styles are inconsistent within a row.** Record names are dark and not underlined, user names are default blue, and related records are underlined chips. **Fix:** pick one table-link treatment, for example ink with underline on hover for every link.
 - **Destructive actions use `confirm()`.** There are 18 native `confirm()` calls, and names are escaped with `addslashes` into inline JS. Native confirms can't be styled and are easy to click through. **Fix:** use a shared confirm modal component, or undo for reversible actions.
 
@@ -203,7 +203,7 @@ The original findings remain below as a resolution checklist.
 
 ## Roadmap (updated 2026-10-21)
 
-**Done.** Shell and navigation, headers and breadcrumbs, and the field and table accessibility pass: pickers, drawer focus, field linking, radio groups, filter names, sort state, pagination names, control outline contrast, a darker success green, tabular numerals. Layout: lists and record pages grow up to 1680px; forms stay a centered column (68rem).
+**Done.** Shell and navigation, headers and breadcrumbs, and the field and table accessibility pass: pickers (including unsaved-change tracking), drawer behavior in one shared script, field linking, radio groups, labels in the certificate rows, filter names, sort state, pagination names, htmx loading and result announcements, control outline contrast, a darker success green, tabular numerals. Layout: lists and record pages grow up to 1680px; forms stay a centered column (68rem).
 
 **Decided.** Page width as above. Visual direction for now is a light tune only; the full enterprise-minimal pass (new neutral ramp, accent, type and radius scale) is its own later run, and the dark compact header bar gets reconsidered then.
 
@@ -211,7 +211,7 @@ The original findings remain below as a resolution checklist.
 
 1. **Enterprise visual pass** (its own run): tokens through the Bootstrap variables, the header bar decision, 14px base type, radius scale.
 2. **[SHOULD-FIX] `$impeccable distill`, then `$impeccable adapt`:** fewer badges and table columns (a visible "+N", rows of 48 to 56px), the embedded activity table width, collapsed mobile filters, touch target sizes, the green Log Activity button in `recent-activity-table`.
-3. **Remaining accessibility:** htmx loading feedback and result-count announcements; unlinked labels in the certificate requirement rows; editing only a token picker does not yet mark the form as having unsaved changes; the drawer's open and close logic still lives in `deliverables-section`; `confirm()` dialogs.
+3. **Remaining accessibility:** `confirm()` dialogs (18 native confirms with names escaped into inline JS) should become one shared confirmation component, and the open checks below.
 4. **Page patterns:** record pages with tabs (Overview, Deliverables, Activity, People, Files); long forms with a sticky sections list in the empty gutter, or create-then-enrich; deliverables chosen by type first; separate screens for building certificate rules and checking them; a dashboard that shows what needs attention.
 5. **[NIT] `$impeccable polish`:** token and CSS consolidation (including `repeater-rows-script` and the scattered `<style>` blocks), the page-header API refactor (27 props), the remaining nits.
 

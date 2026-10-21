@@ -8,7 +8,7 @@
 
 @if($paginator->hasPages())
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-    <small class="text-muted">
+    <small class="text-muted" data-result-count>
         Showing {{ $paginator->firstItem() }}–{{ $paginator->lastItem() }}
         of {{ number_format($paginator->total()) }}
     </small>
@@ -102,5 +102,5 @@
     </nav>
 </div>
 @else
-<small class="text-muted">{{ number_format($paginator->total()) }} record{{ $paginator->total() === 1 ? '' : 's' }}</small>
+<small class="text-muted" data-result-count>{{ number_format($paginator->total()) }} record{{ $paginator->total() === 1 ? '' : 's' }}</small>
 @endif

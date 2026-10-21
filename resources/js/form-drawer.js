@@ -1,5 +1,5 @@
-// A form drawer behaves as a modal: while it is open the rest of the page is inert, and focus goes back to
-// whatever opened it. The drawer scripts toggle `.is-open`; this watches for that class.
+// Behavior for every .form-drawer. A page script opens or closes a drawer by toggling `.is-open`; this file does the rest:
+// aria-hidden, the page scroll lock, moving focus in, making the page inert, returning focus, the close buttons, and Escape.
 let lastFocus = null;
 
 document.addEventListener('focusin', (event) => {
@@ -35,9 +35,13 @@ const observer = new MutationObserver((records) => {
         }
 
         drawer.dataset.drawerWasOpen = open ? '1' : '';
+        drawer.setAttribute('aria-hidden', open ? 'false' : 'true');
+        document.body.classList.toggle('form-drawer-open', document.querySelector('.form-drawer.is-open') !== null);
         setBackgroundInert(drawer, open);
 
-        if (!open && lastFocus?.isConnected) {
+        if (open) {
+            drawer.querySelector('.form-drawer-panel')?.focus();
+        } else if (lastFocus?.isConnected) {
             lastFocus.focus();
         }
     });
@@ -45,4 +49,15 @@ const observer = new MutationObserver((records) => {
 
 document.querySelectorAll('.form-drawer').forEach((drawer) => {
     observer.observe(drawer, { attributes: true, attributeFilter: ['class'] });
+});
+
+document.addEventListener('click', (event) => {
+    event.target.closest('[data-form-drawer-close]')?.closest('.form-drawer')?.classList.remove('is-open');
+});
+
+// Escape closes the topmost open drawer. A token picker with its list open handles Escape itself first.
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+        Array.from(document.querySelectorAll('.form-drawer.is-open')).pop()?.classList.remove('is-open');
+    }
 });

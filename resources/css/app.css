@@ -1223,3 +1223,15 @@ html[data-rail="unpinned"] .app-rail-pin-on {
 .table {
     font-variant-numeric: tabular-nums;
 }
+
+/* A table being replaced by htmx: dimmed and marked busy until the new rows arrive. */
+.is-loading {
+    cursor: progress;
+    opacity: 0.55;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .is-loading {
+        transition: opacity 0.15s;
+    }
+}

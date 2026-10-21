@@ -417,20 +417,13 @@
             return editorDrawerEl.classList.contains('is-open');
         }
 
+        // Focus, aria-hidden, the page lock, the close buttons and Escape are handled by resources/js/form-drawer.js.
         function openEditor() {
             editorDrawerEl.classList.add('is-open');
-            editorDrawerEl.setAttribute('aria-hidden', 'false');
-            document.body.classList.add('form-drawer-open');
-            const panel = editorDrawerEl.querySelector('.form-drawer-panel');
-            if (panel) {
-                panel.focus();
-            }
         }
 
         function closeEditor() {
             editorDrawerEl.classList.remove('is-open');
-            editorDrawerEl.setAttribute('aria-hidden', 'true');
-            document.body.classList.remove('form-drawer-open');
         }
 
         function syncSelectableCardStates() {
@@ -2012,15 +2005,6 @@
                 input.value = defaultValue;
                 input.dispatchEvent(new Event('input'));
             });
-        });
-
-        editorDrawerEl.querySelectorAll('[data-form-drawer-close]').forEach(function (el) {
-            el.addEventListener('click', closeEditor);
-        });
-        document.addEventListener('keydown', function (event) {
-            if (event.key === 'Escape' && isEditorOpen()) {
-                closeEditor();
-            }
         });
 
         document.addEventListener('agreement-scope:change', function () {
