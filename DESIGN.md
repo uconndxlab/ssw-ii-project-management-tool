@@ -68,6 +68,7 @@ typography:
 rounded:
   sm: "0.25rem"
   md: "0.375rem"
+  lg: "0.75rem"
   pill: "50rem"
 spacing:
   xs: "0.25rem"
@@ -118,8 +119,15 @@ components:
     rounded: "{rounded.md}"
     padding: "0.35em 0.65em"
   navigation:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.lg}"
+    padding: "0.5rem"
+  header-bar:
     backgroundColor: "{colors.ink}"
-    padding: "0.5rem 0"
+    textColor: "{colors.surface}"
+    rounded: "{rounded.lg}"
+    padding: "0.375rem 0.5rem 0.375rem 1rem"
 ---
 
 # Design System: TA Tracker
@@ -145,7 +153,7 @@ This is a scan of the existing implementation, not a redesign. Sources are `reso
 The palette combines Action Blue with cool neutrals and functional status and entity colors. Frontmatter values are normative; app-specific values come from the root custom properties, and framework values come from the pinned Bootstrap stylesheet.
 
 ### Primary
-- **Action Blue** (`primary`): primary buttons, links, selected radio-card borders, and the navigation activity action.
+- **Action Blue** (`primary`): primary buttons, links, selected radio-card borders, the Log Activity action, and the current sidebar section.
 - **Deep Action Blue** (`primary-hover`, `primary-active`): progressively darker Bootstrap button interaction states. Log Activity uses the same Bootstrap hover and keyboard-focus treatment.
 - **Pale Blue / Blue Ink** (`primary-subtle`, `primary-emphasis`): project relationship badges and KFS metadata.
 
@@ -160,7 +168,7 @@ The palette combines Action Blue with cool neutrals and functional status and en
 - **Inset Gray** (`surface-inset`): current dropdown destinations.
 - **White Surface** (`surface`): cards, fields, drawers, relationship rows, and the action buttons' raised layer.
 - **Light Gray** (`light`): quiet metadata, selected radio cards, and supporting regions.
-- **Charcoal Ink** (`ink`): body text and the dark navigation background.
+- **Charcoal Ink** (`ink`): body text, the brand mark, and the compact form header bar (the only dark chrome).
 - **Muted Ink** (`muted`): secondary text, help, and subsection labels.
 - **Divider Gray** (`border`): field outlines, section dividers, and ordinary badge borders.
 - **Secondary Gray** (`secondary`): inactive status and secondary controls. Its subtle/emphasis pair identifies teams, activities, and several administrative record types.
@@ -211,7 +219,7 @@ Depth is layered and functional. White cards separate from the Cool Slate canvas
 
 ## Shapes
 
-Controls and cards are gently rounded rectangles. Standard cards, fields, and buttons use the medium radius; small buttons and navigation tools use the small radius. Entity-type labels, count badges, and status badges use pills. Ordinary relationship chips retain rectangular rounded corners unless their caller requests a pill.
+Controls and cards are gently rounded rectangles. Standard cards, fields, and buttons use the medium radius; small buttons and navigation tools use the small radius. Entity-type labels, count badges, and status badges use pills. Ordinary relationship chips retain rectangular rounded corners unless their caller requests a pill. Floating chrome (the sidebar, the Recent panel, and the compact header bar) uses the large radius (0.75rem).
 
 Borders are generally (1px). Exceptions carry structure: subsection rules (4px) and the current dropdown item's blue left accent (3px). Iconography comes from Bootstrap Icons; it supports actions and labels.
 
@@ -259,7 +267,7 @@ Recent is a floating card (same radius, with a larger shadow) beside the sidebar
 
 A “Skip to content” link is the first keyboard stop and becomes visible on focus; it targets the focusable main landmark. The sidebar navigation has an accessible landmark name, the pin is a toggle button with `aria-pressed`, collapsed links keep their labels as accessible names, and flash-message dismiss buttons are named “Close”. Bootstrap, Bootstrap Icons, and htmx retain their pinned CDN versions with SRI hashes and anonymous CORS attributes.
 
-The app uses a light content theme with a dark navigation bar. A separate dark theme is intentionally deferred.
+The app uses a light theme: a white floating sidebar over a Cool Slate canvas. The only dark surface is the compact form header bar, kept as an experiment because it reads as chrome but sits slightly apart from the rest of the palette. A separate dark theme is intentionally deferred.
 
 ### Relationship Ledger Rows and Tables
 
