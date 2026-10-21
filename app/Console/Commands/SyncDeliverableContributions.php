@@ -17,7 +17,8 @@ class SyncDeliverableContributions extends Command
     public function handle(DeliverableContributionService $service): int
     {
         $syncAll = (bool) $this->option('all');
-        $agreementId = $this->argument('agreement');
+        $agreementArgument = $this->argument('agreement');
+        $agreementId = is_string($agreementArgument) ? $agreementArgument : null;
 
         if ($syncAll && $agreementId !== null) {
             $this->error('Pass either an agreement ID or --all, not both.');

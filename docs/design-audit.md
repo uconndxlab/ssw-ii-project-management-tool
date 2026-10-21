@@ -7,6 +7,8 @@
 
 The original audit was documentation only. Resolution statuses below track subsequent implementation work; unchecked findings remain open. Severity counts and health scores describe the original audit, not a new assessment.
 
+**Update (2026-10-21, after PR #39).** The shell changed after this audit was written: the top navbar was replaced by a floating sidebar (pinned or peeking, with search, Log Activity and the account menu inside it), the bottom save bar was removed (Save, Cancel and status now live in the sticky form header), and `SessionBackTargetService` was deleted. Findings that cite `app-navbar.blade.php` or `save-bar.blade.php` describe code that no longer exists. Sections 3, 5 and 7 are untouched; section 4 and section 6 are partly addressed (see their status lines). The "Roadmap" section at the end replaces the original recommended order.
+
 ## Severity
 
 | Level | Meaning | Count |
@@ -97,6 +99,8 @@ The original findings remain below as a resolution checklist.
 
 ## 3. Badge system
 
+**Status: open.** Nothing in this section has been addressed.
+
 `app/Support/EntityBadge.php`, `entity-relation-badge`, `entity-type-badge`, `entity-count-badge`, `category-badge`, `status-badge`, `table-badge-list`
 
 ### SHOULD-FIX
@@ -117,6 +121,8 @@ The original findings remain below as a resolution checklist.
 
 ## 4. Fields and form controls
 
+**Status: partly resolved.** The two save bar findings (undersized, misaligned primary action; typed glyph status with low-contrast amber text) are fixed by the header move: Save and Cancel are default-size buttons aligned to the form column, and the status uses icons and emphasis-colored text. Everything else here is open, including both BLOCKERs (token picker combobox semantics; drawer focus management).
+
 `form-field`, `form-switch`, `form-radio-card`, `form-subsection`, `form-options`, `form-errors`, `token-picker`, `save-bar`, `form-drawer`
 
 ### BLOCKER
@@ -131,8 +137,8 @@ The original findings remain below as a resolution checklist.
 - **Unselected radios, switches, and checkboxes are nearly invisible.** The border measures `#dee2e6` on white, about 1.3:1 (see "Program Scope: All" and the Time Tracking cards in the screenshot). *WCAG 1.4.11 (AA).* **Fix:** use a border of at least `#8c959f` (3:1) for `.form-check-input` and for the field outline. The same value raises text inputs to modern legibility.
 - **Radio groups have no group label.** Program Scope and Time Tracking aren't wrapped in a `fieldset`/`legend` (the create form has 0 fieldsets), so "All" and "None" are read without their question. *WCAG 1.3.1.* **Fix:** add `x-form-radio-group` with a `fieldset` and `legend` styled as `.form-label`.
 - **Index filters have no labels.** On `/agreements`, all 7 filter controls have no label. The selects rely on their first option ("All States"). **Fix:** add `visually-hidden` labels, or visible small labels above the controls.
-- **The save bar's primary action is undersized and misaligned.** "Create Agreement" is `btn-sm` (31px high) in a 54px bar, and the bar uses `.container` while the form uses the narrower `col-lg-10` shell, so Cancel and Save sit off the form's right edge. **Fix:** use the default button size, and match the bar's inner width to the form shell.
-- **Save bar status relies on symbol glyphs and color.** `save-bar.blade.php:83–86`: `●`, `✓`, and `⚠` are typed characters inside colored spans. They're announced literally ("black circle"), and "Unsaved changes" is `text-warning` amber on white at about 1.6:1. **Fix:** use Bootstrap Icons with `aria-hidden` and `text-warning-emphasis` for text.
+- [x] **The save bar's primary action is undersized and misaligned.** "Create Agreement" is `btn-sm` (31px high) in a 54px bar, and the bar uses `.container` while the form uses the narrower `col-lg-10` shell, so Cancel and Save sit off the form's right edge. **Fix:** use the default button size, and match the bar's inner width to the form shell.
+- [x] **Save bar status relies on symbol glyphs and color.** `save-bar.blade.php:83–86`: `●`, `✓`, and `⚠` are typed characters inside colored spans. They're announced literally ("black circle"), and "Unsaved changes" is `text-warning` amber on white at about 1.6:1. **Fix:** use Bootstrap Icons with `aria-hidden` and `text-warning-emphasis` for text.
 - **Drawer behavior lives in one feature partial.** The only open/close/Escape implementation is inside `deliverables-section`, so the next drawer will copy it. **Fix:** ship the behavior with `x-form-drawer`, covered by the BLOCKER above.
 
 ### NIT
@@ -144,6 +150,8 @@ The original findings remain below as a resolution checklist.
 - `token-picker` hard-codes `min-height: 42px`, while `.form-control` is 38px, so pickers and inputs in the same row don't line up.
 
 ## 5. Tables
+
+**Status: open.** Nothing in this section has been addressed. (Record pages gained an overflow menu in the header, but table row actions are unchanged.)
 
 `agreements/partials/table.blade.php` (representative of the index partials), `recent-activity-table`, `table-sort-link`, `table-filter-clear`, `htmx-pagination`
 
@@ -169,6 +177,8 @@ The original findings remain below as a resolution checklist.
 
 ## 6. Buttons
 
+**Status: partly resolved.** Buttons now share an app-wide soft lift (no gloss), the navbar call to action is gone (Log Activity is blue in the sidebar and the phone top bar), and header actions use the default size. Still open: the green Log Activity in `recent-activity-table`, inconsistent button sizes in table and section actions, disabled buttons without a reason, and the documented outline-primary versus outline-secondary rule.
+
 ### SHOULD-FIX
 
 - **The same action has different colors.** "Log Activity" is blue (`.app-navbar-cta`) in the navbar and green (`btn-success`) in `recent-activity-table.blade.php:62`. DESIGN.md says Action Blue marks primary actions. **Fix:** use `btn-primary`. Green is only used twice in the whole app, so drop it as an action color.
@@ -182,6 +192,8 @@ The original findings remain below as a resolution checklist.
 
 ## 7. Token and theming drift (cross-cutting)
 
+**Status: open.** Nothing in this section has been addressed.
+
 ### SHOULD-FIX
 
 - **`repeater-rows-script` is a second design system.** The detector flagged 11 off-system values there, including radii 0.3, 0.45, 0.5, and 0.65rem (DESIGN.md has 0.25, 0.375, and pill) and slate `rgba(15,23,42,…)` shadows and borders that appear nowhere else. **Fix:** map them to DESIGN.md tokens, or promote them into DESIGN.md if they're the direction you want.
@@ -189,20 +201,26 @@ The original findings remain below as a resolution checklist.
 
 ---
 
-## Recommended order
+## Roadmap (updated 2026-10-21)
 
-1. **[BLOCKER] `$impeccable harden`:** Label the token picker and add combobox ARIA, add drawer focus management (or switch to `<dialog>`). Navbar toggler and alert close-button naming are resolved. This is a small diff with the biggest user impact.
-2. **[SHOULD-FIX] `$impeccable harden`:** Link field errors and help text, add required semantics, group radio choices with fieldsets, label filters, and add `aria-sort` and pagination names.
-3. **[SHOULD-FIX] `$impeccable shape`, then `$impeccable distill`:** Decide the modernization direction for tokens (accent, neutrals, radius, type scale, control border contrast), then cut badge density and table columns. This is where the app stops looking like stock Bootstrap.
-4. **[SHOULD-FIX] `$impeccable adapt`:** Fix the embedded activity table width, collapse mobile filters, and size touch targets.
-5. **[SHOULD-FIX] `$impeccable layout`:** Base breadcrumbs on hierarchy, use one card-header language, align the save bar edges. Navbar/content alignment is resolved.
-6. **[NIT] `$impeccable polish`:** Clean up tokens, consolidate component CSS, tabular numbers, and remaining nits.
+**Done.** Shell and navigation (section 1) and headers and breadcrumbs (section 2) are resolved apart from the items marked deferred. Since the audit: the sidebar with pin, peek and Recent; route-based breadcrumbs and Cancel; the sticky form header with the overflow menu, tooltips and Ctrl/⌘ + S; the app-wide button lift; CI no longer needs a Vite build to run tests.
+
+**Next, in order.**
+
+1. **[BLOCKER] `$impeccable harden`:** token picker combobox semantics and named remove buttons; drawer focus management (or a native `<dialog>`).
+2. **[SHOULD-FIX] `$impeccable harden`:** link field errors and help with `aria-describedby`, required semantics, fieldsets for radio groups, labeled filters, `aria-sort`, named pagination arrows.
+3. **Decisions needed before more visual work:** page width (wider lists up to about 1680px with forms capped around 1100 to 1200px, or the current limits), and the visual direction (enterprise-minimal tokens: neutral ramp, one accent, radius and type scale; keep or revert the dark compact header bar).
+4. **[SHOULD-FIX] `$impeccable distill`, then `$impeccable adapt`:** fewer badges and table columns (a visible "+N", rows of 48 to 56px), the embedded activity table width, collapsed mobile filters, touch target sizes, the green Log Activity button.
+5. **Page patterns:** record pages with tabs (Overview, Deliverables, Activity, People, Files); long forms with a sticky sections list in the empty gutter, or create-then-enrich; deliverables chosen by type first; separate screens for building certificate rules and checking them; a dashboard that shows what needs attention.
+6. **[NIT] `$impeccable polish`:** token and CSS consolidation (including `repeater-rows-script` and the scattered `<style>` blocks), tabular numbers, the page-header API refactor (27 props), the remaining nits.
+
+**Deferred or later.** Pinned or favorite destinations on Home, a dark theme, Recent connection diagrams. Open checks: screen reader testing, Safari and Firefox, real touch hardware, and how much staff use phones.
 
 ## What's working, so keep it
 
 - **One form shell, section cards, and a sticky header that carries the form actions**, documented in `form-conventions.md`. That level of consistency is rare in internal tools.
 - **Central color mapping** through `EntityBadge`, so a palette change is one file.
-- **The save bar's state model** (idle, dirty, saving, saved, error) with `aria-live` and a `beforeunload` guard is better than most commercial apps.
+- **The form status model** (idle, dirty, saving, saved, error) with `aria-live` and a `beforeunload` guard, now in the page header, is better than most commercial apps.
 - **Server-rendered htmx tables with `hx-push-url`**, so filtered and sorted views are shareable and back-button safe.
 - **`aria-current` on navigation and dropdown items**, `aria-label` on icon-only row actions, and labeled breadcrumb `nav`.
 - **Status pills always carry text** ("Active" or "Inactive"), not just color.

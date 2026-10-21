@@ -35,7 +35,8 @@ Desktop-first office work in long sessions with many records. Users move between
 - Navigation and visibility are role-dependent. `AppNav` is the single source for primary and admin destinations and must remain the one permission map.
 - Stack: Laravel on PHP 8.4, Blade, Bootstrap 5.3, htmx, Vite. Existing server-rendered tables use htmx with pushed URLs, so filtered and sorted views stay shareable.
 - Accessibility benchmark used by the design audit: WCAG 2.2 AA.
-- Undecided: whether recent-record history follows a user across devices; mobile usage level.
+- Recent records are stored per user in the database (`recent_records`), so history follows a user across devices.
+- Undecided: how much staff use phones (the shell and form header have phone layouts, but the app is designed desktop-first).
 
 ## Brand Commitments
 
@@ -43,7 +44,7 @@ Product name: TA Tracker (organization: Innovate Impact, UConn SSW II). No logo,
 
 ## Evidence on Hand
 
-Live app with seeded demo data (`DemoSeeder`). `docs/design-audit.md` lists current findings; `docs/form-conventions.md` records form rules; `docs/sidebar-navigation-design.md` records the floating-rail proposal. There are no user research notes, analytics, or testimonials; do not invent any.
+Live app with seeded demo data (`DemoSeeder`). `docs/design-audit.md` lists current findings; `docs/form-conventions.md` records form rules; `docs/sidebar-navigation-design.md` records the sidebar design and where the build differs from it. There are no user research notes, analytics, or testimonials; do not invent any.
 
 ## Product Principles
 

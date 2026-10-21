@@ -1,6 +1,6 @@
 # Floating navigation and Recent records
 
-**Status:** Superseded in part. The shell is implemented and recorded in [DESIGN.md](../DESIGN.md) (Navigation): a floating sidebar that is pinned open or peeks open on hover with a pin button, no desktop top bar, search, Log Activity and the account menu inside the sidebar, and Recent stored in a `recent_records` table. The rest (hierarchy-based active state, route breadcrumbs, retention rules, deferred connection diagrams) stands.
+**Status:** Implemented (merged in PR #39). [DESIGN.md](../DESIGN.md) (Navigation) is the source of truth for the shipped design; this document keeps the reasoning and the rules for active state, breadcrumbs and Recent retention. See "As built" below for where the build differs from the original proposal.
 **Date:** 2026-10-16
 **Mode:** Operate — help clients and staff move between connected records and return to earlier work.
 **Visual reference:** The supplied compact floating icon rail that reveals navigation labels when expanded. Keep TA Tracker's existing Working Ledger colors, type, buttons, and restrained surfaces from [DESIGN.md](../DESIGN.md).
@@ -19,13 +19,22 @@ The floating rail uses the left gutter without permanently taking a full sidebar
 - Recent contains at most 30 unique records visited within the last seven days. Revisiting a record moves it to the top and refreshes its last-opened time.
 - Ship a searchable list first. A graph, branching exploration trail, and per-click history are outside the initial proposal.
 
+## As built (differences from the original proposal)
+
+- **Pinned or peeking, not hover-only.** The sidebar is pinned open (docked, the page makes room) or unpinned (icons only, the page does not move). Unpinned, it peeks open over the page on hover (120ms in, 250ms out), keyboard focus, the `/` search shortcut, or while Recent or the account menu is showing; Escape dismisses a peek. The pin choice is stored per user in `localStorage`; new users start pinned at 1200px and wider.
+- **No desktop top bar.** Search, Log Activity, and the account menu (Profile, Log out) live in the sidebar; phones keep a slim top bar with the menu button, brand, and Log Activity.
+- **Admin groups are always listed.** They do not collapse; the sidebar scrolls when the list is taller than the window.
+- **Collapsed tooltips were dropped.** Peeking reveals the labels, so icons need no separate tooltip.
+- **Recent is stored in the database** (`recent_records`, unique per user, record type and id; pruned to 30 records and seven days on read and write), so it follows a user across devices. The question left open below is resolved.
+- **Form actions moved into the page header** (Save, Cancel, status, Ctrl/⌘ + S), and the bottom save bar is gone. See `form-conventions.md`.
+
 ## Proposed shell
 
 Use a floating, rounded rail at the left of desktop content, separated from the page edge and aligned near the top of the working area. Reserve room for its collapsed width; expansion overlays the gutter/content edge without changing the main content width or shifting form controls.
 
 The rail contains the user's permitted primary destinations, grouped administrative navigation where applicable, and a separate Recent button with a clock icon. Preserve the destinations and permission rules supplied by `AppNav::primaryLinks()` and `AppNav::adminSections()`; do not create a second permission map for the sidebar. Compact rendering must still accommodate the longer navigation available to viewers and administrators through a scrollable navigation region.
 
-Keep a slim top utility area for the app identity, global search where allowed, Log Activity, and the account menu. Moving section navigation into the rail must not remove these capabilities. Recent search only filters visited records; global search remains the way to find records that have never been opened.
+Search (where allowed), Log Activity, and the account menu must stay available when section navigation moves into the rail (as built, they sit in the sidebar). Recent search only filters visited records; global search remains the way to find records that have never been opened.
 
 Follow the current Bootstrap Icons vocabulary. Use Action Blue for the active section and existing neutral surfaces for the floating navigation and panel. Keep content headings and breadcrumb styling from the current header work.
 
@@ -93,13 +102,13 @@ Show a helpful first-use message when the list is empty, and a distinct "No rece
 - Recheck access before displaying entries, and keep the normal destination authorization checks. Hide deleted or inaccessible records according to the application's access rules. An inactive record that remains viewable need not be hidden merely for being inactive.
 - Clear recent removes this user's retained Recent entries, including any loaded UI copy. It does not clear unrelated application state.
 
-The future implementation must choose a bounded user-scoped store that supports the seven-day window. The persistence mechanism and whether history follows a user across devices must be settled before implementation; this proposal does not introduce a database migration or a dependency.
+As built, the store is the `recent_records` table, which supports the seven-day window and follows the user across devices.
 
 ## Responsive behavior
 
 On wide screens, keep the collapsed rail in the left gutter. The expanded rail and Recent panel must remain within the viewport and avoid clipping inside scrollable ancestors. An open panel must not silently shrink or reflow the record page.
 
-When the gutter is insufficient, use an explicit compact navigation control and a touch-friendly overlay or sheet. Mobile does not depend on hover and does not reserve a permanent desktop sidebar. Keep Recent search and close controls visible when its list scrolls, accommodate the on-screen keyboard, and retain access to form save bars.
+When the gutter is insufficient, use an explicit compact navigation control and a touch-friendly overlay or sheet. Mobile does not depend on hover and does not reserve a permanent desktop sidebar. Keep Recent search and close controls visible when its list scrolls, accommodate the on-screen keyboard, and retain access to the form actions (now in the sticky page header).
 
 Choose the breakpoint from the existing content/container widths during implementation. Verify index tables, long record titles, centered create/edit forms, and short viewports rather than assuming every page has unused space on the left.
 
@@ -109,7 +118,9 @@ A list of unique records cannot reconstruct an exploration path. Connecting list
 
 If a later version needs connections, first define whether an edge represents a visited link or an actual relationship. A bounded "last opened from" reference per record is a possible starting point, but it is not part of the accepted first version and must not quietly become a full event log.
 
-## Acceptance checks for a future implementation
+## Acceptance checks
+
+Status: the retention, access, clear, role-navigation, active-state and control checks are covered by feature tests (`RecentRecordsTest`, `AppShellNavigationTest`). Hover, pin, peek, Recent and the mobile menu were checked in a browser at 1440px and 390px. Not verified: screen readers, real touch hardware, Safari and Firefox, and reduced-motion behavior.
 
 - Hover reveals labels; leaving the combined navigation/panel area does not prematurely close the active interaction. Expanding navigation does not shift content.
 - Keyboard focus and touch can open and use the same destinations without hover. Escape and focus return work for navigation groups and Recent.
@@ -120,6 +131,6 @@ If a later version needs connections, first define whether an edge represents a 
 - Browser checks cover desktop and mobile, long labels, scrollable navigation/history, reduced motion, overflow, and console errors.
 - Add focused regression tests for the changed state/permission/retention behavior. Do not add tests that only repeat CSS declarations.
 
-## Work boundary
+## Boundary and what is still deferred
 
-This document is the only new sidebar deliverable. Existing header and hierarchy-breadcrumb changes remain uncommitted on the design branch/worktree. [DESIGN.md](../DESIGN.md) continues to describe the implemented app; this proposal does not make the floating sidebar the official navigation system. No new sidebar, Recent storage, graph, dependency, or schema change is authorized by this document alone.
+The shell is the official navigation system and is described in [DESIGN.md](../DESIGN.md). Still deferred: connection diagrams (above) and pinned or favorite destinations, which would belong on the Home page.
