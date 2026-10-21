@@ -21,7 +21,7 @@ The floating rail uses the left gutter without permanently taking a full sidebar
 
 ## As built (differences from the original proposal)
 
-- **Pinned or peeking, not hover-only.** The sidebar is pinned open (docked, the page makes room) or unpinned (icons only, the page does not move). Unpinned, it peeks open over the page on hover (120ms in, 250ms out), keyboard focus, the `/` search shortcut, or while Recent or the account menu is showing; Escape dismisses a peek. The pin choice is stored per user in `localStorage`; new users start pinned at 1200px and wider.
+- **Pinned or peeking, not hover-only.** The sidebar is pinned open (docked, the page makes room) or unpinned (icons only, the page does not move). Unpinned, it peeks open over the page on hover (120ms in, 250ms out), keyboard focus, the `/` search shortcut, or while Recent or the account menu is showing; Escape dismisses a peek. Unpinning with the mouse collapses the sidebar immediately, and it peeks again only after the pointer leaves and re-enters. The pin choice is stored per user in `localStorage`; new users start pinned at 1200px and wider.
 - **No desktop top bar.** Search, Log Activity, and the account menu (Profile, Log out) live in the sidebar; phones keep a slim top bar with the menu button, brand, and Log Activity.
 - **Admin groups are always listed.** They do not collapse; the sidebar scrolls when the list is taller than the window.
 - **Collapsed tooltips were dropped.** Peeking reveals the labels, so icons need no separate tooltip.

@@ -6,7 +6,7 @@
       hx-push-url="true">
     <div class="row g-2 align-items-center">
         <div class="col-md-3">
-            <input type="text" name="search" class="form-control form-control-sm"
+            <input aria-label="Search organizations" type="text" name="search" class="form-control form-control-sm"
                    placeholder="Search organizations…" value="{{ request('search') }}"
                    hx-get="{{ route('organizations.index') }}"
                    hx-trigger="keyup changed delay:400ms, search"
@@ -14,7 +14,7 @@
                    hx-push-url="true" hx-include="#organization-filters">
         </div>
         <div class="col-md-2">
-            <select name="state_id" class="form-select form-select-sm"
+            <select aria-label="Filter by state" name="state_id" class="form-select form-select-sm"
                     hx-get="{{ route('organizations.index') }}" hx-trigger="change"
                     hx-target="#organizations-table" hx-swap="innerHTML"
                     hx-push-url="true" hx-include="#organization-filters">
@@ -27,7 +27,7 @@
             </select>
         </div>
         <div class="col-md-2">
-            <select name="status" class="form-select form-select-sm"
+            <select aria-label="Filter by status" name="status" class="form-select form-select-sm"
                     hx-get="{{ route('organizations.index') }}" hx-trigger="change"
                     hx-target="#organizations-table" hx-swap="innerHTML"
                     hx-push-url="true" hx-include="#organization-filters">
@@ -37,7 +37,7 @@
             </select>
         </div>
         <div class="col-md-2">
-            <select name="project_id" class="form-select form-select-sm"
+            <select aria-label="Filter by project" name="project_id" class="form-select form-select-sm"
                     hx-get="{{ route('organizations.index') }}" hx-trigger="change"
                     hx-target="#organizations-table" hx-swap="innerHTML"
                     hx-push-url="true" hx-include="#organization-filters">
@@ -50,7 +50,7 @@
             </select>
         </div>
         <div class="col-md-2">
-            <select name="program_id" class="form-select form-select-sm"
+            <select aria-label="Filter by program" name="program_id" class="form-select form-select-sm"
                     hx-get="{{ route('organizations.index') }}" hx-trigger="change"
                     hx-target="#organizations-table" hx-swap="innerHTML"
                     hx-push-url="true" hx-include="#organization-filters">

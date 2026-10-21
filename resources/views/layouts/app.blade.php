@@ -32,6 +32,7 @@
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable app-skip-link">Skip to content</a>
+    <div id="app-live" class="visually-hidden" role="status" aria-live="polite"></div>
     @auth
         <x-app-navbar />
         <div class="app-body">

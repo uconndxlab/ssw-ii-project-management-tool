@@ -14,10 +14,11 @@ colors:
   ink: "#212529"
   muted: "rgba(33, 37, 41, 0.75)"
   border: "#dee2e6"
+  control-border: "#8c959f"
   secondary: "#6c757d"
   secondary-subtle: "#e2e3e5"
   secondary-emphasis: "#2b2f32"
-  success: "#198754"
+  success: "#157347"
   success-subtle: "#d1e7dd"
   success-emphasis: "#0a3622"
   warning: "#ffc107"
@@ -158,7 +159,7 @@ The palette combines Action Blue with cool neutrals and functional status and en
 - **Pale Blue / Blue Ink** (`primary-subtle`, `primary-emphasis`): project relationship badges and KFS metadata.
 
 ### Secondary
-- **Status Green** (`success`): active status pills and success feedback; its subtle background and emphasis text identify agreements.
+- **Status Green** (`success`, a darker green so white text clears 4.5:1): active status pills and success feedback; its subtle background and emphasis text identify agreements.
 - **Attention Amber** (`warning`): warnings and unsaved changes; its subtle background and emphasis text identify programs and PI metadata.
 - **Information Cyan** (`info`): activity-type badges in activity tables; its subtle background and emphasis text identify states.
 - **Error Red** (`danger`): validation errors, required markers, and destructive actions.
@@ -196,9 +197,9 @@ The palette combines Action Blue with cool neutrals and functional status and en
 
 ## Layout
 
-The app uses Bootstrap's responsive, twelve-column grid. Signed-in pages use a shell: on desktop a left sidebar beside the main content with no top bar; below (992px) a sticky phone top bar (3.5rem) over the main content. The body is a flex column with a minimum height of `100dvh` (and a `100vh` fallback); main content fills the remaining width and does not assume a navbar height. Beside the sidebar the main container has horizontal padding (1.5rem per side); vertical page padding is (1.5rem). Container maximum widths are (540px), (720px), (960px), (1140px), and (1320px) at the respective (576px), (768px), (992px), (1200px), and (1400px) breakpoints.
+The app uses Bootstrap's responsive, twelve-column grid. Signed-in pages use a shell: on desktop a left sidebar beside the main content with no top bar; below (992px) a sticky phone top bar (3.5rem) over the main content. The body is a flex column with a minimum height of `100dvh` (and a `100vh` fallback); main content fills the remaining width and does not assume a navbar height. Beside the sidebar the main container has horizontal padding (1.5rem per side); vertical page padding is (1.5rem). Lists and record pages use the room beside the sidebar up to a maximum container width of (1680px); the main container no longer follows Bootstrap's smaller maximums.
 
-Create/edit forms use the shared centered ten-column shell at large widths, expanding to the available width below (992px). Section cards have body padding (1rem) and bottom spacing (1.5rem). Field groups generally use bottom spacing (1rem). Subsections have a left rule (4px), inset (1rem), and separation (1.25rem). Reuse the existing grid and gap utilities rather than inventing per-page spacing scales.
+Create/edit forms use the shared centered form column (maximum 68rem), filling the available width on narrower screens. Section cards have body padding (1rem) and bottom spacing (1.5rem). Field groups generally use bottom spacing (1rem). Subsections have a left rule (4px), inset (1rem), and separation (1.25rem). Reuse the existing grid and gap utilities rather than inventing per-page spacing scales.
 
 Page headers wrap their title/metadata block and action area with a gap (1rem). Actions align with the top of the title, including when long record names wrap; the title block can shrink and break long unspaced names. Tables remain horizontally scrollable in their responsive wrapper. Below (992px) the sidebar becomes a slide-in menu opened from the phone top bar. Radio-card rows use two equal columns with a gap (0.5rem).
 
@@ -247,7 +248,7 @@ White, thin-bordered working surfaces. Use `x-section-card` for form sections: m
 
 ### Inputs / Fields
 
-White fields with a thin Divider Gray outline, medium corners, body-size text, and padding (0.375rem 0.75rem). Focus uses Bootstrap's pale blue border and blue ring (0.25rem). Invalid fields use Error Red and associated feedback; disabled fields use the framework's secondary background.
+White fields with a Control Outline (`control-border`, 3:1 on white) so every field, select, checkbox and radio is visible, medium corners, body-size text, and padding (0.375rem 0.75rem). Focus uses Bootstrap's pale blue border and blue ring (0.25rem). Invalid fields use Error Red and associated feedback; disabled fields use the framework's secondary background. Help and error text are linked to their field (`aria-describedby`, `aria-invalid`, `aria-required`), a set of radios is a fieldset with a legend (or a named radio group), and token pickers are named comboboxes with arrow-key and Enter selection and a live "added" or "removed" announcement.
 
 Reuse `x-form-field` for semibold labels, required markers, one-line help, and inline errors. Token pickers wrap selected relationship badges and a search field in a control with minimum height (42px) and compact vertical padding (0.25rem). Disabled token pickers preserve opacity and show a not-allowed cursor. Use switches inside Options subsections and radio cards for choices with consequences. Selected radio cards use a blue border and Light Gray background.
 
@@ -261,7 +262,7 @@ One floating sidebar holds everything global; there is no desktop top bar. Below
 
 The sidebar is a floating white card (radius 0.75rem, inset 0.75rem from the viewport edge) lifted off the slate canvas with the entity-card border and shadow, so the layers read canvas, then chrome and cards. It has three zones. **Actions** at the top: the brand mark and name with a pin button, a search field (a “/” hint; pressing “/” focuses it) and a solid Action Blue Log Activity button, so actions look different from destinations. **Destinations** in the middle: links come from `AppNav::railGroups()`, which reuses the role rules in `primaryLinks()` and `adminSections()`: Work, then Directory (members) or the admin setup groups (admins). Every group is always listed; none collapses. Each link is a Bootstrap Icon plus a label. The section that owns the current route gets a Primary Subtle fill, semibold Primary Emphasis text, and `aria-current` (`page` on the index, `true` on child pages), whatever the entry point. **Personal** at the bottom: Recent, then an account row (initials avatar, name, access profile) whose menu opens upward with Profile and Log out. An open Recent button turns solid Action Blue, distinct from the tinted current section.
 
-The sidebar is pinned open (15rem, docked, the page makes room) or unpinned (4.25rem icons, the page does not move). Unpinned, it peeks open over the page on pointer hover (120ms in, 250ms out), keyboard focus, the search shortcut, or while the Recent panel or account menu is showing; Escape dismisses a peek. The pin choice is remembered per user in `localStorage` and new users start pinned at 1200px and wider. Touch devices and narrow screens do not hover: below (992px) the same markup is a Bootstrap offcanvas menu with the search field, the groups and the account row; links are at least (44px) high.
+The sidebar is pinned open (15rem, docked, the page makes room) or unpinned (4.25rem icons, the page does not move). Unpinned, it peeks open over the page on pointer hover (120ms in, 250ms out), keyboard focus, the search shortcut, or while the Recent panel or account menu is showing; Escape dismisses a peek. Unpinning with the mouse collapses the sidebar at once and it only peeks again after the pointer leaves and re-enters, so it never hangs open under the cursor. The pin choice is remembered per user in `localStorage` and new users start pinned at 1200px and wider. Touch devices and narrow screens do not hover: below (992px) the same markup is a Bootstrap offcanvas menu with the search field, the groups and the account row; links are at least (44px) high.
 
 Recent is a floating card (same radius, with a larger shadow) beside the sidebar, sized to its content and scrolling past the viewport, listing up to 30 records opened in the last seven days (newest first under a “Last opened” label, a record-type icon per row, and a “Current” tag). It has a labeled search with a leading icon, a Clear action, empty, no-match, and load-error states, closes on Escape or an outside click, and returns focus to its button. Entries are stored per user in `recent_records` and rechecked with the `view` policy each time the panel opens.
 
@@ -273,9 +274,13 @@ The app uses a light theme: a white floating sidebar over a Cool Slate canvas. T
 
 Rows group an underlined linked title, muted metadata, optional entity badges, and trailing actions inside a bordered white rounded surface with padding (0.5rem 1rem). Optional details sit below a divider. Index tables use light headers, vertically centered cells, row hover feedback, and compact right-aligned action groups. Reuse the shared sort, badge-list, and pagination components.
 
+A table being replaced by htmx is dimmed (`is-loading`) and marked `aria-busy`, and the polite live region (`#app-live`) announces the new result summary (for example "Showing 21–40 of 59"). Sortable columns expose `aria-sort`, and pagination arrows and the current page are named.
+
 ### Form Actions and Drawers
 
 Form actions live in the page header, not in a bottom bar: a status line (idle, unsaved, saving, saved, error through text and icon, announced politely once), Cancel, and the primary Save/Create button. Save does not use implicit submit: it calls `requestSubmit()`, so Enter inside token pickers keeps its own behavior. Ctrl/⌘ + S saves, and a `beforeunload` guard protects unsaved edits. Cancel returns to the previous record or list page, else the parent crumb.
+
+Drawers behave as modals: while one is open the rest of the page (sidebar, header, content) is inert, Escape closes it, and focus returns to the control that opened it.
 
 Drawers place related forms in a white panel over a translucent backdrop, with bordered header/footer, body padding (1.25rem), and horizontal padding (1.25rem) around the header/footer. The panel slides and the backdrop fades over (0.2s ease). The existing custom drawer CSS does not establish a reduced-motion override; this document does not imply one exists.
 

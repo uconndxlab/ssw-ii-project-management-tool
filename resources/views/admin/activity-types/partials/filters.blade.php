@@ -6,7 +6,7 @@
       hx-push-url="true">
     <div class="row g-2 align-items-center">
         <div class="col-md-3">
-            <input type="text" name="search" class="form-control form-control-sm"
+            <input aria-label="Search activity types" type="text" name="search" class="form-control form-control-sm"
                    placeholder="Search activity types…" value="{{ request('search') }}"
                    hx-get="{{ route('activity-types.index') }}"
                    hx-trigger="keyup changed delay:400ms, search"
@@ -14,7 +14,7 @@
                    hx-push-url="true" hx-include="#activity-type-filters">
         </div>
         <div class="col-md-2">
-            <select name="contact_family_id" class="form-select form-select-sm"
+            <select aria-label="Filter by activity family" name="contact_family_id" class="form-select form-select-sm"
                     hx-get="{{ route('activity-types.index') }}" hx-trigger="change"
                     hx-target="#activity-types-table" hx-swap="innerHTML"
                     hx-push-url="true" hx-include="#activity-type-filters">
@@ -27,7 +27,7 @@
             </select>
         </div>
         <div class="col-md-2">
-            <select name="project_id" class="form-select form-select-sm"
+            <select aria-label="Filter by project" name="project_id" class="form-select form-select-sm"
                     hx-get="{{ route('activity-types.index') }}" hx-trigger="change"
                     hx-target="#activity-types-table" hx-swap="innerHTML"
                     hx-push-url="true" hx-include="#activity-type-filters">
@@ -40,7 +40,7 @@
             </select>
         </div>
         <div class="col-md-2">
-            <select name="program_id" class="form-select form-select-sm"
+            <select aria-label="Filter by program" name="program_id" class="form-select form-select-sm"
                     hx-get="{{ route('activity-types.index') }}" hx-trigger="change"
                     hx-target="#activity-types-table" hx-swap="innerHTML"
                     hx-push-url="true" hx-include="#activity-type-filters">
@@ -53,7 +53,7 @@
             </select>
         </div>
         <div class="col-md-2">
-            <select name="active" class="form-select form-select-sm"
+            <select aria-label="Filter by status" name="active" class="form-select form-select-sm"
                     hx-get="{{ route('activity-types.index') }}" hx-trigger="change"
                     hx-target="#activity-types-table" hx-swap="innerHTML"
                     hx-push-url="true" hx-include="#activity-type-filters">

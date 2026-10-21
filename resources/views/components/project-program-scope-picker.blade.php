@@ -122,8 +122,8 @@
         data-project-names-map='@json($scopePicker['projectNamesMap'])'
         data-project-disabled-placeholder="{{ $projectDisabledPlaceholder }}">
     @if($showScopeModeSelector)
-        <div class="mb-3">
-            <label class="form-label">{{ $scopeModeLabel }}</label>
+        <fieldset class="mb-3"@if($scopeModeHelpText) aria-describedby="{{ $scopeId }}-scope-mode-help"@endif>
+            <legend class="form-label float-none w-auto p-0 fs-6">{{ $scopeModeLabel }}</legend>
             <div class="d-flex flex-wrap gap-3">
                 @foreach ($scopeModeOptions as $value => $label)
                     <div class="form-check">
@@ -138,19 +138,20 @@
                 @endforeach
             </div>
             @if($scopeModeHelpText)
-                <div class="form-text">{{ $scopeModeHelpText }}</div>
+                <div class="form-text" id="{{ $scopeId }}-scope-mode-help">{{ $scopeModeHelpText }}</div>
             @endif
             @error($scopeModeErrorKey)
                 <div class="text-danger small mt-1">{{ $message }}</div>
             @enderror
-        </div>
+        </fieldset>
     @endif
 
     <div class="row g-3" data-scope-picker-fields>
         <div class="col-md-6">
-            <label class="form-label{{ $projectLabelIsRequired ? ' required-label' : '' }}">{{ $projectLabelText }}</label>
+            <label class="form-label{{ $projectLabelIsRequired ? ' required-label' : '' }}" id="{{ $scopeId }}-project-label">{{ $projectLabelText }}</label>
             <x-token-picker
                 :picker-id="$scopePicker['projectPickerId']"
+                :labelled-by="$scopeId.'-project-label'"
                 :name="$projectFieldName"
                 :items="$scopePicker['scopeProjects']"
                 :selected-ids="$scopePicker['selectedProjectIds']"
@@ -170,9 +171,10 @@
         </div>
 
         <div class="col-md-6">
-            <label class="form-label{{ $programLabelIsRequired ? ' required-label' : '' }}">{{ $programLabelText }}</label>
+            <label class="form-label{{ $programLabelIsRequired ? ' required-label' : '' }}" id="{{ $scopeId }}-program-label">{{ $programLabelText }}</label>
             <x-token-picker
                 :picker-id="$scopePicker['programPickerId']"
+                :labelled-by="$scopeId.'-program-label'"
                 :name="$programFieldName"
                 :options="$scopePicker['programOptions']"
                 :selected-ids="$scopePicker['selectedProgramIds']"

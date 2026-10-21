@@ -86,6 +86,14 @@ if (header) {
         form.addEventListener('input', markDirty);
         form.addEventListener('change', markDirty);
 
+        // Token pickers write hidden inputs, so they signal edits themselves. Only a person adding or removing
+        // a token counts; the pickers also fire this event when other code syncs them.
+        form.addEventListener('token-picker:change', (event) => {
+            if (event.detail?.user) {
+                markDirty();
+            }
+        });
+
         form.addEventListener('submit', () => {
             submitted = true;
             dirty = false;

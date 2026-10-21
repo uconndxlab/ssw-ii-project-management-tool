@@ -10,7 +10,7 @@
       hx-push-url="true">
     <div class="row g-2 align-items-center">
         <div class="col-md-3">
-            <input type="text" name="search" class="form-control form-control-sm"
+            <input aria-label="Search by name, email, or PO number" type="text" name="search" class="form-control form-control-sm"
                    placeholder="Search by name, email, or PO number…" value="{{ request('search') }}"
                    hx-get="{{ route($usersIndexRoute) }}"
                    hx-trigger="keyup changed delay:400ms, search"
@@ -18,7 +18,7 @@
                    hx-push-url="true" hx-include="#user-filters">
         </div>
         <div class="col-md-2">
-            <select name="access_profile" class="form-select form-select-sm"
+            <select aria-label="Filter by access profile" name="access_profile" class="form-select form-select-sm"
                     hx-get="{{ route($usersIndexRoute) }}" hx-trigger="change"
                     hx-target="#users-table" hx-swap="innerHTML"
                     hx-push-url="true" hx-include="#user-filters">
@@ -29,7 +29,7 @@
             </select>
         </div>
         <div class="col-md-2">
-            <select name="project_id" class="form-select form-select-sm"
+            <select aria-label="Filter by project" name="project_id" class="form-select form-select-sm"
                     hx-get="{{ route($usersIndexRoute) }}" hx-trigger="change"
                     hx-target="#users-table" hx-swap="innerHTML"
                     hx-push-url="true" hx-include="#user-filters">
@@ -42,7 +42,7 @@
             </select>
         </div>
         <div class="col-md-2">
-            <select name="program_id" class="form-select form-select-sm"
+            <select aria-label="Filter by program" name="program_id" class="form-select form-select-sm"
                     hx-get="{{ route($usersIndexRoute) }}" hx-trigger="change"
                     hx-target="#users-table" hx-swap="innerHTML"
                     hx-push-url="true" hx-include="#user-filters">
@@ -55,7 +55,7 @@
             </select>
         </div>
         <div class="col-md-2">
-            <select name="status" class="form-select form-select-sm"
+            <select aria-label="Filter by status" name="status" class="form-select form-select-sm"
                     hx-get="{{ route($usersIndexRoute) }}" hx-trigger="change"
                     hx-target="#users-table" hx-swap="innerHTML"
                     hx-push-url="true" hx-include="#user-filters">

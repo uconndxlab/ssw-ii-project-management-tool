@@ -17,6 +17,8 @@
     'emptySelectionLabel' => null,
     'entity' => null,
     'entityKind' => null,
+    'labelledBy' => null,
+    'ariaLabel' => null,
 ])
 
 @php
@@ -82,13 +84,26 @@
                class="border-0 flex-grow-1"
                style="outline: none; min-width: 160px;"
                data-token-search
+               id="{{ $pickerId }}-search"
+               role="combobox"
+               aria-autocomplete="list"
+               aria-haspopup="listbox"
+               aria-expanded="false"
+               aria-controls="{{ $pickerId }}-list"
+               @if(filled($labelledBy)) aria-labelledby="{{ $labelledBy }}" @endif
+               aria-label="{{ $ariaLabel ?: preg_replace('/[….\s]+$/u', '', $placeholder) }}"
                placeholder="{{ $placeholder }}"
                autocomplete="off">
     </div>
 
     <div class="border rounded p-3 bg-white shadow-sm d-none position-absolute start-0 end-0 mt-1"
         style="z-index: 1060; max-height: {{ $height }}; overflow-y: scroll;"
+         id="{{ $pickerId }}-list"
+         role="listbox"
+         aria-label="{{ $ariaLabel ?: preg_replace('/[….\s]+$/u', '', $placeholder) }}"
          data-token-list></div>
+
+    <div class="visually-hidden" role="status" aria-live="polite" data-token-status></div>
 
     <div data-token-inputs></div>
 
@@ -109,6 +124,17 @@
         background-color: transparent;
         cursor: not-allowed;
     }
+
+    .token-option {
+        padding: 0.25rem 0.375rem;
+        cursor: pointer;
+        border-radius: var(--bs-border-radius);
+    }
+
+    .token-option:hover,
+    .token-option-active {
+        background-color: var(--bs-primary-bg-subtle);
+    }
 </style>
 <script>
 (function () {
@@ -127,6 +153,7 @@
         const hiddenInputs = picker.querySelector('[data-token-inputs]');
         const optionsNode = picker.querySelector('[data-token-options]');
         const controlWrap = picker.querySelector('[data-token-control]');
+        const statusNode = picker.querySelector('[data-token-status]');
 
         if (!searchInput || !selectedWrap || !listWrap || !hiddenInputs || !optionsNode || !controlWrap) {
             return;
@@ -144,6 +171,58 @@
         const selected = new Set(Array.from(initialSelected));
         let allowedValues = null;
         let isDisabled = picker.dataset.disabled === 'true';
+
+        let activeValue = null;
+
+        function announce(message) {
+            if (!statusNode) {
+                return;
+            }
+
+            statusNode.textContent = '';
+            setTimeout(function () {
+                statusNode.textContent = message;
+            }, 50);
+        }
+
+        function optionDomId(value) {
+            return picker.id + '-option-' + String(value).replace(/[^A-Za-z0-9_-]/g, '-');
+        }
+
+        function setExpanded(expanded) {
+            searchInput.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+
+            if (!expanded) {
+                setActive(null);
+            }
+        }
+
+        function setActive(value) {
+            activeValue = value;
+
+            listWrap.querySelectorAll('[role="option"]').forEach(function (row) {
+                const isActive = value !== null && row.dataset.value === String(value);
+                row.classList.toggle('token-option-active', isActive);
+
+                if (isActive) {
+                    searchInput.setAttribute('aria-activedescendant', row.id);
+                }
+            });
+
+            if (value === null) {
+                searchInput.removeAttribute('aria-activedescendant');
+            }
+        }
+
+        function choose(value, label) {
+            selected.add(String(value));
+            renderSelected();
+            renderList(true);
+            writeHiddenInputs();
+            picker.dispatchEvent(new CustomEvent('token-picker:change', { bubbles: true, detail: { user: true } }));
+            announce(label + ' added');
+            searchInput.focus();
+        }
 
         function selectedArray() {
             return Array.from(selected);
@@ -282,12 +361,14 @@
                 badge.className = 'badge ' + selectedBadgeClasses(option) + ' d-inline-flex align-items-center gap-1';
                 badge.innerHTML = '<span class="d-inline-flex flex-wrap align-items-baseline gap-0"></span><button type="button" class="btn-close" style="font-size: 10px;" aria-label="Remove"></button>';
                 appendOptionPrimaryLabel(badge.querySelector('span'), option);
+                badge.querySelector('button').setAttribute('aria-label', 'Remove ' + option.label);
                 badge.querySelector('button').addEventListener('click', function () {
                     selected.delete(String(value));
                     renderSelected();
                     renderList();
                     writeHiddenInputs();
-                    picker.dispatchEvent(new CustomEvent('token-picker:change', { bubbles: true }));
+                    picker.dispatchEvent(new CustomEvent('token-picker:change', { bubbles: true, detail: { user: true } }));
+                    announce(option.label + ' removed');
                 });
                 selectedWrap.appendChild(badge);
             });
@@ -337,27 +418,19 @@
                 listWrap.appendChild(empty);
             } else {
                 list.forEach(function (opt) {
-                    const row = document.createElement('label');
-                    row.className = 'form-check d-flex align-items-start gap-2 mb-2';
-
-                    const checkbox = document.createElement('input');
-                    checkbox.type = 'checkbox';
-                    checkbox.className = 'form-check-input mt-1';
-                    checkbox.value = String(opt.value);
-                    checkbox.checked = selected.has(String(opt.value));
-                    checkbox.addEventListener('change', function () {
-                        if (checkbox.checked) {
-                            selected.add(String(opt.value));
-                        } else {
-                            selected.delete(String(opt.value));
-                        }
-
-                        renderSelected();
-                        renderList(true);
-                        writeHiddenInputs();
-                        picker.dispatchEvent(new CustomEvent('token-picker:change', { bubbles: true }));
-                        searchInput.focus();
+                    const row = document.createElement('div');
+                    row.id = optionDomId(opt.value);
+                    row.className = 'token-option d-flex align-items-start gap-2 mb-1';
+                    row.setAttribute('role', 'option');
+                    row.setAttribute('aria-selected', 'false');
+                    row.dataset.value = String(opt.value);
+                    row.addEventListener('click', function () {
+                        choose(opt.value, opt.label);
                     });
+
+                    const box = document.createElement('span');
+                    box.className = 'form-check-input d-inline-block flex-shrink-0 mt-1 ms-0';
+                    box.setAttribute('aria-hidden', 'true');
 
                     const textWrap = document.createElement('div');
                     textWrap.className = 'form-check-label d-flex flex-wrap align-items-center gap-2';
@@ -366,7 +439,7 @@
 
                     appendContextBadges(textWrap, opt);
 
-                    row.appendChild(checkbox);
+                    row.appendChild(box);
                     row.appendChild(textWrap);
                     listWrap.appendChild(row);
                 });
@@ -374,11 +447,17 @@
 
             if (forceOpen) {
                 listWrap.classList.remove('d-none');
+                setExpanded(true);
+            }
+
+            if (activeValue !== null) {
+                setActive(listWrap.querySelector('[data-value="' + CSS.escape(String(activeValue)) + '"]') ? activeValue : null);
             }
         }
 
         function closeList() {
             listWrap.classList.add('d-none');
+            setExpanded(false);
         }
 
         function applyDisabledState() {
@@ -515,13 +594,74 @@
                 return;
             }
 
+            setActive(null);
             renderList(true);
+
+            const count = listWrap.querySelectorAll('[role="option"]').length;
+            announce(count === 0 ? emptyMessage : count + (count === 1 ? ' option' : ' options') + ' available');
         });
         searchInput.addEventListener('keydown', function (event) {
-            if (event.key === 'Enter') {
-                event.preventDefault();
+            if (isDisabled) {
+                return;
             }
-            if (event.key === 'Escape') {
+
+            const isOpen = !listWrap.classList.contains('d-none');
+
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                event.preventDefault();
+
+                if (!isOpen) {
+                    renderList(true);
+                }
+
+                const rows = Array.from(listWrap.querySelectorAll('[role="option"]'));
+
+                if (rows.length === 0) {
+                    return;
+                }
+
+                const current = rows.findIndex(function (row) {
+                    return row.dataset.value === activeValue;
+                });
+                const next = event.key === 'ArrowDown'
+                    ? Math.min(current + 1, rows.length - 1)
+                    : Math.max(current - 1, 0);
+
+                setActive(rows[next].dataset.value);
+                rows[next].scrollIntoView({ block: 'nearest' });
+
+                return;
+            }
+
+            if (event.key === 'Enter') {
+                // Enter must never submit the form from here; it adds the highlighted option instead.
+                event.preventDefault();
+
+                const row = isOpen && activeValue !== null
+                    ? listWrap.querySelector('[data-value="' + CSS.escape(String(activeValue)) + '"]')
+                    : null;
+
+                if (row) {
+                    choose(row.dataset.value, optionByValue(row.dataset.value)?.label || row.dataset.value);
+                }
+
+                return;
+            }
+
+            if (event.key === 'Escape' && isOpen) {
+                // Close the list only; a surrounding drawer should stay open.
+                event.stopPropagation();
+                closeList();
+            }
+        });
+
+        // Keep keyboard focus in the search field when the list is clicked or scrolled.
+        listWrap.addEventListener('mousedown', function (event) {
+            event.preventDefault();
+        });
+
+        picker.addEventListener('focusout', function (event) {
+            if (!picker.contains(event.relatedTarget)) {
                 closeList();
             }
         });

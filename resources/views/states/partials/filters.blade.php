@@ -7,7 +7,7 @@
 
     <div class="row g-2 align-items-center">
         <div class="col">
-            <input type="text" name="search" class="form-control form-control-sm"
+            <input aria-label="Search states" type="text" name="search" class="form-control form-control-sm"
                    placeholder="Search states…" value="{{ request('search') }}"
                    hx-get="{{ route('states.index') }}"
                    hx-trigger="keyup changed delay:400ms"
