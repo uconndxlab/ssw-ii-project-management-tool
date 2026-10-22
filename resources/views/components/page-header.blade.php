@@ -145,6 +145,19 @@
     $hasMeta = $hasExplicitMeta || $hasBadgeAugment || $showStandardMeta;
     $hasDefaultAction = filled($actionUrl) && filled($resolvedActionLabel) && filled($resolvedActionClass);
     $hasMore = isset($more) && filled(trim((string) $more));
+    $recordIcon = $context === 'show' && filled($entityType)
+        ? match ($resolvedEntityKind) {
+            'activity' => 'bi-calendar-check',
+            'organization' => 'bi-building',
+            'state' => 'bi-geo-alt',
+            'project' => 'bi-folder',
+            'program' => 'bi-diagram-3',
+            'team', 'user' => 'bi-people',
+            'certificate' => 'bi-award',
+            'logging-field' => 'bi-ui-checks',
+            default => 'bi-file-earmark-text',
+        }
+        : null;
 
     $hasFormActions = $isFormContext && filled($saveLabel);
     $stickyHeader = $sticky ?? $hasFormActions;
@@ -226,6 +239,9 @@
     @endif
 
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+        @if($recordIcon)
+            <span class="app-record-icon" aria-hidden="true"><i class="bi {{ $recordIcon }}"></i></span>
+        @endif
         <div class="page-header-heading min-w-0">
             <h1 class="{{ $resolvedTitleClass }} {{ $resolvedTitleMarginClass }} {{ $resolvedTitleWeightClass }}">{{ $resolvedTitle }}</h1>
 
@@ -269,4 +285,7 @@
             </div>
         @endif
     </div>
+    @isset($facts)
+        <dl class="app-record-facts">{{ $facts }}</dl>
+    @endisset
 </div>

@@ -8,54 +8,49 @@
 
 <div class="card shadow-sm app-index-table-card">
     <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
+        <table class="table table-hover align-middle mb-0 app-data-table app-cards">
+            <thead>
                 <tr>
-                    <th style="min-width: 160px; width: 1%;">
+                    <th>
                         <x-table-sort-link column="name" label="Agreement" :sort="$s" :direction="$d" :url="$url('name')" target="#agreements-table" />
                     </th>
-                    <th style="min-width: 140px;">
+                    <th>
                         <x-table-sort-link column="projects" label="Project" :sort="$s" :direction="$d" :url="$url('projects')" target="#agreements-table" />
                     </th>
-                    <th style="min-width: 140px;">
+                    <th>
                         <x-table-sort-link column="programs" label="Program" :sort="$s" :direction="$d" :url="$url('programs')" target="#agreements-table" />
                     </th>
-                    <th style="min-width: 120px;">
+                    <th>
                         <x-table-sort-link column="states" label="Location" :sort="$s" :direction="$d" :url="$url('states')" target="#agreements-table" />
                     </th>
                     <th class="text-nowrap">
-                        <x-table-sort-link column="start_date" label="Start Date" :sort="$s" :direction="$d" :url="$url('start_date')" target="#agreements-table" />
+                        <x-table-sort-link column="start_date" label="Start" :sort="$s" :direction="$d" :url="$url('start_date')" target="#agreements-table" />
                     </th>
                     <th class="text-nowrap">
-                        <x-table-sort-link column="end_date" label="End Date" :sort="$s" :direction="$d" :url="$url('end_date')" target="#agreements-table" />
+                        <x-table-sort-link column="end_date" label="End" :sort="$s" :direction="$d" :url="$url('end_date')" target="#agreements-table" />
                     </th>
                     <th>
                         <x-table-sort-link column="active" label="Status" :sort="$s" :direction="$d" :url="$url('active')" target="#agreements-table" />
                     </th>
-                    <th style="min-width: 120px;">
+                    <th>
                         <x-table-sort-link column="principal_investigators" label="PI" :sort="$s" :direction="$d" :url="$url('principal_investigators')" target="#agreements-table" />
                     </th>
-                    <th class="text-end text-nowrap" style="width:{{ auth()->user()->can('create', App\Models\Agreement::class) ? '130px' : '52px' }};">Actions</th>
+                    <th class="app-col-actions"><span class="visually-hidden">Actions</span></th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($agreements as $agreement)
                 <tr>
-                    <td>
+                    <td class="app-col-name">
                         @if($agreement->isLinkable())
-                            <a href="{{ route('agreements.show', $agreement) }}" class="fw-semibold text-decoration-none text-dark d-block">
+                            <a href="{{ route('agreements.show', $agreement) }}" class="app-link app-link--strong" @if($agreement->abstract) title="{{ Str::limit($agreement->abstract, 200) }}" @endif>
                                 {{ $agreement->name }}
                             </a>
                         @else
-                            <span class="fw-semibold text-dark d-block">{{ $agreement->name }}</span>
-                        @endif
-                        @if($agreement->abstract)
-                            <div class="text-muted small text-truncate" style="max-width: 220px;" title="{{ $agreement->abstract }}">
-                                {{ $agreement->abstract }}
-                            </div>
+                            <span class="fw-semibold">{{ $agreement->name }}</span>
                         @endif
                     </td>
-                    <td>
+                    <td data-label="Projects">
                         <x-table-badge-list
                             kind="project"
                             :items="$agreement->projects"
@@ -63,7 +58,7 @@
                             :empty-label="$scopeEmptyLabel($agreement->program_scope_mode, 'All projects', 'No projects')"
                         />
                     </td>
-                    <td>
+                    <td data-label="Programs">
                         <x-table-badge-list
                             kind="program"
                             :items="$agreement->programs"
@@ -71,66 +66,46 @@
                             :empty-label="$scopeEmptyLabel($agreement->program_scope_mode, 'All programs', 'No programs')"
                         />
                     </td>
-                    <td>
+                    <td data-label="States">
                         <x-table-badge-list
                             kind="state"
                             :items="$agreement->states"
                             route-name="states.show"
                         />
                     </td>
-                    <td class="small text-nowrap">{{ $agreement->start_date?->format('M d, Y') ?? '—' }}</td>
-                    <td class="small text-nowrap">{{ $agreement->end_date?->format('M d, Y') ?? '—' }}</td>
-                    <td>
+                    <td class="text-nowrap" data-label="Start" @if($agreement->start_date) title="{{ $agreement->start_date->format('M d, Y') }}" @endif>{{ $agreement->start_date?->format('M Y') ?? '—' }}</td>
+                    <td class="text-nowrap" data-label="End" @if($agreement->end_date) title="{{ $agreement->end_date->format('M d, Y') }}" @endif>{{ $agreement->end_date?->format('M Y') ?? '—' }}</td>
+                    <td class="app-card-status">
                         <x-status-badge :active="$agreement->active" />
                     </td>
-                    <td class="small">
+                    <td data-label="PI">
                         @if($agreement->principalInvestigators->isEmpty())
                             <span class="text-muted">—</span>
                         @else
                             {{ $agreement->principalInvestigators->sortBy('name')->pluck('name')->join(', ') }}
                         @endif
                     </td>
-                    <td class="text-end text-nowrap">
+                    <td class="app-col-actions">
                         @php $actionKey = 'agreement-actions-' . $agreement->id; @endphp
-                        <div class="btn-group btn-group-sm" role="group" aria-label="Agreement actions for {{ $agreement->name }}">
-                            <a href="{{ route('agreements.show', $agreement) }}"
-                               class="btn btn-outline-primary"
-                               data-bs-toggle="tooltip"
-                               data-bs-title="View agreement"
-                               aria-label="View agreement">
-                                <i class="bi bi-eye"></i>
-                            </a>
+                        <div class="dropdown app-row-actions d-inline-block">
+                            <button type="button" class="btn btn-sm btn-link app-row-actions-toggle" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" aria-label="Agreement actions for {{ $agreement->name }}"><i class="bi bi-three-dots" aria-hidden="true"></i></button>
+                            <div class="dropdown-menu dropdown-menu-end">
+                            <a href="{{ route('agreements.show', $agreement) }}" class="dropdown-item"><i class="bi bi-eye me-2" aria-hidden="true"></i>View agreement</a>
                             @can('update', $agreement)
-                                <a href="{{ route('agreements.edit', $agreement) }}"
-                                   class="btn btn-outline-secondary"
-                                   data-bs-toggle="tooltip"
-                                   data-bs-title="Edit agreement"
-                                   aria-label="Edit agreement">
-                                    <i class="bi bi-pencil-square"></i>
-                                </a>
+                                <a href="{{ route('agreements.edit', $agreement) }}" class="dropdown-item"><i class="bi bi-pencil-square me-2" aria-hidden="true"></i>Edit agreement</a>
                             @endcan
                             @can('duplicate', $agreement)
                                 <button type="submit"
                                         form="{{ $actionKey }}-duplicate"
-                                        class="btn btn-outline-secondary"
-                                        data-bs-toggle="tooltip"
-                                        data-bs-title="Duplicate agreement"
-                                        aria-label="Duplicate agreement"
-                                        onclick="return confirm('Duplicate {{ addslashes($agreement->name) }}? Activities and logged progress will not be copied.')">
-                                    <i class="bi bi-files"></i>
-                                </button>
+                                        onclick="return confirm('Duplicate {{ addslashes($agreement->name) }}? Activities and logged progress will not be copied.')" class="dropdown-item"><i class="bi bi-files me-2" aria-hidden="true"></i>Duplicate agreement</button>
                             @endcan
                             @can('delete', $agreement)
-                                <button type="submit"
+                                <hr class="dropdown-divider">
+                            <button type="submit"
                                         form="{{ $actionKey }}-delete"
-                                        class="btn btn-outline-danger"
-                                        data-bs-toggle="tooltip"
-                                        data-bs-title="Delete agreement"
-                                        aria-label="Delete agreement"
-                                        onclick="return confirm('Delete {{ addslashes($agreement->name) }}?')">
-                                    <i class="bi bi-trash"></i>
-                                </button>
+                                        onclick="return confirm('Delete {{ addslashes($agreement->name) }}?')" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete agreement</button>
                             @endcan
+                            </div>
                         </div>
                         @can('duplicate', $agreement)
                             <form id="{{ $actionKey }}-duplicate" method="POST" action="{{ route('agreements.duplicate', $agreement) }}" class="d-none">
@@ -162,7 +137,7 @@
             </tbody>
         </table>
     </div>
-    <div class="card-footer bg-white">
+    <div class="card-footer">
         <x-htmx-pagination :paginator="$agreements" target="#agreements-table" />
     </div>
 </div>

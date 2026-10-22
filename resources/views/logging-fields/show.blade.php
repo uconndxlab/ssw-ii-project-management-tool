@@ -14,7 +14,7 @@
         >
             <x-slot:badges>
                 @if($loggingField->is_full_width)
-                    <span class="badge bg-dark">Full width</span>
+                    <span class="badge app-tag">Full width</span>
                 @endif
             </x-slot:badges>
         </x-page-header>
@@ -36,20 +36,20 @@
                         </tr>
                         <tr>
                             <td class="text-muted">Field Type</td>
-                            <td><span class="badge bg-secondary">{{ $loggingField->fieldTypeLabel() }}</span></td>
+                            <td><span class="badge app-tag">{{ $loggingField->fieldTypeLabel() }}</span></td>
                         </tr>
                         <tr>
                             <td class="text-muted">Available In</td>
                             <td>
                                 <div class="d-flex flex-wrap gap-1">
                                     @if($loggingField->available_in_agreements)
-                                        <span class="badge bg-primary">Agreements</span>
+                                        <span class="badge app-tag">Agreements</span>
                                     @endif
                                     @if($loggingField->available_in_contact_families)
-                                        <span class="badge bg-info text-dark">Activity Families</span>
+                                        <span class="badge app-tag">Activity Families</span>
                                     @endif
                                     @if($loggingField->available_in_activities)
-                                        <span class="badge bg-warning text-dark">Activity Types</span>
+                                        <span class="badge app-tag">Activity Types</span>
                                     @endif
                                 </div>
                             </td>
@@ -83,11 +83,7 @@
                         <tr>
                             <td class="text-muted">Status</td>
                             <td>
-                                @if($loggingField->is_active)
-                                    <span class="badge bg-success">Active</span>
-                                @else
-                                    <span class="badge bg-secondary">Inactive</span>
-                                @endif
+                                <x-status-badge :active="$loggingField->is_active" />
                             </td>
                         </tr>
                         <tr>
@@ -127,7 +123,7 @@
                                             <span>{{ $agreement->name }}</span>
                                         @endif
                                         @if($agreement->pivot->is_required)
-                                            <span class="badge bg-warning text-dark ms-2">Required</span>
+                                            <span class="badge app-tag ms-2">Required</span>
                                         @endif
                                     </div>
                                 </li>
@@ -147,7 +143,7 @@
                                     <div>
                                         {{ $family->name }}
                                         @if($family->pivot->is_required)
-                                            <span class="badge bg-warning text-dark ms-2">Required</span>
+                                            <span class="badge app-tag ms-2">Required</span>
                                         @endif
                                     </div>
                                 </li>

@@ -34,15 +34,11 @@
         <hr>
         <h6 class="text-muted fw-normal small mb-2">Assigned Staff</h6>
         @forelse($staffMembers as $member)
-            <div class="small py-1 {{ $loop->last ? '' : 'border-bottom' }}">
-                <x-user-link :user="$member" class="fw-semibold" />
-                @if($member->access_profile)
-                    <span class="text-muted">· {{ $member->accessLabel() }}</span>
-                @endif
+            <x-staff-member-row :user="$member" :role="$member->access_profile ? $member->accessLabel() : null">
                 @if($member->email)
-                    <div class="text-muted">{{ $member->email }}</div>
+                    <x-slot:after><span>{{ $member->email }}</span></x-slot:after>
                 @endif
-            </div>
+            </x-staff-member-row>
         @empty
             <p class="text-muted small mb-0">No staff linked to this state yet.</p>
         @endforelse

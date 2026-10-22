@@ -7,7 +7,9 @@
 
 The original audit was documentation only. Resolution statuses below track subsequent implementation work; unchecked findings remain open. Severity counts and health scores describe the original audit, not a new assessment.
 
-**Update (2026-10-21, after PR #39).** The shell changed after this audit was written: the top navbar was replaced by a floating sidebar (pinned or peeking, with search, Log Activity and the account menu inside it), the bottom save bar was removed (Save, Cancel and status now live in the sticky form header), and `SessionBackTargetService` was deleted. Findings that cite `app-navbar.blade.php` or `save-bar.blade.php` describe code that no longer exists. A later pass fixed the field and table accessibility findings and widened lists (see the section status lines). Sections 3, 6 and 7 are mostly open. The "Roadmap" section at the end replaces the original recommended order.
+**Update (2026-10-21, after PR #39).** The shell changed after this audit was written: the top navbar was replaced by a floating sidebar (pinned or peeking, with search, Log Activity and the account menu inside it), the bottom save bar was removed (Save, Cancel and status now live in the sticky form header), and `SessionBackTargetService` was deleted. Findings that cite `app-navbar.blade.php` or `save-bar.blade.php` describe code that no longer exists. A later pass fixed the field and table accessibility findings and widened lists (see the section status lines). Sections 3, 5, 6 and 7 were then addressed by the enterprise restyle below (2026-10-22). The "Roadmap" section at the end replaces the original recommended order.
+
+**Update (2026-10-22, enterprise restyle).** The visual world was replaced: a cool neutral ramp, one cobalt accent, hairline borders, a 4/6/8 radius scale and 14px type, applied through Bootstrap's variables and `resources/css/app.css` (see [`DESIGN.md`](../DESIGN.md)). The sidebar is docked, the compact form bar is light, entity hues are gone in favor of quiet chips, index tables got one-line rows with a visible "+N", and the relationship ledgers are flat disclosures. Sections 3, 5, 6 and 7 are resolved except where marked open below. A review the same day found the restyle too plain and too hard to scan in places; section 8 lists what is left and the roadmap orders it.
 
 ## Severity
 
@@ -99,29 +101,29 @@ The original findings remain below as a resolution checklist.
 
 ## 3. Badge system
 
-**Status: partly resolved.** The "Active" contrast finding is fixed (the success color is darker, so white text clears 4.5:1 with margin). Everything else here is open.
+**Status: resolved (2026-10-22).** Chips are reserved for status and clickable related records; related records in tables are one linked chip plus a visible "+N" button that opens the full list as deep links (plain text where the user cannot open the record, using the same `isLinkable()` check). Entity hues were dropped, so kind is shown by label and icon and nothing collides. Linked chips are 24px high, type labels are 0.75rem, status chips carry a tone, a dot and text, and `EntityBadge` collapsed to four class strings.
 
 `app/Support/EntityBadge.php`, `entity-relation-badge`, `entity-type-badge`, `entity-count-badge`, `category-badge`, `status-badge`, `table-badge-list`
 
 ### SHOULD-FIX
 
-- **Badge density drowns the signal.** One agreement row shows up to 15 chips (2 projects, 4 programs, 6 states, an overflow marker, a status, and a PI). Every chip is bold, bordered, colored, and underlined. **Fix:** in tables, render related records as a comma-joined text link list or "Alabama, Alaska +4", and keep chips for status and single-value categories. Keep colored chips in the token pickers, where they act as selection tokens.
-- **The overflow marker says "…" instead of a count.** `table-badge-list.blade.php:69`: the count only appears in a `title` tooltip that keyboard and touch users can't see. **Fix:** show "+4" visibly, ideally as a button or link to the full list.
-- **Entity colors collide.** `team`, `activity`, `activity-type`, `contact-family`, `logging-field`, and `default` all map to the same secondary gray, so the "entity color conveys record kind" rule only holds for 5 of 11 kinds. DESIGN.md also permits cyan activity-type badges in activity tables, and cyan is the State color. **Fix:** either give each first-class entity a distinct hue, or drop the claim that color identifies kind and rely on labels. Remove the cyan exception.
-- **Badges are too small and too tight for touch.** Linked chips measure 22px high with 4px gaps, which is below the 24px target-size minimum with no spacing exemption. *WCAG 2.5.8 (AA).* Type badges are 0.7rem (11.2px) bold uppercase, under the roughly 12px floor for legibility. **Fix:** set `min-height: 24px` on linked chips (or use 6px gaps), and make type labels at least 0.75rem.
+- [x] **Badge density drowns the signal.** One agreement row shows up to 15 chips (2 projects, 4 programs, 6 states, an overflow marker, a status, and a PI). Every chip is bold, bordered, colored, and underlined. **Fix:** in tables, render related records as a comma-joined text link list or "Alabama, Alaska +4", and keep chips for status and single-value categories. Keep colored chips in the token pickers, where they act as selection tokens.
+- [x] **The overflow marker says "…" instead of a count.** `table-badge-list.blade.php:69`: the count only appears in a `title` tooltip that keyboard and touch users can't see. **Fix:** show "+4" visibly, ideally as a button or link to the full list.
+- [x] **Entity colors collide.** `team`, `activity`, `activity-type`, `contact-family`, `logging-field`, and `default` all map to the same secondary gray, so the "entity color conveys record kind" rule only holds for 5 of 11 kinds. DESIGN.md also permits cyan activity-type badges in activity tables, and cyan is the State color. **Fix:** either give each first-class entity a distinct hue, or drop the claim that color identifies kind and rely on labels. Remove the cyan exception.
+- [x] **Badges are too small and too tight for touch.** Linked chips measure 22px high with 4px gaps, which is below the 24px target-size minimum with no spacing exemption. *WCAG 2.5.8 (AA).* Type badges are 0.7rem (11.2px) bold uppercase, under the roughly 12px floor for legibility. **Fix:** set `min-height: 24px` on linked chips (or use 6px gaps), and make type labels at least 0.75rem.
 - [x] **"Active" contrast is marginal.** White on `#198754` at 12px bold measures 4.53:1, which passes by 0.03. Any tint change will fail. **Fix:** use a darker green (`#157347` gives about 5.8:1) or the subtle background plus emphasis text, like the other chips.
-- **Status semantics are overloaded.** `status-badge` treats "Cancelled" (recent-activity-table:101) as the same gray as "Inactive", so a cancelled activity looks archived. **Fix:** add a `tone` prop (success / neutral / danger / warning) and an optional icon, so status isn't conveyed by color alone.
+- [x] **Status semantics are overloaded.** `status-badge` treats "Cancelled" (recent-activity-table:101) as the same gray as "Inactive", so a cancelled activity looks archived. **Fix:** add a `tone` prop (success / neutral / danger / warning) and an optional icon, so status isn't conveyed by color alone.
 
 ### NIT
 
-- `relationClasses()` and `typeClasses()` are near-identical match tables. Derive one from the other.
-- `categoryClasses()` has five arms that all return `bg-light text-muted border`. Collapse them to `default`.
-- `entity-type-badge` puts its font size and tracking in an inline `style`. Move them to a `.entity-type-badge` class in `app.css`, using the `entity-type` token.
-- Underlining linked chips in addition to the border and fill is redundant decoration. Use the chip as the affordance, with underline on hover and focus.
+- [x] `relationClasses()` and `typeClasses()` are near-identical match tables. Derive one from the other.
+- [x] `categoryClasses()` has five arms that all return `bg-light text-muted border`. Collapse them to `default`.
+- [x] `entity-type-badge` puts its font size and tracking in an inline `style`. Move them to a `.entity-type-badge` class in `app.css`, using the `entity-type` token.
+- [x] Underlining linked chips in addition to the border and fill is redundant decoration. Use the chip as the affordance, with underline on hover and focus.
 
 ## 4. Fields and form controls
 
-**Status: mostly resolved.** Both BLOCKERs are fixed: token pickers are named comboboxes with a listbox, arrow-key and Enter selection, named remove buttons and a live announcement; open drawers make the rest of the page inert and return focus. Also fixed: errors and help are linked to their fields (with `aria-invalid` and `aria-required`), radio groups are fieldsets or named radio groups, index filters have accessible names, control outlines are 3:1, and the two save bar findings (the bar is gone). Also fixed: the drawer's focus, page lock, close buttons and Escape now live in the shared `form-drawer.js` (a page only toggles `.is-open`), labels without a `for` are linked to the control beside them (the certificate requirement rows, including rows added by script), and editing only a token picker now marks the form as having unsaved changes. Still open: the picker's fixed 42px height and the NITs.
+**Status: mostly resolved.** Both BLOCKERs are fixed: token pickers are named comboboxes with a listbox, arrow-key and Enter selection, named remove buttons and a live announcement; open drawers make the rest of the page inert and return focus. Also fixed: errors and help are linked to their fields (with `aria-invalid` and `aria-required`), radio groups are fieldsets or named radio groups, index filters have accessible names, control outlines are 3:1, and the two save bar findings (the bar is gone). Also fixed: the drawer's focus, page lock, close buttons and Escape now live in the shared `form-drawer.js` (a page only toggles `.is-open`), labels without a `for` are linked to the control beside them (the certificate requirement rows, including rows added by script), and editing only a token picker now marks the form as having unsaved changes. The restyle also aligned the picker's minimum height with the 36px fields and set labels to 500 weight. Still open: the drawer's reduced-motion override and the subsection rule (now 2px, still flagged by the detector as intentional).
 
 `form-field`, `form-switch`, `form-radio-card`, `form-subsection`, `form-options`, `form-errors`, `token-picker`, `save-bar`, `form-drawer`
 
@@ -144,78 +146,112 @@ The original findings remain below as a resolution checklist.
 ### NIT
 
 - `form-switch` and `form-field` emit errors as `text-danger small`, while `form-errors` uses an alert. Keep both, but put a link from each summary item to its field.
-- Every label is 600 weight, so labels compete with `h5` section titles. Current product UIs use 500 for labels.
+- [x] Every label is 600 weight, so labels compete with `h5` section titles. Current product UIs use 500 for labels.
 - `.form-subsection`'s 4px left rule (flagged by the detector as `side-tab`) is documented and intentional. It's fine, but the same accent on dropdown items (`app.css:285`) adds a second meaning for the same mark.
 - The drawer has no `prefers-reduced-motion` override for its 0.2s slide. That's low risk, but DESIGN.md already notes the gap.
-- `token-picker` hard-codes `min-height: 42px`, while `.form-control` is 38px, so pickers and inputs in the same row don't line up.
+- [x] `token-picker` hard-codes `min-height: 42px`, while `.form-control` is 38px, so pickers and inputs in the same row don't line up.
 
 ## 5. Tables
 
-**Status: partly resolved.** Sort state is exposed (`aria-sort` on the column header, set from the sort links) and pagination arrows and the current page are named. Everything else here is open, including row height, mobile tables and filters, htmx loading feedback, the \"+N\" overflow marker, and `confirm()` dialogs.
+**Status: resolved except `confirm()` dialogs (2026-10-22).** Sort state, pagination names and htmx loading feedback were fixed earlier. The restyle added one-line cells with two-line name clamps (rows 48–56px; 63px for a two-line name), phone cards and a collapsed "Filters (n)" panel for the agreements and activities lists, an embedded activity table without its Agreements column, one link style, a three-dots row menu in place of icon strips, and quiet sort carets. The other index tables keep a scrolling wrapper on phones. Still open: the 18 native `confirm()` calls.
 
 `agreements/partials/table.blade.php` (representative of the index partials), `recent-activity-table`, `table-sort-link`, `table-filter-clear`, `htmx-pagination`
 
 ### SHOULD-FIX
 
-- **On desktop, the embedded activity table hides its own actions.** `recent-activity-table.blade.php:74` forces `min-width: 860px` inside the `col-lg-8` card. At 1440px, "Logged By" is clipped and the Actions column is off-screen behind a horizontal scrollbar (see `/agreements/4`). **Fix:** remove the min-width, let Activity wrap, and drop the Agreements column when the table is embedded on an agreement page, where it repeats the page subject.
-- **Rows are too tall to scan.** Multi-line names, a truncated abstract, and stacked badges make rows 85–120px high, so about five agreements fit per screen. **Fix:** cap names at two lines, move the abstract into the record page or a tooltip, and summarize related records (see Badges). Target 48–56px rows.
-- **Mobile is sideways-scroll only.** At 390px, filters fill the first screen and the table shows 1.5 of 9 columns, with no sticky first column and no cue that more columns exist. **Fix:** collapse filters behind a "Filters (n)" button below `md`, make the name column sticky, or render rows as stacked cards below `md`.
+- [x] **On desktop, the embedded activity table hides its own actions.** `recent-activity-table.blade.php:74` forces `min-width: 860px` inside the `col-lg-8` card. At 1440px, "Logged By" is clipped and the Actions column is off-screen behind a horizontal scrollbar (see `/agreements/4`). **Fix:** remove the min-width, let Activity wrap, and drop the Agreements column when the table is embedded on an agreement page, where it repeats the page subject.
+- [x] **Rows are too tall to scan.** Multi-line names, a truncated abstract, and stacked badges make rows 85–120px high, so about five agreements fit per screen. **Fix:** cap names at two lines, move the abstract into the record page or a tooltip, and summarize related records (see Badges). Target 48–56px rows.
+- [x] **Mobile is sideways-scroll only.** At 390px, filters fill the first screen and the table shows 1.5 of 9 columns, with no sticky first column and no cue that more columns exist. **Fix:** collapse filters behind a "Filters (n)" button below `md`, make the name column sticky, or render rows as stacked cards below `md`.
 - [x] **Sort state isn't exposed.** `table-sort-link` changes only the icon, and there are 0 `aria-sort` attributes in views. **Fix:** set `aria-sort="ascending|descending"` on the active `<th>`, and give the link a visually-hidden "sort by …" hint.
 - [x] **Pagination arrows are unnamed.** `htmx-pagination.blade.php:19, 27, 91, 94` use the bare glyphs `‹ ›`. **Fix:** `aria-label="Previous page" / "Next page"`, and `aria-current="page"` on the active item.
 - [x] **htmx updates give no feedback.** Filter typing (400ms debounce) and sort clicks swap the table with no loading state, and the result count isn't announced. **Fix:** add `hx-indicator` with a subtle table opacity or progress bar, plus an `aria-live="polite"` region for "Showing 1–14 of 14".
-- **Link styles are inconsistent within a row.** Record names are dark and not underlined, user names are default blue, and related records are underlined chips. **Fix:** pick one table-link treatment, for example ink with underline on hover for every link.
+- [x] **Link styles are inconsistent within a row.** Record names are dark and not underlined, user names are default blue, and related records are underlined chips. **Fix:** pick one table-link treatment, for example ink with underline on hover for every link.
 - **Destructive actions use `confirm()`.** There are 18 native `confirm()` calls, and names are escaped with `addslashes` into inline JS. Native confirms can't be styled and are easy to click through. **Fix:** use a shared confirm modal component, or undo for reversible actions.
 
 ### NIT
 
-- Row action groups of 4 icon-only buttons (view, edit, duplicate, delete) rely on tooltips. Since the whole row already links to the record, a single overflow "⋯" menu is the current convention and frees about 100px.
-- Clear-filters uses `btn-outline-danger` red for a non-destructive action. Use outline-secondary.
-- Unsorted columns show a 50%-opacity double caret on every header, which adds noise. Show the caret on hover or focus only.
-- `recent-activity-table` and `relationship-scroll-panel` restyle WebKit scrollbars with off-palette grays (`#8d98a5`, `#97a3af`). Native scrollbars are the expectation in product UI.
+- [x] Row action groups of 4 icon-only buttons (view, edit, duplicate, delete) rely on tooltips. Since the whole row already links to the record, a single overflow "⋯" menu is the current convention and frees about 100px.
+- [x] Clear-filters uses `btn-outline-danger` red for a non-destructive action. Use outline-secondary.
+- [x] Unsorted columns show a 50%-opacity double caret on every header, which adds noise. Show the caret on hover or focus only.
+- [x] `recent-activity-table` and `relationship-scroll-panel` restyle WebKit scrollbars with off-palette grays (`#8d98a5`, `#97a3af`). Native scrollbars are the expectation in product UI.
 - Dates and counts aren't `font-variant-numeric: tabular-nums`, so columns jitter.
-- Column widths are set inline in each table partial (`style="min-width:140px"`) instead of shared classes.
+- [x] Column widths are set inline in each table partial (`style="min-width:140px"`) instead of shared classes.
 
 ## 6. Buttons
 
-**Status: partly resolved.** Buttons now share an app-wide soft lift (no gloss), the navbar call to action is gone (Log Activity is blue in the sidebar and the phone top bar), and header actions use the default size. Still open: the green Log Activity in `recent-activity-table`, inconsistent button sizes in table and section actions, disabled buttons without a reason, and the documented outline-primary versus outline-secondary rule.
+**Status: resolved (2026-10-22).** Log Activity is the accent button everywhere, including `recent-activity-table`, which now gives a reason beside it when it is disabled. Buttons are 36px (32px small, 40px on touch), with a soft flat lift. DESIGN.md documents the rule: the accent button is the one primary action, outline buttons are ink on white, and destructive outline buttons fill red on hover. The accent is 6.97:1 with white.
 
 ### SHOULD-FIX
 
-- **The same action has different colors.** "Log Activity" is blue (`.app-navbar-cta`) in the navbar and green (`btn-success`) in `recent-activity-table.blade.php:62`. DESIGN.md says Action Blue marks primary actions. **Fix:** use `btn-primary`. Green is only used twice in the whole app, so drop it as an action color.
-- **Button sizes aren't consistent.** Measured primary actions are 38px (page header), 33px (navbar), and 31px (save bar, table actions, section actions). On touch devices 31px is small, and the most consequential button (save) is the smallest. **Fix:** define two sizes, default (at least 38px) for primary and commit actions and small (at least 32px) for inline row actions, and enlarge targets on touch with `@media (pointer: coarse)`.
-- **Disabled buttons don't explain why.** `recent-activity-table.blade.php:64` renders a disabled `span.btn` with no reason. **Fix:** add a tooltip or adjacent text ("No active agreements") so the user knows what unblocks it.
+- [x] **The same action has different colors.** "Log Activity" is blue (`.app-navbar-cta`) in the navbar and green (`btn-success`) in `recent-activity-table.blade.php:62`. DESIGN.md says Action Blue marks primary actions. **Fix:** use `btn-primary`. Green is only used twice in the whole app, so drop it as an action color.
+- [x] **Button sizes aren't consistent.** Measured primary actions are 38px (page header), 33px (navbar), and 31px (save bar, table actions, section actions). On touch devices 31px is small, and the most consequential button (save) is the smallest. **Fix:** define two sizes, default (at least 38px) for primary and commit actions and small (at least 32px) for inline row actions, and enlarge targets on touch with `@media (pointer: coarse)`.
+- [x] **Disabled buttons don't explain why.** `recent-activity-table.blade.php:64` renders a disabled `span.btn` with no reason. **Fix:** add a tooltip or adjacent text ("No active agreements") so the user knows what unblocks it.
 
 ### NIT
 
-- White on `#0d6efd` measures exactly 4.50:1. That passes, but there's no margin for 14px small-button text. If you retune the brand blue, aim for at least 5:1 (for example `#0b5ed7` as the base).
-- The button variant mix across views is 40 `outline-secondary`, 27 `primary`, 23 `outline-primary`, 22 `outline-danger`, 15 `link`, 11 `danger`, 4 `secondary`, 3 `success`. Document in DESIGN.md when to use outline-primary versus outline-secondary, since they're currently interchangeable.
+- [x] White on `#0d6efd` measures exactly 4.50:1. That passes, but there's no margin for 14px small-button text. If you retune the brand blue, aim for at least 5:1 (for example `#0b5ed7` as the base).
+- [x] The button variant mix across views is 40 `outline-secondary`, 27 `primary`, 23 `outline-primary`, 22 `outline-danger`, 15 `link`, 11 `danger`, 4 `secondary`, 3 `success`. Document in DESIGN.md when to use outline-primary versus outline-secondary, since they're currently interchangeable.
 
 ## 7. Token and theming drift (cross-cutting)
 
-**Status: open.** Nothing in this section has been addressed.
+**Status: resolved (2026-10-22).** `repeater-rows-script` styles now live in `app.css` on the tokens (hairline rows, 4/6/8 radii, no slate shadows); every other component `<style>` block moved there too, so no view ships a `<style>` block. Hard-coded hex values in views were mapped to tokens. The inline `style=""` attributes that remain are data-driven (progress widths, chart heights, show/hide state) or one-off sizes.
 
 ### SHOULD-FIX
 
-- **`repeater-rows-script` is a second design system.** The detector flagged 11 off-system values there, including radii 0.3, 0.45, 0.5, and 0.65rem (DESIGN.md has 0.25, 0.375, and pill) and slate `rgba(15,23,42,…)` shadows and borders that appear nowhere else. **Fix:** map them to DESIGN.md tokens, or promote them into DESIGN.md if they're the direction you want.
-- **Component CSS is scattered.** Nine components ship `<style>` blocks via `@once` and about 60 inline `style=""` attributes. Hex values such as `#e9ecef`, `#e9edf2`, `#0d6efd` (hard-coded in team-picker), and `#fff` bypass the tokens, so a future palette change won't reach them. **Fix:** move component styles into `app.css`, or a `resources/css/components/` split, using `var(--bs-*)`/`var(--app-*)` tokens.
+- [x] **`repeater-rows-script` is a second design system.** The detector flagged 11 off-system values there, including radii 0.3, 0.45, 0.5, and 0.65rem (DESIGN.md has 0.25, 0.375, and pill) and slate `rgba(15,23,42,…)` shadows and borders that appear nowhere else. **Fix:** map them to DESIGN.md tokens, or promote them into DESIGN.md if they're the direction you want.
+- [x] **Component CSS is scattered.** Nine components ship `<style>` blocks via `@once` and about 60 inline `style=""` attributes. Hex values such as `#e9ecef`, `#e9edf2`, `#0d6efd` (hard-coded in team-picker), and `#fff` bypass the tokens, so a future palette change won't reach them. **Fix:** move component styles into `app.css`, or a `resources/css/components/` split, using `var(--bs-*)`/`var(--app-*)` tokens.
 
 ---
 
-## Roadmap (updated 2026-10-21)
+## 8. Post-restyle review (2026-10-22)
 
-**Done.** Shell and navigation, headers and breadcrumbs, and the field and table accessibility pass: pickers (including unsaved-change tracking), drawer behavior in one shared script, field linking, radio groups, labels in the certificate rows, filter names, sort state, pagination names, htmx loading and result announcements, control outline contrast, a darker success green, tabular numerals. Layout: lists and record pages grow up to 1680px; forms stay a centered column (68rem).
+**Method.** Review of the restyled app against seven screenshots (the collapsed sidebar, a record page's header and Summary, the organization and staff ledgers, the Relationships card, an organization's Summary, and the activities list), plus a read of the components behind them (`relationship-scroll-panel`, `relationship-ledger-row`, `table-badge-list`, the index table partials). Benchmarks as above, plus the product's Operate mode: scanability and obvious affordances over expression.
 
-**Decided.** Page width as above. Visual direction for now is a light tune only; the full enterprise-minimal pass (new neutral ramp, accent, type and radius scale) is its own later run, and the dark compact header bar gets reconsidered then.
+**Verdict.** The restyle fixed density, color collisions and consistency, but it removed too much hierarchy and too many cues. Layers are hard to tell apart, accordions do not look interactive, ledgers with detail are stacks of boxes and bullets, and clickable things in tables are harder to hit than before. These need design decisions, not one-line patches, so most items below start with a mock.
 
-**Next, in order.**
+### BLOCKER (both fixed 2026-10-22)
 
-1. **Enterprise visual pass** (its own run): tokens through the Bootstrap variables, the header bar decision, 14px base type, radius scale.
-2. **[SHOULD-FIX] `$impeccable distill`, then `$impeccable adapt`:** fewer badges and table columns (a visible "+N", rows of 48 to 56px), the embedded activity table width, collapsed mobile filters, touch target sizes, the green Log Activity button in `recent-activity-table`.
-3. **Remaining accessibility:** `confirm()` dialogs (18 native confirms with names escaped into inline JS) should become one shared confirmation component, and the open checks below.
-4. **Page patterns:** record pages with tabs (Overview, Deliverables, Activity, People, Files); long forms with a sticky sections list in the empty gutter, or create-then-enrich; deliverables chosen by type first; separate screens for building certificate rules and checking them; a dashboard that shows what needs attention.
-5. **[NIT] `$impeccable polish`:** token and CSS consolidation (including `repeater-rows-script` and the scattered `<style>` blocks), the page-header API refactor (27 props), the remaining nits.
+- [x] **The collapsed sidebar's search showed the "/" hint, cramped against the icon.** `.d-lg-inline` (`!important`) beat the rule that hides the hint when the rail is collapsed, so the hint was always visible. **Fixed:** the hint is hidden by default and shown only when the rail is open at desktop widths.
+- [x] **Viewing an activity meant opening the row menu.** The restyle replaced the eye icon with a menu, and on the activities list neither the date nor the type was a link. **Fixed:** the date is now a link. The broader fix is finding 7.
 
-**Deferred or later.** Pinned or favorite destinations on Home, a dark theme, Recent connection diagrams. Open checks: screen reader testing, Safari and Firefox, real touch hardware, and how much staff use phones.
+### SHOULD-FIX
+
+1. [x] **Layers were too close together.** Pale grey title strips, the near-white canvas and faint borders made card titles read as grey on grey. **Resolved:** the user chose option C, soft elevation: canvas `#f0f2f5`, white card titles, internal lines `#d4dbe3`, transparent outer card borders and the shared `--app-card-shadow`. Semantic danger and selected borders remain intact. Applied to shared cards, Home and search results; forms retain white unbanded titles. The other options remain in the layering study for reference.
+2. [x] **Ledgers with extra detail are stacks of boxes and bullets.** Organization rows put the PO and KFS numbers in a bulleted list with the Payor source and Recipient tags on their own lines; staff rows stack name, role tags, email and agreement chips one per line; linked agreements are a chip plus a paragraph. This wastes vertical space and hides what matters. There are five variants today: name-only (chip cloud), title and description, person (role tags and email), organization (tags plus PO and KFS), and staff group (a group title plus people), across 42 panels on six show pages. **Fix:** design one detail row (title link, dot-separated meta on one line, tags aligned right, a two-column grid when the card is wide) and map the five variants onto it. Resolved through the shared ledger row, including staff and contact adapters: wrapping titles, compact metadata, separate roles/actions, hairline rows and wide-panel columns.
+3. [x] **Accordions do not look interactive.** The chevron is small and faint, there is no hover cue, a collapsed group shows nothing about its contents, and groups with a count of 0 still expand into nothing. **Fix:** make the whole header row the button with a hover fill and a larger chevron, preview the first two names when collapsed ("Default Project, SSW II Project +1"), open short lists (about 6 or fewer) by default, and make empty groups non-interactive and muted. **Resolved:** the shared panel now implements these behaviors, keeping navigation and add/edit actions outside the disclosure button.
+4. [x] **Scrolling inside a ledger is not obvious.** The body scrolls under a `max-height` with overlay scrollbars that hide on macOS and no edge cue. **Fix:** a fade or shadow at the clipped edge and an "n of N" caption, or drop nested scrolling in favor of "Show all N" expanding in place for lists up to about 30 and a scroll region only beyond that. **Resolved:** the user selected Scrolling B (native scrollbar, range caption and bottom cue), now applied across the shared panels.
+5. [x] **The app reads as plain.** Everything is ink or grey at one weight: page headers, Summary, ledgers, table headers and the Year-to-Date block carry about the same visual weight, and no screen has an obvious first thing to look at. **Fix:** a character pass inside the token system (no new hues): a record-kind icon tile in the page header, a key-facts strip under the title (dates, PI, counts), accent-subtle for current and selected states, larger figures for the Year-to-Date numbers, and a clearer table-header treatment. Mock three directions and choose one. **Resolved:** selected Hierarchy C is implemented.
+6. [x] **A linked chip and a tag look nearly the same.** In the activities list the agreement chip (bordered) sits beside the activity-type tag (tinted, no border); both are grey boxes, one clickable and one not, so "a chip always means clickable" is not obvious on screen. **Fix:** make tags text-only (muted text with no box), or give linked chips a visible link cue (a trailing link-out icon or accent text at rest). Mock both. **Resolved:** the user chose the linked-chip treatment without the link icon: cobalt ink, white fill and control outline; tags retain muted fill.
+7. **The whole row should be a click target.** Only the name is a link, and the "+N" and row menu are separate controls, so the click target for opening a record is small. **Fix:** a stretched link on each row's primary cell (`.app-row-link::after` over the row, with chips, "+N" and the menu raised above it), a pointer cursor and the existing hover tint. In the activities list the primary link is the date or the activity type.
+8. [x] **A chip is the wrong form for a table's primary related record.** In the activities list the agreement chip is truncated to "Indiana FOCUS Implem…", so the Copy 2, 3 and 4 agreements cannot be told apart. **Fix:** where the related record is the column's main content (activities → agreement), render a link that wraps to two lines; keep chips for secondary columns. **Resolved with the user’s chip preference:** primary agreement chips wrap their full name in activity and recent-activity tables.
+9. [x] **A green action is left over.** `organizations/show.blade.php:116` ("+ New" next to Linked agreements) is `btn-outline-success`, which contradicts the rule that the accent marks actions. **Fix:** `btn-outline-primary` or `btn-outline-secondary`, matching other section actions. **Resolved:** the section action uses the accent outline.
+
+Sortable-column discoverability was also restored: inactive columns always show both outline carets, while the active column shows its filled direction. Verified sorting through htmx and the resulting URL/ARIA state.
+
+### NIT
+
+- Breadcrumb links are accent blue while every other link is ink with a grey underline. Pick one link treatment for breadcrumbs.
+- The phone card layout covers only the agreements and activities lists; the other index tables still scroll sideways.
+- The Recent panel, an unpinned sidebar peek and the drawer were not re-checked after the restyle.
+
+## Roadmap (updated 2026-10-22, after the post-restyle review)
+
+**Done.** Shell and navigation, headers and breadcrumbs, the field and table accessibility pass, and the enterprise restyle (tokens through Bootstrap's variables, docked sidebar, light compact bar, quiet chips with "+N" menus, one-line tables with row menus and phone cards, flat ledgers, button sizes, CSS consolidation). Two regressions from the restyle are fixed (the collapsed search hint; the activity date is a link).
+
+**Decided.** Lists and record pages grow up to 1680px; forms stay a centered column (68rem). Entity hues are gone; kind is shown by label and icon. The user selected soft elevation (option C): white card titles and working surfaces, a cool grey canvas, internal hairlines and one shared soft card shadow.
+
+**Implementation status and remaining work.** Items marked "mock" need an approved mock before code.
+
+1. **Layering — complete.** Finding 1 resolved with approved soft elevation (C); the system is recorded in DESIGN.md. The transparent 1px table-card border exposed a white rim around grey table headers, reading as gloss. Listing table cards now have zero border width so the header fill reaches the edge.
+2. **Ledger rows and accordions — complete.** Findings 2 and 3 are implemented through the shared row and panel components, including staff/contact variants: wrapping title links, compact metadata, aligned roles/actions, full header buttons, collapsed previews, short lists open by default and non-interactive empty groups. The approved row study remains in `.artifacts/ledger-accordion-mock.html`; selected Scrolling B supersedes its Show all proposal.
+3. **Chip clarity and primary labels — complete; broader row targets remain open.** Findings 6, 8 and 9 are resolved: linked chips use cobalt ink on white with an outline and no link icon; primary agreement names wrap; the leftover green action uses the accent. Every sortable column now has visible arrows at rest. Finding 7 (stretched row links) remains a separate backlog item; activities already open through their linked date.
+4. **Character and scrolling — B and C implemented.** Scrolling B now uses a styled native scrollbar, a visible record range and a bottom-edge cue on overflowing relationship panels. Short lists have no extra scroll caption or keyboard stop. Hierarchy C adds a record-kind icon to show-page headers, moves agreement dates and principal investigators into a key-facts strip, and strengthens existing agreement/organization YTD figures. Facts use already-loaded records and existing totals; forms retain their existing header behavior. `.artifacts/selected-direction-mock.html` records the combined visual direction. Verified record pages at 1440, 1920 and 390px, keyboard scrolling to the end, range updates and non-overflowing lists.
+5. **Remaining accessibility:** `confirm()` dialogs (18 native confirms with names escaped into inline JS) become one shared confirmation component, a reduced-motion override for the drawer, and a re-check of the Recent panel, the sidebar peek and the drawer.
+6. **Phone cards for the other index tables** (projects, programs, states, teams, organizations, users, admin lists): add `app-cards` and `data-label`. Include Home's existing horizontal overflow at 390px: its row action groups extend beyond the viewport. Confirmed unchanged by the soft-elevation update.
+7. **Page patterns:** record pages with tabs (Overview, Deliverables, Activity, People, Files); long forms with a sticky sections list in the empty gutter, or create-then-enrich; deliverables chosen by type first; separate screens for building certificate rules and checking them; a dashboard that shows what needs attention.
+8. **[NIT]** Breadcrumb link style, deliverable progress bars and charts (still stock Bootstrap colors), the page-header API refactor (27 props), the remaining inline `style=""` sizes.
+
+**Deferred or later.** Pinned or favorite destinations on Home, a dark theme, Recent connection diagrams. Open checks: screen reader testing, Safari and Firefox (the phone card CSS uses `:has()`), real touch hardware, and how much staff use phones.
 
 ## What's working, so keep it
 
@@ -228,6 +264,9 @@ The original findings remain below as a resolution checklist.
 
 ## Run notes
 
+- **Ledger implementation confirmation (2026-10-22).** Shared rows and disclosures checked on seven record routes plus activities at 1440, 1920 and 390px: all returned 200, with no page overflow or JavaScript exceptions. Sort cues checked on all 13 index routes; inactive arrows stay visible, and htmx sorting changes URL and `aria-sort` in both directions. Keyboard End reaches the ledger's final rows, updates the range to "end of list" and removes the bottom cue. Linked chips render cobalt ink on white with the control outline and no icon.
+- **Impeccable critique:** independent assessments A (`ledger_final_design_review`) and B (`ledger_final_evidence_review`), target slug `ponents-relationship-ledger-row-blade-php-139aeb62`; no ignore file. A scored the scoped components 30/36 with no actionable findings. B scanned the four shared row/panel/staff/contact markup files once: zero detector findings. Both child browsers hit the Playwright profile lock and used parent screenshots/source; the parent completed live browser checks. No overlay was injected, no live server or temporary review files were created. Questions skipped: the user requested implementation of the selected options.
+- **Ponytail review:** no remaining blocker found in the connected component callers. Removed the duplicate metadata/rendering branch, per-contact nested boxes and an unused header-badge option; staff/contact rows now reuse the shared row. Existing permission checks and contact actions remain intact.
 - The detector ran on `resources/views/components`, `resources/views/layouts`, and `resources/css` and returned 18 advisory findings: 11 in `repeater-rows-script`, 2 `side-tab` in `app.css` (intentional, documented), and 3 font-size and 2 color findings in other components. No browser overlay was injected.
 - The only console error during browsing was a Vite dev-server `504 Outdated Optimize Dep` for `chart.js` on `/agreements/4`. That's an environment issue, not a design finding.
 - Not tested: real screen reader output (findings come from DOM and ARIA inspection), touch gestures on a physical device, and pages outside agreements (activities, admin). Shared components behave the same there, but page-specific partials weren't audited.

@@ -1422,7 +1422,7 @@
 
             labelWrap.className = 'd-flex flex-wrap align-items-center gap-2';
             label.textContent = row.dataset.participantName;
-            historicalBadge.className = 'badge bg-secondary';
+            historicalBadge.className = 'badge app-tag';
             historicalBadge.textContent = 'Historical';
             historicalBadge.classList.toggle('d-none', !isHistoricalParticipant(userId));
 

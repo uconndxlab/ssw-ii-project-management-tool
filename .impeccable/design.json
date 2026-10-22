@@ -1,589 +1,666 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-15T21:31:39.250Z",
+  "generatedAt": "2026-10-22T16:56:39.985Z",
   "title": "Design System: TA Tracker",
   "extensions": {
     "colorMeta": {
-      "primary": {
-        "role": "primary",
-        "displayName": "Action Blue",
-        "tonalRamp": [
-          "oklch(0.15 0.2282 260.03)",
-          "oklch(0.26 0.2282 260.03)",
-          "oklch(0.38 0.2282 260.03)",
-          "oklch(0.49 0.2282 260.03)",
-          "oklch(0.61 0.2282 260.03)",
-          "oklch(0.72 0.2282 260.03)",
-          "oklch(0.84 0.2282 260.03)",
-          "oklch(0.95 0.2282 260.03)"
-        ]
-      },
-      "primary-hover": {
-        "role": "primary",
-        "displayName": "Primary Hover",
-        "tonalRamp": [
-          "oklch(0.15 0.1997 259.80)",
-          "oklch(0.26 0.1997 259.80)",
-          "oklch(0.38 0.1997 259.80)",
-          "oklch(0.49 0.1997 259.80)",
-          "oklch(0.61 0.1997 259.80)",
-          "oklch(0.72 0.1997 259.80)",
-          "oklch(0.84 0.1997 259.80)",
-          "oklch(0.95 0.1997 259.80)"
-        ]
-      },
-      "primary-active": {
-        "role": "primary",
-        "displayName": "Primary Active",
-        "tonalRamp": [
-          "oklch(0.15 0.1904 259.80)",
-          "oklch(0.26 0.1904 259.80)",
-          "oklch(0.38 0.1904 259.80)",
-          "oklch(0.49 0.1904 259.80)",
-          "oklch(0.61 0.1904 259.80)",
-          "oklch(0.72 0.1904 259.80)",
-          "oklch(0.84 0.1904 259.80)",
-          "oklch(0.95 0.1904 259.80)"
-        ]
-      },
-      "primary-subtle": {
-        "role": "primary",
-        "displayName": "Primary Subtle",
-        "tonalRamp": [
-          "oklch(0.15 0.0448 258.76)",
-          "oklch(0.26 0.0448 258.76)",
-          "oklch(0.38 0.0448 258.76)",
-          "oklch(0.49 0.0448 258.76)",
-          "oklch(0.61 0.0448 258.76)",
-          "oklch(0.72 0.0448 258.76)",
-          "oklch(0.84 0.0448 258.76)",
-          "oklch(0.95 0.0448 258.76)"
-        ]
-      },
-      "primary-emphasis": {
-        "role": "primary",
-        "displayName": "Primary Emphasis",
-        "tonalRamp": [
-          "oklch(0.15 0.1092 258.93)",
-          "oklch(0.26 0.1092 258.93)",
-          "oklch(0.38 0.1092 258.93)",
-          "oklch(0.49 0.1092 258.93)",
-          "oklch(0.61 0.1092 258.93)",
-          "oklch(0.72 0.1092 258.93)",
-          "oklch(0.84 0.1092 258.93)",
-          "oklch(0.95 0.1092 258.93)"
-        ]
-      },
-      "page-bg": {
+      "canvas": {
         "role": "neutral",
-        "displayName": "Cool Slate",
+        "displayName": "Canvas",
+        "canonical": "#f0f2f5",
         "tonalRamp": [
-          "oklch(0.15 0.0081 253.86)",
-          "oklch(0.26 0.0081 253.86)",
-          "oklch(0.38 0.0081 253.86)",
-          "oklch(0.49 0.0081 253.86)",
-          "oklch(0.61 0.0081 253.86)",
-          "oklch(0.72 0.0081 253.86)",
-          "oklch(0.84 0.0081 253.86)",
-          "oklch(0.95 0.0081 253.86)"
-        ]
-      },
-      "surface-inset": {
-        "role": "neutral",
-        "displayName": "Surface Inset",
-        "tonalRamp": [
-          "oklch(0.15 0.0046 258.33)",
-          "oklch(0.26 0.0046 258.33)",
-          "oklch(0.38 0.0046 258.33)",
-          "oklch(0.49 0.0046 258.33)",
-          "oklch(0.61 0.0046 258.33)",
-          "oklch(0.72 0.0046 258.33)",
-          "oklch(0.84 0.0046 258.33)",
-          "oklch(0.95 0.0046 258.33)"
+          "#1f252e",
+          "#374253",
+          "#505f77",
+          "#697d9b",
+          "#8e9db4",
+          "#b2bdcc",
+          "#d7dde4",
+          "#f0f2f5"
         ]
       },
       "surface": {
         "role": "neutral",
-        "displayName": "Surface",
+        "displayName": "White Surface",
+        "canonical": "#ffffff",
         "tonalRamp": [
-          "oklch(0.15 0.0000 89.88)",
-          "oklch(0.26 0.0000 89.88)",
-          "oklch(0.38 0.0000 89.88)",
-          "oklch(0.49 0.0000 89.88)",
-          "oklch(0.61 0.0000 89.88)",
-          "oklch(0.72 0.0000 89.88)",
-          "oklch(0.84 0.0000 89.88)",
-          "oklch(0.95 0.0000 89.88)"
+          "#262626",
+          "#454545",
+          "#636363",
+          "#828282",
+          "#a1a1a1",
+          "#bfbfbf",
+          "#dedede",
+          "#f2f2f2"
         ]
       },
-      "light": {
+      "fill": {
         "role": "neutral",
-        "displayName": "Light",
+        "displayName": "Fill",
+        "canonical": "#f0f2f5",
         "tonalRamp": [
-          "oklch(0.15 0.0017 247.84)",
-          "oklch(0.26 0.0017 247.84)",
-          "oklch(0.38 0.0017 247.84)",
-          "oklch(0.49 0.0017 247.84)",
-          "oklch(0.61 0.0017 247.84)",
-          "oklch(0.72 0.0017 247.84)",
-          "oklch(0.84 0.0017 247.84)",
-          "oklch(0.95 0.0017 247.84)"
+          "#1f252e",
+          "#374253",
+          "#505f77",
+          "#697d9b",
+          "#8e9db4",
+          "#b2bdcc",
+          "#d7dde4",
+          "#f0f2f5"
+        ]
+      },
+      "hover": {
+        "role": "neutral",
+        "displayName": "Hover",
+        "canonical": "#eef0f4",
+        "tonalRamp": [
+          "#1e242e",
+          "#364054",
+          "#4e5c79",
+          "#67799d",
+          "#8c9ab5",
+          "#b2bbcd",
+          "#d7dbe5",
+          "#f0f1f5"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#d4dbe3",
+        "tonalRamp": [
+          "#20262d",
+          "#394451",
+          "#526275",
+          "#6c8098",
+          "#909fb1",
+          "#b4becb",
+          "#d8dde4",
+          "#f0f2f4"
+        ]
+      },
+      "line-strong": {
+        "role": "neutral",
+        "displayName": "Strong Hairline",
+        "canonical": "#cfd5dd",
+        "tonalRamp": [
+          "#20252d",
+          "#394351",
+          "#526174",
+          "#6d7f97",
+          "#919eb1",
+          "#b4beca",
+          "#d8dde4",
+          "#f0f2f4"
+        ]
+      },
+      "control-outline": {
+        "role": "neutral",
+        "displayName": "Control Outline",
+        "canonical": "#8c959f",
+        "tonalRamp": [
+          "#23262a",
+          "#3f454b",
+          "#5a636c",
+          "#77818d",
+          "#98a0a9",
+          "#babfc5",
+          "#dbdee1",
+          "#f1f2f3"
         ]
       },
       "ink": {
         "role": "neutral",
         "displayName": "Ink",
+        "canonical": "#151a23",
         "tonalRamp": [
-          "oklch(0.15 0.0095 248.19)",
-          "oklch(0.26 0.0095 248.19)",
-          "oklch(0.38 0.0095 248.19)",
-          "oklch(0.49 0.0095 248.19)",
-          "oklch(0.61 0.0095 248.19)",
-          "oklch(0.72 0.0095 248.19)",
-          "oklch(0.84 0.0095 248.19)",
-          "oklch(0.95 0.0095 248.19)"
+          "#1d2430",
+          "#344056",
+          "#4b5c7c",
+          "#6379a1",
+          "#899ab8",
+          "#afbbcf",
+          "#d6dbe6",
+          "#eff1f5"
+        ]
+      },
+      "body": {
+        "role": "neutral",
+        "displayName": "Body",
+        "canonical": "#232a36",
+        "tonalRamp": [
+          "#1e242e",
+          "#364154",
+          "#4e5e79",
+          "#677b9d",
+          "#8d9bb5",
+          "#b2bccd",
+          "#d7dce5",
+          "#f0f2f5"
         ]
       },
       "muted": {
         "role": "neutral",
-        "displayName": "Muted",
+        "displayName": "Muted Ink",
+        "canonical": "#5d6675",
         "tonalRamp": [
-          "oklch(0.15 0.0095 248.19)",
-          "oklch(0.26 0.0095 248.19)",
-          "oklch(0.38 0.0095 248.19)",
-          "oklch(0.49 0.0095 248.19)",
-          "oklch(0.61 0.0095 248.19)",
-          "oklch(0.72 0.0095 248.19)",
-          "oklch(0.84 0.0095 248.19)",
-          "oklch(0.95 0.0095 248.19)"
+          "#22252b",
+          "#3d434d",
+          "#58616f",
+          "#747e90",
+          "#969eab",
+          "#b8bdc7",
+          "#dadde2",
+          "#f1f2f4"
         ]
       },
-      "border": {
-        "role": "neutral",
-        "displayName": "Border",
+      "accent": {
+        "role": "primary",
+        "displayName": "Cobalt",
+        "canonical": "#2250c4",
         "tonalRamp": [
-          "oklch(0.15 0.0070 247.90)",
-          "oklch(0.26 0.0070 247.90)",
-          "oklch(0.38 0.0070 247.90)",
-          "oklch(0.49 0.0070 247.90)",
-          "oklch(0.61 0.0070 247.90)",
-          "oklch(0.72 0.0070 247.90)",
-          "oklch(0.84 0.0070 247.90)",
-          "oklch(0.95 0.0070 247.90)"
+          "#0b1b41",
+          "#143075",
+          "#1d45a9",
+          "#2a5cda",
+          "#5e84e3",
+          "#92acec",
+          "#c7d4f5",
+          "#e9eefb"
         ]
       },
-      "secondary": {
-        "role": "neutral",
-        "displayName": "Secondary",
+      "accent-hover": {
+        "role": "primary",
+        "displayName": "Deep Cobalt",
+        "canonical": "#1b43a8",
         "tonalRamp": [
-          "oklch(0.15 0.0165 244.89)",
-          "oklch(0.26 0.0165 244.89)",
-          "oklch(0.38 0.0165 244.89)",
-          "oklch(0.49 0.0165 244.89)",
-          "oklch(0.61 0.0165 244.89)",
-          "oklch(0.72 0.0165 244.89)",
-          "oklch(0.84 0.0165 244.89)",
-          "oklch(0.95 0.0165 244.89)"
+          "#0b1a42",
+          "#132f77",
+          "#1c44ab",
+          "#285bdc",
+          "#5c83e5",
+          "#91abed",
+          "#c6d3f6",
+          "#e9eefb"
         ]
       },
-      "secondary-subtle": {
-        "role": "neutral",
-        "displayName": "Secondary Subtle",
+      "accent-active": {
+        "role": "primary",
+        "displayName": "Pressed Cobalt",
+        "canonical": "#163787",
         "tonalRamp": [
-          "oklch(0.15 0.0029 264.54)",
-          "oklch(0.26 0.0029 264.54)",
-          "oklch(0.38 0.0029 264.54)",
-          "oklch(0.49 0.0029 264.54)",
-          "oklch(0.61 0.0029 264.54)",
-          "oklch(0.72 0.0029 264.54)",
-          "oklch(0.84 0.0029 264.54)",
-          "oklch(0.95 0.0029 264.54)"
+          "#0b1b42",
+          "#133076",
+          "#1c46ab",
+          "#285ddc",
+          "#5d84e5",
+          "#91aced",
+          "#c6d4f6",
+          "#e9eefb"
         ]
       },
-      "secondary-emphasis": {
-        "role": "neutral",
-        "displayName": "Secondary Emphasis",
+      "accent-subtle": {
+        "role": "primary",
+        "displayName": "Cobalt Mist",
+        "canonical": "#eaf0fd",
         "tonalRamp": [
-          "oklch(0.15 0.0078 240.10)",
-          "oklch(0.26 0.0078 240.10)",
-          "oklch(0.38 0.0078 240.10)",
-          "oklch(0.49 0.0078 240.10)",
-          "oklch(0.61 0.0078 240.10)",
-          "oklch(0.72 0.0078 240.10)",
-          "oklch(0.84 0.0078 240.10)",
-          "oklch(0.95 0.0078 240.10)"
+          "#071b46",
+          "#0c307e",
+          "#1145b6",
+          "#1b5ce9",
+          "#5384ef",
+          "#8bacf4",
+          "#c2d4f9",
+          "#e8eefd"
+        ]
+      },
+      "accent-line": {
+        "role": "primary",
+        "displayName": "Cobalt Edge",
+        "canonical": "#c7d5f7",
+        "tonalRamp": [
+          "#0a1a43",
+          "#112f78",
+          "#1944ae",
+          "#245be0",
+          "#5a83e7",
+          "#8fabef",
+          "#c5d3f7",
+          "#e9eefc"
+        ]
+      },
+      "accent-ink": {
+        "role": "primary",
+        "displayName": "Cobalt Ink",
+        "canonical": "#1a3e9a",
+        "tonalRamp": [
+          "#0b1a41",
+          "#142f76",
+          "#1d45aa",
+          "#295bdb",
+          "#5e83e4",
+          "#92abed",
+          "#c6d4f5",
+          "#e9eefb"
         ]
       },
       "success": {
         "role": "secondary",
-        "displayName": "Success",
+        "displayName": "Status Green",
+        "canonical": "#157347",
         "tonalRamp": [
-          "oklch(0.15 0.1234 157.01)",
-          "oklch(0.26 0.1234 157.01)",
-          "oklch(0.38 0.1234 157.01)",
-          "oklch(0.49 0.1234 157.01)",
-          "oklch(0.61 0.1234 157.01)",
-          "oklch(0.72 0.1234 157.01)",
-          "oklch(0.84 0.1234 157.01)",
-          "oklch(0.95 0.1234 157.01)"
+          "#0c4128",
+          "#157448",
+          "#1fa868",
+          "#2cd888",
+          "#5fe2a5",
+          "#93ebc2",
+          "#c7f5df",
+          "#e9fbf3"
         ]
       },
       "success-subtle": {
         "role": "secondary",
-        "displayName": "Success Subtle",
+        "displayName": "Green Tint",
+        "canonical": "#e6f4ec",
         "tonalRamp": [
-          "oklch(0.15 0.0269 166.73)",
-          "oklch(0.26 0.0269 166.73)",
-          "oklch(0.38 0.0269 166.73)",
-          "oklch(0.49 0.0269 166.73)",
-          "oklch(0.61 0.0269 166.73)",
-          "oklch(0.72 0.0269 166.73)",
-          "oklch(0.84 0.0269 166.73)",
-          "oklch(0.95 0.0269 166.73)"
+          "#173524",
+          "#2a6041",
+          "#3d8a5e",
+          "#51b37b",
+          "#7cc59b",
+          "#a6d8bc",
+          "#d1ebdc",
+          "#edf7f2"
         ]
       },
-      "success-emphasis": {
+      "success-ink": {
         "role": "secondary",
-        "displayName": "Success Emphasis",
+        "displayName": "Green Ink",
+        "canonical": "#0f5a36",
         "tonalRamp": [
-          "oklch(0.15 0.0598 159.19)",
-          "oklch(0.26 0.0598 159.19)",
-          "oklch(0.38 0.0598 159.19)",
-          "oklch(0.49 0.0598 159.19)",
-          "oklch(0.61 0.0598 159.19)",
-          "oklch(0.72 0.0598 159.19)",
-          "oklch(0.84 0.0598 159.19)",
-          "oklch(0.95 0.0598 159.19)"
+          "#0b4227",
+          "#147647",
+          "#1caa66",
+          "#29db86",
+          "#5de4a3",
+          "#92edc1",
+          "#c6f6df",
+          "#e9fbf3"
         ]
       },
       "warning": {
         "role": "secondary",
-        "displayName": "Warning",
+        "displayName": "Attention Amber",
+        "canonical": "#b7791f",
         "tonalRamp": [
-          "oklch(0.15 0.1722 84.93)",
-          "oklch(0.26 0.1722 84.93)",
-          "oklch(0.38 0.1722 84.93)",
-          "oklch(0.49 0.1722 84.93)",
-          "oklch(0.61 0.1722 84.93)",
-          "oklch(0.72 0.1722 84.93)",
-          "oklch(0.84 0.1722 84.93)",
-          "oklch(0.95 0.1722 84.93)"
+          "#412b0b",
+          "#764e14",
+          "#aa701d",
+          "#db9229",
+          "#e4ad5e",
+          "#edc892",
+          "#f5e2c6",
+          "#fbf4e9"
         ]
       },
       "warning-subtle": {
         "role": "secondary",
-        "displayName": "Warning Subtle",
+        "displayName": "Amber Tint",
+        "canonical": "#fdf1d6",
         "tonalRamp": [
-          "oklch(0.15 0.0509 92.55)",
-          "oklch(0.26 0.0509 92.55)",
-          "oklch(0.38 0.0509 92.55)",
-          "oklch(0.49 0.0509 92.55)",
-          "oklch(0.61 0.0509 92.55)",
-          "oklch(0.72 0.0509 92.55)",
-          "oklch(0.84 0.0509 92.55)",
-          "oklch(0.95 0.0509 92.55)"
+          "#493404",
+          "#835d06",
+          "#be8609",
+          "#f3ae11",
+          "#f6c24b",
+          "#f9d585",
+          "#fce9c0",
+          "#fef7e7"
         ]
       },
-      "warning-emphasis": {
+      "warning-ink": {
         "role": "secondary",
-        "displayName": "Warning Emphasis",
+        "displayName": "Amber Ink",
+        "canonical": "#7a4a06",
         "tonalRamp": [
-          "oklch(0.15 0.0876 86.65)",
-          "oklch(0.26 0.0876 86.65)",
-          "oklch(0.38 0.0876 86.65)",
-          "oklch(0.49 0.0876 86.65)",
-          "oklch(0.61 0.0876 86.65)",
-          "oklch(0.72 0.0876 86.65)",
-          "oklch(0.84 0.0876 86.65)",
-          "oklch(0.95 0.0876 86.65)"
+          "#492c04",
+          "#835006",
+          "#be7309",
+          "#f39611",
+          "#f6af4b",
+          "#f9c985",
+          "#fce3c0",
+          "#fef4e7"
         ]
       },
       "danger": {
         "role": "secondary",
-        "displayName": "Danger",
+        "displayName": "Error Red",
+        "canonical": "#c62d3a",
         "tonalRamp": [
-          "oklch(0.15 0.2020 21.24)",
-          "oklch(0.26 0.2020 21.24)",
-          "oklch(0.38 0.2020 21.24)",
-          "oklch(0.49 0.2020 21.24)",
-          "oklch(0.61 0.2020 21.24)",
-          "oklch(0.72 0.2020 21.24)",
-          "oklch(0.84 0.2020 21.24)",
-          "oklch(0.95 0.2020 21.24)"
+          "#3e0e12",
+          "#701a21",
+          "#a2252f",
+          "#d13341",
+          "#dc656f",
+          "#e7979e",
+          "#f3c9cd",
+          "#faeaec"
         ]
       },
-      "info": {
+      "danger-hover": {
         "role": "secondary",
-        "displayName": "Info",
+        "displayName": "Deep Red",
+        "canonical": "#a82430",
         "tonalRamp": [
-          "oklch(0.15 0.1380 218.05)",
-          "oklch(0.26 0.1380 218.05)",
-          "oklch(0.38 0.1380 218.05)",
-          "oklch(0.49 0.1380 218.05)",
-          "oklch(0.61 0.1380 218.05)",
-          "oklch(0.72 0.1380 218.05)",
-          "oklch(0.84 0.1380 218.05)",
-          "oklch(0.95 0.1380 218.05)"
+          "#3f0e12",
+          "#711820",
+          "#a4232f",
+          "#d33140",
+          "#de646f",
+          "#e8969d",
+          "#f3c8cc",
+          "#faeaeb"
         ]
       },
-      "info-subtle": {
+      "danger-subtle": {
         "role": "secondary",
-        "displayName": "Info Subtle",
+        "displayName": "Red Tint",
+        "canonical": "#fbe8ea",
         "tonalRamp": [
-          "oklch(0.15 0.0398 212.23)",
-          "oklch(0.26 0.0398 212.23)",
-          "oklch(0.38 0.0398 212.23)",
-          "oklch(0.49 0.0398 212.23)",
-          "oklch(0.61 0.0398 212.23)",
-          "oklch(0.72 0.0398 212.23)",
-          "oklch(0.84 0.0398 212.23)",
-          "oklch(0.95 0.0398 212.23)"
+          "#410b11",
+          "#75141f",
+          "#a91d2c",
+          "#da2a3d",
+          "#e35e6c",
+          "#ec929c",
+          "#f5c7cb",
+          "#fbe9eb"
         ]
       },
-      "info-emphasis": {
+      "danger-ink": {
         "role": "secondary",
-        "displayName": "Info Emphasis",
+        "displayName": "Red Ink",
+        "canonical": "#8e1f2a",
         "tonalRamp": [
-          "oklch(0.15 0.0695 216.21)",
-          "oklch(0.26 0.0695 216.21)",
-          "oklch(0.38 0.0695 216.21)",
-          "oklch(0.49 0.0695 216.21)",
-          "oklch(0.61 0.0695 216.21)",
-          "oklch(0.72 0.0695 216.21)",
-          "oklch(0.84 0.0695 216.21)",
-          "oklch(0.95 0.0695 216.21)"
+          "#3f0e13",
+          "#711921",
+          "#a32430",
+          "#d23242",
+          "#dd6470",
+          "#e8969e",
+          "#f3c9cd",
+          "#faeaec"
         ]
       },
-      "organization-bg": {
+      "neutral-subtle": {
         "role": "neutral",
-        "displayName": "Organization Bg",
+        "displayName": "Neutral Chip",
+        "canonical": "#eceef2",
         "tonalRamp": [
-          "oklch(0.15 0.0074 260.73)",
-          "oklch(0.26 0.0074 260.73)",
-          "oklch(0.38 0.0074 260.73)",
-          "oklch(0.49 0.0074 260.73)",
-          "oklch(0.61 0.0074 260.73)",
-          "oklch(0.72 0.0074 260.73)",
-          "oklch(0.84 0.0074 260.73)",
-          "oklch(0.95 0.0074 260.73)"
+          "#1f242d",
+          "#384152",
+          "#515d76",
+          "#6b7a99",
+          "#8f9bb2",
+          "#b3bbcb",
+          "#d8dce4",
+          "#f0f1f5"
         ]
       },
-      "organization-text": {
+      "neutral-ink": {
         "role": "neutral",
-        "displayName": "Organization Text",
+        "displayName": "Neutral Chip Ink",
+        "canonical": "#434b59",
         "tonalRamp": [
-          "oklch(0.15 0.0343 261.32)",
-          "oklch(0.26 0.0343 261.32)",
-          "oklch(0.38 0.0343 261.32)",
-          "oklch(0.49 0.0343 261.32)",
-          "oklch(0.61 0.0343 261.32)",
-          "oklch(0.72 0.0343 261.32)",
-          "oklch(0.84 0.0343 261.32)",
-          "oklch(0.95 0.0343 261.32)"
-        ]
-      },
-      "organization-border": {
-        "role": "neutral",
-        "displayName": "Organization Border",
-        "tonalRamp": [
-          "oklch(0.15 0.0164 262.75)",
-          "oklch(0.26 0.0164 262.75)",
-          "oklch(0.38 0.0164 262.75)",
-          "oklch(0.49 0.0164 262.75)",
-          "oklch(0.61 0.0164 262.75)",
-          "oklch(0.72 0.0164 262.75)",
-          "oklch(0.84 0.0164 262.75)",
-          "oklch(0.95 0.0164 262.75)"
+          "#21252c",
+          "#3b424f",
+          "#556071",
+          "#707d94",
+          "#939dae",
+          "#b6bdc8",
+          "#d9dde3",
+          "#f0f2f4"
         ]
       }
     },
     "typographyMeta": {
-      "display": {
-        "displayName": "Dashboard Display",
-        "purpose": "Responsive dashboard title; capped at 2.5rem from 1200px."
+      "title": {
+        "displayName": "Page title",
+        "purpose": "Page headings, 1.5rem semibold."
       },
       "headline": {
-        "displayName": "Page Headline",
-        "purpose": "Responsive ordinary page title; capped at 2rem from 1200px."
+        "displayName": "Headline",
+        "purpose": "h2 headings, 1.125rem."
+      },
+      "card-title": {
+        "displayName": "Card title",
+        "purpose": "Section and card titles, 1rem semibold."
       },
       "body": {
-        "displayName": "System Body",
-        "purpose": "Inherited system font stack for the entire interface."
+        "displayName": "Body",
+        "purpose": "Controls and content, 14px."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Field labels, 500 weight."
+      },
+      "small": {
+        "displayName": "Small",
+        "purpose": "Help, meta, descriptions, 13px."
+      },
+      "table-head": {
+        "displayName": "Table head",
+        "purpose": "Sentence-case column headers, muted."
+      },
+      "chip": {
+        "displayName": "Chip",
+        "purpose": "Linked chips use 13px medium; status and category labels use 12px."
       },
       "subsection": {
-        "displayName": "Subsection Label",
-        "purpose": "Muted uppercase subgroup labels."
+        "displayName": "Subsection",
+        "purpose": "Tracked uppercase for subsections and entity-type tags only."
+      },
+      "metric": {
+        "displayName": "YTD Metric",
+        "purpose": "Existing agreement and organization totals; 26px semibold, tabular numerals."
       }
     },
     "shadows": [
       {
         "name": "card",
-        "value": "0 0.125rem 0.25rem rgba(0, 0, 0, 0.075)",
-        "purpose": "Section and index cards."
+        "value": "0 1px 3px rgba(21, 26, 35, 0.1), 0 5px 12px rgba(21, 26, 35, 0.05)",
+        "purpose": "Default soft elevation for white working surfaces; internal hairlines divide content."
       },
       {
-        "name": "entity-detail",
-        "value": "0 0.2rem 0.75rem rgba(0, 0, 0, 0.07)",
-        "purpose": "Entity detail cards."
+        "name": "button",
+        "value": "0 1px 2px rgba(21,26,35,.08)",
+        "purpose": "Soft flat lift on buttons. No gloss."
       },
       {
-        "name": "save-bar",
-        "value": "0 -2px 12px rgba(0,0,0,.08)",
-        "purpose": "Fixed form actions."
+        "name": "bar",
+        "value": "0 4px 16px rgba(21,26,35,.10)",
+        "purpose": "Compact sticky form header."
+      },
+      {
+        "name": "pop",
+        "value": "0 8px 24px rgba(21,26,35,.12), 0 2px 6px rgba(21,26,35,.06)",
+        "purpose": "Menus, popovers, Recent panel, a peeking sidebar."
       },
       {
         "name": "drawer",
-        "value": "-0.5rem 0 1.5rem rgba(0, 0, 0, 0.12)",
-        "purpose": "Right-side form drawer."
+        "value": "-0.5rem 0 1.5rem rgba(21,26,35,.12)",
+        "purpose": "Right-edge drawer over a 35% ink backdrop."
+      },
+      {
+        "name": "focus-ring",
+        "value": "0 0 0 3px rgba(34,80,196,.28)",
+        "purpose": "Keyboard focus on controls, chips and menu items."
       }
     ],
     "motion": [
       {
-        "name": "control-state",
-        "value": "0.15s ease-in-out",
-        "purpose": "Bootstrap button and input state transitions; suppressed by its reduced-motion rules."
+        "name": "state",
+        "value": "0.15s ease",
+        "purpose": "Button, chip and table-loading state changes (Bootstrap reduced-motion handling)."
       },
       {
-        "name": "drawer",
-        "value": "0.2s ease",
-        "purpose": "Panel transform and backdrop opacity. Custom CSS has no reduced-motion override."
+        "name": "panel",
+        "value": "0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Sidebar width, Recent panel, compact bar and drawer slide."
       }
     ],
     "breakpoints": [
       {
-        "name": "sm",
-        "value": "576px"
-      },
-      {
-        "name": "md",
+        "name": "phone-cards",
         "value": "768px"
       },
       {
-        "name": "lg",
+        "name": "sidebar",
         "value": "992px"
       },
       {
-        "name": "xl",
+        "name": "pinned-default",
         "value": "1200px"
       },
       {
-        "name": "xxl",
-        "value": "1400px"
+        "name": "content-max",
+        "value": "1680px"
       }
-    ],
-    "rampNote": "Tonal ramps are synthesized OKLCH exploration strips, not additional implemented tokens; alpha is ignored when deriving hue and chroma."
+    ]
   },
   "components": [
     {
       "name": "Primary Button",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "Existing Bootstrap action variant.",
-      "html": "<button class=\"ds-button ds-primary\">Save</button>",
-      "css": ".ds-button{font-family:var(--bs-font-sans-serif,system-ui,sans-serif);font-size:1rem;font-weight:400;line-height:1.5;padding:.375rem .75rem;border:1px solid;border-radius:.375rem;cursor:pointer;transition:color .15s ease-in-out,background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out}.ds-button:disabled{opacity:.65;pointer-events:none}@media(prefers-reduced-motion:reduce){.ds-button{transition:none}}.ds-primary{background:var(--bs-primary,#0d6efd);border-color:var(--bs-primary,#0d6efd);color:#fff}.ds-primary:hover,.ds-primary:focus-visible{background:#0b5ed7;border-color:#0a58ca;color:#fff}.ds-primary:focus-visible{outline:0;box-shadow:0 0 0 .25rem rgba(49,132,253,.5)}.ds-primary:active{background:#0a58ca;border-color:#0a53be}"
+      "description": "The single accent action per view.",
+      "html": "<button class=\"ds-btn-primary\">Create Agreement</button>",
+      "css": ".ds-btn-primary{font-family:system-ui,-apple-system,\"Segoe UI\",Roboto,Arial,sans-serif;background:#2250c4;color:#fff;border:1px solid #2250c4;border-radius:6px;height:36px;padding:0 14px;font-size:14px;font-weight:500;box-shadow:0 1px 2px rgba(21,26,35,.08);cursor:pointer;transition:background .15s}.ds-btn-primary:hover{background:#1b43a8;border-color:#1b43a8}.ds-btn-primary:active{background:#163787}.ds-btn-primary:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(34,80,196,.28)}"
     },
     {
-      "name": "Outline Primary Button",
+      "name": "Outline Button",
       "kind": "button",
-      "refersTo": "button-outline-primary",
-      "description": "Existing Bootstrap action variant.",
-      "html": "<button class=\"ds-button ds-outline-primary\">Edit</button>",
-      "css": ".ds-button{font-family:var(--bs-font-sans-serif,system-ui,sans-serif);font-size:1rem;font-weight:400;line-height:1.5;padding:.375rem .75rem;border:1px solid;border-radius:.375rem;cursor:pointer;transition:color .15s ease-in-out,background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out}.ds-button:disabled{opacity:.65;pointer-events:none}@media(prefers-reduced-motion:reduce){.ds-button{transition:none}}.ds-outline-primary{background:transparent;color:var(--bs-primary,#0d6efd);border-color:var(--bs-primary,#0d6efd)}.ds-outline-primary:hover,.ds-outline-primary:focus-visible{background:var(--bs-primary,#0d6efd);border-color:var(--bs-primary,#0d6efd);color:#fff}.ds-outline-primary:focus-visible{outline:0;box-shadow:0 0 0 .25rem rgba(13,110,253,.5)}.ds-outline-primary:active{background:var(--bs-primary,#0d6efd);color:#fff}"
-    },
-    {
-      "name": "Outline Secondary Button",
-      "kind": "button",
-      "refersTo": "button-outline-secondary",
-      "description": "Existing Bootstrap action variant.",
-      "html": "<button class=\"ds-button ds-outline-secondary\">Cancel</button>",
-      "css": ".ds-button{font-family:var(--bs-font-sans-serif,system-ui,sans-serif);font-size:1rem;font-weight:400;line-height:1.5;padding:.375rem .75rem;border:1px solid;border-radius:.375rem;cursor:pointer;transition:color .15s ease-in-out,background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out}.ds-button:disabled{opacity:.65;pointer-events:none}@media(prefers-reduced-motion:reduce){.ds-button{transition:none}}.ds-outline-secondary{background:transparent;color:var(--bs-secondary,#6c757d);border-color:var(--bs-secondary,#6c757d)}.ds-outline-secondary:hover,.ds-outline-secondary:focus-visible{background:var(--bs-secondary,#6c757d);color:#fff;border-color:var(--bs-secondary,#6c757d)}.ds-outline-secondary:focus-visible{outline:0;box-shadow:0 0 0 .25rem rgba(108,117,125,.5)}.ds-outline-secondary:active{background:var(--bs-secondary,#6c757d);color:#fff}"
+      "refersTo": "button-outline",
+      "description": "Edit, Cancel and supporting actions.",
+      "html": "<button class=\"ds-btn-outline\">Edit</button>",
+      "css": ".ds-btn-outline{font-family:system-ui,-apple-system,\"Segoe UI\",Roboto,Arial,sans-serif;background:#fff;color:#151a23;border:1px solid #8c959f;border-radius:6px;height:36px;padding:0 14px;font-size:14px;font-weight:500;box-shadow:0 1px 2px rgba(21,26,35,.08);cursor:pointer;transition:background .15s}.ds-btn-outline:hover{background:#f0f2f5;border-color:#5d6675}.ds-btn-outline:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(34,80,196,.28)}"
     },
     {
       "name": "Text Field",
       "kind": "input",
       "refersTo": "input",
-      "description": "Semibold label with a standard field and subordinate help.",
-      "html": "<label class=\"ds-label\" for=\"ds-name\">Name</label><input class=\"ds-input\" id=\"ds-name\" placeholder=\"Enter a name\"><div class=\"ds-help\">Use a short, recognizable name.</div>",
-      "css": ".ds-label{display:block;font-family:var(--bs-font-sans-serif,system-ui,sans-serif);font-size:1rem;font-weight:600;line-height:1.5;margin-bottom:.5rem}.ds-input{font-family:var(--bs-font-sans-serif,system-ui,sans-serif);font-size:1rem;line-height:1.5;padding:.375rem .75rem;border:1px solid var(--bs-border-color,#dee2e6);border-radius:.375rem;background:var(--bs-body-bg,#fff);color:var(--bs-body-color,#212529);transition:border-color .15s ease-in-out,box-shadow .15s ease-in-out}.ds-input:focus{border-color:#86b7fe;outline:0;box-shadow:0 0 0 .25rem rgba(13,110,253,.25)}.ds-input:disabled{background:var(--bs-secondary-bg,#e9ecef);opacity:1}.ds-help{font-family:var(--bs-font-sans-serif,system-ui,sans-serif);font-size:.875rem;color:var(--bs-secondary-color,rgba(33,37,41,.75));margin-top:.25rem}@media(prefers-reduced-motion:reduce){.ds-input{transition:none}}"
+      "description": "White 36px field with the 3:1 control outline and a cobalt focus ring.",
+      "html": "<input class=\"ds-input\" value=\"Indiana FOCUS Implementation 2025\">",
+      "css": ".ds-input{font-family:system-ui,-apple-system,\"Segoe UI\",Roboto,Arial,sans-serif;width:260px;height:36px;padding:0 12px;font-size:14px;color:#232a36;background:#fff;border:1px solid #8c959f;border-radius:6px}.ds-input:focus{outline:none;border-color:#2250c4;box-shadow:0 0 0 3px rgba(34,80,196,.28)}"
     },
     {
-      "name": "Organization Relationship Chip",
+      "name": "Linked Chip",
       "kind": "chip",
-      "refersTo": "organization-chip",
-      "description": "Custom organization colors; linked relationship badges are underlined.",
-      "html": "<a class=\"ds-org\" href=\"#organization\">Organization</a>",
-      "css": ".ds-org{font-family:var(--bs-font-sans-serif,system-ui,sans-serif);display:inline-block;padding:.35em .65em;font-size:.75rem;font-weight:700;line-height:1;color:var(--entity-org-text,#4a5568);background:var(--entity-org-bg,#eef1f6);border:1px solid var(--entity-org-border,#d8dee9);border-radius:.375rem;text-decoration:underline}.ds-org:hover,.ds-org:active{color:var(--entity-org-text,#4a5568)}.ds-org:focus-visible{outline:2px solid var(--bs-primary,#0d6efd);outline-offset:2px}"
+      "refersTo": "chip-linked",
+      "description": "Cobalt ink on white with a visible outline; linked records have no link icon. Selected picker tokens stay neutral.",
+      "html": "<a class=\"ds-chip\" href=\"#\">Default Project</a>",
+      "css": ".ds-chip{font-family:system-ui}.ds-chip{--bs-badge-font-weight: 500; display: inline-flex; align-items: center; gap: 0.25rem; min-height: 1.5rem; padding: 0 0.5rem; font-size: 0.8125rem; font-weight: 500; line-height: 1.2; color: #151a23; text-align: start; white-space: nowrap; background-color: #f0f2f5; border: 1px solid #cfd5dd; border-radius: 0.25rem;}.ds-chip{color: #1a3e9a; background-color: #ffffff; border-color: #8c959f; text-decoration: none;}.ds-chip:hover{color: #1a3e9a; background-color: #eaf0fd; border-color: #c7d5f7; text-decoration: underline;}.ds-chip:focus-visible{outline: none; box-shadow: 0 0 0 0.1875rem rgba(34, 80, 196, 0.28);}"
+    },
+    {
+      "name": "Status Chip",
+      "kind": "chip",
+      "refersTo": "status-chip-success",
+      "description": "Tint, dot and text. Tones: success, neutral, warning, danger.",
+      "html": "<span class=\"ds-status\">Active</span>",
+      "css": ".ds-status{font-family:system-ui,-apple-system,\"Segoe UI\",Roboto,Arial,sans-serif;display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;font-size:12px;font-weight:500;color:#0f5a36;background:#e6f4ec;border-radius:4px}.ds-status:before{content:'';width:6px;height:6px;border-radius:50%;background:#157347}"
+    },
+    {
+      "name": "Sidebar Link",
+      "kind": "nav",
+      "refersTo": "navigation-current",
+      "description": "Current section: cobalt mist fill, semibold cobalt ink.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-link is-current\" href=\"#\">Agreements</a><a class=\"ds-nav-link\" href=\"#\">Activities</a></nav>",
+      "css": ".ds-nav{width:200px;display:flex;flex-direction:column;gap:1px}.ds-nav-link{font-family:system-ui,-apple-system,\"Segoe UI\",Roboto,Arial,sans-serif;display:flex;align-items:center;height:32px;padding:0 10px;font-size:14px;font-weight:500;color:#232a36;text-decoration:none;border-radius:6px}.ds-nav-link:hover{background:#eef0f4}.ds-nav-link.is-current{background:#eaf0fd;color:#1a3e9a;font-weight:600}.ds-nav-link:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(34,80,196,.28)}"
     },
     {
       "name": "Section Card",
       "kind": "card",
       "refersTo": "section-card",
-      "description": "Shared white working surface with a subtle structural shadow.",
-      "html": "<section class=\"ds-card\"><h2 class=\"ds-card-title\">Details</h2><p class=\"ds-card-subtitle\">Related information</p><p class=\"ds-card-body\">Section content</p></section>",
-      "css": ".ds-card{font-family:var(--bs-font-sans-serif,system-ui,sans-serif);padding:1rem;background:var(--bs-body-bg,#fff);color:var(--bs-body-color,#212529);border:1px solid rgba(0,0,0,.175);border-radius:.375rem;box-shadow:0 .125rem .25rem rgba(0,0,0,.075)}.ds-card-title{margin:0;font-size:1.25rem;font-weight:500;line-height:1.2}.ds-card-subtitle{margin:.25rem 0 1rem;color:var(--bs-secondary-color,rgba(33,37,41,.75));font-size:.875rem;line-height:1.5}.ds-card-body{margin:0;font-size:1rem;line-height:1.5}"
+      "description": "White, 8px, transparent outer border and shared soft elevation.",
+      "html": "<section class=\"ds-card\"><h2>Information</h2><p>Name, abstract and dates.</p></section>",
+      "css": ".ds-card{font-family:system-ui,-apple-system,\"Segoe UI\",Roboto,Arial,sans-serif;width:300px;padding:16px;background:#fff;border:1px solid transparent;box-shadow:0 1px 3px rgba(21, 26, 35, 0.1), 0 5px 12px rgba(21, 26, 35, 0.05);border-radius:8px;color:#232a36}.ds-card h2{margin:0 0 4px;font-size:16px;font-weight:600;color:#151a23}.ds-card p{margin:0;font-size:14px}"
     },
     {
-      "name": "Primary Navigation",
-      "kind": "nav",
-      "refersTo": "navigation",
-      "description": "Dark navigation with a thin underline for the current destination; condensed sample of desktop links.",
-      "html": "<nav class=\"ds-nav\" aria-label=\"Primary\"><a class=\"ds-brand\" href=\"#home\">TA Tracker</a><a class=\"ds-nav-link ds-current\" aria-current=\"page\" href=\"#home\">Home</a><a class=\"ds-nav-link\" href=\"#agreements\">Agreements</a><a class=\"ds-nav-link\" href=\"#activities\">Activities</a></nav>",
-      "css": ".ds-nav{font-family:var(--bs-font-sans-serif,system-ui,sans-serif);display:flex;flex-wrap:wrap;align-items:center;background:#212529;padding:.5rem .75rem}.ds-brand{font-size:1.25rem;line-height:1.5;color:#fff;text-decoration:none;margin-right:1rem}.ds-nav-link{color:rgba(255,255,255,.55);padding:.5rem;font-size:1rem;line-height:1.5;text-decoration:none}.ds-nav-link:hover,.ds-nav-link:focus-visible{color:rgba(255,255,255,.75)}.ds-current{color:#fff;font-weight:600;box-shadow:inset 0 -1px 0 rgba(255,255,255,.75)}.ds-nav-link:focus-visible,.ds-brand:focus-visible{outline:2px solid #fff;outline-offset:2px}.ds-nav-link:active{color:#fff}"
-    },
-    {
-      "name": "Relationship Ledger Row",
+      "name": "Table Row",
       "kind": "custom",
-      "description": "Bordered row with a linked record title and muted subordinate metadata.",
-      "html": "<article class=\"ds-ledger\"><a class=\"ds-ledger-title\" href=\"#record\">Agreement name</a><div class=\"ds-ledger-meta\">Related organization</div></article>",
-      "css": ".ds-ledger{font-family:var(--bs-font-sans-serif,system-ui,sans-serif);padding:.5rem 1rem;background:var(--bs-body-bg,#fff);border:1px solid var(--bs-border-color,#dee2e6);border-radius:.375rem}.ds-ledger-title{font-size:.875rem;font-weight:600;line-height:1.5;color:var(--bs-link-color,#0d6efd);text-decoration:underline}.ds-ledger-title:hover,.ds-ledger-title:active{color:var(--bs-link-hover-color,#0a58ca)}.ds-ledger-title:focus-visible{outline:2px solid var(--bs-primary,#0d6efd);outline-offset:2px}.ds-ledger-meta{margin-top:.25rem;font-size:.875rem;line-height:1.5;color:var(--bs-secondary-color,rgba(33,37,41,.75))}"
+      "refersTo": "",
+      "description": "Record link: ink with a grey underline at rest, cobalt on hover. Related records as a chip plus a \"+N\" button.",
+      "html": "<div class=\"ds-row\"><a class=\"ds-link\" href=\"#\">Indiana FOCUS Implementation 2025</a><span><a class=\"ds-chip2\" href=\"#\">Default Project</a><button class=\"ds-more\">+1</button></span></div>",
+      "css": ".ds-row{font-family:system-ui,-apple-system,\"Segoe UI\",Roboto,Arial,sans-serif;display:flex;align-items:center;justify-content:space-between;gap:16px;width:420px;padding:10px 12px;background:#fff;border-bottom:1px solid #d4dbe3;font-size:14px}.ds-link{font-weight:600;color:#151a23;text-decoration:underline;text-decoration-color:#8c959f;text-decoration-thickness:1px;text-underline-offset:.2em}.ds-link:hover{color:#2250c4;text-decoration-color:#2250c4}.ds-more{height:24px;margin-left:4px;padding:0 7px;border:0;border-radius:4px;background:#eaf0fd;color:#1a3e9a;font-size:12.5px;font-weight:600;cursor:pointer}.ds-chip2{--bs-badge-font-weight: 500; display: inline-flex; align-items: center; gap: 0.25rem; min-height: 1.5rem; padding: 0 0.5rem; font-size: 0.8125rem; font-weight: 500; line-height: 1.2; color: #151a23; text-align: start; white-space: nowrap; background-color: #f0f2f5; border: 1px solid #cfd5dd; border-radius: 0.25rem;}.ds-chip2{color: #1a3e9a; background-color: #ffffff; border-color: #8c959f; text-decoration: none;}.ds-chip2:hover{color: #1a3e9a; background-color: #eaf0fd; border-color: #c7d5f7; text-decoration: underline;}.ds-chip2:focus-visible{outline: none; box-shadow: 0 0 0 0.1875rem rgba(34, 80, 196, 0.28);}"
     },
     {
-      "name": "Save Bar",
+      "name": "Record Header",
       "kind": "custom",
-      "description": "Static preview of the fixed form footer in its unsaved state; production behavior lives in x-save-bar.",
-      "html": "<div class=\"ds-save\"><span class=\"ds-save-status\">● Unsaved changes</span><div class=\"ds-save-actions\"><button class=\"ds-button ds-save-cancel\">Cancel</button><button class=\"ds-button ds-save-button\">Save</button></div></div>",
-      "css": ".ds-button{font-family:var(--bs-font-sans-serif,system-ui,sans-serif);font-size:1rem;font-weight:400;line-height:1.5;padding:.375rem .75rem;border:1px solid;border-radius:.375rem;cursor:pointer;transition:color .15s ease-in-out,background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out}.ds-button:disabled{opacity:.65;pointer-events:none}@media(prefers-reduced-motion:reduce){.ds-button{transition:none}}.ds-save{font-family:var(--bs-font-sans-serif,system-ui,sans-serif);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem;padding:.5rem .75rem;min-height:54px;background:#fff;border-top:1px solid #dee2e6;box-shadow:0 -2px 12px rgba(0,0,0,.08)}.ds-save-status{font-size:.875rem;font-weight:600;color:var(--bs-warning,#ffc107)}.ds-save-actions{display:flex;gap:.5rem}.ds-save .ds-button{font-size:.875rem;padding:.25rem .5rem;border-radius:.25rem}.ds-save-button{color:#fff;background:var(--bs-primary,#0d6efd);border-color:var(--bs-primary,#0d6efd)}.ds-save-button:hover,.ds-save-button:focus-visible{background:#0b5ed7;border-color:#0a58ca}.ds-save-button:active{background:#0a58ca}.ds-save-cancel{color:var(--bs-secondary,#6c757d);background:transparent;border-color:var(--bs-secondary,#6c757d)}.ds-save-cancel:hover,.ds-save-cancel:focus-visible,.ds-save-cancel:active{color:#fff;background:var(--bs-secondary,#6c757d)}.ds-save-button:focus-visible,.ds-save-cancel:focus-visible{outline:0;box-shadow:0 0 0 .25rem rgba(49,132,253,.5)}"
+      "refersTo": "",
+      "description": "Hierarchy C: record-kind icon and key facts. Forms keep their existing header.",
+      "html": "<header class=\"ds-record\"><div class=\"ds-heading\"><span class=\"ds-record-icon\" aria-hidden=\"true\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"><path d=\"M6 3h8l4 4v14H6Z M14 3v5h4M9 12h6M9 16h6\"/></svg></span><h2>Connecticut TAN2 Technical Assistance</h2></div><dl class=\"ds-record-facts\"><div><dt>Start date</dt><dd>Feb 20, 2025</dd></div><div><dt>End date</dt><dd>Feb 20, 2028</dd></div></dl></header>",
+      "css": ".ds-record{font-family:system-ui;font-size:14px;color:#232a36;background:#f0f2f5;padding:16px;width:400px}.ds-heading{display:flex;gap:12px;align-items:start}.ds-heading h2{font-size:24px;font-weight:600;line-height:1.2;margin:0}.ds-record-icon{display: inline-grid; flex: 0 0 auto; place-items: center; width: 2.5rem; height: 2.5rem; color: #1a3e9a; background-color: #eaf0fd; border-radius: 0.375rem; font-size: 1.25rem;}.ds-record-facts{display: grid; grid-template-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr)); gap: 0.75rem 1.5rem; margin: 1.25rem 0 0; padding-bottom: 1rem; border-bottom: 1px solid #d4dbe3;}.ds-record-facts dt{color: #5d6675; font-size: 0.8125rem; font-weight: 400;}.ds-record-facts dd{margin: 0.25rem 0 0; font-weight: 500; overflow-wrap: anywhere;}"
+    },
+    {
+      "name": "Relationship Scroll Region",
+      "kind": "custom",
+      "refersTo": "",
+      "description": "Shared ledger rows: wrapping titles, compact metadata, full disclosure headers, native scrolling and a range caption. Illustrative names.",
+      "html": "<section class=\"ds-ledger\"><details open><summary class=\"ds-ledger-head\">Linked agreements <span class=\"ds-count\">6</span></summary><div class=\"ds-ledger-body\" tabindex=\"0\" role=\"region\" aria-label=\"Linked agreements\" aria-describedby=\"ds-range\"><article class=\"ds-ledger-row\"><div class=\"ds-ledger-row-head\"><a class=\"ds-ledger-name\" href=\"#\">Agreement 1</a></div><div class=\"ds-ledger-meta\"><span>PO 2026-001</span><span>KFS 5629000</span></div></article><article class=\"ds-ledger-row\"><div class=\"ds-ledger-row-head\"><a class=\"ds-ledger-name\" href=\"#\">Agreement 2</a></div><div class=\"ds-ledger-meta\"><span>PO 2026-002</span><span>KFS 5629100</span></div></article><article class=\"ds-ledger-row\"><div class=\"ds-ledger-row-head\"><a class=\"ds-ledger-name\" href=\"#\">Agreement 3</a></div><div class=\"ds-ledger-meta\"><span>PO 2026-003</span><span>KFS 5629200</span></div></article><article class=\"ds-ledger-row\"><div class=\"ds-ledger-row-head\"><a class=\"ds-ledger-name\" href=\"#\">Agreement 4</a></div><div class=\"ds-ledger-meta\"><span>PO 2026-004</span><span>KFS 5629300</span></div></article><article class=\"ds-ledger-row\"><div class=\"ds-ledger-row-head\"><a class=\"ds-ledger-name\" href=\"#\">Agreement 5</a></div><div class=\"ds-ledger-meta\"><span>PO 2026-005</span><span>KFS 5629400</span></div></article><article class=\"ds-ledger-row\"><div class=\"ds-ledger-row-head\"><a class=\"ds-ledger-name\" href=\"#\">Agreement 6</a></div><div class=\"ds-ledger-meta\"><span>PO 2026-006</span><span>KFS 5629500</span></div></article></div><p class=\"ds-ledger-scroll-status\" id=\"ds-range\">6 linked agreements · scroll for more</p></details></section>",
+      "css": ".ds-ledger{font-family:system-ui;width:340px;background:#fff;color:#232a36;font-size:14px}.ds-ledger-head{display: flex; align-items: stretch; gap: 0.5rem; min-height: 2.75rem; background-color: #f0f2f5; border-radius: 0.25rem;}.ds-count{font-size: 0.8125rem; font-weight: 500; color: #5d6675; font-variant-numeric: tabular-nums;}.ds-ledger-body{display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; max-height: 16rem; overflow-y: auto; font-size: 0.875rem;}.ds-ledger-body.is-scrollable{padding-right: 0.5rem; scrollbar-gutter: stable; scrollbar-width: auto; scrollbar-color: #8c959f #f0f2f5;}.ds-ledger-body::-webkit-scrollbar{width: 0.5rem;}.ds-ledger-body::-webkit-scrollbar-track{background: #f0f2f5; border-radius: 0.25rem;}.ds-ledger-body::-webkit-scrollbar-thumb{background: #8c959f; border-radius: 0.25rem;}.ds-ledger-body:focus-visible{outline: 2px solid #2250c4; outline-offset: 2px;}.ds-ledger-row{min-width: 0; padding: 0.75rem; border-bottom: 1px solid #d4dbe3;}.ds-ledger-row-head{display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 0.375rem 1rem;}.ds-ledger-name{font-size: 0.875rem; font-weight: 500; color: #151a23; overflow-wrap: anywhere;}.ds-ledger-meta{display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.75rem; margin-top: 0.25rem; font-size: 0.8125rem; color: #5d6675; overflow-wrap: anywhere;}.ds-ledger-meta > span + span::before{margin-right: 0.75rem; content: '·';}.ds-ledger-meta > span + span::before{content: none;}.ds-ledger-scroll-status{margin: 0; padding: 0.5rem 0; border-top: 1px solid #d4dbe3; color: #5d6675; font-size: 0.8125rem; font-variant-numeric: tabular-nums;}.ds-ledger-head{padding:10px 12px;cursor:pointer;font-weight:600;display:list-item;list-style-position:inside}.ds-ledger-head:hover{background:#eaf0fd}.ds-ledger-body{max-height:160px;scrollbar-gutter:stable;scrollbar-color:#8c959f #f0f2f5}.ds-ledger-name{color:#151a23;text-decoration:underline;text-underline-offset:.2em}.ds-ledger-name:hover{color:#2250c4}"
     }
   ],
   "narrative": {
     "northStar": "The Working Ledger",
-    "overview": "A practical, orderly, restrained interface for working with agreements, activities, organizations, and related records. Familiar controls and a stable visual hierarchy keep attention on the work. White working surfaces sit over Cool Slate; Action Blue identifies primary actions and links.\n\nComponents are practical and restrained. Depth is layered: subtle shadows separate working surfaces, while borders, headings, and compact badges organize the information inside them. The system uses a single system sans-serif family, clear labels, and responsive Bootstrap grids.",
+    "overview": "**Creative North Star: \"The Working Ledger\"**\n\nA calm, orderly interface for working with agreements, activities, organizations and the records that connect them. Enterprise structure with minimal surfaces: a cool neutral ramp, one cobalt accent, internal hairline dividers, a modest 4/6/8 radius scale and 14px system type. White working surfaces separate from the canvas through soft elevation; card titles stay white and buttons stay flat, without gloss or gradients.\n\nThe look was chosen for the Operate mode PRODUCT.md describes: scanability and consistency beat expression. Color is spent in two places only. The accent marks actions, the current place and focus; status (success, warning, danger, neutral) is the only other place color carries meaning, and it always comes with text.",
     "keyCharacteristics": [
-      "Cool neutral canvas, white working surfaces, and blue actions.",
-      "Compact metadata and tables alongside clearly grouped forms.",
-      "Consistent entity colors and labeled status indicators.",
-      "Small corner radii, thin borders, and subtle structural shadows."
+      "Cool grey canvas, white working surfaces and white card titles; soft card elevation with stronger shadows for overlays.",
+      "One cobalt accent for actions, selection and focus; semantic color only for status.",
+      "Linked record chips use cobalt ink on white with a visible outline and no link icon; non-clickable categories use muted filled tags.",
+      "Dense but calm tables: one-line cells, 48–56px rows, a visible \"+N\" instead of a wall of chips.",
+      "14px system type, tabular numerals in tables, 36px controls (32px small, 40px on touch)."
     ],
     "rules": [
       {
-        "name": "The Entity Color Rule",
-        "body": "Reuse `EntityBadge` mappings across related records, type labels, and counts. Entity color conveys record kind; labeled status pills convey active or inactive state.",
+        "name": "The One Accent Rule",
+        "body": "Cobalt means \"act here\" or \"you are here\". Never use it to decorate, and never use a second hue for record kinds; kind is shown by label and icon.",
+        "section": "colors"
+      },
+      {
+        "name": "The White-Surface Rule",
+        "body": "Controls sit on white surfaces only. The control outline passes 3:1 on white but not on the canvas, so a bare field on the page background is a bug.",
         "section": "colors"
       },
       {
         "name": "The Label Hierarchy Rule",
-        "body": "Keep ordinary labels in sentence case; reserve tracked uppercase for subsection titles and entity-type labels.",
+        "body": "Keep ordinary labels in sentence case; reserve tracked uppercase for subsection titles and the entity-type tag. Tables use `font-variant-numeric: tabular-nums` so columns of dates and counts line up.",
         "section": "typography"
       },
       {
-        "name": "The Working Surface Rule",
-        "body": "Use existing card, drawer, and save-bar treatments for their respective layers; keep internal relationship rows visually subordinate.",
+        "name": "The Elevation Rule",
+        "body": "Working surfaces use the shared soft card shadow. Overlays use the stronger popover or drawer shadow; do not stack extra shadows on nested ledger rows.",
         "section": "elevation"
       }
     ],
     "dos": [
-      "**Do** reuse the shared page header, form shell, section card, field, and save bar components.",
-      "**Do** use the existing entity palette consistently for record kinds and labeled status pills for state.",
-      "**Do** keep help and metadata subordinate with small text and muted color.",
-      "**Do** retain responsive table wrappers, wrapping metadata, and drawer body scrolling.",
-      "**Do** preserve visible focus treatments and the shared save-status announcement."
+      "**Do** reuse the shared page header, form shell, section card and field components.",
+      "**Do** use outlined linked chips in tables and wrapping title links in ledgers; restricted records remain plain text.",
+      "**Do** use status chips (tint, dot and text) for state, and nothing else for color.",
+      "**Do** keep help and metadata subordinate with small muted text.",
+      "**Do** put row actions in the three-dots menu and keep Delete last, in red, behind a confirm.",
+      "**Do** keep controls on white surfaces so the 3:1 outline holds.",
+      "**Do** preserve visible focus rings and the shared save-status announcement."
     ],
     "donts": [
-      "**Don't** put Active switches, filters, or form controls in the page header.",
+      "**Don't** add a second accent hue, per-record-kind colors, gradients or gloss.",
+      "**Don't** add heavy borders or stronger overlay shadows to ordinary cards; use the shared soft elevation.",
+      "**Don't** put Active switches, filters or form controls in the page header.",
       "**Don't** mix header-style cards with section-card form sections on the same form.",
-      "**Don't** add in-card submit/cancel controls to forms that use the sticky save bar.",
-      "**Don't** introduce a new per-page form shell or remap entity colors independently.",
-      "**Don't** replace ordinary sentence-case labels with tracked uppercase metadata styling."
+      "**Don't** add in-card submit/cancel controls to forms; the header owns them.",
+      "**Don't** introduce a per-page form shell, inline `<style>` blocks or off-palette hex values; add to `app.css` using the tokens.",
+      "**Don't** replace ordinary sentence-case labels with tracked uppercase styling."
     ]
   }
 }

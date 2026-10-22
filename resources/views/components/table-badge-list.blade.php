@@ -6,11 +6,11 @@
     'labelKey' => 'name',
     'titleKey' => null,
     'hrefKey' => null,
-    'max' => 5,
+    'max' => 1,
     'emptyLabel' => '—',
-    'emptyClass' => 'text-muted small',
-    'containerClass' => 'd-flex flex-wrap gap-1',
-    'ellipsisLabel' => '...',
+    'emptyClass' => 'text-muted',
+    'containerClass' => 'app-chip-list',
+    'listLabel' => null,
 ])
 
 @php
@@ -55,18 +55,44 @@
     $hiddenCount = max($normalizedItems->count() - $visibleItems->count(), 0);
 @endphp
 
+@php
+    $resolvedListLabel = $listLabel ?? \Illuminate\Support\Str::plural(\Illuminate\Support\Str::headline($kind));
+@endphp
+
+{{-- First item as a chip, the rest behind a visible "+N" button that lists every item as a deep link (or plain text when the user cannot open it). --}}
 <div class="{{ $containerClass }}">
     @if($visibleItems->isEmpty())
         <span class="{{ $emptyClass }}">{{ $emptyLabel }}</span>
     @else
         @foreach($visibleItems as $item)
-            <x-entity-relation-badge :kind="$kind" :href="$item['href']" :title="$item['title']">
+            <x-entity-relation-badge :kind="$kind" :href="$item['href']" :title="$item['title'] ?? $item['label']">
                 {{ $item['label'] }}
             </x-entity-relation-badge>
         @endforeach
 
         @if($hiddenCount > 0)
-            <span class="badge bg-light text-muted border" title="{{ $hiddenCount }} more">{{ $ellipsisLabel }}</span>
+            <div class="dropdown app-more">
+                <button type="button"
+                        class="app-more-btn"
+                        data-bs-toggle="dropdown"
+                        data-bs-popper-config='{"strategy":"fixed"}'
+                        aria-expanded="false"
+                        aria-label="Show all {{ $normalizedItems->count() }} {{ \Illuminate\Support\Str::lower($resolvedListLabel) }}">+{{ $hiddenCount }}</button>
+                <div class="dropdown-menu app-more-menu">
+                    <div class="app-more-head"><span>{{ $resolvedListLabel }}</span><span>{{ $normalizedItems->count() }}</span></div>
+                    <ul class="app-more-list">
+                        @foreach($normalizedItems as $item)
+                            <li>
+                                @if($item['href'])
+                                    <a class="dropdown-item" href="{{ $item['href'] }}">{{ $item['label'] }}</a>
+                                @else
+                                    <span class="dropdown-item-text">{{ $item['label'] }}</span>
+                                @endif
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
         @endif
     @endif
 </div>

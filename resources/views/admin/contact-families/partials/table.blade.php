@@ -9,7 +9,7 @@
 <div class="card shadow-sm app-index-table-card">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
+            <thead>
                 <tr>
                     <th>
                         <x-table-sort-link column="name" label="Name" :sort="$s" :direction="$d" :url="$url('name')" target="#cf-table" />
@@ -26,7 +26,7 @@
                     <th>
                         <x-table-sort-link column="active" label="Status" :sort="$s" :direction="$d" :url="$url('active')" target="#cf-table" />
                     </th>
-                    <th class="text-end" style="width:140px;">Actions</th>
+                    <th class="app-col-actions"><span class="visually-hidden">Actions</span></th>
                 </tr>
             </thead>
             <tbody>
@@ -49,37 +49,25 @@
                             :empty-label="$scopeEmptyLabel($family->program_scope_mode, 'All programs', 'No programs')"
                         />
                     </td>
-                    <td><span class="badge bg-secondary">{{ $family->activity_types_count }}</span></td>
+                    <td><span class="app-count">{{ $family->activity_types_count }}</span></td>
                     <td>
-                        @if($family->active)
-                            <span class="badge bg-success">Active</span>
-                        @else
-                            <span class="badge bg-secondary">Inactive</span>
-                        @endif
+                        <x-status-badge :active="$family->active" />
                     </td>
-                    <td class="text-end text-nowrap">
+                    <td class="app-col-actions">
                         @php $actionKey = 'contact-family-actions-' . $family->id; @endphp
-                        <div class="btn-group btn-group-sm" role="group" aria-label="Activity family actions for {{ $family->name }}">
+                        <div class="dropdown app-row-actions d-inline-block">
+                            <button type="button" class="btn btn-sm btn-link app-row-actions-toggle" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" aria-label="Activity family actions for {{ $family->name }}"><i class="bi bi-three-dots" aria-hidden="true"></i></button>
+                            <div class="dropdown-menu dropdown-menu-end">
                             @can('update', $family)
-                            <a href="{{ route('contact-families.edit', $family) }}"
-                               class="btn btn-outline-secondary"
-                               data-bs-toggle="tooltip"
-                               data-bs-title="Edit activity family"
-                               aria-label="Edit activity family">
-                                <i class="bi bi-pencil-square"></i>
-                            </a>
+                            <a href="{{ route('contact-families.edit', $family) }}" class="dropdown-item"><i class="bi bi-pencil-square me-2" aria-hidden="true"></i>Edit activity family</a>
                             @endcan
                             @can('delete', $family)
+                            <hr class="dropdown-divider">
                             <button type="submit"
                                     form="{{ $actionKey }}-delete"
-                                    class="btn btn-outline-danger"
-                                    data-bs-toggle="tooltip"
-                                    data-bs-title="Delete activity family"
-                                    aria-label="Delete activity family"
-                                    onclick="return confirm('Delete {{ addslashes($family->name) }}?')">
-                                <i class="bi bi-trash"></i>
-                            </button>
+                                    onclick="return confirm('Delete {{ addslashes($family->name) }}?')" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete activity family</button>
                             @endcan
+                            </div>
                         </div>
                         @can('delete', $family)
                         <form id="{{ $actionKey }}-delete" method="POST" action="{{ route('contact-families.destroy', $family) }}" class="d-none">

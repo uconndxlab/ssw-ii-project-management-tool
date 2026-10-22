@@ -124,7 +124,7 @@
                                             <td>{{ $deliverable->notes ?? '' }}</td>
                                             <td>
                                                 @forelse($activeAssignedUsers as $assignedUser)
-                                                    <span class="badge bg-secondary me-1">{{ $assignedUser->name }}</span>
+                                                    <span class="badge app-tag me-1">{{ $assignedUser->name }}</span>
                                                 @empty
                                                     <span class="text-muted small">—</span>
                                                 @endforelse

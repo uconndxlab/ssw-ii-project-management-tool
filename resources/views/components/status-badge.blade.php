@@ -2,12 +2,13 @@
     'active' => true,
     'activeLabel' => 'Active',
     'inactiveLabel' => 'Inactive',
+    'tone' => null,
 ])
 
 @php
     $isActive = filter_var($active, FILTER_VALIDATE_BOOLEAN);
-    $class = $isActive ? 'bg-success' : 'bg-secondary';
+    $resolvedTone = $tone ?? ($isActive ? 'success' : 'neutral');
     $label = $isActive ? $activeLabel : $inactiveLabel;
 @endphp
 
-<span {{ $attributes->merge(['class' => "badge {$class} rounded-pill"]) }}>{{ $label }}</span>
+<span {{ $attributes->merge(['class' => "app-status app-status--{$resolvedTone}"]) }}>{{ $label }}</span>

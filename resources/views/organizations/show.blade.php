@@ -30,7 +30,7 @@
             <dt class="col-5 text-muted fw-normal small">Associated Users</dt>
             <dd class="col-7 mb-2">
                 @forelse($organization->users as $user)
-                    <x-user-link :user="$user" class="badge bg-primary-subtle text-primary-emphasis border me-1 mb-1" />
+                    <x-user-link :user="$user" class="badge app-chip me-1 mb-1" />
                 @empty
                     <span class="text-muted">—</span>
                 @endforelse
@@ -87,16 +87,11 @@
 
         <hr>
 
-        <h6 class="text-muted fw-normal small mb-2">Year-to-Date ({{ now()->year }})</h6>
-        <dl class="row mb-0">
-            <dt class="col-7 text-muted fw-normal small">Activities</dt>
-            <dd class="col-5 mb-1 fw-semibold text-end">{{ $ytdTotals['activities'] }}</dd>
-
-            <dt class="col-7 text-muted fw-normal small">Hours</dt>
-            <dd class="col-5 mb-1 fw-semibold text-end">{{ number_format($ytdTotals['hours'], 1) }}</dd>
-
-            <dt class="col-7 text-muted fw-normal small">Participants</dt>
-            <dd class="col-5 mb-0 fw-semibold text-end">{{ number_format($ytdTotals['participants']) }}</dd>
+        <p class="app-record-period">Year to date · {{ now()->year }}</p>
+        <dl class="app-record-metrics">
+            <div><dt>Activities</dt><dd>{{ $ytdTotals['activities'] }}</dd></div>
+            <div><dt>Hours</dt><dd>{{ number_format($ytdTotals['hours'], 1) }}</dd></div>
+            <div><dt>Participants</dt><dd>{{ number_format($ytdTotals['participants']) }}</dd></div>
         </dl>
     </x-slot:summary>
 
@@ -113,7 +108,7 @@
                 >
                     @can('create', App\Models\Agreement::class)
                         <x-slot:headerActions>
-                            <a href="{{ route('agreements.create') }}" class="btn btn-sm btn-outline-success">+ New</a>
+                            <a href="{{ route('agreements.create') }}" class="btn btn-sm btn-outline-primary">+ New</a>
                         </x-slot:headerActions>
                     @endcan
 
@@ -149,11 +144,7 @@
                         >
                             @if($member->via_agreements?->isNotEmpty())
                                 <x-slot:footer>
-                                    <div class="d-flex flex-wrap gap-1">
-                                        @foreach($member->via_agreements as $agreementName)
-                                            <span class="badge bg-success-subtle text-success-emphasis">{{ $agreementName }}</span>
-                                        @endforeach
-                                    </div>
+                                    <span>Via {{ $member->via_agreements->join(', ') }}</span>
                                 </x-slot:footer>
                             @endif
                         </x-relationship-ledger-row>
@@ -179,7 +170,7 @@
                 <tbody>
                     @foreach($contactFamilyBreakdown as $family => $count)
                     <tr>
-                        <td><span class="badge bg-primary">{{ $family }}</span></td>
+                        <td><span class="badge app-tag">{{ $family }}</span></td>
                         <td class="text-end fw-semibold">{{ $count }}</td>
                     </tr>
                     @endforeach

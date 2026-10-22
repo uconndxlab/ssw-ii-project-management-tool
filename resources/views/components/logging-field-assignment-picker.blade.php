@@ -78,40 +78,6 @@
 </div>
 
 @once
-<style>
-    .logging-field-assignment-card {
-        padding-left: 1rem;
-    }
-
-    .logging-field-assignment-divider-column {
-        border-left: 1px solid var(--bs-border-color);
-    }
-
-    .logging-field-assignment-item {
-        cursor: pointer;
-    }
-
-    .logging-field-assignment-item:hover {
-        background-color: var(--bs-light);
-    }
-
-    .logging-field-assignment-item .badge {
-        font-weight: 600;
-    }
-
-    .logging-field-assignment-drag-handle {
-        cursor: grab;
-    }
-
-    .logging-field-assignment-drag-handle:active {
-        cursor: grabbing;
-    }
-
-    .logging-field-assignment-ghost {
-        opacity: 0.65;
-        background-color: rgba(var(--bs-primary-rgb), 0.08);
-    }
-</style>
 <script>
 (function () {
     function parseJson(value, fallback) {

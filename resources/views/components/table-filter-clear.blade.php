@@ -10,10 +10,10 @@
 
 <div class="{{ $wrapperClass }} {{ $visible ? '' : 'd-none' }}" data-table-filter-clear-wrap>
     <a href="{{ $href }}"
-       class="btn btn-outline-danger btn-sm"
+       class="btn btn-outline-secondary btn-sm"
        data-bs-toggle="tooltip"
        data-bs-title="Clear filters"
        aria-label="Clear filters">
-        <i class="bi bi-x-lg"></i>
+        <i class="bi bi-x-lg" aria-hidden="true"></i><span class="d-md-none ms-1">Clear filters</span>
     </a>
 </div>

@@ -50,7 +50,7 @@
                 data_get($item, 'contextLabels') ?? (data_get($item, 'context') ? [data_get($item, 'context')] : []),
                 fn ($label) => $label !== null && $label !== ''
             )),
-            'contextBadgeClass' => data_get($item, 'contextBadgeClass', $optionBadgeClass ?? $entityBadgeClass ?? 'bg-primary-subtle text-primary-emphasis border'),
+            'contextBadgeClass' => data_get($item, 'contextBadgeClass', $optionBadgeClass ?? $entityBadgeClass ?? 'app-chip'),
             'meta' => filled(data_get($item, 'meta'))
                 ? (string) data_get($item, 'meta')
                 : (filled(data_get($item, 'po_number')) ? (string) data_get($item, 'po_number') : null),
@@ -79,7 +79,7 @@
      data-selected='@json($selectedIds)'>
     <div class="d-flex flex-wrap gap-1 mb-2 {{ $showSelected ? '' : 'd-none' }}" data-token-selected></div>
 
-    <div class="form-control d-flex align-items-center py-1{{ $hasError ? ' is-invalid' : '' }}" style="min-height: 42px;" data-token-control>
+    <div class="form-control d-flex align-items-center py-1{{ $hasError ? ' is-invalid' : '' }}" data-token-control>
         <input type="text"
                class="border-0 flex-grow-1"
                style="outline: none; min-width: 160px;"
@@ -113,29 +113,6 @@
 </div>
 
 @once
-<style>
-    .token-picker-control-disabled {
-        background-color: var(--bs-secondary-bg);
-        opacity: 1;
-        cursor: not-allowed;
-    }
-
-    .token-picker-control-disabled [data-token-search] {
-        background-color: transparent;
-        cursor: not-allowed;
-    }
-
-    .token-option {
-        padding: 0.25rem 0.375rem;
-        cursor: pointer;
-        border-radius: var(--bs-border-radius);
-    }
-
-    .token-option:hover,
-    .token-option-active {
-        background-color: var(--bs-primary-bg-subtle);
-    }
-</style>
 <script>
 (function () {
     function parseJson(node, fallback) {
@@ -346,7 +323,7 @@
 
             if (selected.size === 0 && emptySelectionLabel !== '') {
                 const allBadge = document.createElement('span');
-                allBadge.className = 'badge ' + (defaultSelectedBadgeClass !== '' ? defaultSelectedBadgeClass : 'bg-primary-subtle text-primary-emphasis border') + ' d-inline-flex align-items-center';
+                allBadge.className = 'badge ' + (defaultSelectedBadgeClass !== '' ? defaultSelectedBadgeClass : 'app-chip') + ' d-inline-flex align-items-center';
                 allBadge.textContent = emptySelectionLabel;
                 selectedWrap.appendChild(allBadge);
             }
@@ -375,7 +352,7 @@
         }
 
         function appendContextBadges(textWrap, opt) {
-            const badgeClass = opt.contextBadgeClass || 'bg-primary-subtle text-primary-emphasis border';
+            const badgeClass = opt.contextBadgeClass || 'app-chip';
             const labels = Array.isArray(opt.contextLabels) && opt.contextLabels.length > 0
                 ? opt.contextLabels
                 : (opt.context ? [String(opt.context)] : []);

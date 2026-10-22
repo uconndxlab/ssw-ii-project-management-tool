@@ -19,16 +19,9 @@ test('certification tool create page loads repeater script outside row templates
 
     expect($firstTemplate)->not->toContain("addBtn = e.target.closest('[data-repeater-add]')");
 
-    // The shared repeater stylesheet must render at layout level, never inside a
-    // <template>: row templates are pre-rendered via view()->render(), which would
-    // poison an @once block inside the component and strip the styles from the page.
-    expect($html)->toContain('.repeater-row-card');
-
-    $templateContentStart = strpos($html, '<template data-repeater-template>');
-    $templateContentEnd = strrpos($html, '</template>');
-    $allTemplates = substr($html, $templateContentStart, $templateContentEnd - $templateContentStart);
-
-    expect($allTemplates)->not->toContain('.repeater-row-card');
+    // Repeater styles ship in app.css; neither the page nor its row templates may carry a <style> block.
+    expect($html)->not->toContain('.repeater-row-card');
+    expect($html)->not->toContain('<style');
 });
 
 test('certification tool edit page renders existing rows as collapsible display cards', function () {

@@ -44,7 +44,7 @@
                                value="{{ request('q') }}"
                                aria-label="Search"
                                autocomplete="off">
-                        <kbd class="app-rail-kbd d-none d-lg-inline" aria-hidden="true">/</kbd>
+                        <kbd class="app-rail-kbd" aria-hidden="true">/</kbd>
                     </form>
                 @endif
 

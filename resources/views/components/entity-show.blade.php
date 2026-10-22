@@ -26,7 +26,7 @@
     {{-- Summary column (narrow) --}}
     <div class="col-lg-4">
         <div class="card shadow-sm entity-show-card">
-            <div class="card-header bg-light py-2 px-3">
+            <div class="card-header py-2 px-3">
                 <h2 class="h5 mb-0">Summary</h2>
             </div>
             <div class="card-body">
@@ -43,7 +43,7 @@
                 $headerActionsFilled = $isActivity ? $activityHeaderActionsFilled : $relationshipsHeaderActionsFilled;
             @endphp
             <div class="card shadow-sm entity-show-card">
-                <div class="card-header bg-light py-2 px-3 d-flex align-items-center gap-2 flex-wrap">
+                <div class="card-header py-2 px-3 d-flex align-items-center gap-2 flex-wrap">
                     <h2 class="h5 mb-0">{{ $isActivity ? 'Recent activity' : $mainCardTitle }}</h2>
                     @if($headerMetaFilled)
                         <div class="d-flex align-items-center gap-2 flex-wrap">{{ $isActivity ? $activityHeaderMeta : $relationshipsHeaderMeta }}</div>

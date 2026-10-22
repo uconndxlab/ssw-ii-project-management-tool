@@ -18,12 +18,12 @@
         >
             <x-slot:badges>
                 @if($activity->internal_only)
-                    <span class="badge bg-warning text-dark">Internal only</span>
+                    <span class="app-status app-status--warning">Internal only</span>
                 @endif
                 @if($activity->cancelled)
                     <x-status-badge :active="false" inactive-label="Cancelled" />
                 @elseif($activity->not_yet_complete)
-                    <span class="badge bg-info">Not yet complete</span>
+                    <span class="badge app-tag">Not yet complete</span>
                 @endif
             </x-slot:badges>
             <x-slot:more>
@@ -92,9 +92,9 @@
                     <div class="col-md-8">
                         @forelse($activity->agreements as $agreement)
                             @if($agreement->isLinkable())
-                                <a href="{{ route('agreements.show', $agreement) }}" class="badge bg-secondary text-decoration-none me-1 mb-1">{{ $agreement->name }}</a>
+                                <a href="{{ route('agreements.show', $agreement) }}" class="badge app-chip me-1 mb-1">{{ $agreement->name }}</a>
                             @else
-                                <span class="badge bg-secondary me-1 mb-1">{{ $agreement->name }}</span>
+                                <span class="badge app-tag me-1 mb-1">{{ $agreement->name }}</span>
                             @endif
                         @empty
                             <span class="text-muted small">None assigned</span>
@@ -108,7 +108,7 @@
                     </div>
                     <div class="col-md-8">
                         @forelse($activity->organizations as $organization)
-                            <span class="badge bg-secondary me-1 mb-1">{{ $organization->name }}</span>
+                            <span class="badge app-tag me-1 mb-1">{{ $organization->name }}</span>
                         @empty
                             <span class="text-muted small">None assigned</span>
                         @endforelse
@@ -121,7 +121,7 @@
                     </div>
                     <div class="col-md-8">
                         @forelse($activity->states as $state)
-                            <span class="badge bg-info me-1 mb-1">{{ $state->name }}</span>
+                            <span class="badge app-tag me-1 mb-1">{{ $state->name }}</span>
                         @empty
                             <span class="text-muted small">None assigned</span>
                         @endforelse
@@ -142,7 +142,7 @@
                         <strong>Family:</strong>
                     </div>
                     <div class="col-md-8">
-                        <span class="badge bg-primary">{{ $activity->activityType->contactFamily->name }}</span>
+                        <span class="badge app-tag">{{ $activity->activityType->contactFamily->name }}</span>
                     </div>
                 </div>
 
@@ -151,7 +151,7 @@
                         <strong>Type:</strong>
                     </div>
                     <div class="col-md-8">
-                        <span class="badge bg-info">{{ $activity->activityType->name }}</span>
+                        <span class="badge app-tag">{{ $activity->activityType->name }}</span>
                     </div>
                 </div>
 
@@ -193,7 +193,7 @@
                     </div>
                     <div class="col-md-8">
                         @foreach($activity->projects as $project)
-                            <span class="badge bg-dark me-1">{{ $project->name }}</span>
+                            <span class="badge app-tag me-1">{{ $project->name }}</span>
                         @endforeach
                     </div>
                 </div>
@@ -206,7 +206,7 @@
                     </div>
                     <div class="col-md-8">
                         @foreach($activity->programs as $program)
-                            <span class="badge bg-success me-1">{{ $program->name }}</span>
+                            <span class="badge app-tag me-1">{{ $program->name }}</span>
                         @endforeach
                     </div>
                 </div>
@@ -234,7 +234,7 @@
                     </div>
                     <div class="col-md-8">
                         @foreach($activity->participants as $participant)
-                            <x-user-link :user="$participant" class="badge bg-primary me-1" />
+                            <x-user-link :user="$participant" class="badge app-chip me-1" />
                         @endforeach
                     </div>
                 </div>
@@ -320,9 +320,9 @@
                     </div>
                     <div class="col-md-8">
                         @if($activity->internal_only)
-                            <span class="badge bg-warning">Yes - Excluded from external reports</span>
+                            <span class="app-status app-status--warning">Yes - Excluded from external reports</span>
                         @else
-                            <span class="badge bg-success">No - Available for external reports</span>
+                            <span class="app-status app-status--success">No - Available for external reports</span>
                         @endif
                     </div>
                 </div>
@@ -347,7 +347,7 @@
                     </div>
                     <div class="col-md-8">
                         @if($activity->not_yet_complete)
-                            <span class="badge bg-info">Yes</span>
+                            <span class="badge app-tag">Yes</span>
                             <span class="text-muted small ms-2">Time counts; completions are excluded from deliverable progress.</span>
                         @else
                             <span class="text-muted">No</span>

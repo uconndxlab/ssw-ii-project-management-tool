@@ -1,6 +1,6 @@
 @if($recentActivities?->count() > 0)
 <div class="card shadow-sm mb-4">
-    <div class="card-header bg-light">
+    <div class="card-header">
         <h5 class="mb-0">Recent System Activity</h5>
     </div>
     <div class="card-body p-0">
