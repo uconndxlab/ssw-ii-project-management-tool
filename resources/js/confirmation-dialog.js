@@ -2,7 +2,7 @@ const dialog = document.querySelector('[data-confirm-dialog]');
 const acceptButton = dialog.querySelector('[data-confirm-accept]');
 const approvedButtons = new WeakSet();
 
-window.appConfirm = ({ title, record = '', message, action = 'Continue', tone = 'danger', trigger = document.activeElement }) => {
+window.appConfirm = ({ title, record = '', message, action = 'Continue', cancelLabel = 'Cancel', icon = null, tone = 'danger', trigger = document.activeElement }) => {
     if (dialog.open) {
         return Promise.resolve(false);
     }
@@ -13,10 +13,11 @@ window.appConfirm = ({ title, record = '', message, action = 'Continue', tone = 
     dialog.querySelector('#app-confirm-record').textContent = record;
     dialog.querySelector('#app-confirm-record').hidden = !record;
     dialog.querySelector('#app-confirm-message').textContent = message;
-    dialog.querySelector('[data-confirm-icon]').className = destructive ? 'bi bi-trash3' : 'bi bi-files';
+    dialog.querySelector('[data-confirm-icon]').className = `bi ${icon ?? (destructive ? 'bi-trash3' : 'bi-files')}`;
     dialog.classList.toggle('app-confirm-dialog--primary', !destructive);
     acceptButton.className = destructive ? 'btn btn-danger' : 'btn btn-primary';
     acceptButton.textContent = action;
+    dialog.querySelector('[value="cancel"]').textContent = cancelLabel;
     dialog.returnValue = 'cancel';
 
     return new Promise((resolve) => {

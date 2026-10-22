@@ -28,6 +28,23 @@ test('ledger actions remain separate from the disclosure button', function () {
     $html->assertSeeInOrder(['</button>', 'href="/people"', 'href="/people/create"'], false);
 });
 
+test('ledger view actions have accessible names and decorative icons outside the disclosure', function () {
+    $html = $this->blade('<x-relationship-scroll-panel title="FOCUS - DEJ" title-href="/teams/1" :count="4" collapsible collapsed>Staff</x-relationship-scroll-panel>');
+
+    $html->assertSee('aria-label="View FOCUS - DEJ"', false)
+        ->assertSee('data-tip="View FOCUS - DEJ"', false)
+        ->assertSee('class="bi bi-eye" aria-hidden="true"', false)
+        ->assertSeeInOrder(['</button>', 'href="/teams/1"'], false);
+});
+
+test('an empty ledger can offer a named add action without an expansion control', function () {
+    $html = $this->blade('<x-relationship-scroll-panel title="Contacts" :count="0" collapsible><x-slot:headerActions><a href="/contacts/create" class="btn app-ledger-action" aria-label="Add contact"><i class="bi bi-plus-lg" aria-hidden="true"></i></a></x-slot:headerActions></x-relationship-scroll-panel>');
+
+    $html->assertSee('aria-label="Add contact"', false)
+        ->assertDontSee('aria-expanded', false)
+        ->assertDontSee('<button', false);
+});
+
 test('read-only records retain their metadata without gaining a link', function () {
     $this->blade('<x-relationship-ledger-row title="Restricted agreement" :meta-lines="$lines" :context-badges="[\'Recipient\']" />', ['lines' => [['label' => 'PO', 'value' => '2026-0042']]])
         ->assertSee('Restricted agreement')

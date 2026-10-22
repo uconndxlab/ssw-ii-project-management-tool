@@ -61,7 +61,7 @@
                 >
                     <x-slot:headerActions>
                         @can('create', App\Models\Program::class)
-                        <a href="{{ route('programs.create') }}" class="btn btn-sm btn-outline-primary">+ Add Program</a>
+                        <a href="{{ route('programs.create') }}" class="btn app-ledger-action" aria-label="Add program" data-tip="Add program"><i class="bi bi-plus-lg" aria-hidden="true"></i></a>
                         @endcan
                     </x-slot:headerActions>
 

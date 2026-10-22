@@ -85,7 +85,7 @@
                 >
                     @can('create', App\Models\Agreement::class)
                         <x-slot:headerActions>
-                            <a href="{{ route('agreements.create') }}" class="btn btn-sm btn-outline-primary">+ New</a>
+                            <a href="{{ route('agreements.create') }}" class="btn app-ledger-action" aria-label="Add agreement" data-tip="Add agreement"><i class="bi bi-plus-lg" aria-hidden="true"></i></a>
                         </x-slot:headerActions>
                     @endcan
 

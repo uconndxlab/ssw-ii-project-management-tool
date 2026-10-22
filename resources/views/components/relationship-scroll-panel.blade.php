@@ -23,7 +23,7 @@
 
 <section {{ $attributes->class(['app-ledger', 'app-ledger--empty' => $isEmpty]) }}>
     @if($showHeader)
-        <div class="app-ledger-head">
+        <div @class(['app-ledger-head', 'app-ledger-head--collapsible' => $canCollapse])>
             <h3 class="app-ledger-heading">
                 @if($canCollapse)
                     <button type="button"
@@ -43,14 +43,20 @@
             @if($headerMetaFilled)
                 {{ $headerMeta }}
             @endif
-            @if(filled($titleHref))
-                <a href="{{ $titleHref }}" class="app-ledger-view-link" aria-label="View {{ $title }}">View</a>
-            @endif
             @if($isEmpty)
                 <span class="app-ledger-empty-message">{{ $emptyMessage }}</span>
             @endif
-            @if($headerActionsFilled)
-                <div class="app-ledger-header-actions">{{ $headerActions }}</div>
+            @if(filled($titleHref) || $headerActionsFilled)
+                <div class="app-ledger-header-actions">
+                    @if(filled($titleHref))
+                        <a href="{{ $titleHref }}" class="btn app-ledger-action" aria-label="View {{ $title }}" data-tip="View {{ $title }}">
+                            <i class="bi bi-eye" aria-hidden="true"></i>
+                        </a>
+                    @endif
+                    @if($headerActionsFilled)
+                        {{ $headerActions }}
+                    @endif
+                </div>
             @endif
         </div>
     @endif
