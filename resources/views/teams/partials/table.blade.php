@@ -33,7 +33,7 @@
                 @forelse($teams as $team)
                 <tr>
                     <td>
-                        <a href="{{ route('teams.show', $team) }}" class="app-link app-link--strong">
+                        <a href="{{ route('teams.show', $team) }}" class="app-link app-link--strong app-row-link">
                             {{ $team->name }}
                         </a>
                     </td>
@@ -72,7 +72,11 @@
                             <hr class="dropdown-divider">
                             <button type="submit"
                                     form="{{ $actionKey }}-delete"
-                                    onclick="return confirm('Delete team {{ addslashes($team->name) }}?')" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete team</button>
+                                    data-confirm
+                                    data-confirm-title="Delete team?"
+                                    data-confirm-record="{{ $team->name }}"
+                                    data-confirm-message="This action cannot be undone."
+                                    data-confirm-action="Delete team" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete team</button>
                             @endcan
                             </div>
                         </div>

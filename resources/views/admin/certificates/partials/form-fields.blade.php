@@ -664,7 +664,7 @@
         syncAll(renewalPane);
     }
 
-    document.addEventListener('change', function (e) {
+    document.addEventListener('change', async function (e) {
         if (e.target.matches('[data-kind-select]')) {
             syncRequirementRow(e.target.closest('[data-requirement-row]'));
         }
@@ -680,7 +680,12 @@
         if (e.target.matches('[data-renewal-matches-initial]')) {
             const form = renewalPane.querySelector('[data-renewal-requirements-form]');
             if (e.target.checked) {
-                if (liveRowsInPane(renewalPane) > 0 && !window.confirm('This will remove recertification requirements from the form. Continue?')) {
+                if (liveRowsInPane(renewalPane) > 0 && !await window.appConfirm({
+                    title: 'Use initial requirements for recertification?',
+                    message: 'The recertification groups and requirements currently in this form will be removed. Save the certificate to apply this change.',
+                    action: 'Use initial requirements',
+                    trigger: e.target,
+                })) {
                     e.target.checked = false;
                     return;
                 }
@@ -709,11 +714,17 @@
         renewalPane.querySelector('[data-renewal-copy-initial]')?.addEventListener('click', function () {
             pauseObserver(cloneInitialRequirementsToRenewal);
         });
-        renewalPane.querySelector('[data-renewal-clear]')?.addEventListener('click', function () {
-            if (!window.confirm('Remove all recertification groups and requirements from this form?')) {
+        renewalPane.querySelector('[data-renewal-clear]')?.addEventListener('click', async function (event) {
+            if (!await window.appConfirm({
+                title: 'Clear recertification requirements?',
+                message: 'Remove all recertification groups and requirements from this form. Save the certificate to apply this change.',
+                action: 'Clear requirements',
+                trigger: event.currentTarget,
+            })) {
                 return;
             }
             removeRenewalRows();
+            renewalPane.querySelector('[data-repeater-name="requirements"] > [data-repeater-add]')?.focus();
         });
     }
 

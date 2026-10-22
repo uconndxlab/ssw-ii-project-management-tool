@@ -61,7 +61,11 @@
                             @can('delete', $tool)
                             <hr class="dropdown-divider">
                             <button type="submit" form="{{ $actionKey }}-delete"
-                                    onclick="return confirm('Delete {{ addslashes($tool->name) }}?')" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete tool</button>
+                                    data-confirm
+                                    data-confirm-title="Delete certification tool?"
+                                    data-confirm-record="{{ $tool->name }}"
+                                    data-confirm-message="This action cannot be undone."
+                                    data-confirm-action="Delete tool" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete tool</button>
                             @endcan
                             </div>
                         </div>

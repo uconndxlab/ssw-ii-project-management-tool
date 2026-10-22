@@ -36,7 +36,7 @@
                 <tr>
                     <td class="text-nowrap app-card-lead">
                         @if($activity->isLinkable())
-                            <a href="{{ route('activities.show', $activity) }}" class="app-link--strong">{{ $activity->engagement_date->format('M d, Y') }}</a>
+                            <a href="{{ route('activities.show', $activity) }}" class="app-link--strong app-row-link">{{ $activity->engagement_date->format('M d, Y') }}</a>
                         @else
                             {{ $activity->engagement_date->format('M d, Y') }}
                         @endif
@@ -79,13 +79,22 @@
                             @if($canDuplicate)
                                 <button type="submit"
                                         form="{{ $actionKey }}-duplicate"
-                                        onclick="return confirm('Duplicate this activity? A new activity will be created with the same details.')" class="dropdown-item"><i class="bi bi-files me-2" aria-hidden="true"></i>Duplicate activity</button>
+                                        data-confirm
+                                        data-confirm-title="Duplicate activity?"
+                                        data-confirm-record="{{ $activity->activityType?->name ?? 'Activity' }} · {{ $activity->engagement_date->format('M d, Y') }}"
+                                        data-confirm-message="A new activity will be created with the same details."
+                                        data-confirm-action="Duplicate activity"
+                                        data-confirm-tone="primary" class="dropdown-item"><i class="bi bi-files me-2" aria-hidden="true"></i>Duplicate activity</button>
                             @endif
                             @if($canDelete)
                                 <hr class="dropdown-divider">
                             <button type="submit"
                                         form="{{ $actionKey }}-delete"
-                                        onclick="return confirm('Delete this activity?')" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete activity</button>
+                                        data-confirm
+                                        data-confirm-title="Delete activity?"
+                                        data-confirm-record="{{ $activity->activityType?->name ?? 'Activity' }} · {{ $activity->engagement_date->format('M d, Y') }}"
+                                        data-confirm-message="This action cannot be undone."
+                                        data-confirm-action="Delete activity" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete activity</button>
                             @endif
                             </div>
                         </div>

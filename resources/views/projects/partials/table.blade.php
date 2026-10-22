@@ -27,7 +27,7 @@
                 @forelse($projects as $project)
                 <tr>
                     <td>
-                        <a href="{{ route('projects.show', $project) }}" class="app-link app-link--strong">
+                        <a href="{{ route('projects.show', $project) }}" class="app-link app-link--strong app-row-link">
                             {{ $project->name }}
                         </a>
                     </td>
@@ -55,7 +55,11 @@
                             <hr class="dropdown-divider">
                             <button type="submit"
                                     form="{{ $actionKey }}-delete"
-                                    onclick="return confirm('Delete {{ addslashes($project->name) }}? This will also delete all {{ $project->programs_count }} associated programs.')" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete project</button>
+                                    data-confirm
+                                    data-confirm-title="Delete project?"
+                                    data-confirm-record="{{ $project->name }}"
+                                    data-confirm-message="Programs are kept. If a program depends only on this project, assign it to another project before deleting."
+                                    data-confirm-action="Delete project" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete project</button>
                             @endcan
                             </div>
                         </div>

@@ -27,7 +27,7 @@
                 @forelse($programs as $program)
                 <tr>
                     <td>
-                        <a href="{{ route('programs.show', $program) }}" class="app-link app-link--strong">
+                        <a href="{{ route('programs.show', $program) }}" class="app-link app-link--strong app-row-link">
                             {{ $program->name }}
                         </a>
                     </td>
@@ -55,7 +55,11 @@
                             <hr class="dropdown-divider">
                             <button type="submit"
                                     form="{{ $actionKey }}-delete"
-                                    onclick="return confirm('Delete {{ addslashes($program->name) }}?')" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete program</button>
+                                    data-confirm
+                                    data-confirm-title="Delete program?"
+                                    data-confirm-record="{{ $program->name }}"
+                                    data-confirm-message="This action cannot be undone."
+                                    data-confirm-action="Delete program" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete program</button>
                             @endcan
                             </div>
                         </div>

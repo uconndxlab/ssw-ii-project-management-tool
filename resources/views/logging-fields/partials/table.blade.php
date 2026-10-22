@@ -36,7 +36,7 @@
                 @forelse($loggingFields as $field)
                 <tr>
                     <td>
-                        <a href="{{ route('logging-fields.show', $field) }}" class="app-link app-link--strong">
+                        <a href="{{ route('logging-fields.show', $field) }}" class="app-link app-link--strong app-row-link">
                             {{ $field->name }}
                         </a>
                         @if($field->help_text)
@@ -92,7 +92,11 @@
                             <hr class="dropdown-divider">
                             <button type="submit"
                                     form="{{ $actionKey }}-delete"
-                                    onclick="return confirm('Delete field {{ addslashes($field->name) }}?')" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete logging field</button>
+                                    data-confirm
+                                    data-confirm-title="Delete logging field?"
+                                    data-confirm-record="{{ $field->name }}"
+                                    data-confirm-message="This action cannot be undone."
+                                    data-confirm-action="Delete field" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete logging field</button>
                             @endcan
                             </div>
                         </div>

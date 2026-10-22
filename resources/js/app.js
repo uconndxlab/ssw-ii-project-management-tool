@@ -6,3 +6,4 @@ import './form-drawer.js';
 import './table-filters.js';
 import './relationship-scroll.js';
 import './table-scroll.js';
+import './confirmation-dialog.js';

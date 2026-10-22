@@ -64,7 +64,7 @@
                         </td>
                         <td>
                             @if($canView)
-                                <a href="{{ route('activities.show', $activity) }}" class="app-link--strong">{{ $activity->activityType?->name ?? 'Activity' }}</a>
+                                <a href="{{ route('activities.show', $activity) }}" class="app-link--strong app-row-link">{{ $activity->activityType?->name ?? 'Activity' }}</a>
                             @else
                                 <span class="fw-semibold">{{ $activity->activityType?->name ?? 'Activity' }}</span>
                             @endif

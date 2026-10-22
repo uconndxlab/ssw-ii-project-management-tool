@@ -45,7 +45,7 @@
                 @php $scope = $user->getScopeBySource(); @endphp
                 <tr>
                     <td>
-                        <x-user-link :user="$user" class="app-link app-link--strong d-block" />
+                        <x-user-link :user="$user" class="app-link app-link--strong app-row-link d-block" />
                     </td>
                     <td class="text-muted small">{{ $user->email }}</td>
                     <td class="text-muted small">{{ $user->po_number ?: '—' }}</td>
@@ -108,7 +108,11 @@
                             <hr class="dropdown-divider">
                             <button type="submit"
                                     form="{{ $actionKey }}-delete"
-                                    onclick="return confirm('Delete {{ addslashes($user->name) }}?')" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete user</button>
+                                    data-confirm
+                                    data-confirm-title="Delete user?"
+                                    data-confirm-record="{{ $user->name }}"
+                                    data-confirm-message="This action cannot be undone."
+                                    data-confirm-action="Delete user" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete user</button>
                             @endcan
                             </div>
                         </div>

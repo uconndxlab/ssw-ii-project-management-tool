@@ -17,6 +17,7 @@ Create/edit forms share one shell and the same components. Do not invent a per-p
 - Booleans: `x-form-switch` (hidden `0` + checkbox `1`) inside `x-form-options` (left-bar subsection titled Options). Controllers use `$request->boolean('name')`, never `has('name')`.
 - Active belongs in the identity section Options, never in `x-page-header`, never a Status `<select>`.
 - Choices with consequences: `x-form-radio-card`.
+- Destructive submits use `data-confirm` with escaped title, record, message and action attributes; the shared confirmation resumes the original form after approval. Form-only cleanup uses `await window.appConfirm(...)` and changes the unsaved form only. Do not use `window.confirm()` or interpolate names into inline JavaScript.
 - Related string lists (options, candidates): `x-inline-string-list`. Grouped fields use `x-form-subsection`.
 
 ## Do not

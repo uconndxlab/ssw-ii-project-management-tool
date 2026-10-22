@@ -45,7 +45,12 @@
                 <button type="submit"
                         form="agreement-duplicate-form"
                         class="dropdown-item"
-                        onclick="return confirm('Duplicate {{ addslashes($agreement->name) }}? Activities and logged progress will not be copied.')">
+                        data-confirm
+                        data-confirm-title="Duplicate agreement?"
+                        data-confirm-record="{{ $agreement->name }}"
+                        data-confirm-message="Activities and logged progress will not be copied. Review the new copy before saving."
+                        data-confirm-action="Duplicate agreement"
+                        data-confirm-tone="primary">
                     <i class="bi bi-files me-2" aria-hidden="true"></i>Duplicate
                 </button>
             </li>

@@ -81,7 +81,11 @@
                 <form method="POST" action="{{ route('logging-fields.destroy', $loggingField) }}">
                     @csrf @method('DELETE')
                     <button type="submit" class="btn btn-sm btn-danger"
-                            onclick="return confirm('Are you sure you want to delete {{ addslashes($loggingField->name) }}? This action cannot be undone.')">Delete Field</button>
+                            data-confirm
+                            data-confirm-title="Delete logging field?"
+                            data-confirm-record="{{ $loggingField->name }}"
+                            data-confirm-message="This action cannot be undone."
+                            data-confirm-action="Delete field">Delete Field</button>
                 </form>
             @endif
         @endcan

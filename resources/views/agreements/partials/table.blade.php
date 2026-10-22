@@ -43,8 +43,8 @@
                 <tr>
                     <td class="app-col-name">
                         @if($agreement->isLinkable())
-                            <a href="{{ route('agreements.show', $agreement) }}" class="app-link app-link--strong" @if($agreement->abstract) title="{{ Str::limit($agreement->abstract, 200) }}" @endif>
-                                {{ $agreement->name }}
+                            <a href="{{ route('agreements.show', $agreement) }}" class="app-link app-link--strong app-row-link" @if($agreement->abstract) title="{{ Str::limit($agreement->abstract, 200) }}" @endif>
+                                <span class="app-row-link-label">{{ $agreement->name }}</span>
                             </a>
                         @else
                             <span class="fw-semibold">{{ $agreement->name }}</span>
@@ -97,13 +97,22 @@
                             @can('duplicate', $agreement)
                                 <button type="submit"
                                         form="{{ $actionKey }}-duplicate"
-                                        onclick="return confirm('Duplicate {{ addslashes($agreement->name) }}? Activities and logged progress will not be copied.')" class="dropdown-item"><i class="bi bi-files me-2" aria-hidden="true"></i>Duplicate agreement</button>
+                                        data-confirm
+                                        data-confirm-title="Duplicate agreement?"
+                                        data-confirm-record="{{ $agreement->name }}"
+                                        data-confirm-message="Activities and logged progress will not be copied. Review the new copy before saving."
+                                        data-confirm-action="Duplicate agreement"
+                                        data-confirm-tone="primary" class="dropdown-item"><i class="bi bi-files me-2" aria-hidden="true"></i>Duplicate agreement</button>
                             @endcan
                             @can('delete', $agreement)
                                 <hr class="dropdown-divider">
                             <button type="submit"
                                         form="{{ $actionKey }}-delete"
-                                        onclick="return confirm('Delete {{ addslashes($agreement->name) }}?')" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete agreement</button>
+                                        data-confirm
+                                        data-confirm-title="Delete agreement?"
+                                        data-confirm-record="{{ $agreement->name }}"
+                                        data-confirm-message="This action cannot be undone."
+                                        data-confirm-action="Delete agreement" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete agreement</button>
                             @endcan
                             </div>
                         </div>

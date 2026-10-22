@@ -29,7 +29,7 @@
                 @forelse($states as $state)
                 <tr>
                     <td>
-                        <a href="{{ route('states.show', $state) }}" class="app-link app-link--strong">
+                        <a href="{{ route('states.show', $state) }}" class="app-link app-link--strong app-row-link">
                             {{ $state->name }}
                         </a>
                     </td>
@@ -53,7 +53,11 @@
                             <hr class="dropdown-divider">
                             <button type="submit"
                                     form="{{ $actionKey }}-delete"
-                                    onclick="return confirm('Delete state {{ addslashes($state->name) }}?')" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete state</button>
+                                    data-confirm
+                                    data-confirm-title="Delete state?"
+                                    data-confirm-record="{{ $state->name }}"
+                                    data-confirm-message="This action cannot be undone."
+                                    data-confirm-action="Delete state" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete state</button>
                             @endcan
                             </div>
                         </div>

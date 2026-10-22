@@ -73,7 +73,11 @@
                             <hr class="dropdown-divider">
                             <button type="submit"
                                     form="{{ $actionKey }}-delete"
-                                    onclick="return confirm('Delete {{ addslashes($type->name) }}?')" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete activity type</button>
+                                    data-confirm
+                                    data-confirm-title="Delete activity type?"
+                                    data-confirm-record="{{ $type->name }}"
+                                    data-confirm-message="This action cannot be undone."
+                                    data-confirm-action="Delete activity type" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete activity type</button>
                             @endcan
                             </div>
                         </div>

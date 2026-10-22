@@ -61,7 +61,11 @@
                             @can('delete', $certificate)
                             <hr class="dropdown-divider">
                             <button type="submit" form="{{ $actionKey }}-delete"
-                                    onclick="return confirm('Delete {{ addslashes($certificate->name) }}?')" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete certificate</button>
+                                    data-confirm
+                                    data-confirm-title="Delete certificate?"
+                                    data-confirm-record="{{ $certificate->name }}"
+                                    data-confirm-message="This action cannot be undone."
+                                    data-confirm-action="Delete certificate" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete certificate</button>
                             @endcan
                             </div>
                         </div>

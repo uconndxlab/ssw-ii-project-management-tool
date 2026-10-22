@@ -49,7 +49,12 @@
                 <button type="submit"
                         form="activity-duplicate-form"
                         class="dropdown-item"
-                        onclick="return confirm('Duplicate this activity? A new activity will be created with the same details.')">
+                        data-confirm
+                        data-confirm-title="Duplicate activity?"
+                        data-confirm-record="{{ $activity->activityType?->name ?? 'Activity' }} · {{ $activity->engagement_date->format('M d, Y') }}"
+                        data-confirm-message="A new activity will be created with the same details."
+                        data-confirm-action="Duplicate activity"
+                        data-confirm-tone="primary">
                     <i class="bi bi-files me-2" aria-hidden="true"></i>Duplicate
                 </button>
             </li>
