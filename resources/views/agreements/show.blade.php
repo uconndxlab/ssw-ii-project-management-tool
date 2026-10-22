@@ -197,6 +197,7 @@
                             kind="team"
                             :count="$teamOnlyUsers->count()"
                             collapsible
+                            :collapsed="true"
                             height="220px">
                             @foreach($teamOnlyUsers as $user)
                                 <x-relationship-ledger-row
@@ -219,6 +220,7 @@
                         kind="user"
                         :count="$directUsers->count()"
                         collapsible
+                        :collapsed="true"
                         height="220px">
                         @foreach($directUsers as $user)
                             <x-relationship-ledger-row
@@ -250,30 +252,23 @@
         @endif
 
         @if($agreement->certificationCandidates->isNotEmpty())
-            <hr>
-            <h6 class="app-subhead mb-2">Certification Candidates</h6>
-            <div class="small d-grid gap-1 mb-0">
+            <x-relationship-scroll-panel title="Certification candidates" :count="$agreement->certificationCandidates->count()" collapsible collapsed class="mt-3">
                 @foreach($agreement->certificationCandidates as $candidate)
-                    <div>{{ $candidate->name }}</div>
+                    <x-relationship-ledger-row :title="$candidate->name" />
                 @endforeach
-            </div>
+            </x-relationship-scroll-panel>
         @endif
 
         @if($agreement->attachments->isNotEmpty())
-            <hr>
-            <h6 class="app-subhead mb-2">Attachments</h6>
-            @foreach($agreement->attachments as $attachment)
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <div class="small text-truncate me-2" title="{{ $attachment->filename }}">
-                        <i class="bi bi-file-earmark me-1"></i>{{ $attachment->filename }}
-                    </div>
-                    <a href="{{ $attachment->download_url }}"
-                       class="btn btn-sm btn-outline-primary text-nowrap"
-                       target="_blank">
-                        View / Download
-                    </a>
-                </div>
-            @endforeach
+            <x-relationship-scroll-panel title="Attachments" :count="$agreement->attachments->count()" collapsible collapsed class="mt-3">
+                @foreach($agreement->attachments as $attachment)
+                    <x-relationship-ledger-row :title="$attachment->filename">
+                        <x-slot:actions>
+                            <a href="{{ $attachment->download_url }}" class="btn btn-sm btn-outline-primary text-nowrap" target="_blank">View / Download</a>
+                        </x-slot:actions>
+                    </x-relationship-ledger-row>
+                @endforeach
+            </x-relationship-scroll-panel>
         @endif
     </x-slot:summary>
 

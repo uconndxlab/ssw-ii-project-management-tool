@@ -30,6 +30,7 @@ use App\Support\DeliverableActivityHistogram;
 use App\Support\DeliverableAssignmentTargets;
 use App\Support\DeliverableHistoryScope;
 use App\Support\ProjectProgramScope;
+use App\Support\TablePagination;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -106,7 +107,7 @@ class AgreementController extends Controller
 
         $this->applyAgreementIndexSort($query, $sort, $direction);
 
-        $agreements = $query->paginate(20)->withQueryString();
+        $agreements = $query->paginate(TablePagination::perPage($request))->withQueryString();
 
         if ($request->header('HX-Request') === 'true' && $request->input('partial') === 'filters') {
             return view('agreements.partials.filters', compact(

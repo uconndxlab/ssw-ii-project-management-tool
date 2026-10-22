@@ -9,6 +9,7 @@ use App\Models\Organization;
 use App\Models\Program;
 use App\Models\Project;
 use App\Support\ProjectProgramScope;
+use App\Support\TablePagination;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -52,7 +53,7 @@ class ProjectController extends Controller
                 break;
         }
 
-        $projects = $query->paginate(20)->withQueryString();
+        $projects = $query->paginate(TablePagination::perPage($request))->withQueryString();
 
         if ($request->header('HX-Request')) {
             return view('projects.partials.table', compact('projects', 'sort', 'direction'));

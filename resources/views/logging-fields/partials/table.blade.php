@@ -7,7 +7,7 @@
 @endphp
 
 <div class="card shadow-sm app-index-table-card">
-    <div class="table-responsive">
+    <x-table-scroll>
         <table class="table table-hover align-middle mb-0">
             <thead>
                 <tr>
@@ -116,7 +116,7 @@
                 @endforelse
             </tbody>
         </table>
-    </div>
+    </x-table-scroll>
     <div class="card-footer">
         <x-htmx-pagination :paginator="$loggingFields" target="#logging-fields-table" />
     </div>

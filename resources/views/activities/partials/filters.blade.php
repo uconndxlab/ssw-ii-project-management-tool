@@ -72,6 +72,7 @@
             :filter-keys="['search', 'state_id', 'organization_id', 'agreement_id', 'activity_type_id']"
         />
     </div>
+    <input type="hidden" name="per_page" value="{{ \App\Support\TablePagination::perPage(request()) }}">
     <input type="hidden" name="sort" value="{{ $sort ?? 'date' }}">
     <input type="hidden" name="direction" value="{{ $direction ?? 'desc' }}">
 </form>

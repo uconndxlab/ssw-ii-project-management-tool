@@ -14,27 +14,10 @@
 <x-entity-show>
     {{-- ── Summary ─────────────────────────────────────────────────────── --}}
     <x-slot:summary>
-        <dl class="row mb-0">
-            <dt class="col-5 text-muted fw-normal small">Programs</dt>
-            <dd class="col-7 mb-2">
-                <x-entity-count-badge kind="program" :count="$project->programs->count()" />
-            </dd>
-
-            <dt class="col-5 text-muted fw-normal small">Organizations</dt>
-            <dd class="col-7 mb-2">
-                <x-entity-count-badge kind="organization" :count="$project->organizations->count()" />
-            </dd>
-
-            <dt class="col-5 text-muted fw-normal small">Agreements</dt>
-            <dd class="col-7 mb-2">
-                <x-entity-count-badge kind="agreement" :count="$agreements->count()" />
-            </dd>
-
-            <dt class="col-5 text-muted fw-normal small">Created</dt>
-            <dd class="col-7 mb-2 small text-muted">{{ $project->created_at->format('M d, Y') }}</dd>
-
-            <dt class="col-5 text-muted fw-normal small">Updated</dt>
-            <dd class="col-7 mb-0 small text-muted">{{ $project->updated_at->format('M d, Y') }}</dd>
+        <dl class="app-record-metrics">
+            <div><dt>Programs</dt><dd>{{ $project->programs->count() }}</dd></div>
+            <div><dt>Organizations</dt><dd>{{ $project->organizations->count() }}</dd></div>
+            <div><dt>Agreements</dt><dd>{{ $agreements->count() }}</dd></div>
         </dl>
 
         <x-relationship-scroll-panel

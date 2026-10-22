@@ -5,3 +5,4 @@ import './table-a11y.js';
 import './form-drawer.js';
 import './table-filters.js';
 import './relationship-scroll.js';
+import './table-scroll.js';

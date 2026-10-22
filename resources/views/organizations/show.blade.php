@@ -9,42 +9,22 @@
     entity-type="Organization"
     :active="$organization->active"
     :action-url="auth()->user()->can('update', $organization) ? route('organizations.edit', $organization) : null"
-/>
+>
+    <x-slot:badges>
+        @if(filled($organization->po_number))
+            <span class="badge app-tag">PO number: {{ $organization->po_number }}</span>
+        @endif
+    </x-slot:badges>
+</x-page-header>
 
 <x-entity-show>
     {{-- ── Summary ─────────────────────────────────────────────────────── --}}
     <x-slot:summary>
-        <dl class="row mb-0">
-            <dt class="col-5 text-muted fw-normal small">Name</dt>
-            <dd class="col-7 mb-2 fw-semibold">{{ $organization->name }}</dd>
-
-            <dt class="col-5 text-muted fw-normal small">PO Number</dt>
-            <dd class="col-7 mb-2">{{ $organization->po_number ?: '—' }}</dd>
-
-            <dt class="col-5 text-muted fw-normal small">State(s)</dt>
-            <dd class="col-7 mb-2"><x-entity-count-badge kind="state" :count="$organization->states->count()" /></dd>
-
-            <dt class="col-5 text-muted fw-normal small">Contacts</dt>
-            <dd class="col-7 mb-2"><x-entity-count-badge kind="user" :count="$organization->contacts->count()" /></dd>
-
-            <dt class="col-5 text-muted fw-normal small">Associated Users</dt>
-            <dd class="col-7 mb-2">
-                @forelse($organization->users as $user)
-                    <x-user-link :user="$user" class="badge app-chip me-1 mb-1" />
-                @empty
-                    <span class="text-muted">—</span>
-                @endforelse
-            </dd>
-
-            <dt class="col-5 text-muted fw-normal small">Agreements</dt>
-            <dd class="col-7 mb-2">
-                <x-entity-count-badge kind="agreement" :count="$agreements->count()" />
-            </dd>
-
-            <dt class="col-5 text-muted fw-normal small">Staff</dt>
-            <dd class="col-7 mb-2">
-                <x-entity-count-badge kind="team" :count="$teamMembers->count()" />
-            </dd>
+        <p class="app-record-period">Year to date · {{ now()->year }}</p>
+        <dl class="app-record-metrics">
+            <div><dt>Activities</dt><dd>{{ $ytdTotals['activities'] }}</dd></div>
+            <div><dt>Hours</dt><dd>{{ number_format($ytdTotals['hours'], 1) }}</dd></div>
+            <div><dt>Participants</dt><dd>{{ number_format($ytdTotals['participants']) }}</dd></div>
         </dl>
 
         <x-relationship-scroll-panel
@@ -53,7 +33,7 @@
             :count="$organization->contacts->count()"
             height="220px"
             collapsible
-            :collapsed="false"
+            :collapsed="true"
             class="mt-3">
             <div class="d-flex flex-column gap-2">
                 @forelse($organization->contacts as $contact)
@@ -85,14 +65,11 @@
             @endforelse
         </x-relationship-scroll-panel>
 
-        <hr>
-
-        <p class="app-record-period">Year to date · {{ now()->year }}</p>
-        <dl class="app-record-metrics">
-            <div><dt>Activities</dt><dd>{{ $ytdTotals['activities'] }}</dd></div>
-            <div><dt>Hours</dt><dd>{{ number_format($ytdTotals['hours'], 1) }}</dd></div>
-            <div><dt>Participants</dt><dd>{{ number_format($ytdTotals['participants']) }}</dd></div>
-        </dl>
+        <x-relationship-scroll-panel title="Associated users" kind="user" :count="$organization->users->count()" collapsible collapsed class="mt-3">
+            @foreach($organization->users->sortBy('name') as $user)
+                <x-relationship-ledger-row :title="$user->name" :href="\App\Support\UserProfileLink::route($user)" :subtitle="$user->email" />
+            @endforeach
+        </x-relationship-scroll-panel>
     </x-slot:summary>
 
     {{-- ── Relationships ───────────────────────────────────────────────── --}}

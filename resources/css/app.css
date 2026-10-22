@@ -22,6 +22,7 @@
     --app-shadow-button: 0 1px 2px rgba(21, 26, 35, 0.08);
     /* Soft elevation separates white working surfaces from the canvas. */
     --app-card-shadow: 0 1px 3px rgba(21, 26, 35, 0.1), 0 5px 12px rgba(21, 26, 35, 0.05);
+    --app-scroll-shadow-color: rgba(21, 26, 35, 0.32);
 
     --bs-body-font-size: 0.875rem;
     --bs-body-color: #232a36;
@@ -217,9 +218,140 @@ main {
     overflow: hidden;
 }
 
-.app-index-table-card > .table-responsive,
 .app-index-table-card > .card-footer {
     position: relative;
+}
+
+.app-table-scroll-frame {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+}
+
+.app-table-scroll-frame > .table-responsive {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.app-table-scroll-frame::before,
+.app-table-scroll-frame::after {
+    content: '';
+    position: absolute;
+    top: var(--app-table-header-height, 0px);
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 3;
+    pointer-events: none;
+}
+
+.app-table-scroll-frame::after {
+    box-shadow: var(--app-scroll-top, 0 0 transparent),
+        var(--app-scroll-bottom, 0 0 transparent),
+        var(--app-scroll-left, 0 0 transparent),
+        var(--app-scroll-right, 0 0 transparent);
+}
+
+.app-table-scroll-frame.has-more-above {
+    --app-scroll-top: inset 0 8px 8px -8px var(--app-scroll-shadow-color);
+}
+
+.app-table-scroll-frame.has-more-below {
+    --app-scroll-bottom: inset 0 -8px 8px -8px var(--app-scroll-shadow-color);
+}
+
+.app-table-scroll-frame.has-more-left {
+    --app-scroll-left: inset 8px 0 8px -8px var(--app-scroll-shadow-color);
+}
+
+.app-table-scroll-frame.has-more-right {
+    --app-scroll-right: inset -8px 0 8px -8px var(--app-scroll-shadow-color);
+}
+
+.app-table-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1rem;
+}
+
+.app-table-page-size {
+    margin: 0;
+    font-size: 0.8125rem;
+}
+
+.app-table-page-size .form-select {
+    width: 4.75rem;
+}
+
+.app-table-scroll-frame > .table-responsive:focus-visible {
+    outline: none;
+}
+
+.app-table-scroll-frame:has(> .table-responsive:focus-visible)::before {
+    z-index: 4;
+    border: 2px solid var(--app-accent);
+}
+
+/* Desktop lists fit the window; the table owns both scroll axes, leaving its footer in view.
+   Short windows retain document scrolling so filters and controls remain reachable. */
+@media (min-width: 992px) and (min-height: 600px) {
+    .app-main:has(> .container > [data-index-table]) {
+        height: 100dvh;
+        min-height: 0;
+    }
+
+    .app-main:has(> .container > [data-index-table]) > .container {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: 0;
+    }
+
+    .app-main:has(> .container > [data-index-table]) > .container > * {
+        flex-shrink: 0;
+    }
+
+    .app-main > .container > [data-index-table] {
+        flex: 1 1 0;
+        min-height: 0;
+    }
+
+    [data-index-table] > .app-index-table-card {
+        height: 100%;
+        min-height: 0;
+    }
+
+    [data-index-table] > .app-index-table-card > .app-table-scroll-frame {
+        flex: 1 1 0;
+    }
+
+    [data-index-table] .app-table-scroll-frame > .table-responsive {
+        min-height: 0;
+        overflow: auto;
+        overscroll-behavior: none;
+        scrollbar-gutter: stable;
+        scrollbar-color: var(--app-control-border) var(--app-surface-fill);
+    }
+
+    [data-index-table] > .app-index-table-card > .card-footer {
+        flex-shrink: 0;
+    }
+
+    [data-index-table] .table {
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    [data-index-table] .table > thead {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background-color: var(--app-surface-fill);
+    }
 }
 
 .entity-badge--organization {
@@ -1913,6 +2045,7 @@ a.badge.app-chip:focus-visible {
     align-items: center;
     gap: 0.25rem 0.75rem;
     width: 100%;
+    min-width: 0;
     min-height: 2.75rem;
     padding: 0.625rem 0.75rem;
     color: var(--app-ink);
@@ -1943,6 +2076,7 @@ a.badge.app-chip:focus-visible {
 }
 
 .app-ledger-preview {
+    grid-column: 1;
     display: none;
     min-width: 0;
     overflow: hidden;

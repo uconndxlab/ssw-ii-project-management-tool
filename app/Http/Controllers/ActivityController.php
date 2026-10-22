@@ -20,6 +20,7 @@ use App\Support\ActivityFundingSourceTokens;
 use App\Support\ActivityTypeDuration;
 use App\Support\ProgramParticipantDirectory;
 use App\Support\ProjectProgramScope;
+use App\Support\TablePagination;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\RedirectResponse;
@@ -194,7 +195,7 @@ class ActivityController extends Controller
                 break;
         }
 
-        $activities = $query->paginate(50)->withQueryString();
+        $activities = $query->paginate(TablePagination::perPage($request))->withQueryString();
 
         // HTMX: refresh cascading filters and table together
         if ($request->header('HX-Request') === 'true' && $request->input('partial') === 'filters') {

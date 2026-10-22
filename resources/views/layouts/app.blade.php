@@ -79,7 +79,7 @@
 
     <script>
         (function () {
-            var defaultIgnoredNames = ['sort', 'direction', 'page', 'partial'];
+            var defaultIgnoredNames = ['sort', 'direction', 'page', 'per_page', 'partial'];
 
             function ignoredNamesForForm(form) {
                 var ignored = new Set(defaultIgnoredNames);

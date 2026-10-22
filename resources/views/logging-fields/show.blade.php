@@ -3,177 +3,88 @@
 @section('title', $loggingField->name)
 
 @section('content')
-<div class="row mb-4">
-    <div class="col-lg-6">
-        <x-page-header
-            context="show"
-            :title="$loggingField->name"
-            entity-type="Logging Field"
-            :active="$loggingField->is_active"
-            :action-url="auth()->user()->can('update', $loggingField) ? route('logging-fields.edit', $loggingField) : null"
-        >
-            <x-slot:badges>
-                @if($loggingField->is_full_width)
-                    <span class="badge app-tag">Full width</span>
-                @endif
-            </x-slot:badges>
-        </x-page-header>
-    </div>
-</div>
+@php
+    $fieldOptions = $loggingField->normalizedOptions();
+@endphp
+<x-page-header
+    context="show"
+    :title="$loggingField->name"
+    entity-type="Logging Field"
+    :active="$loggingField->is_active"
+    :action-url="auth()->user()->can('update', $loggingField) ? route('logging-fields.edit', $loggingField) : null"
+>
+    <x-slot:badges>
+        <span class="badge app-tag">Field type: {{ $loggingField->fieldTypeLabel() }}</span>
+    </x-slot:badges>
+</x-page-header>
 
-<div class="row">
-    <div class="col-lg-6">
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Field Details</h5>
+<x-entity-show>
+    <x-slot:summary>
+        <dl class="app-record-metrics">
+            <div><dt>Agreements</dt><dd>{{ $loggingField->agreements->count() }}</dd></div>
+            <div><dt>Activity families</dt><dd>{{ $loggingField->contactFamilies->count() }}</dd></div>
+        </dl>
+        <dl class="row mb-0 mt-3">
+            <dt class="col-5 text-muted fw-normal small">Available in</dt>
+            <dd class="col-7 mb-2">
+                <div class="d-flex flex-wrap gap-1">
+                    @if($loggingField->available_in_agreements)<span class="badge app-tag">Agreements</span>@endif
+                    @if($loggingField->available_in_contact_families)<span class="badge app-tag">Activity Families</span>@endif
+                    @if($loggingField->available_in_activities)<span class="badge app-tag">Activity Types</span>@endif
+                </div>
+            </dd>
+            <dt class="col-5 text-muted fw-normal small">Sort order</dt>
+            <dd class="col-7 mb-2">{{ $loggingField->sort_order ?? 'None (alphabetical)' }}</dd>
+            <dt class="col-5 text-muted fw-normal small">Layout</dt>
+            <dd class="col-7 mb-0">{{ $loggingField->is_full_width ? 'Full width' : 'Half width' }}</dd>
+        </dl>
+        @if($loggingField->usesOptions() && $fieldOptions)
+            <x-relationship-scroll-panel title="Options" :count="count($fieldOptions)" collapsible collapsed class="mt-3">
+                @foreach($fieldOptions as $option)
+                    <x-relationship-ledger-row :title="$option['label']" />
+                @endforeach
+            </x-relationship-scroll-panel>
+        @endif
+        @if($loggingField->help_text)
+            <hr>
+            <h3 class="app-subhead mb-2">Help text</h3>
+            <p class="small mb-0">{{ $loggingField->help_text }}</p>
+        @endif
+    </x-slot:summary>
+
+    <x-slot:relationships>
+        <div class="row g-4">
+            <div class="col-md-6">
+                <x-relationship-scroll-panel title="Agreements" kind="agreement" :count="$loggingField->agreements->count()" collapsible>
+                    @foreach($loggingField->agreements as $agreement)
+                        <x-relationship-ledger-row
+                            :title="$agreement->name"
+                            :href="$agreement->isLinkable() ? route('agreements.show', $agreement) : null"
+                            :context-badges="$agreement->pivot->is_required ? ['Required'] : []"
+                        />
+                    @endforeach
+                </x-relationship-scroll-panel>
             </div>
-            <div class="card-body">
-                <table class="table table-borderless mb-0">
-                    <tbody>
-                        <tr>
-                            <td class="text-muted" style="width: 40%;">Field Name</td>
-                            <td class="fw-semibold">{{ $loggingField->name }}</td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">Field Type</td>
-                            <td><span class="badge app-tag">{{ $loggingField->fieldTypeLabel() }}</span></td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">Available In</td>
-                            <td>
-                                <div class="d-flex flex-wrap gap-1">
-                                    @if($loggingField->available_in_agreements)
-                                        <span class="badge app-tag">Agreements</span>
-                                    @endif
-                                    @if($loggingField->available_in_contact_families)
-                                        <span class="badge app-tag">Activity Families</span>
-                                    @endif
-                                    @if($loggingField->available_in_activities)
-                                        <span class="badge app-tag">Activity Types</span>
-                                    @endif
-                                </div>
-                            </td>
-                        </tr>
-                        @if($loggingField->usesOptions() && $loggingField->normalizedOptions())
-                        <tr>
-                            <td class="text-muted">Options</td>
-                            <td>
-                                <ul class="mb-0">
-                                    @foreach($loggingField->normalizedOptions() as $option)
-                                        <li>{{ $option['label'] }}</li>
-                                    @endforeach
-                                </ul>
-                            </td>
-                        </tr>
-                        @endif
-                        @if($loggingField->help_text)
-                        <tr>
-                            <td class="text-muted">Help Text</td>
-                            <td>{{ $loggingField->help_text }}</td>
-                        </tr>
-                        @endif
-                        <tr>
-                            <td class="text-muted">Sort Order</td>
-                            <td>{{ $loggingField->sort_order ?? 'None (alphabetical)' }}</td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">Layout</td>
-                            <td>{{ $loggingField->is_full_width ? 'Full width' : 'Half width' }}</td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">Status</td>
-                            <td>
-                                <x-status-badge :active="$loggingField->is_active" />
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">Created</td>
-                            <td>{{ $loggingField->created_at->format('M d, Y g:i A') }}</td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">Last Updated</td>
-                            <td>{{ $loggingField->updated_at->format('M d, Y g:i A') }}</td>
-                        </tr>
-                    </tbody>
-                </table>
+            <div class="col-md-6">
+                <x-relationship-scroll-panel title="Activity Families" :count="$loggingField->contactFamilies->count()" collapsible>
+                    @foreach($loggingField->contactFamilies as $family)
+                        <x-relationship-ledger-row :title="$family->name" :context-badges="$family->pivot->is_required ? ['Required'] : []" />
+                    @endforeach
+                </x-relationship-scroll-panel>
             </div>
         </div>
-    </div>
-
-    <div class="col-lg-6">
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Usage Statistics</h5>
-            </div>
-            <div class="card-body">
-                <p class="text-muted mb-3">This field is currently used in:</p>
-
-                <div class="mb-4">
-                    <h6 class="fw-semibold">Agreements ({{ $loggingField->agreements->count() }})</h6>
-                    @if($loggingField->agreements->isNotEmpty())
-                        <ul class="list-group list-group-flush">
-                            @foreach($loggingField->agreements as $agreement)
-                                <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
-                                    <div>
-                                        @if($agreement->isLinkable())
-                                            <a href="{{ route('agreements.show', $agreement) }}" class="text-decoration-none">
-                                                {{ $agreement->name }}
-                                            </a>
-                                        @else
-                                            <span>{{ $agreement->name }}</span>
-                                        @endif
-                                        @if($agreement->pivot->is_required)
-                                            <span class="badge app-tag ms-2">Required</span>
-                                        @endif
-                                    </div>
-                                </li>
-                            @endforeach
-                        </ul>
-                    @else
-                        <p class="text-muted small mb-0">Not used in any agreements yet.</p>
-                    @endif
-                </div>
-
-                <div>
-                    <h6 class="fw-semibold">Activity Families ({{ $loggingField->contactFamilies->count() }})</h6>
-                    @if($loggingField->contactFamilies->isNotEmpty())
-                        <ul class="list-group list-group-flush">
-                            @foreach($loggingField->contactFamilies as $family)
-                                <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
-                                    <div>
-                                        {{ $family->name }}
-                                        @if($family->pivot->is_required)
-                                            <span class="badge app-tag ms-2">Required</span>
-                                        @endif
-                                    </div>
-                                </li>
-                            @endforeach
-                        </ul>
-                    @else
-                        <p class="text-muted small mb-0">Not used in any activity families yet.</p>
-                    @endif
-                </div>
-            </div>
-        </div>
-
         @can('delete', $loggingField)
-        @if($loggingField->agreements->isEmpty() && $loggingField->contactFamilies->isEmpty())
-        <div class="card border-danger">
-            <div class="card-body">
-                <h6 class="text-danger mb-2">Delete This Field?</h6>
+            @if($loggingField->agreements->isEmpty() && $loggingField->contactFamilies->isEmpty())
+                <hr>
+                <h3 class="h6 text-danger mb-2">Delete This Field?</h3>
                 <p class="small text-muted mb-3">This field is not currently in use and can be safely deleted.</p>
-                <form method="POST" action="{{ route('logging-fields.destroy', $loggingField) }}" class="d-inline">
+                <form method="POST" action="{{ route('logging-fields.destroy', $loggingField) }}">
                     @csrf @method('DELETE')
                     <button type="submit" class="btn btn-sm btn-danger"
-                        onclick="return confirm('Are you sure you want to delete {{ addslashes($loggingField->name) }}? This action cannot be undone.')">
-                        Delete Field
-                    </button>
+                            onclick="return confirm('Are you sure you want to delete {{ addslashes($loggingField->name) }}? This action cannot be undone.')">Delete Field</button>
                 </form>
-            </div>
-        </div>
-        @endif
+            @endif
         @endcan
-    </div>
-</div>
-
+    </x-slot:relationships>
+</x-entity-show>
 @endsection

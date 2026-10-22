@@ -3,42 +3,34 @@
 @section('title', $team->name)
 
 @section('content')
-<div class="row mb-4">
-    <div class="col-12">
-        <x-page-header context="show" :title="$team->name" entity-type="Team" :active="$team->active" :action-url="auth()->user()->can('update', $team) ? route('teams.edit', $team) : null" />
-    </div>
-</div>
+<x-page-header context="show" :title="$team->name" entity-type="Team" :active="$team->active" :action-url="auth()->user()->can('update', $team) ? route('teams.edit', $team) : null"/>
 
-<div class="row">
+<div class="row g-4">
     <!-- Team Details -->
-    <div class="col-md-4">
+    <div class="col-lg-4">
         <div class="card mb-4">
             <div class="card-header">
-                <h5 class="mb-0">Team Details</h5>
+                <h2 class="h5 mb-0">Summary</h2>
             </div>
-            <div class="card-body">
-                <dl class="row mb-0">
-                    <dt class="col-sm-4">Members:</dt>
-                    <dd class="col-sm-8">{{ $team->users->count() }}</dd>
-
-                    <dt class="col-sm-4">Agreements:</dt>
-                    <dd class="col-sm-8">{{ $team->agreements->count() }}</dd>
-
-                    <dt class="col-sm-4">Created:</dt>
-                    <dd class="col-sm-8">{{ $team->created_at->format('M d, Y') }}</dd>
-
-                    <dt class="col-sm-4">Updated:</dt>
-                    <dd class="col-sm-8">{{ $team->updated_at->format('M d, Y') }}</dd>
+            <div class="card-body" data-record-summary>
+                <dl class="app-record-metrics">
+                    <div><dt>Members</dt><dd>{{ $team->users->count() }}</dd></div>
+                    <div><dt>Agreements</dt><dd>{{ $team->agreements->count() }}</dd></div>
                 </dl>
+                <x-relationship-scroll-panel title="Agreements" kind="agreement" :count="$team->agreements->count()" collapsible collapsed class="mt-3">
+                    @foreach($team->agreements->sortBy('name') as $agreement)
+                        <x-relationship-ledger-row :title="$agreement->name" :href="$agreement->isLinkable() ? route('agreements.show', $agreement) : null" />
+                    @endforeach
+                </x-relationship-scroll-panel>
             </div>
         </div>
     </div>
 
     <!-- Team Members -->
-    <div class="col-md-8">
+    <div class="col-lg-8">
         <div class="card mb-4">
             <div class="card-header">
-                <h5 class="mb-0">Team Members ({{ $team->users->count() }})</h5>
+                <h2 class="h5 mb-0">Team Members ({{ $team->users->count() }})</h2>
             </div>
             <div class="card-body">
                 @if($team->users->isNotEmpty())
@@ -64,7 +56,7 @@
         <!-- Team Deliverables -->
         <div class="card mb-4">
             <div class="card-header">
-                <h5 class="mb-0">Team Deliverables</h5>
+                <h2 class="h5 mb-0">Team Deliverables</h2>
             </div>
             <div class="card-body">
                 @php
@@ -143,7 +135,7 @@
         <!-- Individual Assignments -->
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0">Individual Assignments</h5>
+                <h2 class="h5 mb-0">Individual Assignments</h2>
             </div>
             <div class="card-body">
                 @if($team->users->isEmpty())

@@ -15,6 +15,7 @@ use App\Support\Authorization\PrivilegeSync;
 use App\Support\Authorization\ScopeSync;
 use App\Support\Authorization\UserAccess;
 use App\Support\ProjectProgramScope;
+use App\Support\TablePagination;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -87,7 +88,7 @@ class AdminUserController extends Controller
 
         $this->applyUserIndexSort($query, $sort, $direction);
 
-        $users = $query->paginate(20)->withQueryString();
+        $users = $query->paginate(TablePagination::perPage($request))->withQueryString();
 
         $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
         $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
@@ -184,7 +185,7 @@ class AdminUserController extends Controller
         $direction = $request->input('direction', 'asc') === 'desc' ? 'desc' : 'asc';
         $this->applyUserIndexSort($query, $sort, $direction);
 
-        $users = $query->paginate(20)->withQueryString();
+        $users = $query->paginate(TablePagination::perPage($request))->withQueryString();
         $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
         $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
         $superviseesIndex = true;

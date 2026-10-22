@@ -12,7 +12,7 @@
 @endphp
 
 <div class="card shadow-sm app-index-table-card">
-    <div class="table-responsive">
+    <x-table-scroll>
         <table class="table table-hover align-middle mb-0 app-data-table app-cards">
             <thead>
                 <tr>
@@ -112,7 +112,7 @@
                 @endforelse
             </tbody>
         </table>
-    </div>
+    </x-table-scroll>
     <div class="card-footer">
         <x-htmx-pagination :paginator="$activities" target="#activities-table" />
     </div>

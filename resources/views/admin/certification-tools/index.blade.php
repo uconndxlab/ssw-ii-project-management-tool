@@ -19,7 +19,7 @@
     </div>
 </div>
 
-<div id="certification-tools-table">
+<div id="certification-tools-table" data-index-table>
     @include('admin.certification-tools.partials.table', [
         'certificationTools' => $certificationTools,
         'sort'               => $sort,

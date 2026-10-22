@@ -14,38 +14,17 @@
 <x-entity-show>
     {{-- ── Summary ─────────────────────────────────────────────────────── --}}
     <x-slot:summary>
-        <dl class="row mb-0">
-            <dt class="col-5 text-muted fw-normal small">Projects</dt>
-            <dd class="col-7 mb-2">
-                @if($program->projects->isNotEmpty())
-                    <div class="d-flex flex-wrap gap-1">
-                        @foreach($program->projects->sortBy('name') as $project)
-                            <x-entity-relation-badge kind="project" :href="route('projects.show', $project)">{{ $project->name }}</x-entity-relation-badge>
-                        @endforeach
-                    </div>
-                @else
-                    <span class="text-muted">—</span>
-                @endif
-            </dd>
-
-            <dt class="col-5 text-muted fw-normal small">Agreements</dt>
-            <dd class="col-7 mb-2">
-                <x-entity-count-badge kind="agreement" :count="$agreements->count()" />
-            </dd>
-
-            <dt class="col-5 text-muted fw-normal small">Organizations</dt>
-            <dd class="col-7 mb-2">
-                <x-entity-count-badge kind="organization" :count="$organizations->count()" />
-            </dd>
-
-            <dt class="col-5 text-muted fw-normal small">Activities</dt>
-            <dd class="col-7 mb-2">
-                <x-entity-count-badge kind="activity" :count="$activityCount" />
-            </dd>
-
-            <dt class="col-5 text-muted fw-normal small">Added</dt>
-            <dd class="col-7 mb-0 small text-muted">{{ $program->created_at->format('M d, Y') }}</dd>
+        <dl class="app-record-metrics">
+            <div><dt>Activities</dt><dd>{{ $activityCount }}</dd></div>
+            <div><dt>Agreements</dt><dd>{{ $agreements->count() }}</dd></div>
+            <div><dt>Organizations</dt><dd>{{ $organizations->count() }}</dd></div>
         </dl>
+
+        <x-relationship-scroll-panel title="Projects" kind="project" :count="$program->projects->count()" collapsible collapsed class="mt-3">
+            @foreach($program->projects->sortBy('name') as $project)
+                <x-relationship-ledger-row :title="$project->name" :href="route('projects.show', $project)" />
+            @endforeach
+        </x-relationship-scroll-panel>
 
         <x-relationship-scroll-panel
             title="States"

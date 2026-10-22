@@ -146,7 +146,7 @@
     $hasDefaultAction = filled($actionUrl) && filled($resolvedActionLabel) && filled($resolvedActionClass);
     $hasMore = isset($more) && filled(trim((string) $more));
     $recordIcon = $context === 'show' && filled($entityType)
-        ? match ($resolvedEntityKind) {
+        ? match ($badgeKind === 'role' ? 'user' : $resolvedEntityKind) {
             'activity' => 'bi-calendar-check',
             'organization' => 'bi-building',
             'state' => 'bi-geo-alt',

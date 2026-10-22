@@ -16,7 +16,7 @@
     $bodyId = $resolvedPanelId . '-body';
     $isEmpty = ! is_null($count) && (int) $count === 0;
     $canCollapse = $showHeader && $collapsible && ! $isEmpty;
-    $isCollapsed = $canCollapse && $collapsed && (is_null($count) || (int) $count > 6);
+    $isCollapsed = $canCollapse && $collapsed;
     $headerMetaFilled = isset($headerMeta) && filled(trim((string) $headerMeta));
     $headerActionsFilled = isset($headerActions) && filled(trim((string) $headerActions));
 @endphp
@@ -33,7 +33,7 @@
                             aria-expanded="{{ $isCollapsed ? 'false' : 'true' }}"
                             aria-controls="{{ $bodyId }}">
                         <span class="app-ledger-label">{{ $title }} @if(! is_null($count))<span class="app-count">{{ $count }}</span>@endif</span>
-                        <span class="app-ledger-preview" data-ledger-preview hidden></span>
+                        <span class="app-ledger-preview" data-ledger-preview aria-hidden="true" hidden></span>
                         <i class="bi bi-chevron-right" aria-hidden="true"></i>
                     </button>
                 @else

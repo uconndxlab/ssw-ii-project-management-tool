@@ -1,6 +1,6 @@
 // Collapses index filter forms behind a "Filters (n)" button below the md breakpoint.
 // The first column of each form's row is the search box and stays visible; every other column is a filter.
-const ignoredNames = new Set(['sort', 'direction', 'page', 'partial', 'search']);
+const ignoredNames = new Set(['sort', 'direction', 'page', 'per_page', 'partial', 'search']);
 const openForms = new Set();
 
 function activeFilterCount(form) {
@@ -25,6 +25,22 @@ function activeFilterCount(form) {
 
 function initTableFilters(scope = document) {
     scope.querySelectorAll('form[data-table-filter-form]').forEach((form) => {
+        const target = form.getAttribute('hx-target');
+        const pageSize = target && document.querySelector(target)?.querySelector('[data-table-page-size]');
+        const pageSizeInput = form.querySelector('input[name="per_page"]');
+
+        if (pageSize && pageSizeInput) {
+            pageSizeInput.value = pageSize.value;
+
+            const clear = form.querySelector('[data-table-filter-clear-wrap] a');
+
+            if (clear) {
+                const url = new URL(clear.href);
+                url.searchParams.set('per_page', pageSize.value);
+                clear.href = url.toString();
+            }
+        }
+
         const row = form.querySelector(':scope > .row');
 
         if (!row || row.classList.contains('app-filters-js') || row.children.length < 2) {

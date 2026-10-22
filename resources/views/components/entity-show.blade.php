@@ -20,6 +20,7 @@
     $relationshipsHeaderActionsFilled = isset($relationshipsHeaderActions) && filled(trim((string) $relationshipsHeaderActions));
     $activityHeaderMetaFilled = isset($activityHeaderMeta) && filled(trim((string) $activityHeaderMeta));
     $activityHeaderActionsFilled = isset($activityHeaderActions) && filled(trim((string) $activityHeaderActions));
+    $sections = isset($activity) ? ($activityFirst ? ['activity', 'relationships'] : ['relationships', 'activity']) : ['relationships'];
 @endphp
 
 <div class="row g-4">
@@ -29,14 +30,14 @@
             <div class="card-header py-2 px-3">
                 <h2 class="h5 mb-0">Summary</h2>
             </div>
-            <div class="card-body">
+            <div class="card-body" data-record-summary>
                 {{ $summary }}
             </div>
         </div>
     </div>
 
     <div class="col-lg-8 d-flex flex-column gap-4">
-        @foreach($activityFirst ? ['activity', 'relationships'] : ['relationships', 'activity'] as $section)
+        @foreach($sections as $section)
             @php
                 $isActivity = $section === 'activity';
                 $headerMetaFilled = $isActivity ? $activityHeaderMetaFilled : $relationshipsHeaderMetaFilled;

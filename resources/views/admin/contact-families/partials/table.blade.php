@@ -2,12 +2,12 @@
     $s    = $sort ?? 'sort_order';
     $d    = $direction ?? 'asc';
     $flip = fn($col) => ($s === $col && $d === 'asc') ? 'desc' : 'asc';
-    $url  = fn($col) => route('contact-families.index', array_merge(request()->query(), ['sort' => $col, 'direction' => $flip($col)]));
+    $url  = fn($col) => route('contact-families.index', array_merge(request()->query(), ['sort' => $col, 'direction' => $flip($col), 'page' => 1]));
     $scopeEmptyLabel = fn ($mode, string $allLabel, string $noneLabel) => ($mode?->value ?? $mode) === 'none' ? $noneLabel : $allLabel;
 @endphp
 
 <div class="card shadow-sm app-index-table-card">
-    <div class="table-responsive">
+    <x-table-scroll>
         <table class="table table-hover align-middle mb-0">
             <thead>
                 <tr>
@@ -89,6 +89,9 @@
                 @endforelse
             </tbody>
         </table>
+    </x-table-scroll>
+    <div class="card-footer">
+        <x-htmx-pagination :paginator="$contactFamilies" target="#cf-table" />
     </div>
 </div>
 

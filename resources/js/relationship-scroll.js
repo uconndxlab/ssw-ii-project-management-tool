@@ -15,7 +15,7 @@ function syncScroll(body) {
 
     if (preview) {
         const names = items.map((item) => item.dataset.ledgerTitle).filter(Boolean);
-        preview.textContent = names.slice(0, 2).join(', ') + (names.length > 2 ? ` +${names.length - 2}` : '');
+        preview.textContent = names.join(', ');
         preview.hidden = names.length === 0;
     }
 
