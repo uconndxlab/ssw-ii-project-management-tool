@@ -13,7 +13,6 @@
     'containerClass' => null,
     'entityType' => null,
     'entityKind' => null,
-    'entityTypeBadgeClass' => null,
     'badgeKind' => null,
     'active' => null,
     'inactiveLabel' => 'Inactive',
@@ -48,12 +47,6 @@
         $resolvedTitle = $mode === 'edit'
             ? 'Edit ' . $entityType
             : ($resolvedEntityKind === 'activity' ? 'Log Activity' : 'Create ' . $entityType);
-    }
-
-    $resolvedEntityTypeBadgeClass = $entityTypeBadgeClass;
-
-    if (blank($resolvedEntityTypeBadgeClass) && filled($resolvedEntityKind)) {
-        $resolvedEntityTypeBadgeClass = \App\Support\EntityBadge::typeClasses($resolvedEntityKind);
     }
 
     $resolvedBreadcrumbLabel = $breadcrumbLabel;
@@ -140,9 +133,8 @@
     $hasExplicitMeta = isset($meta) && filled(trim((string) $meta));
     $hasExplicitControls = isset($controls) && filled(trim((string) $controls));
     $inlineDescription = filled($description) && in_array($context, ['form', 'show'], true);
-    $showFormMeta = $isFormContext && filled($entityType);
-    $showStandardMeta = $showFormMeta || filled($entityType) || !is_null($active) || $inlineDescription;
-    $hasMeta = $hasExplicitMeta || $hasBadgeAugment || $showStandardMeta;
+    $hasRoleBadge = $badgeKind === 'role' && filled($entityType);
+    $hasMeta = $hasExplicitMeta || $hasBadgeAugment || $hasRoleBadge || !is_null($active) || $inlineDescription;
     $hasDefaultAction = filled($actionUrl) && filled($resolvedActionLabel) && filled($resolvedActionClass);
     $hasMore = isset($more) && filled(trim((string) $more));
     $recordIcon = $context === 'show' && filled($entityType)
@@ -251,17 +243,11 @@
 
             @if($hasMeta)
                 <div class="{{ $resolvedMetaClass }}">
-                    @if($showStandardMeta)
-                        @if(filled($entityType))
-                            @if(filled($badgeKind))
-                                <x-category-badge :kind="$badgeKind">{{ $entityType }}</x-category-badge>
-                            @else
-                                <x-entity-type-badge :label="$entityType" :badge-class="$resolvedEntityTypeBadgeClass" />
-                            @endif
-                        @endif
-                        @if(! is_null($active))
-                            <x-status-badge :active="$active" :inactive-label="$inactiveLabel" />
-                        @endif
+                    @if($hasRoleBadge)
+                        <x-category-badge kind="role">{{ $entityType }}</x-category-badge>
+                    @endif
+                    @if(! is_null($active))
+                        <x-status-badge :active="$active" :inactive-label="$inactiveLabel" />
                     @endif
                     @if($hasBadgeAugment)
                         {{ $badges }}

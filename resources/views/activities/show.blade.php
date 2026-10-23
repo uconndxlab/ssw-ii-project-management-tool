@@ -13,7 +13,6 @@
     context="show"
     :title="$activity->activityType->name"
     entity-type="Activity"
-    :description="$activity->identityLabel(includeType: false)"
     :action-url="$canManageActivity ? route('activities.edit', $activity) : null"
 >
     <x-slot:facts>

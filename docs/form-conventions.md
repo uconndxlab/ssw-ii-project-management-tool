@@ -5,6 +5,7 @@ Create/edit forms share one shell and the same components. Do not invent a per-p
 ## Shell
 - `x-form-shell` (a centered column, 68rem max) wraps the form. `x-form-errors` above the `<form>`. `x-page-header` inside the form. `x-section-card` for every section. Save, Cancel, and status live in the sticky page header (`save-label`, `form-id`, `last-saved-at` props) — no in-card submit/cancel and no bottom bar. Once the header scrolls away a light compact bar (same white surface and buttons) takes over.
 - Section by user job: identity → coverage/scope → people/orgs → rules/options → related records.
+- Header metadata is optional. Omit entity-type badges; create/edit titles and breadcrumbs already establish the entity. Do not leave an empty metadata row for spacing.
 - Dirty forms guard ordinary same-tab links and Cancel with the shared leave warning: exit icon, record name, Keep editing first, and Discard changes. Keep editing preserves input and restores focus; approved navigation bypasses the native warning once. Modified/new-tab links, downloads, same-document anchors and local controls keep their usual behavior. Save still validates and submits normally. Retain `beforeunload` for refresh, tab close and browser navigation; it cannot be restyled.
 
 ## Fields
