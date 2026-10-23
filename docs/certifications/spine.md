@@ -85,6 +85,13 @@ Group eval: all | any | n_of. Overall = all groups + all ungrouped requirements 
 ## Acceptance test — the NWIC Local Coach certificate
 If the model cannot express this table, the design is wrong. Source: NWIC Certification Guide Spring 2026.
 
+**Open clarification before affected authoring/progress work:** the user has said the exploratory builder mock's
+Full-review/Phase interaction is not accurate. The encodings below record the current plan; they do not
+resolve that correction. Obtain concrete examples of which submissions count, how Full relates to Phase,
+and how coverage and minimum counts combine. Reconcile the affected rows, evaluation rules and schema if
+needed before implementing those interactions or the Doc 3 evaluator. Do not treat the mock as a rule
+specification or invent the missing behavior. The no-score-math decision remains unchanged.
+
 | Guide requirement | Kind | Encoding |
 |---|---|---|
 | Registration in InnovatePractice(c) | attestation | coach checks off |
@@ -204,11 +211,25 @@ errors. Fix with `./vendor/bin/sail artisan view:clear`. See the repo memory `do
 1. Catalog foundation — enums, duties + CertificationAccess, tool builder, roles, certificates +
    requirements. Acceptance: author the NWIC Local Coach certificate. No people, no progress. **SHIPPED** —
    see `doc-1-catalog-foundation.md`.
+   **Follow-up 1A — Catalog authoring usability: PLANNED**, specified in that document's follow-up section.
+   Part of the certificate work, independent of the enterprise restyle. Doc 2 can proceed independently;
+   settle the Full/Phase clarification and authoring pattern before Doc 3 builds capture/progress UI.
 2. People & enrollment — candidates person table + backfill, agreement drawer, coach picker.
 3. Capture & progress — activity-form tagging + submissions, attestation UI, CertificateProgressService.
 4. Lifecycle — statuses, endorsement gate, award/revoke, expiry + renewal cycles, action log.
 5. Surfacing (deferrable) — central indexes, candidate detail, PDF generation
    (needs `barryvdh/laravel-dompdf`), expiration notifications.
+
+## Certificate release and design integration
+- Certificates must be releasable before and separately from `design/enterprise-restyle`. Implement
+  certificate work on a branch based on `main`, using the components and visual system available there.
+  The follow-up improves authoring structure and behavior; it does not import the restyle's CSS or shared
+  component changes, or depend on its new confirmation dialog.
+- After certificate work reaches `main`, merge the updated `main` into the design branch and reconcile
+  certificate templates with the newer styles there. Keep one certificate implementation; avoid parallel
+  versions or repeated file copying. The later design release carries the integrated certificate work.
+- Use the certificate builder to establish a possible form pattern, then evaluate it against a difficult
+  deliverable. App-wide form changes and deliverable restructuring are outside this certificate release.
 
 ## Still open (Doc 5 TODOs, low risk)
 - PDF content / template / whether to regenerate after a name correction.

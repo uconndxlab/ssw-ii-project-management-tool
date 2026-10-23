@@ -1,6 +1,7 @@
 # Doc 1 — Catalog Foundation
 
 **Status: SHIPPED.** See the spine's Handoffs section for what actually landed and any deviations.
+The catalog authoring follow-up below is **PLANNED**, not part of the shipped completion claim.
 
 Prereq: read `docs/certifications/spine.md` first.
 Goal: an admin can build scoring tools and author a full certificate (initial + renewal requirement sets).
@@ -163,3 +164,67 @@ Fully implemented and verified (via direct controller-level smoke tests in tinke
 is available in this environment — all test data was created and cleaned up in the same pass). See the
 spine's Handoffs section for exact names, deviations, the `x-repeater-rows` component API, and notes for
 Doc 2.
+
+## Follow-up 1A — Catalog authoring usability (PLANNED)
+
+Goal: an admin can express and review certificate rules without understanding the nested storage model.
+This is certificate work for the separate certificate release, using the existing visual system on
+`main`. The exploratory mock established a direction, not an approved specification for every rule.
+Keep the shipped foundation and Docs 2-5 numbering intact; append a spine handoff only when this follow-up
+actually ships. Doc 2 can proceed independently. Settle the authoring pattern before Doc 3's related UI.
+
+### Clarify the rule before designing its controls
+- The user flagged the mock's Full-review/Phase interaction as inaccurate. Obtain concrete examples of
+  valid submissions and expected counts, including coverage, minimum counts and how Full relates to Phase.
+  Correct the spine's affected acceptance/evaluation details before implementing that interaction or the
+  Doc 3 evaluator. If the confirmed rule needs a model change, scope it explicitly; do not silently encode
+  different semantics through new labels or controls.
+- Distinguish certificate stages (Initial/Renewal) from tool dimensions such as Phase. Scores and threshold
+  notes remain recorded guidance; coaches judge passing outcomes. Never introduce automatic score math.
+
+### Authoring direction
+- Organize by task: Basics, Initial requirements, Renewal, Review rules. Allow direct navigation between
+  sections rather than requiring a Next/Back wizard. Preserve the existing form shell and Save/Cancel
+  behavior; navigation and a local editor must not silently save part of the certificate.
+- Show a compact requirement list with meaningful summaries and one focused editor at a time. Prefer an
+  inline editor beneath the selected item initially; verify complex examples before choosing a drawer.
+  Start a new requirement by choosing Activity work, Tool submissions or Coach confirmation, then reveal
+  only relevant fields. Preserve completion-unit counting rather than implying every activity counts once.
+- Present grouped requirements together under their all/any/set-number rule. Offer grouping where authors
+  work with the requirements, instead of making them create groups elsewhere and remember dropdown links.
+  Ungrouped requirements remain individually required; do not invent arbitrary nested Boolean groups.
+- Keep certificate-specific role management contextual to the role selector. Keep any-role filtering and
+  existing role data available. Global-role management and duty administration retain their separate scope.
+- Explain certificate defaults and per-requirement overrides explicitly. Show the effective counting window
+  and program/role filters in summaries. Distinguish award validity from how far back work can count.
+- Make following initial rules versus copying them explicit: following remains linked; copying starts an
+  independent renewal list. Preserve support for genuinely different renewal requirements and confirm
+  destructive replacement/clearing using mechanisms available on the certificate branch.
+- Provide readable rule summaries for authors to check before saving. Summaries must reflect all effective
+  conditions, including groups, overrides and inherited renewal rules. This is configuration review, not
+  candidate progress evaluation; progress, endorsement and awarding remain Docs 3-4.
+
+### Boundaries and preservation
+- Reuse the Blade/Bootstrap components available on `main`; no dependency on enterprise-restyle tokens,
+  layouts or new shared JS. Preserve program scope, prerequisites, permissions and existing save semantics.
+- No new draft/publish workflow, autosave, candidate evaluator or general-purpose rules engine. Do not
+  redesign deliverables or the scoring-tool builder as a prerequisite for this authoring follow-up.
+- Preserve stable IDs, phase/group membership, ordering, deletion markers and new unsaved group references
+  through editing and validation errors. Existing catalog records must reopen without losing data. Treat
+  a field hidden for a different requirement kind deliberately; do not silently retain contradictory rules
+  or discard authored data when switching types/tools.
+
+### Acceptance and handoff
+1. Confirm the Full/Phase examples and update the spine first. Author and reopen the full NWIC Local Coach
+   example with its confirmed rules, plus Trainer prerequisites/roles and a simple coach attestation.
+2. Verify grouped and ungrouped requirements, initial/renewal edits in the same submission, linked renewal,
+   independent copies, ordering and confirmed removals. Validation failures preserve values and open the
+   relevant section/editor with errors linked to controls.
+3. Check keyboard-only operation, named controls, focus after add/edit/remove and navigation between
+   sections. Reordering must have a keyboard alternative. Inspect desktop and phone layouts with realistic
+   long labels and complex rules; check browser errors and existing authorization boundaries.
+4. Add meaningful regression coverage for changed behavior, then run the repository's required checks.
+   Use factories/tests for test data; do not seed over or recreate the development database.
+5. Record the proven authoring conventions in the existing form-conventions document and append the spine
+   handoff. Later, evaluate the pattern against one difficult deliverable before extracting shared UI.
+   After certificate work reaches `main`, integrate it into the design branch and reconcile styles there.
