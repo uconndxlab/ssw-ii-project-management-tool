@@ -39,3 +39,10 @@ Create/edit forms share one shell and the same components. Do not invent a per-p
   stage/group references and nested values through validation; open the section/editor with the error.
 - This certificate-specific editor is a proven local pattern, not a new shared form framework. Evaluate
   a difficult deliverable before extracting reusable behavior; enterprise-style reconciliation stays separate.
+
+## Activity certification capture
+
+- Opening another candidate editor scrolls the selected candidate below the phone and compact form
+  headers after the previous editor collapses, while retaining keyboard focus on the editor toggle.
+- Enrollment progress links retain the source agreement for breadcrumbs. Only visible roster-linked
+  agreements can appear in that navigation context; agreement context never limits certificate credit.

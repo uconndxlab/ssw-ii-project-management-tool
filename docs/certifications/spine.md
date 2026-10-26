@@ -467,3 +467,26 @@ committed or released. Doc 1's shipped schema stays unchanged. See the completed
 - Still deferred: endorsement, awards/revocation, renewal execution, action logs for certificate
   lifecycle, uploads/PDFs/notifications and automated inter-rater sequencing. No production
   deployment or assistive-technology software testing was performed.
+
+### Doc 3 user-review follow-up — COMPLETE IN WORKING TREE
+
+- The original Doc 3 work is now commit `b5c8356`; new follow-up changes are unstaged on
+  `feature/certificates-doc3`. No staging/commit/push was performed in this follow-up.
+- Enrollment breadcrumbs retain the originating visible agreement (safe fallback when unavailable),
+  including after confirmation saves. Agreement context is navigation/provenance only; it does not
+  change program-intersection credit. Evidence-bearing assignments no longer display Not Started
+  from stale stored status. Opening an activity candidate editor scrolls it below sticky headers.
+- `NwicCertificationSeeder` was applied explicitly to development after tests. It installs the full
+  Spring 2026 guide catalog: Local Coach 19 initial / 10 renewal, Supervisor 19 / 11, Trainer 11 / 4;
+  annual validity; Trainer's Coach-or-Supervisor prerequisites; five tools; training/online/WVCC
+  types; phase coverage and independent Full-review/field-observation quotas. All thresholds remain
+  coach guidance. Uncounted/qualitative conditions are coach confirmations with guide page notes.
+- Seeder is local/testing-only, not automatically called. It preserves existing evidence, people,
+  assignments and option IDs; repeats preserve requirement IDs. Existing COMET retains its stale
+  historical `crest` slug and evidence identity; CREST is a separate instrument using `crest-nwic`.
+  No new enrollment, endorsement, award or renewal cycle was fabricated.
+- Full mapping, setup command and implementation boundaries are in Doc 3. Prior inter-rater
+  sequencing, formal prerequisite award validation and lifecycle execution remain deferred.
+- Checks passed: composer check (298 tests / 1,271 assertions, audit, Pint, PHPStan), build, and
+  desktop/mobile Playwright checks for the navigation, badge and editor-scroll fixes. Screenshots
+  and independent critique artifacts are gitignored under `.artifacts/doc3/`.

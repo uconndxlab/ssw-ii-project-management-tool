@@ -49,7 +49,7 @@
                             @if($canConfirm)
                                 <details @if($errors->any() && (string) old('requirement_id') === (string) $requirement->id) open @endif>
                                     <summary class="small text-primary">{{ $attestation?->satisfied ? 'Change confirmation' : 'Confirm requirement…' }}</summary>
-                                    <form class="mt-3" method="POST" action="{{ route('certificate-enrollments.attest', [$enrollment, $requirement]) }}">
+                                    <form class="mt-3" method="POST" action="{{ route('certificate-enrollments.attest', ['certificateEnrollment' => $enrollment, 'requirement' => $requirement, 'agreement_id' => request()->integer('agreement_id') ?: null]) }}">
                                         @csrf @method('PUT')
                                         <input type="hidden" name="requirement_id" value="{{ $requirement->id }}">
                                         <x-form-field label="Note" :for="'confirmation-note-'.$requirement->id">

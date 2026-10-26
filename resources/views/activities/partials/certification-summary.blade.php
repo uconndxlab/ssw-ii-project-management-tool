@@ -7,7 +7,7 @@
                 <strong>{{ $person['name'] }}</strong>
                 <span class="small text-muted">{{ $tag['role_name'] ?? 'No role' }} · {{ $tag['completion_units'] }} unit(s) · {{ $tag['submission_count'] }} submission(s)</span>
                 @foreach($person['enrollments'] as $enrollment)
-                    @if($enrollment['url'])<div><a class="small" href="{{ $enrollment['url'] }}">{{ $enrollment['name'] }} progress</a></div>@endif
+                    @if($enrollment['url'])<div><a class="small" href="{{ route('certificate-enrollments.show', ['certificateEnrollment' => $enrollment['id'], 'agreement_id' => $tag['agreement_id']]) }}">{{ $enrollment['name'] }} progress</a></div>@endif
                 @endforeach
             </div>
         @endforeach

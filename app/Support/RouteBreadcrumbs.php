@@ -3,6 +3,9 @@
 namespace App\Support;
 
 use App\Enums\RecentRecordType;
+use App\Models\Agreement;
+use App\Models\CertificateEnrollment;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -23,7 +26,22 @@ class RouteBreadcrumbs
         $indexRoute = $resource.'.index';
         $items = [];
 
-        if ($routeName === 'profile.edit') {
+        if ($routeName === 'certificate-enrollments.show') {
+            $enrollment = $route->parameter('certificateEnrollment');
+            $actor = $request->user();
+            if ($enrollment instanceof CertificateEnrollment && $actor instanceof User) {
+                $agreements = Agreement::query()->visibleTo($actor)
+                    ->whereHas('certificationCandidates', fn ($query) => $query->where('certification_candidate_id', $enrollment->certification_candidate_id))
+                    ->orderBy('name')->get();
+                $agreement = $agreements->firstWhere('id', $request->integer('agreement_id'))
+                    ?? $agreements->firstWhere('id', $enrollment->sponsoring_agreement_id)
+                    ?? $agreements->first();
+                if ($agreement !== null) {
+                    $items[] = ['label' => 'Agreements', 'url' => route('agreements.index'), 'current' => false];
+                    $items[] = ['label' => $agreement->name, 'url' => route('agreements.show', $agreement), 'current' => false];
+                }
+            }
+        } elseif ($routeName === 'profile.edit') {
             $items[] = ['label' => 'Profile', 'url' => route('profile'), 'current' => false];
         } elseif (Route::has($indexRoute) && $routeName !== $indexRoute) {
             $label = $resource === 'contact-families'

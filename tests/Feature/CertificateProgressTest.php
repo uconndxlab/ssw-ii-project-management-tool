@@ -1,9 +1,11 @@
 <?php
 
+use App\Enums\CertificateEnrollmentStatus;
 use App\Enums\CertificateRequirementPhase;
 use App\Enums\ProgramScopeMode;
 use App\Models\Activity;
 use App\Models\ActivityCertificationCandidate;
+use App\Models\Agreement;
 use App\Models\CertificateAttestation;
 use App\Models\CertificateRequirement;
 use App\Models\CertificateRequirementDimensionRule;
@@ -150,4 +152,35 @@ test('duties outside scope and duties without roster visibility never disclose p
     UserCertificationDuty::factory()->coach()->atSystem()->create(['user_id' => $stranger->id]);
     $this->actingAs($stranger)->get(route('certificate-enrollments.show', $f['enrollment']))->assertForbidden();
     $this->actingAsGuest()->get(route('certificate-enrollments.show', $f['enrollment']))->assertRedirect(route('login'));
+});
+
+test('enrollment breadcrumbs retain the visible originating agreement and fall back safely', function () {
+    $f = certificationActivityFixture();
+    $other = Agreement::factory()->create(['name' => 'Origin agreement']);
+    $other->programs()->attach($f['program']);
+    $other->certificationCandidates()->create(['certification_candidate_id' => $f['candidate']->id]);
+    $this->actingAs($f['actor'])->get(route('certificate-enrollments.show', ['certificateEnrollment' => $f['enrollment'], 'agreement_id' => $other->id]))
+        ->assertOk()->assertSee('<a href="'.route('agreements.show', $other).'" class="text-decoration-none">Origin agreement</a>', false);
+    $viewer = createProgramViewer($f['program']);
+    $hidden = Agreement::factory()->create(['name' => 'Hidden source agreement']);
+    $hidden->certificationCandidates()->create(['certification_candidate_id' => $f['candidate']->id]);
+    $this->actingAs($viewer)->get(route('certificate-enrollments.show', ['certificateEnrollment' => $f['enrollment'], 'agreement_id' => $hidden->id]))
+        ->assertOk()->assertDontSee('Hidden source agreement')->assertSee('<a href="'.route('agreements.show', $f['agreement']).'"', false);
+    $f['enrollment']->update(['sponsoring_agreement_id' => null]);
+    $this->get(route('certificate-enrollments.show', $f['enrollment']))->assertOk()->assertSee('Agreements');
+});
+
+test('coach confirmations preserve the originating agreement breadcrumb context', function () {
+    $f = certificationActivityFixture();
+    UserCertificationDuty::factory()->coach()->atProgram($f['program'])->create(['user_id' => $f['actor']->id]);
+    $requirement = CertificateRequirement::factory()->for($f['certificate'])->attestation()->create();
+    $this->actingAs($f['actor'])->put(route('certificate-enrollments.attest', ['certificateEnrollment' => $f['enrollment'], 'requirement' => $requirement, 'agreement_id' => $f['agreement']->id]), ['satisfied' => true])
+        ->assertRedirect(route('certificate-enrollments.show', ['certificateEnrollment' => $f['enrollment'], 'agreement_id' => $f['agreement']->id]));
+});
+
+test('agreement assignment reflects started evidence without rewriting lifecycle status', function () {
+    $f = certificationActivityFixture();
+    progressEvidence($f);
+    $this->actingAs($f['actor'])->get(route('agreements.show', $f['agreement']))->assertOk()->assertSee('In progress')->assertDontSee('Not Started');
+    expect($f['enrollment']->fresh()->status)->toBe(CertificateEnrollmentStatus::NotStarted);
 });

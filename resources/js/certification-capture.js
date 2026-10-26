@@ -30,6 +30,11 @@ function initCertificationCapture() {
     const hidden = (name, value) => `<input type="hidden" name="${esc(name)}" value="${esc(value)}">`;
     const text = (name, value) => `<textarea class="form-control" id="${esc(name)}" name="${esc(name)}" rows="2">${esc(value)}</textarea>`;
     const select = (name, options, value, prompt, required = false) => `<select class="form-select" id="${esc(name)}" name="${esc(name)}"${required ? ' required aria-required="true"' : ''}><option value="">${esc(prompt)}</option>${options.map(option => `<option value="${esc(option.id)}"${String(option.id) === String(value) ? ' selected' : ''}>${esc(option.name ?? option.label)}</option>`).join('')}</select>`;
+    const progressUrl = (enrollment, row) => {
+        const url = new URL(enrollment.url);
+        if (row.agreement_id) url.searchParams.set('agreement_id', row.agreement_id);
+        return url.toString();
+    };
     const dirty = () => form.dispatchEvent(new Event('input', { bubbles: true }));
     const announce = message => { root.querySelector('[data-certification-status]').textContent = message; };
     function capture() {
@@ -126,7 +131,7 @@ function initCertificationCapture() {
                 const role = req.role_id && Number(req.role_id) !== Number(row.certification_role_id) ? ` — choose ${req.role_name} role` : '';
                 return `${title}${role}${req.tool_id ? ' — coach-recorded submission needed' : ''}`;
             }).join('; ') + '. Final credit depends on the requirement’s dates and conditions.';
-            return `<div class="mt-1">${enrollment.url ? `<a href="${esc(enrollment.url)}">${esc(enrollment.name)}</a>` : esc(enrollment.name)} · ${esc(reasons)}</div>`;
+            return `<div class="mt-1">${enrollment.url ? `<a href="${esc(progressUrl(enrollment, row))}">${esc(enrollment.name)}</a>` : esc(enrollment.name)} · ${esc(reasons)}</div>`;
         }).join('') || '<div>No certificates assigned. The activity tag is still recorded.</div>';
         html += '</div><div class="d-flex flex-wrap justify-content-between gap-2 align-items-center mt-3"><h3 class="h6 mb-0">Tool submissions</h3>' + (coach(null, person) ? '<button type="button" class="btn btn-sm btn-outline-primary" data-candidate-action="add-submission">Add submission</button>' : '') + '</div>';
         if (!row.submissions.length) html += `<p class="small text-muted mt-2">${savedCount ? `${savedCount} recorded submission(s). Detailed evidence is limited to admins, coaches, and managers in scope.` : 'No submissions. Trainings can be tagged without recording a tool.'}</p>`;
@@ -178,6 +183,16 @@ function initCertificationCapture() {
         const available = people.filter(person => person.active && !rows.some(row => Number(row.certification_candidate_id) === person.id && !Number(row._delete)) && person.agreements.some(a => agreementIds().includes(Number(a.id)))).map(person => String(person.id));
         picker.dispatchEvent(new CustomEvent('token-picker:restrict', { detail: available }));
     }
+    function scrollToCandidate(row) {
+        requestAnimationFrame(() => {
+            const target = rowsRoot.querySelector(`[data-candidate="${CSS.escape(row.key)}"]`);
+            if (!target) return;
+            const phoneBar = document.querySelector('.app-topbar');
+            const phoneHeight = phoneBar?.offsetParent !== null ? phoneBar?.offsetHeight || 0 : 0;
+            const headerHeight = document.querySelector('[data-header-sticky] .app-header-bar')?.offsetHeight || 0;
+            window.scrollTo({ top: window.scrollY + target.getBoundingClientRect().top - phoneHeight - headerHeight - 16, behavior: 'instant' });
+        });
+    }
     root.addEventListener('click', event => {
         const button = event.target.closest('button');
         if (!button) return;
@@ -222,6 +237,7 @@ function initCertificationCapture() {
         }
         render();
         restrictPicker();
+        if (action === 'edit' && open === row.key) scrollToCandidate(row);
         if (action === 'add-submission') rowsRoot.querySelector(`[data-candidate="${CSS.escape(row.key)}"] [data-submission="${CSS.escape(row.openSubmission)}"] select`)?.focus();
         if (action !== 'edit' && button.dataset.subAction !== 'edit') dirty();
     });
