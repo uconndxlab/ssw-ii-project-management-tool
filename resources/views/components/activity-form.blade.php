@@ -26,6 +26,7 @@
     'allottedDurationHours' => null,
     'allottedDurationDays' => null,
     'activity' => null,
+    'certificationForm' => [],
 ])
 
 @php
@@ -522,6 +523,8 @@
                             />
                         </x-form-options>
                     </x-section-card>
+
+                    @include('activities.partials.certification-fields')
 
                     <x-section-card title="Time Tracking" id="time-tracking-section">
                         <div class="form-subsections">

@@ -291,7 +291,9 @@
                                             @if($enrollment->enrolled_at) · Assigned {{ $enrollment->enrolled_at->format('M j, Y') }}@endif
                                         </div>
                                     </div>
-                                    <span class="badge bg-secondary-subtle text-secondary-emphasis border">{{ $enrollment->isUnstarted() ? 'Assigned' : $enrollment->status->label() }}</span>
+                                    <div class="d-flex flex-wrap align-items-center gap-2"><span class="badge bg-secondary-subtle text-secondary-emphasis border">{{ $enrollment->isUnstarted() ? 'Assigned' : $enrollment->status->label() }}</span>
+                                        <a href="{{ route('certificate-enrollments.show', $enrollment) }}" class="small">Progress</a>
+                                    </div>
                                 </div>
                             @empty
                                 <p class="text-muted small mb-0">No certificates assigned.</p>

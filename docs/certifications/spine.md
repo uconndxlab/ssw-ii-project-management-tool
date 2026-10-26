@@ -162,16 +162,19 @@ certificate_enrollments           IMPLEMENTED (Doc 2) with only the fields that 
                                   unique(certification_candidate_id, certificate_id). Doc 4 adds
                                   requirements_met_at/endorsed_at/endorsed_by_user_id/award fields via
                                   a NEW migration when actually needed — they do not exist yet.
-certificate_awards                certificate_enrollment_id, cycle, phase, awarded_at, awarded_by_user_id,
+certificate_awards                PLANNED (Doc 4): certificate_enrollment_id, cycle, phase, awarded_at, awarded_by_user_id,
                                   expires_at, requirements_snapshot json, revoked_at, revoked_by_user_id,
                                   revoke_reason, pdf_path, pdf_generated_at
-certificate_attestations          certificate_enrollment_id, certificate_requirement_id, cycle, satisfied,
-                                  satisfied_at, satisfied_by_user_id, note, evidence_file_path
+certificate_attestations          IMPLEMENTED (Doc 3): certificate_enrollment_id,
+                                  certificate_requirement_id, cycle, satisfied, satisfied_at,
+                                  satisfied_by_user_id, note. No evidence upload/file column.
                                   unique(enrollment, requirement, cycle)
-activity_certification_candidate  activity_id, certification_candidate_id, agreement_id nullable
+activity_certification_candidates IMPLEMENTED (Doc 3; plural table): activity_id,
+                                  certification_candidate_id, agreement_id nullable
                                   (PROVENANCE ONLY), certification_role_id nullable, completion_units, notes
                                   unique(activity_id, certification_candidate_id)
-certification_tool_submissions    activity_certification_candidate_id, certification_tool_id, outcome
+certification_tool_submissions    IMPLEMENTED (Doc 3): activity_certification_candidate_id,
+                                  certification_tool_id, outcome
                                   (passed|not_passed|not_scored), recorded_by_user_id, notes
 certification_tool_submission_dimension_values
                                   certification_tool_submission_id, certification_tool_dimension_id,
@@ -180,7 +183,7 @@ certification_tool_submission_dimension_values
 certification_tool_submission_scores
                                   certification_tool_submission_id, certification_tool_score_field_id,
                                   value decimal. unique(submission, score_field)
-certificate_action_logs           certificate_enrollment_id, certificate_award_id nullable, user_id
+certificate_action_logs           PLANNED (Doc 4): certificate_enrollment_id, certificate_award_id nullable, user_id
                                   nullable, action, context json, reason text; created_at only
 user_certification_duties         user_id, duty (coach|manager), scope_type (system|project|program),
                                   scope_id nullable, granted_by_user_id, created_at, revoked_at,
@@ -234,6 +237,7 @@ errors. Fix with `./vendor/bin/sail artisan view:clear`. See the repo memory `do
 2. People & enrollment — candidates person table + backfill, agreement drawer, coach picker.
    **COMPLETE IN WORKING TREE; UNCOMMITTED** — see `doc-2-people-and-enrollment.md`.
 3. Capture & progress — activity-form tagging + submissions, attestation UI, CertificateProgressService.
+   **COMPLETE IN WORKING TREE; UNCOMMITTED** — see `doc-3-capture-and-progress.md`.
 4. Lifecycle — statuses, endorsement gate, award/revoke, expiry + renewal cycles, action log.
 5. Surfacing (deferrable) — central indexes, candidate detail, PDF generation
    (needs `barryvdh/laravel-dompdf`), expiration notifications.
@@ -423,3 +427,43 @@ committed or released. Doc 1's shipped schema stays unchanged. See the completed
   horizontal overflow at desktop/390px. No valid catalog forms were saved to the development database.
 - Own-diff cleanup replaced the old inline orchestration, duplicate lookback controls and unused
   preparation code with a certificate-local editor. No generalized builder or new dependency was added.
+
+
+### Doc 3 — Capture & Progress (COMPLETE IN WORKING TREE; UNCOMMITTED)
+
+- Branch `feature/certificates-doc3` was created from `feature/certificates-1a-doc2`; the prior
+  1A/Doc 2 work was already committed and the starting tree was clean. No staging, commit, push,
+  PR or worktree was created for Doc 3. No enterprise-restyle code was imported.
+- Approved draft interaction is implemented in the existing activity form: roster candidate
+  search, role/units, bulk role assignment, zero/multiple submissions, required tool dimensions,
+  optional scores, explicit coach outcome, compact focused editors and staged removal/undo.
+- One activity review timestamp/actor and an Activities filter. Existing activity-edit access
+  is preserved: logger, Delivered by participant, or admin covering the activity scope.
+- Detailed progress requires existing candidate/enrollment visibility plus scoped admin authority
+  or coach/manager duty. Ordinary viewers get a general summary. Submission writes require coach
+  duty in a program shared by activity, tool and a candidate certificate. Confirmations require
+  visible enrollment plus coach duty for the certificate. Admin status alone does not judge work.
+- Forward migrations added the plural tag table, submissions, dimension values, score values,
+  cycle-specific attestations and review fields. Applied locally without resetting or reseeding
+  development data. Saved tags survive roster changes; omissions never delete evidence. Explicit
+  removal is required. Used dimensions/options/scores cannot be deleted; used tools retire.
+- Live evaluator preserves program intersection, role/classification, rolling windows, cancellation,
+  completion and cycle bounds. Totals, coverage and quotas share the same eligible/passing pool
+  independently. Scores never enter evaluation. Linked renewal uses initial requirements with
+  the current cycle. A later cycle without its previous award date fails closed; Doc 4 supplies it.
+- Evidence now protects an enrollment from Doc 2's unstarted-assignment removal shortcut. Progress
+  does not mutate lifecycle status. Doc 4 must own lifecycle transitions and final award snapshots.
+- Final checks: `vendor/bin/sail composer check` passed (292 tests / 1,189 assertions), including
+  audit, Pint and PHPStan. Production build passed. Playwright verified training selection,
+  saved multi-submission activity, full save, remove/undo preservation, keyboard focus, help links,
+  live confirmation and mobile layouts at 390px; no console errors. Screenshots are gitignored
+  in `.artifacts/doc3/`. Independent impeccable assessments completed; one correction batch,
+  then browser confirmation. Detector found zero issues; overlay server could not start, so
+  direct DOM/keyboard/layout/console inspection supplied browser evidence. Own ponytail-review
+  completed once; cut unchanged submission writes and empty-roster catalog loading.
+- Local demo: activity 42 and enrollment 3, titled `Doc 3 Demo — Local Coach`. COMET's existing
+  option IDs were kept while labels clarify field observations versus Supervisor Checklist's
+  document-plus-observation Full reviews. Local demo admin has coach duty on program 2.
+- Still deferred: endorsement, awards/revocation, renewal execution, action logs for certificate
+  lifecycle, uploads/PDFs/notifications and automated inter-rater sequencing. No production
+  deployment or assistive-technology software testing was performed.

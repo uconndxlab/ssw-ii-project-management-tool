@@ -14,6 +14,7 @@ use App\Models\State;
 use App\Models\User;
 use App\Services\ActivityActionLogService;
 use App\Services\ActivityDuplicationService;
+use App\Services\CertificationEvidenceService;
 use App\Services\DeliverableContributionService;
 use App\Services\PrivateFileService;
 use App\Support\ActivityFundingSourceTokens;
@@ -40,6 +41,7 @@ class ActivityController extends Controller
         private ActivityDuplicationService $activityDuplicationService,
         private ActivityActionLogService $activityActionLogService,
         private PrivateFileService $privateFiles,
+        private CertificationEvidenceService $certificationEvidence,
     ) {}
 
     public function index(Request $request): View
@@ -79,6 +81,10 @@ class ActivityController extends Controller
                         $userQuery->whereIlike('name', "%{$search}%");
                     });
             });
+        }
+
+        if ($request->boolean('needs_certification_review')) {
+            $query->whereNotNull('certification_review_requested_at');
         }
 
         // Filters
@@ -265,7 +271,10 @@ class ActivityController extends Controller
         $preselectedAgreementId = $request->query('agreement_id');
         $currentContactFamilyId = old('contact_family_id', null);
 
+        $certificationForm = $this->certificationEvidence->formData($this->actor(), $agreements);
+
         return view('activities.create', compact(
+            'certificationForm',
             'agreements',
             'states',
             'organizations',
@@ -362,6 +371,7 @@ class ActivityController extends Controller
                 $this->dynamicLoggingFieldValidationAttributes($agreements, $contactFamily, $activityType, $baseValidated['program_ids'])
             )
         );
+        $validated['certification'] = $request->only(['certification_candidates', 'needs_certification_review']);
         $activity = null;
 
         DB::transaction(function () use (&$activity, $validated, $agreements, $contactFamily, $activityType, $engagementDate, $activityTypeId, $completionCount) {
@@ -377,13 +387,15 @@ class ActivityController extends Controller
 
             $this->syncActivityDurationSnapshot($activity, $activityType, true);
 
-            $this->syncLoggingFieldAnswers($activity, $validated, $agreements, $contactFamily, $activityType);
-
             $activity->agreements()->sync($validated['agreement_ids'] ?? []);
             $activity->states()->sync($validated['state_ids'] ?? []);
             $activity->organizations()->sync($validated['organization_ids'] ?? []);
             $activity->programs()->sync($validated['program_ids'] ?? []);
             $activity->participants()->sync($validated['participant_user_ids'] ?? []);
+
+            $this->certificationEvidence->save($activity, $this->actor(), $validated['certification']);
+
+            $this->syncLoggingFieldAnswers($activity, $validated, $agreements, $contactFamily, $activityType);
 
             $this->syncAgreementFundingSources($activity, $validated, $agreements);
             $this->syncActivityTimeTracking($activity, $validated['time_tracking']);
@@ -433,7 +445,9 @@ class ActivityController extends Controller
                 : [];
         }
 
-        return view('activities.show', compact('activity', 'scopedLoggingFields'));
+        $certificationForm = $this->certificationEvidence->formData($this->actor(), $activity->agreements, $activity);
+
+        return view('activities.show', compact('activity', 'scopedLoggingFields', 'certificationForm'));
     }
 
     public function edit(Activity $activity): View
@@ -481,7 +495,10 @@ class ActivityController extends Controller
         $contactFamilyId = $activity->activityType?->contactFamily?->id;
         $currentContactFamilyId = old('contact_family_id', $contactFamilyId !== null ? (string) $contactFamilyId : '');
 
+        $certificationForm = $this->certificationEvidence->formData($this->actor(), $agreements, $activity);
+
         return view('activities.edit', compact(
+            'certificationForm',
             'activity',
             'agreements',
             'states',
@@ -583,7 +600,10 @@ class ActivityController extends Controller
             )
         );
 
+        $validated['certification'] = $request->only(['certification_candidates', 'needs_certification_review']);
+
         DB::transaction(function () use ($activity, $validated, $agreements, $contactFamily, $activityType, $engagementDate, $activityTypeId, $completionCount) {
+            $activity->refreshForUpdate();
             $activityTypeChanged = (int) $activity->activity_type_id !== (int) $activityTypeId;
 
             $activity->update([
@@ -597,13 +617,15 @@ class ActivityController extends Controller
 
             $this->syncActivityDurationSnapshot($activity, $activityType, $activityTypeChanged);
 
-            $this->syncLoggingFieldAnswers($activity, $validated, $agreements, $contactFamily, $activityType);
-
             $activity->agreements()->sync($validated['agreement_ids'] ?? []);
             $activity->states()->sync($validated['state_ids'] ?? []);
             $activity->organizations()->sync($validated['organization_ids'] ?? []);
             $activity->programs()->sync($validated['program_ids'] ?? []);
             $activity->participants()->sync($validated['participant_user_ids'] ?? []);
+
+            $this->certificationEvidence->save($activity, $this->actor(), $validated['certification']);
+
+            $this->syncLoggingFieldAnswers($activity, $validated, $agreements, $contactFamily, $activityType);
 
             $this->syncAgreementFundingSources($activity, $validated, $agreements);
             $this->syncActivityTimeTracking($activity, $validated['time_tracking']);

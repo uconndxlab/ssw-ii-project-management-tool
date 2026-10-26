@@ -6,6 +6,7 @@ use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\AgreementController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CertificateController;
+use App\Http\Controllers\CertificateProgressController;
 use App\Http\Controllers\CertificationToolController;
 use App\Http\Controllers\ContactFamilyController;
 use App\Http\Controllers\DashboardController;
@@ -81,6 +82,8 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::resource('activity-types', ActivityTypeController::class)->except(['show']);
     Route::resource('certification-tools', CertificationToolController::class)->except(['show']);
     Route::resource('certificates', CertificateController::class)->except(['show']);
+    Route::get('/certificate-enrollments/{certificateEnrollment}', [CertificateProgressController::class, 'show'])->name('certificate-enrollments.show');
+    Route::put('/certificate-enrollments/{certificateEnrollment}/confirmations/{requirement}', [CertificateProgressController::class, 'attest'])->name('certificate-enrollments.attest');
 
     Route::get('/supervisees', [AdminUserController::class, 'supervisees'])->name('supervisees.index');
     Route::get('/users/{user}', [AdminUserController::class, 'show'])->name('users.show');

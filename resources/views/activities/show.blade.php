@@ -61,6 +61,7 @@
 
 <div class="row">
     <div class="col-lg-8">
+        @include('activities.partials.certification-summary')
         <div class="card">
             <div class="card-header">
                 <h5 class="mb-0">Basic Information</h5>

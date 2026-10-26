@@ -4,10 +4,12 @@ namespace App\Models;
 
 use App\Enums\CertificateEnrollmentStatus;
 use App\Enums\CertificateRequirementPhase;
+use App\Enums\ProgramScopeMode;
 use Database\Factories\CertificateEnrollmentFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * One (candidate, certificate) assignment, global regardless of how many agreements the candidate
@@ -69,10 +71,25 @@ class CertificateEnrollment extends Model
         return $this->belongsTo(User::class, 'supervising_coach_user_id');
     }
 
+    /** @return HasMany<CertificateAttestation, $this> */
+    public function attestations(): HasMany
+    {
+        return $this->hasMany(CertificateAttestation::class);
+    }
+
     public function isUnstarted(): bool
     {
         return $this->status === CertificateEnrollmentStatus::NotStarted
             && $this->phase === CertificateRequirementPhase::Initial
-            && $this->cycle === 1;
+            && $this->cycle === 1
+            && ! $this->attestations()->exists()
+            && ! ActivityCertificationCandidate::query()
+                ->where('certification_candidate_id', $this->certification_candidate_id)
+                ->whereHas('activity.programs', function ($query) {
+                    $certificate = $this->certificate;
+                    if ($certificate?->program_scope_mode !== ProgramScopeMode::All) {
+                        $query->whereIn('programs.id', $certificate?->programs->modelKeys() ?? []);
+                    }
+                })->exists();
     }
 }
