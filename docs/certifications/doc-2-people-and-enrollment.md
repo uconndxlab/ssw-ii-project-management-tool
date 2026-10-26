@@ -162,7 +162,7 @@ An initial unstarted enrollment is labeled **Assigned**. This is assignment meta
 completion. Requirement counts, activity/tool credit, and progress remain Doc 3; endorsement, awards,
 and renewal execution remain Doc 4. No progress bar, percentage, completed count, or award action is implied.
 
-## Duty administration and authorized self-grants
+## Duty administration
 
 The admin Edit User form provides system-wide duty switches for system administrators and program
 token pickers limited to the actor's grantable scope. Selected program tokens are visible and removable.
@@ -171,20 +171,10 @@ alone. Each rendered duty editor submits a presence marker so an empty selection
 authorized program. Explicitly submitted changes preserve rows outside the actor's grant/revoke authority.
 Revoked duty rows are retained with actor/timestamps.
 
-Authorized admins can grant/revoke their own duties in **Profile → Edit Profile → Certification
-duties**. The dedicated `PUT /profile/certification-duties` route is named
-`profile.certification-duties.update` and uses `UpdateCertificationDutiesRequest`. It requires an
-active authenticated admin, permits system duties only for system admins, and restricts program
-scopes to programs the actor administers. Out-of-scope submissions are validation errors. The action
-always targets the signed-in user and passes only validated duty data to the existing sync service
-inside a transaction. Posted name, email, password, or access-profile fields cannot alter the account.
-
-`UserPolicy::update()` still forbids general self-edit through the admin-user route. Profile has
-separate password and duty forms: the main action is explicitly **Save password**, while duties use
-**Save certification duties** without requiring password fields. Existing retained-revocation and
-outside-scope preservation rules apply to self-grants too. Duties outside the actor's current admin
-scope are excluded from editable selections and retained, so a later scope change does not make
-the form unsavable or silently revoke historical duties.
+Profile editing is password-only. The Profile duty form, its dedicated update endpoint, and its request
+class have been removed at the user's request. Duty administration remains on authorized admin Edit User
+forms. `UserPolicy::update()` still forbids general self-edit through that route; no replacement self-service
+duty workflow is provided. Existing duties and service-level grant/revoke authority are unchanged.
 
 ## Review corrections and verification
 
@@ -199,8 +189,8 @@ Tests:
   preservation, duplication, deletion, reachability, idempotency, and page-render coverage.
 - `tests/Feature/Certification/CertificationDutyGrantTest.php`: duty grant/revoke boundaries and
   retained revocations, including the service-only self-grant case.
-- `tests/Feature/CertificationCompletionTest.php`: ten cases covering HTTP self-grant/revoke,
-  privilege preservation, scoped-admin restrictions, member/guest rejection, malformed payloads,
+- `tests/Feature/CertificationCompletionTest.php`: cases covering password-only Profile rendering,
+  rejection of the removed duty endpoint, password updates preserving duties and privileges,
   candidate lookup privacy, recovery to a working editor after invalid fields, immediate assignment
   data for shared-person reuse, actionable show-page facts, and saved-assignment controls/coach
   selection retained after validation errors on a new roster link.
@@ -223,7 +213,8 @@ The browser pass checked keyboard candidate search, person switching, explicit i
 known-email reuse (browser-response fixtures, without stored data changes), existing-roster focus,
 assignment counts, coach editing, fixed certificate identity, and mobile layout. Long certificate
 summaries truncate within the compact row and keep their full text available on hover and in the editor.
-The Profile duty form and ordinary multi-select pickers were checked separately. Existing unrelated
+The original review checked the Profile duty form (subsequently removed) and ordinary multi-select
+pickers separately. Existing unrelated
 organization/KFS controls cause slight page-wide overflow on mobile; certification controls fit.
 This was a functional review of the changed flow, not exhaustive assistive-technology certification.
 

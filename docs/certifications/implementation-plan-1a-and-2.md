@@ -222,7 +222,8 @@ Preserve all existing catalog permissions. Do not seed demonstration certificate
 
 Completion handoff: [Doc 2 — People and Enrollment](doc-2-people-and-enrollment.md). The implementation
 is complete in the working tree, including scoped candidate search, explicit known-email reuse, a
-focused assignment editor, and authorized duty self-grants through Profile. The original acceptance
+focused assignment editor, and duty administration on authorized admin Edit User forms. Profile editing
+is password-only; the former Profile duty workflow has been removed. The original acceptance
 checklist below remains the specification; the handoff records actual behavior and verification.
 1A is also complete; its catalog-only handoff is recorded in Doc 1 and the spine. Docs 3–5 remain future work.
 
@@ -334,7 +335,8 @@ development database. Preserve real records; do not truncate, reseed, or run des
   than treating a narrow program duty as global. Do not change the staff reporting hierarchy.
 - [ ] Add the smallest grant/revoke control for coach duties to an existing authorized user-admin surface
   if no usable control exists. Follow `canGrantDuty`, retain revoked rows, record actor/timestamps, and
-  preserve allowed self-grants. Validate revocation authority too. Do not build a new duty-admin subsystem.
+  preserve existing service-level authority. Profile editing remains password-only; do not add a Profile
+  duty workflow. Validate revocation authority too. Do not build a new duty-admin subsystem.
 - [ ] Scope manager-duty workflow/UI to Doc 4 unless already implemented. Record this narrowing of the
   old general duty-UI note in the handoff. Never seed or silently grant duties to populate the picker.
 

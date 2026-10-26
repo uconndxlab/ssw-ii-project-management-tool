@@ -375,9 +375,9 @@ authorization boundaries, tests, and open issues.
 - Coach selection requires a matching certificate-program duty and the coach's agreement visibility.
   Program changes update the form options. Duties do not confer access.
 - Duty controls exist on authorized admin Edit User forms. Selected program duties are visible and
-  removable; omission preserves existing duties. Authorized admins can self-grant/revoke through the
-  duty-only Profile form and `profile.certification-duties.update` route. Scope validation and the
-  existing duty authority apply; general user self-edit permission remains unchanged.
+  removable; omission preserves existing duties. Profile editing is password-only; its duty form,
+  update endpoint and dedicated request have been removed. Existing duty records, service-level duty
+  authority and general user self-edit permission remain unchanged.
 - Candidate search shows names/emails only. Known emails explicitly reuse a person or open their
   existing roster row. Shared identity remains locked until explicitly edited with authority. Adding
   a candidate starts with search-or-create; selecting an existing person immediately shows their

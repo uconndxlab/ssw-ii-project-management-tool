@@ -12,26 +12,6 @@
 
         <x-page-header form-id="profile-edit-form" save-label="Save password" context="form" title="Edit Profile" />
 
-        <x-section-card title="Account">
-            <x-form-field label="Name" for="name">
-                <input type="text"
-                       class="form-control"
-                       id="name"
-                       value="{{ $user->name }}"
-                       disabled
-                       aria-disabled="true">
-            </x-form-field>
-
-            <x-form-field label="Email" for="email" class="mb-0">
-                <input type="email"
-                       class="form-control"
-                       id="email"
-                       value="{{ $user->email }}"
-                       disabled
-                       aria-disabled="true">
-            </x-form-field>
-        </x-section-card>
-
         <x-section-card title="Change password">
             <x-form-field label="Current Password" for="current_password" name="current_password" :required="true">
                 <input type="password"
@@ -61,17 +41,5 @@
             </x-form-field>
         </x-section-card>
     </form>
-
-    @if($canGrantCertificationDuties)
-        <form method="POST" action="{{ route('profile.certification-duties.update') }}" id="profile-certification-duties-form" class="mt-4">
-            @csrf
-            @method('PUT')
-            <x-section-card title="Certification duties">
-                <p class="form-text mt-0">Manage your own certification duties within your admin scope.</p>
-                @include('admin.users.partials.certification-duties')
-                <button type="submit" class="btn btn-primary mt-3">Save certification duties</button>
-            </x-section-card>
-        </form>
-    @endif
 </x-form-shell>
 @endsection

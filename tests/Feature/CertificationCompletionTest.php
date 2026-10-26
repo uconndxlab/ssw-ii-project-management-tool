@@ -1,7 +1,5 @@
 <?php
 
-use App\Enums\CertificationDuty;
-use App\Enums\PrivilegeScopeType;
 use App\Models\Agreement;
 use App\Models\AgreementCertificationCandidate;
 use App\Models\Certificate;
@@ -9,76 +7,77 @@ use App\Models\CertificateEnrollment;
 use App\Models\CertificationCandidate;
 use App\Models\User;
 use App\Models\UserCertificationDuty;
+use Illuminate\Support\Facades\Hash;
 
-test('a system admin can grant and revoke their own duties without editing their account privileges', function () {
+test('profile editing exposes only password fields even for a system admin', function () {
     $admin = createSystemAdmin();
-    $originalName = $admin->name;
-    $this->actingAs($admin)->get(route('profile.edit'))->assertOk()->assertSee('Save certification duties');
-    $this->actingAs($admin)->put(route('profile.certification-duties.update'), [
-        'duty_coach_present' => '1', 'duty_coach_system' => '1', 'name' => 'Untrusted replacement', 'access_profile' => 'member',
-    ])->assertSessionHasNoErrors()->assertRedirect(route('profile.edit'));
-    $duty = UserCertificationDuty::where('user_id', $admin->id)->sole();
-    expect($duty->duty)->toBe(CertificationDuty::Coach)
-        ->and($duty->scope_type)->toBe(PrivilegeScopeType::System)
-        ->and($duty->granted_by_user_id)->toBe($admin->id)
-        ->and($admin->fresh()->name)->toBe($originalName)
-        ->and($admin->fresh()->access()->isSystemAdmin())->toBeTrue();
 
-    $this->actingAs($admin)->put(route('profile.certification-duties.update'), [
-        'duty_coach_present' => '1',
-    ])->assertSessionHasNoErrors();
-    expect($duty->fresh()->revoked_at)->not->toBeNull()
-        ->and($duty->fresh()->revoked_by_user_id)->toBe($admin->id);
+    $this->actingAs($admin)->get(route('profile.edit'))
+        ->assertOk()
+        ->assertSee('Save password')
+        ->assertSee('name="current_password"', false)
+        ->assertSee('name="password"', false)
+        ->assertSee('name="password_confirmation"', false)
+        ->assertDontSee('Certification duties')
+        ->assertDontSee('duty_coach_')
+        ->assertDontSee('duty_manager_')
+        ->assertDontSee('id="name"', false)
+        ->assertDontSee('id="email"', false);
+
     $this->actingAs($admin)->get(route('admin.users.edit', $admin))->assertForbidden();
 });
 
-test('a program admin can self-grant only within their own scope', function () {
+test('the removed profile duty endpoint cannot grant duties to a program admin', function () {
     [, $program] = createProjectWithProgram();
-    [, $otherProgram] = createProjectWithProgram();
     $admin = createProgramAdmin($program);
-    $this->actingAs($admin)->put(route('profile.certification-duties.update'), [
-        'duty_coach_program_ids' => [$program->id],
-    ])->assertSessionHasNoErrors();
-    expect($admin->fresh()->certification()->coachProgramIds())->toBe([$program->id]);
 
-    $this->actingAs($admin)->put(route('profile.certification-duties.update'), [
-        'duty_coach_program_ids' => [$otherProgram->id],
-    ])->assertSessionHasErrors('duty_coach_program_ids.0');
-    $this->actingAs($admin)->put(route('profile.certification-duties.update'), [
-        'duty_manager_system' => '1',
-    ])->assertSessionHasErrors('duty_manager_system');
-    expect($admin->fresh()->certification()->coachProgramIds())->toBe([$program->id])
-        ->and($admin->fresh()->certification()->isManager())->toBeFalse();
+    $this->actingAs($admin)->put('/profile/certification-duties', [
+        'duty_coach_program_ids' => [$program->id],
+    ])->assertNotFound();
+
+    expect($admin->fresh()->certification()->isCoach())->toBeFalse();
 });
 
-test('ordinary members cannot self-grant certification duties', function () {
+test('ordinary member profiles have no duty editor or duty update endpoint', function () {
     $member = User::factory()->create(['access_profile' => 'member']);
+
     $this->actingAs($member)->get(route('profile.edit'))->assertOk()->assertDontSee('Save certification duties');
-    $this->actingAs($member)->put(route('profile.certification-duties.update'), ['duty_coach_system' => '1'])->assertForbidden();
+    $this->actingAs($member)->put('/profile/certification-duties', ['duty_coach_system' => '1'])->assertNotFound();
+
     expect(UserCertificationDuty::where('user_id', $member->id)->exists())->toBeFalse();
 });
 
-test('self-grant forms preserve existing duties outside the current admin scope', function () {
-    [, $program] = createProjectWithProgram();
-    [, $otherProgram] = createProjectWithProgram();
-    $admin = createProgramAdmin($program);
-    $outsideDuty = UserCertificationDuty::factory()->coach()->atProgram($otherProgram)->create(['user_id' => $admin->id]);
-    $this->actingAs($admin)->get(route('profile.edit'))->assertOk()->assertViewHas('existingCoachProgramIds', []);
+test('the removed profile duty endpoint cannot revoke existing admin duties', function () {
+    $admin = createSystemAdmin();
+    $duty = UserCertificationDuty::factory()->coach()->atSystem()->create(['user_id' => $admin->id]);
 
-    $this->actingAs($admin)->put(route('profile.certification-duties.update'), [
-        'duty_coach_present' => '1', 'duty_coach_program_ids' => [$program->id],
-    ])->assertSessionHasNoErrors()->assertRedirect(route('profile.edit'));
+    $this->actingAs($admin)->put('/profile/certification-duties', [
+        'duty_coach_present' => '1',
+    ])->assertNotFound();
 
-    expect($outsideDuty->fresh()->revoked_at)->toBeNull()
-        ->and($admin->fresh()->certification()->coachProgramIds())->toContain($program->id, $otherProgram->id);
+    expect($duty->fresh()->revoked_at)->toBeNull();
 });
 
-test('duty self-grants require authentication and a valid payload', function () {
-    $this->put(route('profile.certification-duties.update'), ['duty_coach_system' => '1'])->assertRedirect(route('login'));
+test('password updates ignore certification duties and account privilege changes', function () {
     $admin = createSystemAdmin();
-    $this->actingAs($admin)->put(route('profile.certification-duties.update'), ['duty_coach_program_ids' => 'invalid'])
-        ->assertSessionHasErrors('duty_coach_program_ids');
-    expect(UserCertificationDuty::count())->toBe(0);
+    $originalName = $admin->name;
+    $duty = UserCertificationDuty::factory()->coach()->atSystem()->create(['user_id' => $admin->id]);
+
+    $this->actingAs($admin)->put(route('profile.password.update'), [
+        'current_password' => 'password',
+        'password' => 'new-password-123',
+        'password_confirmation' => 'new-password-123',
+        'duty_coach_present' => '1',
+        'duty_manager_system' => '1',
+        'name' => 'Untrusted replacement',
+        'access_profile' => 'member',
+    ])->assertSessionHasNoErrors()->assertRedirect(route('profile.edit'));
+
+    expect(Hash::check('new-password-123', $admin->fresh()->password))->toBeTrue();
+    expect($admin->fresh()->name)->toBe($originalName);
+    expect($admin->fresh()->access()->isSystemAdmin())->toBeTrue();
+    expect($duty->fresh()->revoked_at)->toBeNull();
+    expect($admin->fresh()->certification()->isManager())->toBeFalse();
 });
 
 test('candidate search offers only reachable people and preserves shared-edit authority', function () {
