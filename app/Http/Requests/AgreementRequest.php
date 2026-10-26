@@ -14,6 +14,7 @@ use App\Models\Organization;
 use App\Models\Program;
 use App\Models\Team;
 use App\Models\User;
+use App\Services\CertificationAssignmentSyncService;
 use App\Support\ActivityTypeDuration;
 use App\Support\Authorization\ScopeSync;
 use App\Support\DeliverableHistoryScope;
@@ -84,9 +85,19 @@ class AgreementRequest extends FormRequest
             'require_payor' => ['nullable', 'boolean'],
             'require_payee' => ['nullable', 'boolean'],
             'certification_candidates' => ['nullable', 'array'],
+            'certification_candidates.*' => ['array'],
             'certification_candidates.*.id' => ['nullable', 'integer'],
-            'certification_candidates.*.value' => ['nullable', 'string', 'max:255'],
             'certification_candidates.*._delete' => ['nullable', 'boolean'],
+            'certification_candidates.*.certification_candidate_id' => ['nullable', 'integer'],
+            'certification_candidates.*.name' => ['nullable', 'string', 'max:255'],
+            'certification_candidates.*.email' => ['nullable', 'string', 'max:255'],
+            'certification_candidates.*.notes' => ['nullable', 'string', 'max:2000'],
+            'certification_candidates.*.assignments' => ['nullable', 'array'],
+            'certification_candidates.*.assignments.*' => ['array'],
+            'certification_candidates.*.assignments.*.enrollment_id' => ['nullable', 'integer'],
+            'certification_candidates.*.assignments.*.certificate_id' => ['nullable', 'integer'],
+            'certification_candidates.*.assignments.*.coach_user_id' => ['nullable', 'integer'],
+            'certification_candidates.*.assignments.*._delete' => ['nullable', 'boolean'],
             'deleted_attachment_ids' => ['nullable', 'array'],
             'deleted_attachment_ids.*' => ['integer', 'exists:agreement_attachments,id'],
 
@@ -805,6 +816,17 @@ class AgreementRequest extends FormRequest
                         );
                     }
                 }
+            }
+
+            if (! $validator->errors()->has('certification_candidates') && ! $validator->errors()->has('certification_candidates.*')) {
+                app(CertificationAssignmentSyncService::class)->validateRows(
+                    $validator,
+                    $actor,
+                    $existingAgreement instanceof Agreement ? $existingAgreement : null,
+                    is_array($this->input('certification_candidates')) ? $this->input('certification_candidates') : [],
+                    $programScopeMode,
+                    array_values($selectedProgramIdSet->all()),
+                );
             }
         });
     }

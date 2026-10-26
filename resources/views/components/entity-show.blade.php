@@ -36,6 +36,9 @@
     </div>
 
     <div class="col-lg-8 d-flex flex-column gap-4">
+        @isset($beforeMain)
+            {{ $beforeMain }}
+        @endisset
         @foreach($activityFirst ? ['activity', 'relationships'] : ['relationships', 'activity'] as $section)
             @php
                 $isActivity = $section === 'activity';

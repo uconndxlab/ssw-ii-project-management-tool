@@ -17,9 +17,25 @@ Create/edit forms share one shell and the same components. Do not invent a per-p
 - Booleans: `x-form-switch` (hidden `0` + checkbox `1`) inside `x-form-options` (left-bar subsection titled Options). Controllers use `$request->boolean('name')`, never `has('name')`.
 - Active belongs in the identity section Options, never in `x-page-header`, never a Status `<select>`.
 - Choices with consequences: `x-form-radio-card`.
-- Related string lists (options, candidates): `x-inline-string-list`. Grouped fields use `x-form-subsection`.
+- Related string lists (plain options): `x-inline-string-list`. Entity + detail rows (e.g. agreement certification candidates) use `x-repeater-rows` with a compact summary and focused display/edit row. Candidate assignments stay directly editable within that row, without another collapse step. Single-person search reuses `x-token-picker` with `single=true`; ordinary program and duty pickers remain multi-select. A plain string list cannot carry an identity reference or assignment fields. Grouped fields use `x-form-subsection`.
 
 ## Do not
 - Put Active, filters, or form controls in the page header.
 - Mix `card` + `card-header` with `x-section-card` on the same form.
 - Change which fields save; regroup and restyle only.
+
+## Certificate catalog authoring
+
+- Use direct job-based section buttons for Basics / Initial requirements / Renewal / Review rules.
+  Keep one certificate-level save. Section navigation, Done editing and contextual role edits never save.
+- A compact requirement row opens one inline editor. Reveal Activity work / Tool submissions /
+  Coach confirmation fields by kind; one visible editor at a time. Full review expands every condition.
+- Keep grouped members together beneath their All / Any one / A set number rule. Use up/down buttons
+  for keyboard ordering. Ungrouping preserves members; removing a requirement is a separate action.
+- Manage certificate-specific roles beside the selector and resolve new roles in the same transaction.
+  Preserve global roles and Any role; this is not a general role-administration surface.
+- Explain linked renewal versus an independent copy. Confirm clearing/replacement and incompatible
+  type/tool changes. Keep incompatible scope selections visible for correction. Preserve stable IDs,
+  stage/group references and nested values through validation; open the section/editor with the error.
+- This certificate-specific editor is a proven local pattern, not a new shared form framework. Evaluate
+  a difficult deliverable before extracting reusable behavior; enterprise-style reconciliation stays separate.

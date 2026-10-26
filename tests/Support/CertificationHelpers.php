@@ -7,6 +7,35 @@ use App\Models\Certificate;
 use App\Models\CertificationTool;
 use App\Models\CertificationToolDimension;
 use App\Models\CertificationToolDimensionOption;
+use App\Models\Program;
+use App\Models\Project;
+use App\Models\State;
+use App\Models\User;
+
+/**
+ * @return array<string, mixed>
+ */
+function agreementStorePayload(Project $project, Program $program, array $overrides = []): array
+{
+    $state = State::factory()->create();
+    $member = User::factory()->create();
+    $member->programs()->attach($program->id);
+
+    return array_merge([
+        'name' => 'Agreement '.uniqid(),
+        'program_scope_mode' => 'specific',
+        'project_ids' => [$project->id],
+        'program_ids' => [$program->id],
+        'state_ids' => [$state->id],
+        'user_ids' => [$member->id],
+        'principal_investigator_ids' => [$member->id],
+        'time_tracking_mode' => 'none',
+        'require_payor' => 0,
+        'require_payee' => 0,
+        'start_date' => now()->toDateString(),
+        'end_date' => now()->addYear()->toDateString(),
+    ], $overrides);
+}
 
 function certificateStorePayload(array $overrides = [], bool $withNestedFixture = false): array
 {

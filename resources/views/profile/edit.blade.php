@@ -10,7 +10,7 @@
         @csrf
         @method('PUT')
 
-        <x-page-header form-id="profile-edit-form" save-label="Save" context="form" title="Edit Profile" />
+        <x-page-header form-id="profile-edit-form" save-label="Save password" context="form" title="Edit Profile" />
 
         <x-section-card title="Account">
             <x-form-field label="Name" for="name">
@@ -61,5 +61,17 @@
             </x-form-field>
         </x-section-card>
     </form>
+
+    @if($canGrantCertificationDuties)
+        <form method="POST" action="{{ route('profile.certification-duties.update') }}" id="profile-certification-duties-form" class="mt-4">
+            @csrf
+            @method('PUT')
+            <x-section-card title="Certification duties">
+                <p class="form-text mt-0">Manage your own certification duties within your admin scope.</p>
+                @include('admin.users.partials.certification-duties')
+                <button type="submit" class="btn btn-primary mt-3">Save certification duties</button>
+            </x-section-card>
+        </form>
+    @endif
 </x-form-shell>
 @endsection

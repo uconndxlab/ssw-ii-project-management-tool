@@ -155,6 +155,19 @@
     </div>
 </x-section-card>
 
+@if($isEdit && $canGrantCertificationDuties)
+    <x-section-card title="Certification Duties">
+        @include('admin.users.partials.certification-duties', [
+            'actor' => $actor,
+            'dutyProgramOptions' => $dutyProgramOptions,
+            'existingCoachSystem' => $existingCoachSystem,
+            'existingCoachProgramIds' => $existingCoachProgramIds,
+            'existingManagerSystem' => $existingManagerSystem,
+            'existingManagerProgramIds' => $existingManagerProgramIds,
+        ])
+    </x-section-card>
+@endif
+
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const cards = document.querySelectorAll('input[name="access_profile"]');

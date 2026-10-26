@@ -508,6 +508,7 @@
         initSortables(row);
         initCollapsibleRows(row);
         updateEmptyStates(row);
+        row.dispatchEvent(new CustomEvent('repeater:row-added', { bubbles: true }));
 
         if (row.matches('[data-repeater-collapsible]')) {
             setRowMode(row, 'edit');

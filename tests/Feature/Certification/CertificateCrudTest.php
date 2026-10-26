@@ -188,16 +188,18 @@ test('certificate nested rows assign sort_order from submitted order', function 
                 'phase' => 'initial',
                 'kind' => 'attestation',
                 'label' => 'First Req',
+                'group_index' => 0,
                 'target_count' => 1,
             ],
             1 => [
                 'phase' => 'initial',
                 'kind' => 'attestation',
                 'label' => 'Second Req',
+                'group_index' => 1,
                 'target_count' => 1,
             ],
         ],
-    ]));
+    ]))->assertSessionHasNoErrors()->assertRedirect();
 
     $certificate = Certificate::where('name', 'Sort Order Certificate')->firstOrFail();
 

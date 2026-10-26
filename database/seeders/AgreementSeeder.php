@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Agreement;
 use App\Models\AgreementCertificationCandidate;
+use App\Models\CertificationCandidate;
 use App\Models\ContactFamily;
 use App\Models\LoggingField;
 use App\Models\Organization;
@@ -117,10 +118,13 @@ class AgreementSeeder extends Seeder
                 ->filter()
                 ->values();
 
-            foreach ($candidateNames as $candidateName) {
+            foreach ($candidateNames as $index => $candidateName) {
+                $candidate = CertificationCandidate::query()->firstOrCreate(['name' => $candidateName], ['active' => true]);
+
                 AgreementCertificationCandidate::factory()->create([
                     'agreement_id' => $agreement->id,
-                    'name' => $candidateName,
+                    'certification_candidate_id' => $candidate->id,
+                    'sort_order' => $index,
                 ]);
             }
 

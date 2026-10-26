@@ -78,6 +78,14 @@ class AdminUserRequest extends FormRequest
             'program_ids.*' => ['distinct', 'exists:programs,id'],
             'team_ids' => ['nullable', 'array'],
             'team_ids.*' => ['distinct', 'exists:teams,id'],
+            'duty_coach_present' => ['sometimes', 'boolean'],
+            'duty_coach_system' => ['sometimes', 'boolean'],
+            'duty_coach_program_ids' => ['sometimes', 'array'],
+            'duty_coach_program_ids.*' => ['integer', 'distinct', 'exists:programs,id'],
+            'duty_manager_present' => ['sometimes', 'boolean'],
+            'duty_manager_system' => ['sometimes', 'boolean'],
+            'duty_manager_program_ids' => ['sometimes', 'array'],
+            'duty_manager_program_ids.*' => ['integer', 'distinct', 'exists:programs,id'],
         ];
     }
 

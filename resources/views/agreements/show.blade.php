@@ -238,16 +238,6 @@
             <p class="text-muted small mb-0">No staff assigned.</p>
         @endif
 
-        @if($agreement->certificationCandidates->isNotEmpty())
-            <hr>
-            <h6 class="text-muted fw-semibold small text-uppercase mb-2" style="letter-spacing:.05em;">Certification Candidates</h6>
-            <div class="small d-grid gap-1 mb-0">
-                @foreach($agreement->certificationCandidates as $candidate)
-                    <div>{{ $candidate->name }}</div>
-                @endforeach
-            </div>
-        @endif
-
         @if($agreement->attachments->isNotEmpty())
             <hr>
             <h6 class="text-muted fw-semibold small text-uppercase mb-2" style="letter-spacing:.05em;">Attachments</h6>
@@ -265,6 +255,55 @@
             @endforeach
         @endif
     </x-slot:summary>
+
+    <x-slot:beforeMain>
+        <section class="card shadow-sm entity-show-card" aria-labelledby="certificate-assignments-heading">
+            <div class="card-header bg-light py-2 px-3 d-flex flex-wrap align-items-center gap-2">
+                <h2 class="h5 mb-0" id="certificate-assignments-heading">Certificate assignments</h2>
+                <span class="text-muted small">{{ $certificationRosterDisplay->count() }} {{ \Illuminate\Support\Str::plural('candidate', $certificationRosterDisplay->count()) }}</span>
+                @can('update', $agreement)
+                    <a href="{{ route('agreements.edit', $agreement) }}#certification-candidates" class="btn btn-sm btn-outline-primary ms-auto">Manage assignments</a>
+                @endcan
+            </div>
+            <div class="card-body">
+                @forelse($certificationRosterDisplay as $entry)
+                    @php
+                        $person = $entry['roster']->candidate;
+                        $assignments = $entry['enrollments'];
+                    @endphp
+                    @if($person)
+                        <div class="py-3 {{ $loop->first ? 'pt-0' : 'border-top' }} {{ $loop->last ? 'pb-0' : '' }}">
+                            <div class="d-flex flex-wrap align-items-start gap-2 mb-2">
+                                <div class="min-w-0">
+                                    <h3 class="h6 mb-0 text-break">{{ $person->name }}</h3>
+                                    @if($person->email)<div class="small text-muted text-break">{{ $person->email }}</div>@endif
+                                </div>
+                                @can('update', $agreement)
+                                    <a class="small ms-auto" href="{{ route('agreements.edit', $agreement) }}#certification-candidate-{{ $person->id }}">{{ $assignments->isEmpty() ? 'Assign a certificate' : 'Edit assignments' }}</a>
+                                @endcan
+                            </div>
+                            @forelse($assignments as $enrollment)
+                                <div class="d-flex flex-wrap align-items-start justify-content-between gap-2 py-2">
+                                    <div class="min-w-0">
+                                        <div class="fw-medium text-break">{{ $enrollment->certificate?->name ?? 'Certificate' }}</div>
+                                        <div class="small text-muted">
+                                            {{ $enrollment->supervisingCoach ? 'Coach: '.$enrollment->supervisingCoach->name : 'No coach selected' }}
+                                            @if($enrollment->enrolled_at) · Assigned {{ $enrollment->enrolled_at->format('M j, Y') }}@endif
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-secondary-subtle text-secondary-emphasis border">{{ $enrollment->isUnstarted() ? 'Assigned' : $enrollment->status->label() }}</span>
+                                </div>
+                            @empty
+                                <p class="text-muted small mb-0">No certificates assigned.</p>
+                            @endforelse
+                        </div>
+                    @endif
+                @empty
+                    <p class="text-muted mb-0">Add a candidate to assign certificates on this agreement.</p>
+                @endforelse
+            </div>
+        </section>
+    </x-slot:beforeMain>
 
     {{-- ── Deliverables ────────────────────────────────────────────────── --}}
     <x-slot:relationships>

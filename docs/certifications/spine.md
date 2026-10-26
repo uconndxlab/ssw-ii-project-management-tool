@@ -48,7 +48,10 @@ live, scoped by program intersection.
 10. Per-site "criteria may be adapted" overrides: client said IGNORE. Out of scope.
 
 ## Terminology
-- **Candidate** — an external person. No login. Global record, persists across agreements. Email REQUIRED.
+- **Candidate** — an external person. No login. Global record, persists across agreements. Email is
+  required and unique whenever a form creates or edits a candidate's identity; it is nullable in
+  storage so legacy migrated rows can exist without one (Doc 2 correction — superseding the earlier
+  unconditional "Email REQUIRED" in this line).
 - **Certificate** — catalog entry, program-scoped, optional expiry, optional prerequisites.
 - **Requirement** — one line item. Kind = activity_count | tool_submission | attestation.
 - **Requirement group** — satisfy_mode all | any | n_of, for "complete 3 of these 5".
@@ -75,22 +78,23 @@ activity_count   → 1. filter tags: candidate; activity NOT cancelled, NOT not_
                    2. sum completion_units, compare to target_count
 tool_submission  → 1. same base filters, plus certification_tool_id match
                    2. if requires_passing → keep only outcome = passed
-                   3. apply dimension rules over the SURVIVORS:
+                   3. independently evaluate rules over that same eligible/passing pool:
                       coverage = at least 1 submission per listed option;
-                      quota    = at least min_count at a given option
-                   4. count surviving submissions, compare to target_count
+                      quota    = at least min_count submissions matching any listed option
+                   4. count the same pool for target_count; dimension rules do not reduce it
                    Score values are NEVER read by the engine.
 Group eval: all | any | n_of. Overall = all groups + all ungrouped requirements satisfied.
 
 ## Acceptance test — the NWIC Local Coach certificate
 If the model cannot express this table, the design is wrong. Source: NWIC Certification Guide Spring 2026.
 
-**Open clarification before affected authoring/progress work:** the user has said the exploratory builder mock's
-Full-review/Phase interaction is not accurate. The encodings below record the current plan; they do not
-resolve that correction. Obtain concrete examples of which submissions count, how Full relates to Phase,
-and how coverage and minimum counts combine. Reconcile the affected rows, evaluation rules and schema if
-needed before implementing those interactions or the Doc 3 evaluator. Do not treat the mock as a rule
-specification or invent the missing behavior. The no-score-math decision remains unchanged.
+**Confirmed from the guide:** a submission can count toward its total, phase coverage, and review quota
+at once. Supervisor Checklist requires six, phases 2–4 and at least four Full reviews (document plus
+observation). COMET requires six, phases 1–4 and at least four field observations with face-to-face
+teams/families. Do not filter the entire pool to Full/observations before counting the six. Preserve
+existing tool option IDs and make their observation meaning clear when configuring COMET. Thresholds
+remain coach guidance, not calculated score gates. See section 3 of the implementation plan for source
+context and the explicitly deferred COMET inter-rater sequencing prerequisite.
 
 | Guide requirement | Kind | Encoding |
 |---|---|---|
@@ -99,7 +103,7 @@ specification or invent the missing behavior. The no-score-math decision remains
 | CREST — 12 submissions | tool_submission | tool with no dimensions, target 12 |
 | Supervisor Checklist — 6, span phases 2-4, ≥4 full reviews, 85%/80% | tool_submission | target 6, requires_passing, coverage Phase{2,3,4}, quota ReviewMode=Full min 4, threshold note |
 | STEPS — "ability to move from expert practitioner…" | attestation | unmeasurable by design |
-| COMET — 6 across all 4 phases, ≥4 field observations | tool_submission | coverage Phase{1,2,3,4}, quota ReviewMode=Full min 4 |
+| COMET — 6 across all 4 phases, ≥4 field observations | tool_submission | coverage Phase{1,2,3,4}, quota field observations min 4 (an existing Full option must represent this meaning), target 6, requires_passing |
 | SAS — 9/12 across 3 sessions, 75% per section | tool_submission | target 3, four score fields, coach judges |
 | Participate in all NWIC coaching sessions | attestation | no fixed target |
 | WVCC — 3 times over a year | activity_count | target 3, window_months = 12 |
@@ -111,10 +115,19 @@ DEFERRED: requirement sequencing (COMET inter-rater review must precede COMETs c
 the guide. Add `depends_on_requirement_id` later if asked.
 
 ## Schema (authoritative)
-certification_candidates          name, email REQUIRED+unique, phone, start_date, notes, active
-agreement_certification_candidates (EXISTS, becomes roster link)
-                                  + certification_candidate_id FK, + sort_order; keeps agreement_id,
-                                  program_id, notes. Backfill one person per row, NO name auto-merge.
+certification_candidates          name, email (nullable in storage — legacy-backfilled rows may have
+                                  none; NORMALIZED trim+lowercase, unique when present; required +
+                                  valid + unique whenever a form creates or actually edits a
+                                  candidate's identity), phone, start_date, notes, active. SHIPPED
+                                  (Doc 2) exactly as described here — the schema below is as-built,
+                                  not merely planned.
+agreement_certification_candidates (EXISTS, becomes roster link) — IMPLEMENTED (Doc 2)
+                                  + certification_candidate_id FK (not null, restrictOnDelete),
+                                  + sort_order; keeps agreement_id, program_id, notes; the legacy
+                                  `name` column was dropped after backfill. Backfilled one person per
+                                  row initially; the forward legacy-name reconciliation then unifies
+                                  matching legacy names and repoints their roster/enrollment links.
+                                  unique(agreement_id, certification_candidate_id).
 certificates                      name, description, active, sort_order, program_scope_mode, retired_at,
                                   validity_months nullable (null = never expires),
                                   default_window_months nullable (null = all-time),
@@ -141,10 +154,14 @@ certification_tool_score_fields   certification_tool_id, name, slug, unit (perce
 certification_roles               name, slug, certificate_id nullable (null = standard/global), active,
                                   sort_order. NO activity_type whitelist — role options on the log derive
                                   from REQUIREMENTS matching that activity's classification.
-certificate_enrollments           certification_candidate_id, certificate_id, sponsoring_agreement_id
-                                  nullable, supervising_coach_user_id nullable, status, phase, cycle,
-                                  enrolled_at, requirements_met_at, endorsed_at, endorsed_by_user_id, notes
-                                  unique(certification_candidate_id, certificate_id)
+certificate_enrollments           IMPLEMENTED (Doc 2) with only the fields that pass currently writes:
+                                  certification_candidate_id, certificate_id, sponsoring_agreement_id
+                                  nullable (nullOnDelete — provenance only, survives agreement
+                                  deletion), supervising_coach_user_id nullable (nullOnDelete),
+                                  status, phase, cycle, enrolled_at, notes.
+                                  unique(certification_candidate_id, certificate_id). Doc 4 adds
+                                  requirements_met_at/endorsed_at/endorsed_by_user_id/award fields via
+                                  a NEW migration when actually needed — they do not exist yet.
 certificate_awards                certificate_enrollment_id, cycle, phase, awarded_at, awarded_by_user_id,
                                   expires_at, requirements_snapshot json, revoked_at, revoked_by_user_id,
                                   revoke_reason, pdf_path, pdf_generated_at
@@ -211,10 +228,11 @@ errors. Fix with `./vendor/bin/sail artisan view:clear`. See the repo memory `do
 1. Catalog foundation — enums, duties + CertificationAccess, tool builder, roles, certificates +
    requirements. Acceptance: author the NWIC Local Coach certificate. No people, no progress. **SHIPPED** —
    see `doc-1-catalog-foundation.md`.
-   **Follow-up 1A — Catalog authoring usability: PLANNED**, specified in that document's follow-up section.
-   Part of the certificate work, independent of the enterprise restyle. Doc 2 can proceed independently;
-   settle the Full/Phase clarification and authoring pattern before Doc 3 builds capture/progress UI.
+   **Follow-up 1A — Catalog authoring usability: COMPLETE IN WORKING TREE**, specified in that document's
+   follow-up section and the handoff below. Uncommitted, independently verified alongside Doc 2; the
+   guide rules and authoring pattern are ready for Doc 3. Independent of the enterprise restyle.
 2. People & enrollment — candidates person table + backfill, agreement drawer, coach picker.
+   **COMPLETE IN WORKING TREE; UNCOMMITTED** — see `doc-2-people-and-enrollment.md`.
 3. Capture & progress — activity-form tagging + submissions, attestation UI, CertificateProgressService.
 4. Lifecycle — statuses, endorsement gate, award/revoke, expiry + renewal cycles, action log.
 5. Surfacing (deferrable) — central indexes, candidate detail, PDF generation
@@ -333,3 +351,75 @@ it already needs; a global-role admin screen can piggyback on the same catalog C
 
 **Nothing else discovered that changes Docs 2-5** — schema, terminology, and evaluation order in this spine
 all held up against the acceptance table with no changes needed.
+
+### Doc 2 — People and Enrollment (COMPLETE; REVIEWED, UNCOMMITTED)
+
+Branch: `feature/certificates-1a-doc2`, based on `main`. The implementation and review
+corrections are still in the working tree; this is not a release declaration.
+See [doc-2-people-and-enrollment.md](doc-2-people-and-enrollment.md) for the current behavior,
+authorization boundaries, tests, and open issues.
+
+- External `certification_candidates` are separate from staff users. Initial legacy backfill preserved
+  every row; the forward `2026_10_25_131838` correction reconciles matching legacy names into shared people.
+  Locally 26 people became 10, preserving 26 roster links and the existing enrollment. No progress,
+  staff accounts, or emails are invented. Conflicting data aborts reconciliation for review.
+- Agreement roster links preserve metadata and have a unique agreement/person pair. Global
+  `certificate_enrollments` have a unique person/certificate pair and optional sponsor/coach.
+  Agreement removal/duplication does not clone or delete people/enrollments or reset sponsorship.
+- Create/edit supports candidate selection, new people, optional coaches, certificate assignment,
+  and explicit authorized correction/removal of initial NotStarted cycle-1 enrollments.
+  Untouched legacy people can retain null email; actual identity edits collect email.
+- Edit and show both filter enrollments by viewer visibility and agreement programs. Shared identity
+  and global enrollment mutations check the affected agreements. A missing sponsor grants no authority.
+  Existing retired selections remain preservable; new assignment eligibility remains strict.
+- Coach selection requires a matching certificate-program duty and the coach's agreement visibility.
+  Program changes update the form options. Duties do not confer access.
+- Duty controls exist on authorized admin Edit User forms. Selected program duties are visible and
+  removable; omission preserves existing duties. Authorized admins can self-grant/revoke through the
+  duty-only Profile form and `profile.certification-duties.update` route. Scope validation and the
+  existing duty authority apply; general user self-edit permission remains unchanged.
+- Candidate search shows names/emails only. Known emails explicitly reuse a person or open their
+  existing roster row. Shared identity remains locked until explicitly edited with authority. Adding
+  a candidate starts with search-or-create; selecting an existing person immediately shows their
+  applicable global assignments. Certificate rows are flat within one focused editor.
+- The main-column Certificate assignments section shows certificate/coach/date and links directly to
+  the matching editor. Assigned is an assignment state; computed completion and automatic credit are
+  still Doc 3, not inferred from the initial status.
+- Review verification: `composer check` passed (252 tests / 978 assertions, PHPStan, Pint, audit);
+  63 focused certification/profile cases and the frontend build passed. An isolated PostgreSQL-schema
+  backfill test was added. Two independent Impeccable reviews and Playwright checks informed the UI fixes.
+  No live application form was saved during this review.
+- **1A is now complete in the same working tree**; see its separate handoff below.
+  Doc 3 progress/evidence and Doc 4 endorsement/award/renewal remain future work, including their
+  lifecycle columns. No activity-based completion or progress calculation exists yet.
+
+
+### Follow-up 1A — Catalog Authoring (COMPLETE; UNCOMMITTED)
+
+Branch: `feature/certificates-1a-doc2`. This completes the bounded catalog-authoring follow-up; it is not
+committed or released. Doc 1's shipped schema stays unchanged. See the completed follow-up in
+[doc-1-catalog-foundation.md](doc-1-catalog-foundation.md) for the interaction and preservation contract.
+
+- Certificate authoring now uses freely navigable Basics, Initial requirements, Renewal and Review rules.
+  Compact summaries open one focused inline editor. Activity work counts completion units; tool
+  submissions have a total plus independently evaluated coverage/quota rules; confirmation remains manual.
+- Groups physically contain their requirements. Contextual role editing supports new-role assignment in
+  one save through `role_index`; stage-scoped `group_index`, stable IDs, ordering and deletion survive.
+  Role/program filters, effective windows, guidance and linked renewal appear in the full rule review.
+- Renewal can follow initial configuration or copy it into independent records. Destructive replacements
+  and incompatible type/tool changes confirm. Out-of-scope selections are preserved for correction.
+  Nested ownership/category/stage validation prevents cross-record edits and incompatible hidden rules.
+- Confirmed guide semantics above replace the old open Full/Phase clarification. No schema change,
+  numerical score comparison, prerequisite sequencing, activity evidence or progress implementation was
+  added. Doc 3 must use the same eligible/passing pool for totals, phase coverage and observation quotas.
+- Doc 2 remains the completed assignment flow, including the legacy-person reconciliation and assignment
+  section on agreements. Its completion does not imply any candidate has earned progress. Doc 4 retains
+  formal endorsement, awarding, expiration and renewal execution.
+
+- Final combined check: `vendor/bin/sail composer check` passed (266 tests / 1,062 assertions, audit,
+  Pint and PHPStan); the production frontend build passed. Two independent UI assessments and the
+  focused browser recheck informed the final empty-state, contrast and validation-focus fixes. The
+  certificate-partials detector returned zero findings. Runtime checks had no console errors or
+  horizontal overflow at desktop/390px. No valid catalog forms were saved to the development database.
+- Own-diff cleanup replaced the old inline orchestration, duplicate lookback controls and unused
+  preparation code with a certificate-local editor. No generalized builder or new dependency was added.

@@ -19,6 +19,7 @@
     'entityKind' => null,
     'labelledBy' => null,
     'ariaLabel' => null,
+    'single' => false,
 ])
 
 @php
@@ -74,6 +75,7 @@
      data-open-on-focus="{{ $openOnFocus ? 'true' : 'false' }}"
      data-disabled="{{ $disabled ? 'true' : 'false' }}"
      data-show-selected="{{ $showSelected ? 'true' : 'false' }}"
+     data-single="{{ $single ? 'true' : 'false' }}"
      data-empty-selection-label="{{ $emptySelectionLabel ?? '' }}"
      data-selected-badge-class="{{ $entityBadgeClass ?? '' }}"
      data-selected='@json($selectedIds)'>
@@ -169,6 +171,7 @@
         const options = parseJson(optionsNode, []);
         const initialSelected = new Set(parseJson({ textContent: picker.dataset.selected || '[]' }, []));
         const selected = new Set(Array.from(initialSelected));
+        const single = picker.dataset.single === 'true';
         let allowedValues = null;
         let isDisabled = picker.dataset.disabled === 'true';
 
@@ -215,6 +218,7 @@
         }
 
         function choose(value, label) {
+            if (single) selected.clear();
             selected.add(String(value));
             renderSelected();
             renderList(true);
@@ -222,6 +226,10 @@
             picker.dispatchEvent(new CustomEvent('token-picker:change', { bubbles: true, detail: { user: true } }));
             announce(label + ' added');
             searchInput.focus();
+            if (single) {
+                searchInput.value = '';
+                closeList();
+            }
         }
 
         function selectedArray() {
@@ -383,6 +391,9 @@
             labels.forEach(function (label) {
                 const badge = document.createElement('span');
                 badge.className = 'badge ' + badgeClass;
+                if (single) {
+                    badge.classList.add('text-wrap', 'text-start', 'mw-100');
+                }
                 badge.textContent = String(label);
                 textWrap.appendChild(badge);
             });
@@ -411,6 +422,11 @@
             const list = filteredOptions(searchInput.value);
             listWrap.innerHTML = '';
 
+            if (single && list.length === 0) {
+                closeList();
+                return;
+            }
+
             if (list.length === 0) {
                 const empty = document.createElement('div');
                 empty.className = 'text-muted small';
@@ -434,6 +450,9 @@
 
                     const textWrap = document.createElement('div');
                     textWrap.className = 'form-check-label d-flex flex-wrap align-items-center gap-2';
+                if (single) {
+                    textWrap.classList.add('flex-grow-1', 'min-w-0');
+                }
 
                     appendOptionPrimaryLabel(textWrap, opt);
 
@@ -475,7 +494,7 @@
         picker.addEventListener('token-picker:set', function (event) {
             const values = Array.isArray(event.detail) ? event.detail : [];
             selected.clear();
-            values.forEach(function (value) {
+            (single ? values.slice(0, 1) : values).forEach(function (value) {
                 selected.add(String(value));
             });
             syncSelectionToAllowedValues();
@@ -531,6 +550,7 @@
             }
 
             if (detail.select !== false) {
+                if (single) selected.clear();
                 selected.add(String(option.value));
                 renderSelected();
                 writeHiddenInputs();
@@ -701,6 +721,9 @@
     });
 
     document.body.addEventListener('htmx:afterSwap', function (event) {
+        initTokenPickers(event.target);
+    });
+    document.addEventListener('repeater:row-added', function (event) {
         initTokenPickers(event.target);
     });
 })();

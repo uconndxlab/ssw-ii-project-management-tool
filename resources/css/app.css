@@ -1235,3 +1235,19 @@ html[data-rail="unpinned"] .app-rail-pin-on {
         transition: opacity 0.15s;
     }
 }
+
+/* Certificate catalog authoring stays inside the existing form shell. */
+[data-certificate-editor] [hidden] { display: none !important; }
+.cert-sections .nav-link:not(.active) { color: var(--bs-primary-text-emphasis); }
+.cert-sections { border-bottom: 1px solid var(--bs-border-color); padding-bottom: .75rem; }
+.cert-requirement { background: var(--bs-body-bg); }
+.cert-requirement [data-cert-edit]:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 4px; }
+.cert-requirement [data-cert-summary] { line-height: 1.6; }
+.cert-group { background: var(--bs-tertiary-bg); }
+.cert-group .cert-requirement { background: var(--bs-body-bg); }
+@media (max-width: 575.98px) {
+    .cert-requirement > .d-flex { flex-wrap: wrap; }
+    .cert-row-actions { width: 100%; }
+    .cert-sections .nav-link { padding: .5rem .65rem; }
+    .cert-row-actions .btn, .cert-group > .d-flex .btn { min-width: 44px; min-height: 44px; }
+}

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Enums\AccessProfile;
+use App\Enums\CertificationDuty;
+use App\Enums\PrivilegeScopeType;
 use App\Enums\ProgramScopeMode;
 use App\Http\Requests\AdminUserRequest;
 use App\Models\Program;
@@ -11,6 +13,7 @@ use App\Models\Team;
 use App\Models\User;
 use App\Services\UserDeactivationService;
 use App\Services\UserShowPageData;
+use App\Support\Authorization\CertificationDutySync;
 use App\Support\Authorization\PrivilegeSync;
 use App\Support\Authorization\ScopeSync;
 use App\Support\Authorization\UserAccess;
@@ -273,6 +276,8 @@ class AdminUserController extends Controller
 
         $this->syncPrivileges($user, $validated, $request);
 
+        $this->syncCertificationDuties($user, $request);
+
         return $this->redirectAfterSave($user, 'User updated successfully.');
     }
 
@@ -337,6 +342,28 @@ class AdminUserController extends Controller
             'teams' => $teams,
             'ledgerProjects' => $ledgerProjects->get(['id', 'name']),
             'ledgerPrograms' => $ledgerPrograms->get(['id', 'name']),
+            'canGrantCertificationDuties' => $access->isSystemAdmin() || $access->adminProgramIds() !== [],
+            'dutyProgramOptions' => $ledgerPrograms->get(['id', 'name']),
+            'existingCoachSystem' => $user->exists && $user->certificationDuties()
+                ->where('duty', CertificationDuty::Coach)
+                ->whereNull('revoked_at')
+                ->where('scope_type', PrivilegeScopeType::System)
+                ->exists(),
+            'existingCoachProgramIds' => $user->exists ? $user->certificationDuties()
+                ->where('duty', CertificationDuty::Coach)
+                ->whereNull('revoked_at')
+                ->where('scope_type', PrivilegeScopeType::Program)
+                ->pluck('scope_id')->all() : [],
+            'existingManagerSystem' => $user->exists && $user->certificationDuties()
+                ->where('duty', CertificationDuty::Manager)
+                ->whereNull('revoked_at')
+                ->where('scope_type', PrivilegeScopeType::System)
+                ->exists(),
+            'existingManagerProgramIds' => $user->exists ? $user->certificationDuties()
+                ->where('duty', CertificationDuty::Manager)
+                ->whereNull('revoked_at')
+                ->where('scope_type', PrivilegeScopeType::Program)
+                ->pluck('scope_id')->all() : [],
         ];
     }
 
@@ -367,5 +394,19 @@ class AdminUserController extends Controller
             $request->boolean('is_supervisor') && $profile !== AccessProfile::Input,
             PrivilegeSync::rowsFromRequest($request->all(), $this->actor()),
         );
+    }
+
+    private function syncCertificationDuties(User $user, Request $request): void
+    {
+        $submitted = [];
+
+        foreach (['coach', 'manager'] as $duty) {
+            if ($request->hasAny(["duty_{$duty}_present", "duty_{$duty}_system", "duty_{$duty}_program_ids"])) {
+                $submitted["{$duty}_system"] = $request->boolean("duty_{$duty}_system");
+                $submitted["{$duty}_program_ids"] = ProjectProgramScope::normalizeIds($request->input("duty_{$duty}_program_ids", []));
+            }
+        }
+
+        CertificationDutySync::apply($this->actor(), $user, $submitted);
     }
 }
