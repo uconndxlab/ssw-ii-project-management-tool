@@ -34,3 +34,11 @@ test('duplicate confirmations preserve the original POST form and explain omitte
         ->assertSee('action="'.route('agreements.duplicate', $agreement).'"', false)
         ->assertSee('method="POST"', false);
 });
+
+test('agreement certification editor uses the shared confirmation instead of native prompts', function () {
+    $agreement = Agreement::factory()->create();
+
+    $this->actingAs(createSystemAdmin())->get(route('agreements.edit', $agreement))->assertOk()
+        ->assertSee('window.appConfirm(', false)
+        ->assertDontSee('window.confirm(', false);
+});
