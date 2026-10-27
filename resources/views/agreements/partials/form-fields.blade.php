@@ -748,7 +748,7 @@ function initializeCertificationAssignments() {
     }
 
     form.addEventListener('change', refresh);
-    form.addEventListener('token-picker:change', event => {
+    form.addEventListener('token-picker:change', async event => {
         const picker = event.target.closest('[data-candidate-picker] [data-token-picker]');
         if (!picker) { refresh(); return; }
         const row = picker.closest('[data-candidate-row]');
@@ -757,7 +757,7 @@ function initializeCertificationAssignments() {
         if (identity.value === selectedId) return;
         const hasAssignments = Array.from(row.querySelectorAll('[data-assignment-row]')).some(a =>
             a.querySelector('[data-repeater-delete]').value !== '1' && a.querySelector('[name$="[certificate_id]"]')?.value);
-        if (hasAssignments && !window.confirm('Changing the candidate clears the unsaved certificate rows in this editor. Continue?')) {
+        if (hasAssignments && !await window.appConfirm({ title: 'Change candidate?', message: 'The unsaved certificate rows in this editor will be cleared.', action: 'Change candidate', trigger: picker })) {
             picker.dispatchEvent(new CustomEvent('token-picker:set', {detail: identity.value ? [identity.value] : []}));
             return;
         }
@@ -775,7 +775,7 @@ function initializeCertificationAssignments() {
         row.querySelector('[data-candidate-email]').dispatchEvent(new Event('input', {bubbles:true}));
         refresh();
     });
-    form.addEventListener('click', event => {
+    form.addEventListener('click', async event => {
         const row = event.target.closest('[data-candidate-row]');
         if (!row) return;
         if (event.target.closest('[data-edit-identity]')) {
@@ -795,7 +795,7 @@ function initializeCertificationAssignments() {
                 && other.querySelector('[data-candidate-select]').value === matchButton.dataset.candidateId);
             if (existingRow) {
                 const hasAssignments = Array.from(row.querySelectorAll('[data-assignment-row]')).some(a => a.querySelector('[name$="[certificate_id]"]')?.value);
-                if (hasAssignments && !window.confirm('Discard the unsaved certificate rows here and edit the existing roster candidate?')) return;
+                if (hasAssignments && !await window.appConfirm({ title: 'Discard certificate rows?', message: 'The unsaved certificate rows here will be discarded so you can edit the existing roster candidate.', action: 'Discard rows', trigger: matchButton })) return;
                 row.querySelector('[data-repeater-remove]').click();
                 setTimeout(() => {
                     form.querySelectorAll('[data-candidate-row]').forEach(other => { other.dataset.repeaterMode = other === existingRow ? 'edit' : 'display'; });
@@ -822,7 +822,7 @@ function initializeCertificationAssignments() {
         if (event.target.closest('[data-back-to-search]')) {
             const hasContent = row.querySelector('[data-candidate-name]').value || row.querySelector('[data-candidate-email]').value
                 || row.querySelector('[data-assignment-row]');
-            if (hasContent && !window.confirm('Discard this new candidate’s unsaved details and return to search?')) return;
+            if (hasContent && !await window.appConfirm({ title: 'Discard new candidate?', message: 'This new candidate’s unsaved details will be discarded and you will return to search.', action: 'Discard details', trigger: event.target.closest('[data-back-to-search]') })) return;
             row.dataset.personMode = 'search';
             row.querySelector('[data-candidate-name]').value = '';
             row.querySelector('[data-candidate-email]').value = '';
@@ -852,9 +852,16 @@ function initializeCertificationAssignments() {
         if (!button || !form.contains(button) || !button.closest('[data-repeater-name="certification_candidates"]')) return;
         const removing = button.hasAttribute('data-repeater-remove');
         const row = button.closest('[data-repeater-row]');
-        if (removing && row.dataset.existing === '1' && button.dataset.confirmRemove && !window.confirm(button.dataset.confirmRemove)) {
+        if (removing && row.dataset.existing === '1' && button.dataset.confirmRemove && button.dataset.removeApproved !== '1') {
             event.preventDefault();
             event.stopImmediatePropagation();
+            window.appConfirm({ title: button.dataset.confirmRemoveTitle, message: button.dataset.confirmRemove, action: 'Remove', trigger: button }).then(confirmed => {
+                if (!confirmed || !button.isConnected) return;
+                // Replay the click so the repeater handles the approved removal.
+                button.dataset.removeApproved = '1';
+                button.click();
+                delete button.dataset.removeApproved;
+            });
             return;
         }
         const addButton = button.closest('[data-repeater]')?.querySelector(':scope > [data-repeater-add]');

@@ -99,12 +99,12 @@ class CertificateEnrollment extends Model
         $latest = $this->awards->whereNotNull('awarded_at')->sortByDesc('cycle')->first();
 
         return match (true) {
-            $this->status === CertificateEnrollmentStatus::Revoked => ['label' => 'Revoked', 'class' => 'text-bg-danger'],
-            $latest?->isLive() === true => ['label' => $latest->expires_at ? 'Certified · until '.$latest->expires_at->format('M j, Y') : 'Certified · no expiry', 'class' => 'text-bg-success'],
-            $latest?->isExpired() === true => ['label' => 'Expired '.$latest->expires_at?->format('M j, Y'), 'class' => 'text-bg-secondary'],
-            $this->awards->contains(fn (CertificateAward $award) => $award->cycle === $this->cycle && $award->awarded_at === null) => ['label' => 'Endorsed', 'class' => 'text-bg-warning'],
-            $this->isUnstarted() => ['label' => 'Assigned', 'class' => 'bg-secondary-subtle text-secondary-emphasis border'],
-            default => ['label' => 'In progress', 'class' => 'bg-secondary-subtle text-secondary-emphasis border'],
+            $this->status === CertificateEnrollmentStatus::Revoked => ['label' => 'Revoked', 'class' => 'app-status app-status--danger'],
+            $latest?->isLive() === true => ['label' => $latest->expires_at ? 'Certified · until '.$latest->expires_at->format('M j, Y') : 'Certified · no expiry', 'class' => 'app-status app-status--success'],
+            $latest?->isExpired() === true => ['label' => 'Expired '.$latest->expires_at?->format('M j, Y'), 'class' => 'app-status app-status--neutral'],
+            $this->awards->contains(fn (CertificateAward $award) => $award->cycle === $this->cycle && $award->awarded_at === null) => ['label' => 'Endorsed', 'class' => 'app-status app-status--warning'],
+            $this->isUnstarted() => ['label' => 'Assigned', 'class' => 'app-status app-status--neutral'],
+            default => ['label' => 'In progress', 'class' => 'app-status app-status--neutral'],
         };
     }
 

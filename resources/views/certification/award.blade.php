@@ -4,15 +4,15 @@
 @php
     $snapshot = $award->requirements_snapshot;
     $status = match (true) {
-        $award->revoked_at !== null => ['Revoked '.$award->revoked_at->format('M j, Y'), 'text-bg-danger'],
-        $award->isExpired() => ['Expired '.$award->expires_at?->format('M j, Y'), 'text-bg-secondary'],
-        $superseded => ['Superseded by a later cycle', 'bg-secondary-subtle text-secondary-emphasis border'],
-        default => ['Valid', 'text-bg-success'],
+        $award->revoked_at !== null => ['Revoked '.$award->revoked_at->format('M j, Y'), 'danger'],
+        $award->isExpired() => ['Expired '.$award->expires_at?->format('M j, Y'), 'neutral'],
+        $superseded => ['Superseded by a later cycle', 'neutral'],
+        default => ['Valid', 'success'],
     };
 @endphp
 <x-form-shell>
     <x-page-header :title="($snapshot['certificate']['name'] ?? $enrollment->certificate->name).' · Cycle '.$award->cycle" :description="$enrollment->candidate->name" entity-type="Certificate award" :breadcrumb-label="'Cycle '.$award->cycle.' award'">
-        <x-slot:badges><span class="badge rounded-pill {{ $status[1] }}">{{ $status[0] }}</span></x-slot:badges>
+        <x-slot:badges><x-status-badge :tone="$status[1]" :active-label="$status[0]" /></x-slot:badges>
     </x-page-header>
     <x-section-card title="Award">
         <dl class="row small mb-0">
@@ -35,7 +35,7 @@
                 <div class="d-flex flex-wrap align-items-center gap-2">
                     <h3 class="h6 mb-0" id="snapshot-requirement-{{ $row['id'] }}">{{ $row['label'] }}</h3>
                     <span class="small text-muted">{{ $row['count'] }} / {{ $row['target'] }}</span>
-                    <span class="badge ms-auto {{ $row['satisfied'] ? 'text-bg-success' : 'text-bg-secondary' }}">{{ $row['satisfied'] ? 'Met' : 'Not met' }}</span>
+                    <span class="ms-auto app-status {{ $row['satisfied'] ? 'app-status--success' : 'app-status--neutral' }}">{{ $row['satisfied'] ? 'Met' : 'Not met' }}</span>
                 </div>
                 @foreach($row['rules'] as $rule)
                     <div class="small text-muted">{{ $rule['dimension'] }} {{ $rule['mode'] }} · {{ implode(', ', $rule['options']) }} · {{ $rule['count'] }} / {{ $rule['target'] }}</div>

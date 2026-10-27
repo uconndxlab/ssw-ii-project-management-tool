@@ -25,6 +25,7 @@
         <strong data-certificate-title>{{ $isExisting ? $certificateName : 'Certificate assignment' }}</strong>
         @if($canRemove)
             <button type="button" class="btn btn-sm btn-outline-danger" data-repeater-remove
+                    data-confirm-remove-title="Remove certificate assignment?"
                     data-confirm-remove="Remove this certificate assignment for this person everywhere it is displayed? Removing the person from this agreement is a separate action."
                     aria-label="Remove assignment {{ $certificateName }}">Remove</button>
         @endif

@@ -119,7 +119,7 @@
             </div>
 
             <div class="col-lg-7">
-                <div class="border rounded overflow-hidden d-flex flex-column h-100" style="min-height: 420px; background-color: #e9ecef;">
+                <div class="border rounded overflow-hidden d-flex flex-column h-100" style="min-height: 420px; background-color: var(--app-surface-fill);">
                     <div class="small text-muted px-3 py-2 border-bottom bg-body">
                         Selected users
                     </div>
@@ -442,7 +442,7 @@
             titleWrap.appendChild(createTeamBadge(teamLabels[String(teamId)] || ('Team ' + teamId)));
 
             const meta = document.createElement('span');
-            meta.className = 'badge bg-light text-muted border rounded-pill';
+            meta.className = 'badge app-tag';
             meta.textContent = memberIds.length + ' member' + (memberIds.length === 1 ? '' : 's');
             titleWrap.appendChild(meta);
 

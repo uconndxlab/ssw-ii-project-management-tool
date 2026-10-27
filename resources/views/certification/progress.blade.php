@@ -4,7 +4,7 @@
 <x-form-shell>
     @php $badge = $enrollment->lifecycleBadge(); @endphp
     <x-page-header :title="$enrollment->candidate->name" :description="$enrollment->certificate->name" entity-type="Certificate enrollment">
-        <x-slot:badges><span class="badge rounded-pill {{ $badge['class'] }}">{{ $badge['label'] }}</span></x-slot:badges>
+        <x-slot:badges><span class="{{ $badge['class'] }}">{{ $badge['label'] }}</span></x-slot:badges>
         <x-slot:meta>
             <span>{{ ucfirst($enrollment->phase->value) }} · Cycle {{ $enrollment->cycle }}</span>
             <span>{{ $summary['met'] }} / {{ $summary['total'] }} requirements met</span>
@@ -32,7 +32,7 @@
                         <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
                             <h3 class="h6 mb-0" id="requirement-{{ $requirement->id }}">{{ $requirement->label ?: ($requirement->certificationTool?->name ?? $requirement->activityType?->name ?? $requirement->kind->label()) }}</h3>
                             <span class="small text-muted">{{ $requirement->kind === \App\Enums\CertificateRequirementKind::Attestation ? 'Coach confirmation' : ($requirement->kind === \App\Enums\CertificateRequirementKind::ToolSubmission ? 'Tool submissions' : 'Activity work') }}</span>
-                            <span class="badge ms-auto {{ $row['satisfied'] ? 'text-bg-success' : 'text-bg-secondary' }}">{{ $row['satisfied'] ? 'Met' : 'Not met' }}</span>
+                            <span class="ms-auto app-status {{ $row['satisfied'] ? 'app-status--success' : 'app-status--neutral' }}">{{ $row['satisfied'] ? 'Met' : 'Not met' }}</span>
                         </div>
                         @if($requirement->kind === \App\Enums\CertificateRequirementKind::Attestation)
                             @if($attestation)

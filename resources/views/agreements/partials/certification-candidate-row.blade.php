@@ -47,6 +47,7 @@
                     aria-label="{{ $editing ? 'Collapse' : 'Edit' }} candidate {{ $name }}"
                     aria-expanded="{{ $editing ? 'true' : 'false' }}" aria-controls="{{ $fieldId }}-body">{{ $editing ? 'Done' : 'Edit' }}</button>
             <button type="button" class="btn btn-sm btn-outline-danger" data-repeater-remove
+                    data-confirm-remove-title="Remove candidate from agreement?"
                     data-confirm-remove="Remove this person from this agreement? Their person record and certificate assignments will be kept."
                     aria-label="Remove {{ $name ?: 'candidate' }} from this agreement">Remove</button>
         </div>

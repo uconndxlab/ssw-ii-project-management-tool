@@ -68,89 +68,59 @@
 
     $actionsFilled = isset($actions) && filled(trim((string) $actions));
     $footerFilled = isset($footer) && filled(trim((string) $footer));
-    $hasDetails = filled($description) || $metaBadges->isNotEmpty() || $metaLines->isNotEmpty() || $footerFilled;
     $resolvedKindLabel = filled($kind)
         ? \Illuminate\Support\Str::of($kind)->replace('-', ' ')->title()->value()
         : null;
+    $badges = $contextBadges->concat($metaBadges);
+    $hasMeta = filled($subtitle) || $metaLines->isNotEmpty() || $footerFilled;
 @endphp
 
-<div {{ $attributes->merge(['class' => 'border rounded overflow-hidden bg-body px-3 py-2']) }}>
-    <div class="d-flex justify-content-between align-items-start gap-3">
-        <div class="min-w-0 flex-grow-1">
-            <div class="d-flex flex-wrap align-items-center gap-2 min-w-0">
-                @if($titleAsBadge && filled($kind))
-                    <x-entity-relation-badge :kind="$kind" :href="$href" :wrap="$wrapTitle">
-                        {{ $title }}
-                    </x-entity-relation-badge>
-                @elseif($href)
-                    <a href="{{ $href }}" class="fw-semibold small text-decoration-underline d-block text-break">{{ $title }}</a>
-                @else
-                    <span class="fw-semibold small d-block text-body text-break">{{ $title }}</span>
-                @endif
-
-                @if($showKindBadge && filled($resolvedKindLabel) && ! $titleAsBadge)
-                    <x-entity-type-badge :label="$resolvedKindLabel" :badge-class="\App\Support\EntityBadge::typeClasses($kind)" />
-                @endif
-            </div>
-
-            @if(filled($subtitle))
-                <div class="small text-muted mt-1">{{ $subtitle }}</div>
+<article data-ledger-item data-ledger-title="{{ $title }}" {{ $attributes->class(['app-ledger-row', 'app-ledger-row--simple' => ! $hasMeta && ! filled($description) && $badges->isEmpty() && ! $actionsFilled]) }}>
+    <div class="app-ledger-row-head">
+        <div class="app-ledger-row-identity">
+            @if($href)
+                <a href="{{ $href }}" class="app-ledger-name">{{ $title }}</a>
+            @else
+                <span class="app-ledger-name">{{ $title }}</span>
             @endif
-
-            @if($contextBadges->isNotEmpty())
-                <div class="d-flex flex-wrap gap-1 mt-2">
-                    @foreach($contextBadges as $badge)
-                        @if(filled($badge['class']))
-                            <span class="badge {{ $badge['class'] }}">{{ $badge['label'] }}</span>
-                        @else
-                            <x-category-badge :kind="$badge['kind']">{{ $badge['label'] }}</x-category-badge>
-                        @endif
-                    @endforeach
-                </div>
-            @endif
-
-            @if($hasDetails)
-                <hr class="my-2">
-
-                @if(filled($description))
-                    <div class="small text-muted">{{ $description }}</div>
-                @endif
-
-                @if($metaBadges->isNotEmpty())
-                    <div class="d-flex flex-wrap gap-1 {{ filled($description) ? 'mt-2' : '' }}">
-                        @foreach($metaBadges as $badge)
-                            @if(filled($badge['class']))
-                                <span class="badge {{ $badge['class'] }}">{{ $badge['label'] }}</span>
-                            @else
-                                <x-category-badge :kind="$badge['kind']">{{ $badge['label'] }}</x-category-badge>
-                            @endif
-                        @endforeach
-                    </div>
-                @endif
-
-                @if($metaLines->isNotEmpty())
-                    <ul class="small text-muted mb-0 ps-3 {{ filled($description) || $metaBadges->isNotEmpty() ? 'mt-2' : '' }}">
-                        @foreach($metaLines as $line)
-                            <li>
-                                @if(filled($line['label'] ?? null))
-                                    <span class="fw-semibold text-body">{{ $line['label'] }}:</span>
-                                @endif
-                                @if(filled($line['value'] ?? null))
-                                    <span class="fw-normal text-muted">{{ $line['value'] }}</span>
-                                @endif
-                            </li>
-                        @endforeach
-                    </ul>
-                @endif
-
-                @if($footerFilled)
-                    <div class="mt-2">{{ $footer }}</div>
-                @endif
+            @if($showKindBadge && filled($resolvedKindLabel) && ! $titleAsBadge)
+                <x-entity-type-badge :label="$resolvedKindLabel" :badge-class="\App\Support\EntityBadge::typeClasses($kind)" />
             @endif
         </div>
-
-        @if($actionsFilled)
-            <div class="flex-shrink-0">{{ $actions }}</div>
+        @if($badges->isNotEmpty() || $actionsFilled)
+            <div class="app-ledger-row-roles">
+                @foreach($badges as $badge)
+                    @if(filled($badge['class']))
+                        <span class="badge {{ $badge['class'] }}">{{ $badge['label'] }}</span>
+                    @else
+                        <x-category-badge :kind="$badge['kind']">{{ $badge['label'] }}</x-category-badge>
+                    @endif
+                @endforeach
+                @if($actionsFilled)
+                    {{ $actions }}
+                @endif
+            </div>
         @endif
     </div>
-</div>
+    @if($hasMeta)
+        <div class="app-ledger-meta">
+            @if(filled($subtitle))
+                <span>{{ $subtitle }}</span>
+            @endif
+            @foreach($metaLines as $line)
+                <span>
+                    @if(filled($line['label'] ?? null))
+                        <span class="fw-medium text-body">{{ $line['label'] }}</span>
+                    @endif
+                    {{ $line['value'] }}
+                </span>
+            @endforeach
+            @if($footerFilled)
+                {{ $footer }}
+            @endif
+        </div>
+    @endif
+    @if(filled($description))
+        <p class="app-ledger-description">{{ $description }}</p>
+    @endif
+</article>

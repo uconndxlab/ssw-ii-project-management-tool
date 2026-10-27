@@ -5,68 +5,74 @@
 @section('content')
 @php
     $canManageActivity = auth()->user()->can('update', $activity);
+    $activityDuration = \App\Support\ActivityTypeDuration::fromActivity($activity);
+    $completionCount = (int) ($activity->completion_count ?? 1);
     $canViewActionLog = auth()->user()->can('viewActionLog', $activity);
 @endphp
-<div class="row mb-4">
-    <div class="col-lg-8">
-        <x-page-header
-            context="show"
-            :title="$activity->activityType->name"
-            entity-type="Activity"
-            :description="$activity->identityLabel(includeType: false)"
-            :action-url="$canManageActivity ? route('activities.edit', $activity) : null"
-        >
-            <x-slot:badges>
-                @if($activity->internal_only)
-                    <span class="badge bg-warning text-dark">Internal only</span>
-                @endif
-                @if($activity->cancelled)
-                    <x-status-badge :active="false" inactive-label="Cancelled" />
-                @elseif($activity->not_yet_complete)
-                    <span class="badge bg-info">Not yet complete</span>
-                @endif
-            </x-slot:badges>
-            <x-slot:more>
-                @if($canViewActionLog)
-                    <li>
-                        <button type="button"
-                                class="dropdown-item"
-                                hx-get="{{ route('activities.action-logs', ['activity' => $activity, 'current' => 1]) }}"
-                                hx-target="#activity-action-log-modal-body"
-                                hx-swap="innerHTML"
-                                onclick="window.showActivityActionLogModal()">
-                            <i class="bi bi-journal-text me-2" aria-hidden="true"></i>View log
-                        </button>
-                    </li>
-                @endif
-                @can('duplicate', $activity)
-                    <li>
-                        <button type="submit"
-                                form="activity-duplicate-form"
-                                class="dropdown-item"
-                                onclick="return confirm('Duplicate this activity? A new activity will be created with the same details.')">
-                            <i class="bi bi-files me-2" aria-hidden="true"></i>Duplicate
-                        </button>
-                    </li>
-                @endcan
-            </x-slot:more>
-        </x-page-header>
+<x-page-header
+    context="show"
+    :title="$activity->activityType->name"
+    entity-type="Activity"
+    :action-url="$canManageActivity ? route('activities.edit', $activity) : null"
+>
+    <x-slot:facts>
+        <div><dt>Date</dt><dd>{{ $activity->engagement_date->format('F d, Y') }}</dd></div>
+        <div><dt>Logged by</dt><dd class="app-fact-links"><x-user-link :user="$activity->user" /></dd></div>
+        <div><dt>Activity family</dt><dd>{{ $activity->activityType->contactFamily->name }}</dd></div>
+    </x-slot:facts>
+    <x-slot:badges>
+        @if($activity->internal_only)
+            <span class="app-status app-status--warning">Internal only</span>
+        @endif
+        @if($activity->cancelled)
+            <x-status-badge :active="false" inactive-label="Cancelled" />
+        @elseif($activity->not_yet_complete)
+            <span class="badge app-tag">Not yet complete</span>
+        @endif
+    </x-slot:badges>
+    <x-slot:more>
+        @if($canViewActionLog)
+            <li>
+                <button type="button"
+                        class="dropdown-item"
+                        hx-get="{{ route('activities.action-logs', ['activity' => $activity, 'current' => 1]) }}"
+                        hx-target="#activity-action-log-modal-body"
+                        hx-swap="innerHTML"
+                        onclick="window.showActivityActionLogModal()">
+                    <i class="bi bi-journal-text me-2" aria-hidden="true"></i>View log
+                </button>
+            </li>
+        @endif
         @can('duplicate', $activity)
-            <form id="activity-duplicate-form" method="POST" action="{{ route('activities.duplicate', $activity) }}" class="d-none">
-                @csrf
-            </form>
+            <li>
+                <button type="submit"
+                        form="activity-duplicate-form"
+                        class="dropdown-item"
+                        data-confirm
+                        data-confirm-title="Duplicate activity?"
+                        data-confirm-record="{{ $activity->activityType?->name ?? 'Activity' }} · {{ $activity->engagement_date->format('M d, Y') }}"
+                        data-confirm-message="A new activity will be created with the same details."
+                        data-confirm-action="Duplicate activity"
+                        data-confirm-tone="primary">
+                    <i class="bi bi-files me-2" aria-hidden="true"></i>Duplicate
+                </button>
+            </li>
         @endcan
-    </div>
-</div>
+    </x-slot:more>
+</x-page-header>
+@can('duplicate', $activity)
+    <form id="activity-duplicate-form" method="POST" action="{{ route('activities.duplicate', $activity) }}" class="d-none">
+        @csrf
+    </form>
+@endcan
 
-<div class="row">
-    <div class="col-lg-8">
-        @include('activities.partials.certification-summary')
+<div class="row g-4">
+    <div class="col-lg-4">
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0">Basic Information</h5>
+                <h2 class="h5 mb-0">Summary</h2>
             </div>
-            <div class="card-body">
+            <div class="card-body" data-record-summary>
                 @if($activity->cancelled)
                     <div class="alert alert-warning py-2">
                         This activity is marked cancelled. It remains visible in history and reports, but it does not count toward deliverable progress.
@@ -77,168 +83,60 @@
                     </div>
                 @endif
 
-                <div class="row mb-3">
-                    <div class="col-md-4">
-                        <strong>Date:</strong>
-                    </div>
-                    <div class="col-md-8">
-                        {{ $activity->engagement_date->format('F d, Y') }}
-                    </div>
-                </div>
-
-                <div class="row mb-3">
-                    <div class="col-md-4">
-                        <strong>Agreements:</strong>
-                    </div>
-                    <div class="col-md-8">
-                        @forelse($activity->agreements as $agreement)
-                            @if($agreement->isLinkable())
-                                <a href="{{ route('agreements.show', $agreement) }}" class="badge bg-secondary text-decoration-none me-1 mb-1">{{ $agreement->name }}</a>
-                            @else
-                                <span class="badge bg-secondary me-1 mb-1">{{ $agreement->name }}</span>
-                            @endif
-                        @empty
-                            <span class="text-muted small">None assigned</span>
-                        @endforelse
-                    </div>
-                </div>
-
-                <div class="row mb-3">
-                    <div class="col-md-4">
-                        <strong>Organizations:</strong>
-                    </div>
-                    <div class="col-md-8">
-                        @forelse($activity->organizations as $organization)
-                            <span class="badge bg-secondary me-1 mb-1">{{ $organization->name }}</span>
-                        @empty
-                            <span class="text-muted small">None assigned</span>
-                        @endforelse
-                    </div>
-                </div>
-
-                <div class="row mb-3">
-                    <div class="col-md-4">
-                        <strong>States:</strong>
-                    </div>
-                    <div class="col-md-8">
-                        @forelse($activity->states as $state)
-                            <span class="badge bg-info me-1 mb-1">{{ $state->name }}</span>
-                        @empty
-                            <span class="text-muted small">None assigned</span>
-                        @endforelse
-                    </div>
-                </div>
-
-                <div class="row mb-3">
-                    <div class="col-md-4">
-                        <strong>Logged By:</strong>
-                    </div>
-                    <div class="col-md-8">
-                        <x-user-link :user="$activity->user" />
-                    </div>
-                </div>
-
-                <div class="row mb-3">
-                    <div class="col-md-4">
-                        <strong>Family:</strong>
-                    </div>
-                    <div class="col-md-8">
-                        <span class="badge bg-primary">{{ $activity->activityType->contactFamily->name }}</span>
-                    </div>
-                </div>
-
-                <div class="row mb-3">
-                    <div class="col-md-4">
-                        <strong>Type:</strong>
-                    </div>
-                    <div class="col-md-8">
-                        <span class="badge bg-info">{{ $activity->activityType->name }}</span>
-                    </div>
-                </div>
-
-                @php
-                    $activityDuration = \App\Support\ActivityTypeDuration::fromActivity($activity);
-                    $completionCount = (int) ($activity->completion_count ?? 1);
-                @endphp
-                <div class="row mb-3">
-                    <div class="col-md-4">
-                        <strong>Completions:</strong>
-                    </div>
-                    <div class="col-md-8">
-                        {{ $completionCount }}
-                    </div>
-                </div>
-                @if($activityDuration->hasDuration())
-                <div class="row mb-3">
-                    <div class="col-md-4">
-                        <strong>Allotted Duration (per completion):</strong>
-                    </div>
-                    <div class="col-md-8">
-                        {{ $activityDuration->formatLabel() }}
-                    </div>
-                </div>
-                <div class="row mb-3">
-                    <div class="col-md-4">
-                        <strong>Total Allotted:</strong>
-                    </div>
-                    <div class="col-md-8">
-                        {{ $activityDuration->formatTotalLabel($completionCount) }}
-                    </div>
-                </div>
-                @endif
-
-                @if($activity->projects->isNotEmpty())
-                <div class="row mb-3">
-                    <div class="col-md-4">
-                        <strong>Projects:</strong>
-                    </div>
-                    <div class="col-md-8">
-                        @foreach($activity->projects as $project)
-                            <span class="badge bg-dark me-1">{{ $project->name }}</span>
-                        @endforeach
-                    </div>
-                </div>
-                @endif
-
-                @if($activity->programs->isNotEmpty())
-                <div class="row mb-3">
-                    <div class="col-md-4">
-                        <strong>Programs:</strong>
-                    </div>
-                    <div class="col-md-8">
-                        @foreach($activity->programs as $program)
-                            <span class="badge bg-success me-1">{{ $program->name }}</span>
-                        @endforeach
-                    </div>
-                </div>
-                @endif
+                <dl class="app-record-metrics">
+                    <div><dt>Completions</dt><dd>{{ $completionCount }}</dd></div>
+                    @if($activityDuration->hasDuration())
+                        <div><dt>Total duration</dt><dd>{{ $activityDuration->formatTotalLabel($completionCount) }}</dd></div>
+                    @endif
+                </dl>
+                <x-relationship-scroll-panel title="Agreements" kind="agreement" :count="$activity->agreements->count()" collapsible collapsed class="mt-3">
+                    @foreach($activity->agreements as $record)
+                        <x-relationship-ledger-row :title="$record->name" :href="$record->isLinkable() ? route('agreements.show', $record) : null" />
+                    @endforeach
+                </x-relationship-scroll-panel>
+                <x-relationship-scroll-panel title="Organizations" kind="organization" :count="$activity->organizations->count()" collapsible collapsed class="mt-3">
+                    @foreach($activity->organizations as $record)
+                        <x-relationship-ledger-row :title="$record->name" />
+                    @endforeach
+                </x-relationship-scroll-panel>
+                <x-relationship-scroll-panel title="States" kind="state" :count="$activity->states->count()" collapsible collapsed class="mt-3">
+                    @foreach($activity->states as $record)
+                        <x-relationship-ledger-row :title="$record->name" />
+                    @endforeach
+                </x-relationship-scroll-panel>
+                <x-relationship-scroll-panel title="Projects" kind="project" :count="$activity->projects->count()" collapsible collapsed class="mt-3">
+                    @foreach($activity->projects as $record)
+                        <x-relationship-ledger-row :title="$record->name" />
+                    @endforeach
+                </x-relationship-scroll-panel>
+                <x-relationship-scroll-panel title="Programs" kind="program" :count="$activity->programs->count()" collapsible collapsed class="mt-3">
+                    @foreach($activity->programs as $record)
+                        <x-relationship-ledger-row :title="$record->name" />
+                    @endforeach
+                </x-relationship-scroll-panel>
             </div>
         </div>
-
-        <div class="card mt-3">
+    </div>
+    <div class="col-lg-8">
+        @include('activities.partials.certification-summary')
+        <div class="card">
             <div class="card-header">
-                <h5 class="mb-0">Delivery Team</h5>
+                <h2 class="h5 mb-0">Delivery Team</h2>
             </div>
             <div class="card-body">
-                <div class="row">
-                    <div class="col-md-4">
-                        <strong>Logged By:</strong>
-                    </div>
-                    <div class="col-md-8">
-                        <x-user-link :user="$activity->user" />
-                    </div>
-                </div>
                 @if($activity->participants->count() > 0)
-                <div class="row mt-2">
+                <div class="row">
                     <div class="col-md-4">
                         <strong>Delivered By:</strong>
                     </div>
                     <div class="col-md-8">
                         @foreach($activity->participants as $participant)
-                            <x-user-link :user="$participant" class="badge bg-primary me-1" />
+                            <x-user-link :user="$participant" class="badge app-chip me-1" />
                         @endforeach
                     </div>
                 </div>
+                @else
+                    <p class="text-muted small mb-0">No delivery team members recorded.</p>
                 @endif
             </div>
         </div>
@@ -246,7 +144,7 @@
         @if($activity->contactTime || $activity->participantTimes->isNotEmpty())
         <div class="card mt-3">
             <div class="card-header">
-                <h5 class="mb-0">Time Tracking</h5>
+                <h2 class="h5 mb-0">Time Tracking</h2>
             </div>
             <div class="card-body">
                 @if($activity->contactTime)
@@ -312,7 +210,7 @@
 
         <div class="card mt-3">
             <div class="card-header">
-                <h5 class="mb-0">Reporting & Visibility</h5>
+                <h2 class="h5 mb-0">Reporting & Visibility</h2>
             </div>
             <div class="card-body">
                 <div class="row mb-2">
@@ -321,9 +219,9 @@
                     </div>
                     <div class="col-md-8">
                         @if($activity->internal_only)
-                            <span class="badge bg-warning">Yes - Excluded from external reports</span>
+                            <span class="app-status app-status--warning">Yes - Excluded from external reports</span>
                         @else
-                            <span class="badge bg-success">No - Available for external reports</span>
+                            <span class="app-status app-status--success">No - Available for external reports</span>
                         @endif
                     </div>
                 </div>
@@ -348,7 +246,7 @@
                     </div>
                     <div class="col-md-8">
                         @if($activity->not_yet_complete)
-                            <span class="badge bg-info">Yes</span>
+                            <span class="badge app-tag">Yes</span>
                             <span class="text-muted small ms-2">Time counts; completions are excluded from deliverable progress.</span>
                         @else
                             <span class="text-muted">No</span>
@@ -384,7 +282,7 @@
         @if($hasAgreementFieldContent || $contactFamilyScopedFields->isNotEmpty() || $activityTypeScopedFields->isNotEmpty())
         <div class="card mt-3">
             <div class="card-header">
-                <h5 class="mb-0">Dynamic Logging Fields</h5>
+                <h2 class="h5 mb-0">Dynamic Logging Fields</h2>
             </div>
             <div class="card-body">
                 @if($hasAgreementFieldContent)

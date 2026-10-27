@@ -7,9 +7,9 @@
 @endphp
 
 <div class="card shadow-sm app-index-table-card">
-    <div class="table-responsive">
+    <x-table-scroll>
         <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
+            <thead>
                 <tr>
                     <th>
                         <x-table-sort-link column="name" label="Name" :sort="$s" :direction="$d" :url="$url('name')" target="#activity-types-table" />
@@ -32,7 +32,7 @@
                     <th>
                         <x-table-sort-link column="active" label="Status" :sort="$s" :direction="$d" :url="$url('active')" target="#activity-types-table" />
                     </th>
-                    <th class="text-end" style="width:140px;">Actions</th>
+                    <th class="app-col-actions"><span class="visually-hidden">Actions</span></th>
                 </tr>
             </thead>
             <tbody>
@@ -59,35 +59,27 @@
                     <td>{{ $type->duration_days }}</td>
                     <td>{{ $type->duration_hours }}</td>
                     <td>
-                        @if($type->active)
-                            <span class="badge bg-success">Active</span>
-                        @else
-                            <span class="badge bg-secondary">Inactive</span>
-                        @endif
+                        <x-status-badge :active="$type->active" />
                     </td>
-                    <td class="text-end text-nowrap">
+                    <td class="app-col-actions">
                         @php $actionKey = 'activity-type-actions-' . $type->id; @endphp
-                        <div class="btn-group btn-group-sm" role="group" aria-label="Activity type actions for {{ $type->name }}">
+                        <div class="dropdown app-row-actions d-inline-block">
+                            <button type="button" class="btn btn-sm btn-link app-row-actions-toggle" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" aria-label="Activity type actions for {{ $type->name }}"><i class="bi bi-three-dots" aria-hidden="true"></i></button>
+                            <div class="dropdown-menu dropdown-menu-end">
                             @can('update', $type)
-                            <a href="{{ route('activity-types.edit', $type) }}"
-                               class="btn btn-outline-secondary"
-                               data-bs-toggle="tooltip"
-                               data-bs-title="Edit activity type"
-                               aria-label="Edit activity type">
-                                <i class="bi bi-pencil-square"></i>
-                            </a>
+                            <a href="{{ route('activity-types.edit', $type) }}" class="dropdown-item"><i class="bi bi-pencil-square me-2" aria-hidden="true"></i>Edit activity type</a>
                             @endcan
                             @can('delete', $type)
+                            <hr class="dropdown-divider">
                             <button type="submit"
                                     form="{{ $actionKey }}-delete"
-                                    class="btn btn-outline-danger"
-                                    data-bs-toggle="tooltip"
-                                    data-bs-title="Delete activity type"
-                                    aria-label="Delete activity type"
-                                    onclick="return confirm('Delete {{ addslashes($type->name) }}?')">
-                                <i class="bi bi-trash"></i>
-                            </button>
+                                    data-confirm
+                                    data-confirm-title="Delete activity type?"
+                                    data-confirm-record="{{ $type->name }}"
+                                    data-confirm-message="This action cannot be undone."
+                                    data-confirm-action="Delete activity type" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete activity type</button>
                             @endcan
+                            </div>
                         </div>
                         @can('delete', $type)
                         <form id="{{ $actionKey }}-delete" method="POST" action="{{ route('activity-types.destroy', $type) }}" class="d-none">
@@ -109,8 +101,8 @@
                 @endforelse
             </tbody>
         </table>
-    </div>
-    <div class="card-footer bg-white">
+    </x-table-scroll>
+    <div class="card-footer">
         <x-htmx-pagination :paginator="$activityTypes" target="#activity-types-table" />
     </div>
 </div>

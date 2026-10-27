@@ -194,7 +194,7 @@ function initCertificationCapture() {
             window.scrollTo({ top: window.scrollY + target.getBoundingClientRect().top - phoneHeight - headerHeight - 16, behavior });
         });
     }
-    root.addEventListener('click', event => {
+    root.addEventListener('click', async event => {
         const button = event.target.closest('button');
         if (!button) return;
         capture();
@@ -218,7 +218,7 @@ function initCertificationCapture() {
         if (row && action) {
             if (action === 'edit') open = open === row.key ? null : row.key;
             if (action === 'remove') {
-                if ((row.submissions.length || row.submission_count) && !confirm(`Removing ${personFor(row)?.name} also removes the submissions recorded for this person. Remove on save?`)) return;
+                if ((row.submissions.length || row.submission_count) && !await window.appConfirm({ title: 'Remove candidate?', record: personFor(row)?.name ?? '', message: 'The submissions recorded for this person will also be removed when you save.', action: 'Remove candidate', trigger: button })) return;
                 row._delete = 1;
                 announce('Candidate marked for removal. Undo is available until you save.');
             }

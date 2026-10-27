@@ -1,132 +1,158 @@
 ---
 name: TA Tracker
-description: The Working Ledger — a practical, orderly interface for project and activity records.
+description: The Working Ledger — a calm, hairline-ruled enterprise interface for agreements, activities and the records around them.
 colors:
-  primary: "#0d6efd"
-  primary-hover: "#0b5ed7"
-  primary-active: "#0a58ca"
-  primary-subtle: "#cfe2ff"
-  primary-emphasis: "#052c65"
-  page-bg: "#dde1e6"
-  surface-inset: "#e8eaed"
-  surface: "#fff"
-  light: "#f8f9fa"
-  ink: "#212529"
-  muted: "rgba(33, 37, 41, 0.75)"
-  border: "#dee2e6"
-  control-border: "#8c959f"
-  secondary: "#6c757d"
-  secondary-subtle: "#e2e3e5"
-  secondary-emphasis: "#2b2f32"
+  canvas: "#f0f2f5"
+  surface: "#ffffff"
+  fill: "#f0f2f5"
+  hover: "#eef0f4"
+  line: "#d4dbe3"
+  line-strong: "#cfd5dd"
+  control-outline: "#8c959f"
+  ink: "#151a23"
+  body: "#232a36"
+  muted: "#5d6675"
+  accent: "#2250c4"
+  accent-hover: "#1b43a8"
+  accent-active: "#163787"
+  accent-subtle: "#eaf0fd"
+  accent-line: "#c7d5f7"
+  accent-ink: "#1a3e9a"
   success: "#157347"
-  success-subtle: "#d1e7dd"
-  success-emphasis: "#0a3622"
-  warning: "#ffc107"
-  warning-subtle: "#fff3cd"
-  warning-emphasis: "#664d03"
-  danger: "#dc3545"
-  info: "#0dcaf0"
-  info-subtle: "#cff4fc"
-  info-emphasis: "#055160"
-  organization-bg: "#eef1f6"
-  organization-text: "#4a5568"
-  organization-border: "#d8dee9"
+  success-subtle: "#e6f4ec"
+  success-ink: "#0f5a36"
+  warning: "#b7791f"
+  warning-subtle: "#fdf1d6"
+  warning-ink: "#7a4a06"
+  danger: "#c62d3a"
+  danger-hover: "#a82430"
+  danger-subtle: "#fbe8ea"
+  danger-ink: "#8e1f2a"
+  neutral-subtle: "#eceef2"
+  neutral-ink: "#434b59"
 typography:
-  display:
-    fontSize: "2rem"
+  title:
+    fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif'
+    fontSize: "1.5rem"
     fontWeight: 600
     lineHeight: 1.2
+    letterSpacing: "-0.01em"
   headline:
-    fontSize: "1.75rem"
-    fontWeight: 700
+    fontSize: "1.125rem"
+    fontWeight: 600
     lineHeight: 1.2
-  title:
-    fontSize: "1.25rem"
-    fontWeight: 500
+  card-title:
+    fontSize: "1rem"
+    fontWeight: 600
     lineHeight: 1.2
   body:
-    fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"'
-    fontSize: "1rem"
+    fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif'
+    fontSize: "0.875rem"
     fontWeight: 400
     lineHeight: 1.5
   label:
-    fontSize: "1rem"
-    fontWeight: 600
+    fontSize: "0.875rem"
+    fontWeight: 500
     lineHeight: 1.5
   small:
-    fontSize: "0.875rem"
+    fontSize: "0.8125rem"
+    fontWeight: 400
     lineHeight: 1.5
+  table-head:
+    fontSize: "0.78125rem"
+    fontWeight: 600
+    lineHeight: 1.5
+  chip:
+    fontSize: "0.8125rem"
+    fontWeight: 500
+    lineHeight: 1.2
   subsection:
-    fontSize: "0.8rem"
+    fontSize: "0.75rem"
     fontWeight: 600
     lineHeight: 1.3
     letterSpacing: "0.04em"
-  entity-type:
-    fontSize: "0.7rem"
-    fontWeight: 700
-    lineHeight: 1
-    letterSpacing: "0.05em"
+  metric:
+    fontSize: "1.625rem"
+    fontWeight: 600
+    lineHeight: 1.2
 rounded:
   sm: "0.25rem"
   md: "0.375rem"
-  lg: "0.75rem"
-  pill: "50rem"
+  lg: "0.5rem"
 spacing:
   xs: "0.25rem"
   sm: "0.5rem"
   compact: "0.75rem"
   md: "1rem"
-  section: "1.25rem"
-  lg: "1.5rem"
+  section: "1.5rem"
 components:
   button-primary:
-    backgroundColor: "{colors.primary}"
+    backgroundColor: "{colors.accent}"
     textColor: "{colors.surface}"
     rounded: "{rounded.md}"
-    padding: "0.375rem 0.75rem"
+    padding: "0.40625rem 0.875rem"
+    height: "36px"
   button-primary-hover:
-    backgroundColor: "{colors.primary-hover}"
+    backgroundColor: "{colors.accent-hover}"
     textColor: "{colors.surface}"
   button-primary-active:
-    backgroundColor: "{colors.primary-active}"
+    backgroundColor: "{colors.accent-active}"
     textColor: "{colors.surface}"
-  button-outline-primary:
-    backgroundColor: "transparent"
-    textColor: "{colors.primary}"
+  button-outline:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
     rounded: "{rounded.md}"
-    padding: "0.375rem 0.75rem"
-  button-outline-secondary:
-    backgroundColor: "transparent"
-    textColor: "{colors.secondary}"
-    rounded: "{rounded.md}"
-    padding: "0.375rem 0.75rem"
+    padding: "0.40625rem 0.875rem"
+    height: "36px"
+  button-outline-hover:
+    backgroundColor: "{colors.fill}"
+    textColor: "{colors.ink}"
   button-small:
-    rounded: "{rounded.sm}"
-    padding: "0.25rem 0.5rem"
+    rounded: "{rounded.md}"
+    padding: "0.328rem 0.625rem"
+    height: "32px"
   input:
     backgroundColor: "{colors.surface}"
-    textColor: "{colors.ink}"
+    textColor: "{colors.body}"
     rounded: "{rounded.md}"
-    padding: "0.375rem 0.75rem"
-    typography: "{typography.body}"
+    padding: "0.40625rem 0.75rem"
+    height: "36px"
   section-card:
     backgroundColor: "{colors.surface}"
-    textColor: "{colors.ink}"
-    rounded: "{rounded.md}"
+    textColor: "{colors.body}"
+    rounded: "{rounded.lg}"
     padding: "{spacing.md}"
-  organization-chip:
-    backgroundColor: "{colors.organization-bg}"
-    textColor: "{colors.organization-text}"
-    rounded: "{rounded.md}"
-    padding: "0.35em 0.65em"
+  chip-linked:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.accent-ink}"
+    rounded: "{rounded.sm}"
+    padding: "0 0.5rem"
+    height: "24px"
+  chip-linked-hover:
+    backgroundColor: "{colors.accent-subtle}"
+    textColor: "{colors.accent-ink}"
+  status-chip-success:
+    backgroundColor: "{colors.success-subtle}"
+    textColor: "{colors.success-ink}"
+    rounded: "{rounded.sm}"
+    padding: "0 0.5rem"
+    height: "22px"
+  status-chip-neutral:
+    backgroundColor: "{colors.neutral-subtle}"
+    textColor: "{colors.neutral-ink}"
+    rounded: "{rounded.sm}"
+    padding: "0 0.5rem"
+    height: "22px"
   navigation:
     backgroundColor: "{colors.surface}"
-    textColor: "{colors.ink}"
-    rounded: "{rounded.lg}"
-    padding: "0.5rem"
+    textColor: "{colors.body}"
+    padding: "0.75rem"
+  navigation-current:
+    backgroundColor: "{colors.accent-subtle}"
+    textColor: "{colors.accent-ink}"
   header-bar:
-    backgroundColor: "{colors.ink}"
-    textColor: "{colors.surface}"
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
     rounded: "{rounded.lg}"
     padding: "0.375rem 0.5rem 0.375rem 1rem"
 ---
@@ -137,165 +163,201 @@ components:
 
 **Creative North Star: "The Working Ledger"**
 
-A practical, orderly, restrained interface for working with agreements, activities, organizations, and related records. Familiar controls and a stable visual hierarchy keep attention on the work. White working surfaces sit over Cool Slate; Action Blue identifies primary actions and links.
+A calm, orderly interface for working with agreements, activities, organizations and the records that connect them. Enterprise structure with minimal surfaces: a cool neutral ramp, one cobalt accent, internal hairline dividers, a modest 4/6/8 radius scale and 14px system type. White working surfaces separate from the canvas through soft elevation; card titles stay white and buttons stay flat, without gloss or gradients.
 
-Components are practical and restrained. Depth is layered: subtle shadows separate working surfaces, while borders, headings, and compact badges organize the information inside them. The system uses a single system sans-serif family, clear labels, and responsive Bootstrap grids.
+The look was chosen for the Operate mode PRODUCT.md describes: scanability and consistency beat expression. Color is spent in two places only. The accent marks actions, the current place and focus; status (success, warning, danger, neutral) is the only other place color carries meaning, and it always comes with text.
 
 **Key Characteristics:**
-- Cool neutral canvas, white working surfaces, and blue actions.
-- Compact metadata and tables alongside clearly grouped forms.
-- Consistent entity colors and labeled status indicators.
-- Small corner radii, thin borders, and subtle structural shadows.
+- Cool grey canvas, white working surfaces and white card titles; soft card elevation with stronger shadows for overlays.
+- One cobalt accent for actions, selection and focus; semantic color only for status.
+- Linked record chips use cobalt ink on white with a visible outline and no link icon; non-clickable categories use muted filled tags.
+- Dense but calm tables: one-line cells, 48–56px rows, a visible "+N" instead of a wall of chips.
+- 14px system type, tabular numerals in tables, 36px controls (32px small, 40px on touch).
 
-This is a scan of the existing implementation, not a redesign. Sources are `resources/css/app.css`, `resources/views/layouts/app.blade.php`, shared Blade components, `app/Support/EntityBadge.php`, and `docs/form-conventions.md`. Bootstrap CSS is pinned to 5.3.2 in the layout; Bootstrap Icons is pinned to 1.11.3. Live home and activity-create styles were sampled during documentation. No PRODUCT.md exists; the descriptive language above was confirmed for this documentation pass.
+This file replaces the earlier scan of the stock-Bootstrap implementation. Sources are `resources/css/app.css` (tokens and primitives), `resources/views/layouts/app.blade.php`, the shared Blade components, `app/Support/EntityBadge.php`, and `docs/form-conventions.md`. Bootstrap CSS is pinned to 5.3.2 in the layout and Bootstrap Icons to 1.11.3; the tokens are pushed through Bootstrap's variables, so stock components follow.
 
 ## Colors
 
-The palette combines Action Blue with cool neutrals and functional status and entity colors. Frontmatter values are normative; app-specific values come from the root custom properties, and framework values come from the pinned Bootstrap stylesheet.
+A cool, low-chroma neutral ramp with a single cobalt accent. Frontmatter values are normative; Bootstrap's `--bs-*` variables and the `--app-*` properties in `app.css` carry them.
 
 ### Primary
-- **Action Blue** (`primary`): primary buttons, links, selected radio-card borders, the Log Activity action, and the current sidebar section.
-- **Deep Action Blue** (`primary-hover`, `primary-active`): progressively darker Bootstrap button interaction states. Log Activity uses the same Bootstrap hover and keyboard-focus treatment.
-- **Pale Blue / Blue Ink** (`primary-subtle`, `primary-emphasis`): project relationship badges and KFS metadata.
+- **Cobalt** (`accent`): primary buttons, the current sidebar section's icon, focus rings, selected radio-card borders and the active page in pagination. White text on it is 6.97:1.
+- **Deep Cobalt** (`accent-hover`, `accent-active`): hover and pressed states of accent buttons and links.
+- **Cobalt Mist / Cobalt Ink** (`accent-subtle`, `accent-line`, `accent-ink`): the current sidebar section, hovered linked chips, the "+N" button and selected options.
 
 ### Secondary
-- **Status Green** (`success`, a darker green so white text clears 4.5:1): active status pills and success feedback; its subtle background and emphasis text identify agreements.
-- **Attention Amber** (`warning`): warnings and unsaved changes; its subtle background and emphasis text identify programs and PI metadata.
-- **Information Cyan** (`info`): activity-type badges in activity tables; its subtle background and emphasis text identify states.
-- **Error Red** (`danger`): validation errors, required markers, and destructive actions.
+- **Status Green** (`success`, `success-subtle`, `success-ink`): Active and completed. A darker green so white text on it clears 4.5:1.
+- **Attention Amber** (`warning`, `warning-subtle`, `warning-ink`): warnings, needs-review and unsaved changes.
+- **Error Red** (`danger`, `danger-hover`, `danger-subtle`, `danger-ink`): validation errors, required markers, cancelled and destructive actions.
 
 ### Neutral
-- **Cool Slate** (`page-bg`): the page canvas, distinct from white content surfaces.
-- **Inset Gray** (`surface-inset`): current dropdown destinations.
-- **White Surface** (`surface`): cards, fields, drawers, relationship rows, and the action buttons' raised layer.
-- **Light Gray** (`light`): quiet metadata, selected radio cards, and supporting regions.
-- **Charcoal Ink** (`ink`): body text, the brand mark, and the compact form header bar (the only dark chrome).
-- **Muted Ink** (`muted`): secondary text, help, and subsection labels.
-- **Divider Gray** (`border`): field outlines, section dividers, and ordinary badge borders.
-- **Secondary Gray** (`secondary`): inactive status and secondary controls. Its subtle/emphasis pair identifies teams, activities, and several administrative record types.
-- **Organization Mist / Slate / Edge** (`organization-bg`, `organization-text`, `organization-border`): the custom organization relationship palette.
+- **Canvas** (`canvas`): the cool grey page background beneath elevated white working surfaces.
+- **Surface** (`surface`): cards, fields, the sidebar, drawers and menus.
+- **Fill** (`fill`): table headers, disclosure headers, selected picker tokens, inset wells and disabled fields.
+- **Hover** (`hover`): row and menu-item hover.
+- **Hairline** (`line`, `line-strong`): internal dividers and sidebar edges (`line`); picker-token and well edges (`line-strong`). Linked chips use the stronger control outline. Ordinary cards have transparent outer borders; semantic borders such as danger and selected rows remain visible.
+- **Control Outline** (`control-outline`): field, select, checkbox and radio outlines, 3:1 on white.
+- **Ink / Body / Muted** (`ink`, `body`, `muted`): headings and links, running text, and secondary text (5.8:1 on white, 5.2:1 on the canvas).
+- **Neutral Chip** (`neutral-subtle`, `neutral-ink`): inactive status and non-clickable tags.
 
-**The Entity Color Rule.** Reuse `EntityBadge` mappings across related records, type labels, and counts. Entity color conveys record kind; labeled status pills convey active or inactive state.
+**The One Accent Rule.** Cobalt means "act here" or "you are here". Never use it to decorate, and never use a second hue for record kinds; kind is shown by label and icon.
+
+**The White-Surface Rule.** Controls sit on white surfaces only. The control outline passes 3:1 on white but not on the canvas, so a bare field on the page background is a bug.
 
 ## Typography
 
-**Display and Body Font:** the Bootstrap system sans-serif stack captured in `typography.body`, inherited throughout. No separate display, web, or monospace family is established.
+**Display and Body Font:** the Bootstrap system sans-serif stack, inherited throughout. No hosted or monospace family.
 
-**Character:** familiar and utilitarian. Weight, size, spacing, and muted metadata establish hierarchy without decorative typography.
+**Character:** familiar and quiet. Weight, size and muted color make the hierarchy; there is no display face.
 
 ### Hierarchy
-- **Display:** dashboard heading, semibold (600), fixed size (2rem), line height (1.2).
-- **Headline:** ordinary page headings, bold (700), fixed size (1.75rem), line height (1.2).
-- **Title:** form-section and entity-detail card headings (1.25rem), medium (500), line height (1.2).
-- **Body:** ordinary controls and content (1rem), regular (400), line height (1.5).
-- **Label:** field labels (1rem), semibold (600); required markers are appended in Error Red.
-- **Small:** help, compact actions, descriptions, and relationship metadata (0.875rem). Nested small text can inherit an em-based scale from Bootstrap.
-- **Subsection:** muted uppercase labels (0.8rem), semibold (600), tracking (0.04em), line height (1.3).
-- **Entity type:** uppercase pill labels (0.7rem), bold (700), tracking (0.05em), line height (1).
+- **Title:** page headings (1.5rem, 600, -0.01em tracking). Dashboards use 1.75rem.
+- **Headline / Card title:** `h2` in 1.125rem, card and section titles in 1rem, both 600.
+- **Body:** controls and content (0.875rem, 400, 1.5).
+- **Label:** field labels (0.875rem, 500); required markers are appended in Error Red.
+- **Small:** help, meta and descriptions (0.8125rem). Absolute, not em-based, so nested small text does not shrink twice.
+- **Table head:** 0.78125rem, 600, muted, sentence case.
+- **Chip:** 0.75rem, 500.
+- **Subsection:** muted uppercase labels (0.75rem, 600, 0.04em tracking), reserved for form subsections, record-page sub-headings and entity-type tags.
 
-**The Label Hierarchy Rule.** Keep ordinary labels in sentence case; reserve tracked uppercase for subsection titles and entity-type labels.
+**The Label Hierarchy Rule.** Keep ordinary labels in sentence case; reserve tracked uppercase for subsection titles and the entity-type tag. Tables use `font-variant-numeric: tabular-nums` so columns of dates and counts line up.
 
 ## Layout
 
-The app uses Bootstrap's responsive, twelve-column grid. Signed-in pages use a shell: on desktop a left sidebar beside the main content with no top bar; below (992px) a sticky phone top bar (3.5rem) over the main content. The body is a flex column with a minimum height of `100dvh` (and a `100vh` fallback); main content fills the remaining width and does not assume a navbar height. Beside the sidebar the main container has horizontal padding (1.5rem per side); vertical page padding is (1.5rem). Lists and record pages use the room beside the sidebar up to a maximum container width of (1680px); the main container no longer follows Bootstrap's smaller maximums.
+Signed-in pages use a shell: on desktop a docked left sidebar beside the main content with no top bar; below 992px a sticky phone top bar (3.5rem) over the main content. The body is a flex column with a minimum height of `100dvh`. Page padding is 1.5rem on all sides; the spacing scale is 4, 8, 12, 16, 24 and 32px.
 
-Create/edit forms use the shared centered form column (maximum 68rem), filling the available width on narrower screens. Section cards have body padding (1rem) and bottom spacing (1.5rem). Field groups generally use bottom spacing (1rem). Subsections have a left rule (4px), inset (1rem), and separation (1.25rem). Reuse the existing grid and gap utilities rather than inventing per-page spacing scales.
+Desktop listing pages fit the viewport. Their title, filters and pagination remain visible while the table scrolls inside its card, with sticky column headings and both scroll axes available. This applies from 992px wide and 600px high; phones and shorter windows retain normal document scrolling so controls remain reachable. Record pages and forms retain their normal page flow.
 
-Page headers wrap their title/metadata block and action area with a gap (1rem). Actions align with the top of the title, including when long record names wrap; the title block can shrink and break long unspaced names. Tables remain horizontally scrollable in their responsive wrapper. Below (992px) the sidebar becomes a slide-in menu opened from the phone top bar. Radio-card rows use two equal columns with a gap (0.5rem).
+Lists and record pages use the room beside the sidebar up to a maximum container width of 1680px. Create and edit forms use the shared centered form column (maximum 68rem). Section cards have 1rem body padding and 1.5rem spacing between them; field groups use 1rem.
 
-Drawers attach to the right edge at a maximum width (52rem), filling narrower viewports. Their bodies scroll independently.
+Page headers wrap their title and action area with a 1rem gap; actions align with the top of the title, and long record names wrap. Below 768px, index tables marked `app-cards` become one card per row (name and menu on top, status, then labeled lines) and index filters collapse behind a "Filters" button that shows how many are active. Other tables keep a horizontally scrollable wrapper. Below 992px the sidebar becomes a slide-in menu opened from the phone top bar. Radio-card rows use two equal columns.
+
+Drawers attach to the right edge at a maximum width of 52rem, filling narrower viewports. Their bodies scroll independently.
 
 ## Elevation & Depth
 
-Depth is layered and functional. White cards separate from the Cool Slate canvas with thin borders and subtle shadows. Relationship rows use borders rather than individual shadows. Drawers add a stronger lateral shadow and a translucent charcoal backdrop; the compact header bar casts a deeper downward shadow.
+Soft elevation, approved as option C in the layering study. White cards and white title strips sit above the cool grey canvas, separated by a small shadow rather than a visible outer outline. Hairlines divide content inside cards. Overlays use a stronger shadow so their depth remains distinct.
 
 ### Shadow Vocabulary
-- **Section/card:** `0 0.125rem 0.25rem rgba(0, 0, 0, 0.075)`.
-- **Entity detail card:** `0 0.2rem 0.75rem rgba(0, 0, 0, 0.07)`, paired with a translucent border.
-- **Buttons:** solid buttons cast `0 1px 3px` in their own color at 45% opacity; outline buttons use a white fill with `0 1px 2px rgba(33,37,41,.08)`. No gloss or gradients. Grouped, link, close, and disabled buttons stay flat.
-- **Compact header bar:** `0 0.75rem 2rem rgba(33,37,41,.28)`.
-- **Drawer:** `-0.5rem 0 1.5rem rgba(0, 0, 0, 0.12)`.
+- **Cards, sections, table containers:** `0 1px 3px rgba(21,26,35,.10), 0 5px 12px rgba(21,26,35,.05)` through `--app-card-shadow`. This is the default working surface treatment.
+- **Buttons:** `0 1px 2px rgba(21,26,35,.08)`, a soft flat lift. No gloss or gradients. Grouped, link, close and disabled buttons stay flat.
+- **Compact header bar:** `0 4px 16px rgba(21,26,35,.10)`.
+- **Menus, popovers, the Recent panel and a peeking sidebar:** `0 8px 24px rgba(21,26,35,.12), 0 2px 6px rgba(21,26,35,.06)`.
+- **Drawer:** `-0.5rem 0 1.5rem rgba(21,26,35,.12)` over a 35% ink backdrop.
+- **Focus ring:** `0 0 0 3px rgba(34,80,196,.28)`.
 
-**The Working Surface Rule.** Use existing card, drawer, and header-bar treatments for their respective layers; keep internal relationship rows visually subordinate.
+**The Elevation Rule.** Working surfaces use the shared soft card shadow. Overlays use the stronger popover or drawer shadow; do not stack extra shadows on nested ledger rows.
 
 ## Shapes
 
-Controls and cards are gently rounded rectangles. Standard cards, fields, and buttons use the medium radius; small buttons and navigation tools use the small radius. Entity-type labels, count badges, and status badges use pills. Ordinary relationship chips retain rectangular rounded corners unless their caller requests a pill. Floating chrome (the sidebar, the Recent panel, and the compact header bar) uses the large radius (0.75rem).
-
-Borders are generally (1px). Exceptions carry structure: subsection rules (4px) and the current dropdown item's blue left accent (3px). Iconography comes from Bootstrap Icons; it supports actions and labels.
+Three radii: 4px (`sm`) for chips, tags and menu items; 6px (`md`) for buttons, fields and the sidebar's controls; 8px (`lg`) for cards, menus, drawers' panels and the compact bar. The docked sidebar is square against the viewport edge. Borders are 1px; the one exception is the 2px rule beside a form subsection. Iconography is Bootstrap Icons and supports labels, never replaces them.
 
 ## Components
 
 ### Buttons
 
-Practical actions with familiar filled and outline variants. Primary actions use Action Blue and white text; editing uses an outline-blue action in the shared page header. Cancel and supporting actions commonly use outline gray. Standard buttons use the medium radius and padding (0.375rem 0.75rem); compact buttons use the small radius and padding (0.25rem 0.5rem), with text (0.875rem).
-
-Buttons are medium weight and sit on the soft lift described in the Shadow Vocabulary, so they stand above the slate canvas by default. Bootstrap buttons darken or fill on hover, show a focus ring for keyboard focus, and reduce opacity when disabled. Their state transitions last (0.15s), with Bootstrap reduced-motion handling. Log Activity reuses `btn btn-primary btn-sm` and retains an outlined current-page state; do not add a brightness filter that reduces text contrast.
+Familiar filled and outline variants at two sizes: 36px (default) and 32px (small, for row and section actions), growing to 40px on touch (`pointer: coarse`). The accent button is the single primary action; outline buttons use ink text and the control outline; destructive actions are red outline that fills on hover. Log Activity is always the accent button, in the sidebar, the phone top bar and an agreement's activity table. A disabled button says why next to it ("This agreement is inactive."). Buttons are 500 weight with the soft lift above and a 0.15s state transition under Bootstrap's reduced-motion handling.
 
 ### Page Headers and Breadcrumbs
 
-Reuse `x-page-header` with its existing props and `badges`, `meta`, `controls`, and `more` slots. Default page headings use `.app-page-title` (1.75rem); dashboard headings use `.app-dashboard-title` (2rem). Explicit title and control classes remain supported. Keep the record's Active/Inactive badge in the header metadata for immediate scanning; do not repeat it in Summary. Agreement type labels remain unchanged.
+Reuse `x-page-header` with its `badges`, `meta`, `controls` and `more` slots. Page headings use `.app-page-title`; the record's Active/Inactive status chip belongs in the header metadata and is not repeated in Summary. Record and form headers omit entity-type badges: the breadcrumb and record icon already establish the entity. Metadata is optional and its row disappears when empty.
 
-Header actions are captured once and repeated in the compact bar. In the full header the form status sits under the buttons; in the compact bar it sits beside them. Icon-only buttons and Save (with its shortcut) get tooltips; a button that already shows its text gets none. A `more` slot adds an overflow menu (three dots) to the right of the main actions; it is left out when empty. The main action keeps its label in the full header and in the compact bar only Save keeps its label (Cancel and Edit become icons whose names stay available); on phones Save is an icon too.
+Show-page headers add a 40px cobalt-mist record-kind icon beside the title. User/profile headers use the people icon while retaining the meaningful access-profile label. Create/edit headers retain their title and action composition without a type badge. The optional `facts` slot carries useful working information: agreement dates and principal investigators, user contact/supervisor details, and activity date, logger and family. Activity facts appear once in the labeled strip, without a duplicate subtitle; Internal only, Cancelled and Not yet complete remain in metadata. Person links retain their policy checks. A populated organization PO number and logging-field type use compact metadata labels; missing identifiers are omitted.
 
-Form headers are sticky: pass `sticky` to override (`true` for other contexts, `false` to turn off). Once the full header scrolls out of view a compact bar slides in at the top of the form column without moving the page: back link to the parent crumb, title, status, and actions. The compact bar is dark on purpose (an experiment): it reads as chrome, not as another white card. The full header itself never shifts. Form headers take `save-label`, `form-id`, and `last-saved-at`.
+**The Useful Facts Rule.** Do not fill a header strip for symmetry. Created, updated, added and joined dates are bookkeeping metadata and stay out of the record display. Relationship counts already visible in the wider panel headings do not need repeating above the page. Projects, programs, states and teams can have no facts strip at all; keep useful business dates on agreements and activities.
 
-Breadcrumbs show route hierarchy, independent of navigation history: resource index → record on show pages, resource index → Create on create pages, and resource index → record → Edit where a show route exists. Resources without show pages link directly from their index to Edit; profile editing links to Profile. The current crumb exposes `aria-current="page"`. `RouteBreadcrumbs` supplies this hierarchy and also the form Cancel target: the page the user came from when it is a record or list page on this site (so index filters and a record's Edit button both return them there), otherwise the parent crumb. The proposed page-header prop/inference API refactor is deferred.
+Summary is a quick-facts column. Existing YTD figures lead on agreements and organizations; other entities lead with their existing totals or completion/duration figures. Use 26px semibold tabular numerals and 13px labels; only actual year-to-date figures carry a cobalt-ink period label. Related-record disclosures in Summary start closed at every item count. Wider relationship and reporting sections can start open. This extends selected Hierarchy C across record pages without new metrics or entity hues.
+
+Header actions are captured once and repeated in the compact bar. In the full header the form status sits under the buttons; in the compact bar it sits beside them. Icon-only buttons and Save (with its shortcut) get tooltips. A `more` slot adds an overflow menu. In the compact bar only Save keeps its label; on phones Save is an icon too.
+
+Form headers are sticky. Once the full header scrolls out of view a compact bar slides in at the top of the form column without moving the page: back link to the parent crumb, title, status and actions. The bar is the same white surface and buttons as the full header, condensed, with a hairline and the bar shadow; it no longer inverts to dark. Form headers take `save-label`, `form-id` and `last-saved-at`.
+
+Breadcrumbs show route hierarchy, independent of navigation history: resource index → record on show pages, resource index → Create on create pages, resource index → record → Edit where a show route exists. The current crumb exposes `aria-current="page"`. `RouteBreadcrumbs` supplies the hierarchy and the form Cancel target (the record or list page the user came from, else the parent crumb).
 
 ### Cards / Containers
 
-White, thin-bordered working surfaces. Use `x-section-card` for form sections: medium corners, subtle card shadow, a medium-weight title, optional muted subtitle, and body padding (1rem). Entity detail cards use the distinct shadow above and the same sentence-case, medium-weight (1.25rem) `h2` title style as form sections. Their light header strip remains; counts and actions wrap alongside the heading. Recent activity and the main card render in the requested `activityFirst` order, including in heading and keyboard navigation. Index table cards clip overflow around their responsive table and footer.
+White, 8px, with the shared soft shadow and a transparent outer border. Use `x-section-card` for form sections: a 1rem title (600), optional muted subtitle and 1rem body padding. Form section titles remain unbanded. Entity detail and Home card titles use the same white surface as the body, with a hairline below the title. Search result card titles follow this treatment too. Recent activity and the main card render in the requested `activityFirst` order. Index table cards clip overflow around their table and footer.
 
 ### Inputs / Fields
 
-White fields with a Control Outline (`control-border`, 3:1 on white) so every field, select, checkbox and radio is visible, medium corners, body-size text, and padding (0.375rem 0.75rem). Focus uses Bootstrap's pale blue border and blue ring (0.25rem). Invalid fields use Error Red and associated feedback; disabled fields use the framework's secondary background. Help and error text are linked to their field (`aria-describedby`, `aria-invalid`, `aria-required`), a set of radios is a fieldset with a legend (or a named radio group), and token pickers are named comboboxes with arrow-key and Enter selection and a live "added" or "removed" announcement.
+White 36px fields (32px small) with the control outline, 6px radius and 0.875rem text. Focus swaps the border to cobalt and adds the 3px ring. Invalid fields use Error Red and associated feedback; disabled fields use the Fill color. Help and error text are linked to their field (`aria-describedby`, `aria-invalid`, `aria-required`), a set of radios is a fieldset with a legend, and token pickers are named comboboxes with arrow-key and Enter selection and a live "added" or "removed" announcement. Pickers share the 36px minimum height of the fields beside them.
 
-Reuse `x-form-field` for semibold labels, required markers, one-line help, and inline errors. Token pickers wrap selected relationship badges and a search field in a control with minimum height (42px) and compact vertical padding (0.25rem). Disabled token pickers preserve opacity and show a not-allowed cursor. Use switches inside Options subsections and radio cards for choices with consequences. Selected radio cards use a blue border and Light Gray background.
+Reuse `x-form-field` for labels, required markers, one-line help and inline errors. Use switches inside Options subsections and radio cards for choices with consequences. Selected radio cards use a cobalt border and the cobalt mist fill. Checked checkboxes, radios and switches are cobalt.
 
-### Chips / Badges
+### Chips, Tags and Status
 
-Compact, bold labels that distinguish record kind, metadata, counts, and status. Related-record chips use subtle entity backgrounds, dark emphasis text, and a border; linked chips are underlined. Organization chips use the custom mist/slate/edge palette. Type labels and counts use pills; active and inactive status pills use solid green and gray with explicit text. Preserve existing contextual exceptions such as cyan activity-type badges in activity tables.
+Four distinct things, each with one treatment:
+- **Linked chip** (`a.app-chip`): a related record the user can open. White, 1px control outline, cobalt ink, at least 24px high, 4px radius, no link icon. Hover goes to cobalt mist with an underline. Selected picker tokens retain their neutral fill and remove button.
+- **Plain text** (`.app-plain`): a related record the user cannot open. Never a chip, so a chip always means clickable. Access follows `isLinkable()` (the `view` policy), exactly as before.
+- **Tag** (`.app-tag`): a non-clickable label (role, flag, record kind). Tinted, no border.
+- **Status chip** (`.app-status`): tinted fill, dark ink, a dot and text. Tones: success, neutral, warning, danger. `x-status-badge` takes `active` and an optional `tone`. Meaning never rests on color alone.
+
+Counts are plain numbers (`.app-count`). In tables a related-record cell shows the first record as a linked chip and a visible "+N" button (`x-table-badge-list`); the button opens a menu listing every record, each a deep link or plain text. Primary agreement chips in activity tables wrap their full name so similarly named agreements remain distinguishable. `EntityBadge` returns these class strings, so there are no per-kind hues.
 
 ### Navigation
 
-One floating sidebar holds everything global; there is no desktop top bar. Below (992px) a slim dark top bar carries only the menu button, the brand, and Log Activity.
+A docked, full-height white sidebar with a hairline on its right edge; there is no desktop top bar. Below 992px a slim light top bar carries only the menu button, the brand and Log Activity.
 
-The sidebar is a floating white card (radius 0.75rem, inset 0.75rem from the viewport edge) lifted off the slate canvas with the entity-card border and shadow, so the layers read canvas, then chrome and cards. It has three zones. **Actions** at the top: the brand mark and name with a pin button, a search field (a “/” hint; pressing “/” focuses it) and a solid Action Blue Log Activity button, so actions look different from destinations. **Destinations** in the middle: links come from `AppNav::railGroups()`, which reuses the role rules in `primaryLinks()` and `adminSections()`: Work, then Directory (members) or the admin setup groups (admins). Every group is always listed; none collapses. Each link is a Bootstrap Icon plus a label. The section that owns the current route gets a Primary Subtle fill, semibold Primary Emphasis text, and `aria-current` (`page` on the index, `true` on child pages), whatever the entry point. **Personal** at the bottom: Recent, then an account row (initials avatar, name, access profile) whose menu opens upward with Profile and Log out. An open Recent button turns solid Action Blue, distinct from the tinted current section.
+The sidebar has three zones. **Actions** at the top: the brand mark (a cobalt square) and name with a pin button, a search field (a "/" hint; pressing "/" focuses it) and the accent Log Activity button. **Destinations** in the middle: links come from `AppNav::railGroups()`, which reuses the role rules in `primaryLinks()` and `adminSections()`: Work, then Reference Data, Agreement Setup, Activity Setup, Certification Setup and People for admins. Every group is always listed. Each link is a Bootstrap Icon plus a 14px label. The section that owns the current route gets the cobalt mist fill, semibold cobalt-ink text and `aria-current` (`page` on the index, `true` on child pages). **Personal** at the bottom: Recent, then an account row (initials avatar, name, access profile) whose menu opens upward with Profile and Log out. An open Recent button turns solid cobalt, distinct from the tinted current section.
 
-The sidebar is pinned open (15rem, docked, the page makes room) or unpinned (4.25rem icons, the page does not move). Unpinned, it peeks open over the page on pointer hover (120ms in, 250ms out), keyboard focus, the search shortcut, or while the Recent panel or account menu is showing; Escape dismisses a peek. Unpinning with the mouse collapses the sidebar at once and it only peeks again after the pointer leaves and re-enters, so it never hangs open under the cursor. The pin choice is remembered per user in `localStorage` and new users start pinned at 1200px and wider. Touch devices and narrow screens do not hover: below (992px) the same markup is a Bootstrap offcanvas menu with the search field, the groups and the account row; links are at least (44px) high.
+The sidebar is pinned open (15rem, docked, the page makes room) or unpinned (4.25rem icons, the page does not move). Unpinned, it peeks open over the page on pointer hover (120ms in, 250ms out), keyboard focus, the search shortcut, or while the Recent panel or account menu is showing, with the popover shadow; Escape dismisses a peek. Unpinning with the mouse collapses at once and only peeks again after the pointer leaves and re-enters. The pin choice is remembered per user in `localStorage`, and new users start pinned at 1200px and wider. Below 992px the same markup is a Bootstrap offcanvas menu; links are at least 44px high.
 
-Recent is a floating card (same radius, with a larger shadow) beside the sidebar, sized to its content and scrolling past the viewport, listing up to 30 records opened in the last seven days (newest first under a “Last opened” label, a record-type icon per row, and a “Current” tag). It has a labeled search with a leading icon, a Clear action, empty, no-match, and load-error states, closes on Escape or an outside click, and returns focus to its button. Entries are stored per user in `recent_records` and rechecked with the `view` policy each time the panel opens.
+Recent is a floating 8px panel beside the sidebar, sized to its content, listing up to 30 records opened in the last seven days with a labeled search, a Clear action, and empty, no-match and load-error states. It closes on Escape or an outside click and returns focus to its button. Entries are stored per user in `recent_records` and rechecked with the `view` policy each time the panel opens.
 
-A “Skip to content” link is the first keyboard stop and becomes visible on focus; it targets the focusable main landmark. The sidebar navigation has an accessible landmark name, the pin is a toggle button with `aria-pressed`, collapsed links keep their labels as accessible names, and flash-message dismiss buttons are named “Close”. Bootstrap, Bootstrap Icons, and htmx retain their pinned CDN versions with SRI hashes and anonymous CORS attributes.
+A "Skip to content" link is the first keyboard stop. The sidebar navigation has a landmark name, the pin is a toggle button with `aria-pressed`, collapsed links keep their labels as accessible names, and flash-message dismiss buttons are named "Close". Bootstrap, Bootstrap Icons and htmx retain their pinned CDN versions with SRI hashes.
 
-The app uses a light theme: a white floating sidebar over a Cool Slate canvas. The only dark surface is the compact form header bar, kept as an experiment because it reads as chrome but sits slightly apart from the rest of the palette. A separate dark theme is intentionally deferred.
+### Tables and Relationship Ledgers
 
-### Relationship Ledger Rows and Tables
+Index tables use a Fill header in sentence case (0.78125rem, 600, muted), 1px row dividers, a hover tint, and one-line cells with names clamped to two lines. Rows are 48–56px. Record names, people and other links share one style: ink, 500 weight, a grey underline at rest, cobalt on hover (`.app-link`). Sort links retain visible carets at rest. Row actions are a single three-dots menu (View, Edit, Duplicate, then Delete in red after a divider), not a strip of icon buttons. Destructive actions still confirm.
 
-Rows group an underlined linked title, muted metadata, optional entity badges, and trailing actions inside a bordered white rounded surface with padding (0.5rem 1rem). Optional details sit below a divider. Index tables use light headers, vertically centered cells, row hover feedback, and compact right-aligned action groups. Reuse the shared sort, badge-list, and pagination components.
+When a row has a permitted record-view link, stretch that native anchor across the row with `.app-row-link`; this also applies to embedded recent activities. Related links, chips and menu controls sit above the target and retain their own actions. Keyboard focus outlines the row without adding a second tab stop. Native modified-click and open-in-new-tab behavior remain available. Keep any two-line text clamp inside `.app-row-link-label` so it does not clip the stretched target. Records without a view link, and administrative lists without a record-view page, do not gain a row target.
 
-A table being replaced by htmx is dimmed (`is-loading`) and marked `aria-busy`, and the polite live region (`#app-live`) announces the new result summary (for example "Showing 21–40 of 59"). Sortable columns expose `aria-sort`, and pagination arrows and the current page are named.
+Table stacking is explicit: row targets use layer 1, secondary links and dropdown wrappers use 2, open dropdown wrappers use 5, and the opaque sticky header uses 6. Apply dropdown layers to every table, including lists without stretched links. Do not isolate the table body into its own stacking context: fixed dropdown menus must remain usable beyond a short table's edge.
+
+A table being replaced by htmx is dimmed (`is-loading`) and marked `aria-busy`, and the polite live region (`#app-live`) announces the new result summary. Every sortable column shows outline up/down carets at rest; the active direction uses one filled caret and exposes `aria-sort`. Pagination arrows and the current page are named. An agreement's embedded activity table drops the Agreements column.
+
+Every listing has a pagination footer, including empty and single-page results. It combines a Show selector (10, 25, 50 or 100 rows, default 25), the current result range and page navigation when needed. Page-size changes return to page 1 and preserve search, filters and sorting. The chosen size stays in the URL, survives htmx swaps and filter clearing, and is bounded on the server. Activity Families uses this same pagination rather than loading every record.
+
+The shared table scroll frame adds a subtle dark shadow at each edge where rows or columns remain hidden. Top shadows sit below sticky headings; bottom shadows stop above pagination. Cues disappear at the corresponding scroll boundary or when all content fits, and recalculate after resize and htmx replacement. On desktop the opaque header sticks as one unit, with separate cell borders so its divider stays attached. Disable overscroll bounce inside the desktop table. The scroll-region focus border is drawn by the stationary frame below the header, above the shadow; individual sort links retain their own focus indicators. On phones and short windows, the frame includes the non-sticky header. Neither overlay intercepts pointer input. Use soft inset shadows from `--app-scroll-shadow-color`, without gradients or a permanent rim.
+
+Relationship ledgers use one flat record row across name-only, description, person, organization, contact and staff-group variants. Wrapping title links lead; role tags and actions sit alongside; email, PO, KFS and source agreements follow as compact metadata. Narrow ledgers stack metadata; wide ledgers can use two columns. No nested row cards or bulleted metadata. Permission-restricted titles remain plain text; contact email and phone remain actionable.
+
+The full disclosure header is a button with a hover fill, visible focus and a rotating chevron. All Summary disclosures start closed, including single-record lists; wider Relationships disclosures start open unless explicitly closed. A collapsed preview is one comma-separated line of record names, clipped with a CSS ellipsis at the available width. Do not append a "+N" suffix: the heading already carries the total count. Preview text is hidden from assistive technology so long lists do not inflate button names; expanded rows expose the full records. Empty groups show a muted count and explanation without a disclosure button. Group navigation and add/edit controls sit outside the button.
+
+Ledger header actions use the approved icon-button pattern: a 44×44px bordered eye or plus action immediately left of the disclosure chevron. View and Add remain native links outside the disclosure button, with explicit accessible names, hover/focus tooltips and an accent focus outline. Reserve preview space so text cannot run underneath actions. Empty groups can retain a permitted Add action without a chevron; groups without an action gain no placeholder. The shared header supports the existing View and Add slots without nesting controls.
+
+Long lists use the selected Scrolling B: a styled 8px native scrollbar, a visible range caption (for example, "1–3 of 9 · more below"), and a dark bottom-edge cue while records remain below. The scroll region gets a keyboard stop, a name and an associated caption only when it overflows. The caption is not a live region, so it does not announce every scroll event. Short lists have no extra keyboard stop or visible caption. Nested panels count only their own rendered items; record counts are measured from the displayed rows, not inferred from server totals.
 
 ### Form Actions and Drawers
 
-Form actions live in the page header, not in a bottom bar: a status line (idle, unsaved, saving, saved, error through text and icon, announced politely once), Cancel, and the primary Save/Create button. Save does not use implicit submit: it calls `requestSubmit()`, so Enter inside token pickers keeps its own behavior. Ctrl/⌘ + S saves, and a `beforeunload` guard protects unsaved edits. Cancel returns to the previous record or list page, else the parent crumb.
+Confirmations use one shared HTML dialog, styled as a flat white 8px surface with the popover shadow and a 35% ink backdrop. A small semantic icon accompanies the sentence-case title; the full record name and a plain consequence follow. Delete/remove actions use danger, duplicate actions use the accent. Cancel receives initial focus; Escape and the close button cancel, and focus returns to the visible trigger. Confirm resumes the original form once, retaining CSRF and method fields. Certificate-form changes use the same asynchronous confirmation without saving the form. The body scrolls in short windows while the action footer remains reachable. A restrained 140ms entrance is disabled for reduced motion. Use `textContent` and escaped data attributes for names; never interpolate record names into inline JavaScript.
 
-Drawers behave as modals: while one is open the rest of the page (sidebar, header, content) is inert, Escape closes it, and focus returns to the control that opened it.
+Form actions live in the page header, not in a bottom bar: a status line (idle, unsaved, saving, saved, error through text and icon, announced politely once), Cancel and the primary Save/Create button. Save calls `requestSubmit()`, so Enter inside token pickers keeps its own behavior. Ctrl/⌘ + S saves, and a `beforeunload` guard protects unsaved edits.
 
-Drawers place related forms in a white panel over a translucent backdrop, with bordered header/footer, body padding (1.25rem), and horizontal padding (1.25rem) around the header/footer. The panel slides and the backdrop fades over (0.2s ease). The existing custom drawer CSS does not establish a reduced-motion override; this document does not imply one exists.
+Ordinary same-tab links and Cancel on a dirty form first use the shared confirmation, with the exit icon, record name, Keep editing and Discard changes. Keep editing receives focus and preserves values; confirming resumes the original link without a second native prompt. New-tab/modified links, downloads, same-document anchors and local UI controls pass through. Saving retains its original validation and submission flow. Refresh, tab close and browser-driven navigation retain the browser-owned `beforeunload` safeguard; its appearance is not customizable. Restored pages reset the navigation bypass so retained unsaved values remain protected.
+
+Drawers behave as modals: the rest of the page is inert while one is open, Escape closes it, and focus returns to the control that opened it. They are a white panel with 1.25rem padding, hairline header and footer, a 35% ink backdrop and the drawer shadow, sliding in over 0.2s. The drawer CSS has no reduced-motion override.
+
+### Alerts, Dropdowns and Pagination
+
+Alerts and dropdowns follow the semantic subtle colors and the 8px menu radius. Pagination uses ink text, a hairline border and a cobalt current page. Empty table states keep a muted sentence and, where permitted, the accent create button.
 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** reuse the shared page header, form shell, section card, and field components.
-- **Do** use the existing entity palette consistently for record kinds and labeled status pills for state.
-- **Do** keep help and metadata subordinate with small text and muted color.
-- **Do** retain responsive table wrappers, wrapping metadata, and drawer body scrolling.
-- **Do** preserve visible focus treatments and the shared save-status announcement.
+- **Do** reuse the shared page header, form shell, section card and field components.
+- **Do** use outlined linked chips in tables and wrapping title links in ledgers; restricted records remain plain text.
+- **Do** use status chips (tint, dot and text) for state, and nothing else for color.
+- **Do** keep help and metadata subordinate with small muted text.
+- **Do** put row actions in the three-dots menu and keep Delete last, in red, behind a confirm.
+- **Do** keep controls on white surfaces so the 3:1 outline holds.
+- **Do** preserve visible focus rings and the shared save-status announcement.
 
 ### Don't:
-- **Don't** put Active switches, filters, or form controls in the page header.
+- **Don't** add a second accent hue, per-record-kind colors, gradients or gloss.
+- **Don't** add heavy borders or stronger overlay shadows to ordinary cards; use the shared soft elevation.
+- **Don't** put Active switches, filters or form controls in the page header.
 - **Don't** mix header-style cards with section-card form sections on the same form.
 - **Don't** add in-card submit/cancel controls to forms; the header owns them.
-- **Don't** introduce a new per-page form shell or remap entity colors independently.
-- **Don't** replace ordinary sentence-case labels with tracked uppercase metadata styling.
+- **Don't** introduce a per-page form shell, inline `<style>` blocks or off-palette hex values; add to `app.css` using the tokens.
+- **Don't** replace ordinary sentence-case labels with tracked uppercase styling.

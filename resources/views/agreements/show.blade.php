@@ -25,13 +25,32 @@
     :active="$agreement->active"
     :action-url="auth()->user()->can('update', $agreement) ? route('agreements.edit', $agreement) : null"
 >
+    <x-slot:facts>
+        <div><dt>Start date</dt><dd>{{ $agreement->start_date?->format('M d, Y') ?? '—' }}</dd></div>
+        <div><dt>End date</dt><dd>{{ $agreement->end_date?->format('M d, Y') ?? '—' }}</dd></div>
+        <div>
+            <dt>Principal investigators</dt>
+            <dd class="app-fact-links">
+                @forelse($agreement->principalInvestigators as $investigator)
+                    <x-user-link :user="$investigator" />
+                @empty
+                    Not assigned
+                @endforelse
+            </dd>
+        </div>
+    </x-slot:facts>
     <x-slot:more>
         @can('duplicate', $agreement)
             <li>
                 <button type="submit"
                         form="agreement-duplicate-form"
                         class="dropdown-item"
-                        onclick="return confirm('Duplicate {{ addslashes($agreement->name) }}? Activities and logged progress will not be copied.')">
+                        data-confirm
+                        data-confirm-title="Duplicate agreement?"
+                        data-confirm-record="{{ $agreement->name }}"
+                        data-confirm-message="Activities and logged progress will not be copied. Review the new copy before saving."
+                        data-confirm-action="Duplicate agreement"
+                        data-confirm-tone="primary">
                     <i class="bi bi-files me-2" aria-hidden="true"></i>Duplicate
                 </button>
             </li>
@@ -49,27 +68,24 @@
     <x-slot:activityHeaderMeta>
         <x-entity-count-badge kind="activity" :count="$lifetimeTotals['activities']" />
         <span class="text-muted small">Lifetime</span>
-        <x-entity-count-badge kind="activity" :count="$ytdTotals['activities']" />
-        <span class="text-muted small">YTD</span>
     </x-slot:activityHeaderMeta>
 
     {{-- ── Summary ─────────────────────────────────────────────────────── --}}
     <x-slot:summary>
-        <dl class="row mb-0" style="min-width: 0;">
-            <dt class="col-5 text-muted fw-normal small">Start Date</dt>
-            <dd class="col-7 mb-2">{{ $agreement->start_date?->format('M d, Y') ?? '—' }}</dd>
+        <p class="app-record-period">Year to date · {{ now()->year }}</p>
+        <dl class="app-record-metrics">
+            <div><dt>Activities</dt><dd>{{ $ytdTotals['activities'] }}</dd></div>
+        </dl>
 
-            <dt class="col-5 text-muted fw-normal small">End Date</dt>
-            <dd class="col-7 mb-2">{{ $agreement->end_date?->format('M d, Y') ?? '—' }}</dd>
-
-            @if($agreement->extension_start_date || $agreement->extension_end_date)
+        @if($agreement->extension_start_date || $agreement->extension_end_date)
+            <dl class="row mb-0 mt-3">
                 <dt class="col-5 text-muted fw-normal small">Extension Start</dt>
                 <dd class="col-7 mb-2 small">{{ $agreement->extension_start_date?->format('M d, Y') ?? '—' }}</dd>
 
                 <dt class="col-5 text-muted fw-normal small">Extension End</dt>
                 <dd class="col-7 mb-2 small">{{ $agreement->extension_end_date?->format('M d, Y') ?? '—' }}</dd>
-            @endif
-        </dl>
+            </dl>
+        @endif
 
         <div class="d-grid gap-3 mt-3">
             <x-relationship-scroll-panel
@@ -167,12 +183,12 @@
 
         @if($agreement->abstract)
             <hr>
-            <h6 class="text-muted fw-semibold small text-uppercase mb-2" style="letter-spacing:.05em;">Abstract</h6>
+            <h6 class="app-subhead mb-2">Abstract</h6>
             <p class="small mb-0">{{ $agreement->abstract }}</p>
         @endif
 
         <hr>
-        <h6 class="text-muted fw-semibold small text-uppercase mb-3" style="letter-spacing:.05em;">Assigned Staff</h6>
+        <h6 class="app-subhead mb-3">Assigned Staff</h6>
         @if($hasAnyUsers)
             <div class="d-grid gap-2">
                 @foreach($agreement->teams as $team)
@@ -186,6 +202,7 @@
                             kind="team"
                             :count="$teamOnlyUsers->count()"
                             collapsible
+                            :collapsed="true"
                             height="220px">
                             @foreach($teamOnlyUsers as $user)
                                 <x-relationship-ledger-row
@@ -208,6 +225,7 @@
                         kind="user"
                         :count="$directUsers->count()"
                         collapsible
+                        :collapsed="true"
                         height="220px">
                         @foreach($directUsers as $user)
                             <x-relationship-ledger-row
@@ -239,26 +257,21 @@
         @endif
 
         @if($agreement->attachments->isNotEmpty())
-            <hr>
-            <h6 class="text-muted fw-semibold small text-uppercase mb-2" style="letter-spacing:.05em;">Attachments</h6>
-            @foreach($agreement->attachments as $attachment)
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <div class="small text-truncate me-2" title="{{ $attachment->filename }}">
-                        <i class="bi bi-file-earmark me-1"></i>{{ $attachment->filename }}
-                    </div>
-                    <a href="{{ $attachment->download_url }}"
-                       class="btn btn-sm btn-outline-primary text-nowrap"
-                       target="_blank">
-                        View / Download
-                    </a>
-                </div>
-            @endforeach
+            <x-relationship-scroll-panel title="Attachments" :count="$agreement->attachments->count()" collapsible collapsed class="mt-3">
+                @foreach($agreement->attachments as $attachment)
+                    <x-relationship-ledger-row :title="$attachment->filename">
+                        <x-slot:actions>
+                            <a href="{{ $attachment->download_url }}" class="btn btn-sm btn-outline-primary text-nowrap" target="_blank">View / Download</a>
+                        </x-slot:actions>
+                    </x-relationship-ledger-row>
+                @endforeach
+            </x-relationship-scroll-panel>
         @endif
     </x-slot:summary>
 
     <x-slot:beforeMain>
         <section class="card shadow-sm entity-show-card" aria-labelledby="certificate-assignments-heading">
-            <div class="card-header bg-light py-2 px-3 d-flex flex-wrap align-items-center gap-2">
+            <div class="card-header py-2 px-3 d-flex flex-wrap align-items-center gap-2">
                 <h2 class="h5 mb-0" id="certificate-assignments-heading">Certificate assignments</h2>
                 <span class="text-muted small">{{ $certificationRosterDisplay->count() }} {{ \Illuminate\Support\Str::plural('candidate', $certificationRosterDisplay->count()) }}</span>
                 @can('update', $agreement)
@@ -291,7 +304,7 @@
                                             @if($enrollment->enrolled_at) · Assigned {{ $enrollment->enrolled_at->format('M j, Y') }}@endif
                                         </div>
                                     </div>
-                                    <div class="d-flex flex-wrap align-items-center gap-2">@php $lifecycleBadge = $enrollment->lifecycleBadge(); @endphp<span class="badge {{ $lifecycleBadge['class'] }}">{{ $lifecycleBadge['label'] }}</span>
+                                    <div class="d-flex flex-wrap align-items-center gap-2">@php $lifecycleBadge = $enrollment->lifecycleBadge(); @endphp<span class="{{ $lifecycleBadge['class'] }}">{{ $lifecycleBadge['label'] }}</span>
                                         <a href="{{ route('certificate-enrollments.show', ['certificateEnrollment' => $enrollment, 'agreement_id' => $agreement->id]) }}" class="small">Progress</a>
                                     </div>
                                 </div>
@@ -325,6 +338,8 @@
             view-all-label="View Activities"
             :log-activity-url="route('activities.create') . '?agreement_id=' . $agreement->id"
             :log-activity-enabled="$agreement->active"
+            log-activity-disabled-reason="This agreement is inactive."
+            hide-agreements
             empty-message="No activities logged for this agreement yet."
         />
     </x-slot:activity>

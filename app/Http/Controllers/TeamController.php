@@ -9,6 +9,7 @@ use App\Models\Team;
 use App\Models\User;
 use App\Support\Authorization\ScopeSync;
 use App\Support\ProjectProgramScope;
+use App\Support\TablePagination;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -60,7 +61,7 @@ class TeamController extends Controller
 
         $this->applyTeamIndexSort($query, $sort, $direction);
 
-        $teams = $query->paginate(20)->withQueryString();
+        $teams = $query->paginate(TablePagination::perPage($request))->withQueryString();
 
         $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
         $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);

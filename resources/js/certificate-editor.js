@@ -288,7 +288,9 @@ if (root) {
 
     function resetRules(row) { rows('[data-cert-rule]', row).forEach(markDeleted); }
 
-    root.addEventListener('click', (event) => {
+    const confirmChange = (trigger, title, message, action) => window.appConfirm({ title, message, action, trigger });
+
+    root.addEventListener('click', async (event) => {
         const button = event.target.closest('button');
         if (!button) return;
         const row = button.closest('[data-cert-requirement]');
@@ -333,7 +335,10 @@ if (root) {
                 const id = value('[data-cert-saved-role]', target) || `new:${target.dataset.certRoleRow}`;
                 if (requirementRows().some((item) => value('[data-cert-role]', item) === id)) { alert('Choose another role on its requirements before removing this role.'); return; }
             }
-            if (!confirm(kind === 'group' ? 'Ungroup these requirements? Each will become individually required.' : `Remove this ${kind}? This takes effect when you save the certificate.`)) return;
+            const confirmed = kind === 'group'
+                ? await confirmChange(button, 'Ungroup requirements?', 'Each requirement in this group will become individually required.', 'Ungroup')
+                : await confirmChange(button, `Remove this ${kind}?`, 'This takes effect when you save the certificate.', `Remove ${kind}`);
+            if (!confirmed) return;
             if (kind === 'group') requirementRows(target).forEach((item) => { item.dataset.pendingGroup = ''; });
             markDeleted(target);
             sync();
@@ -354,21 +359,21 @@ if (root) {
         }
         if (button.hasAttribute('data-cert-clear')) {
             const renewal = $('[data-cert-stage=renewal]');
-            if (!confirm('Clear all independent renewal requirements and groups? This takes effect when you save.')) return;
+            if (!await confirmChange(button, 'Clear renewal requirements?', 'All independent renewal requirements and groups will be removed when you save.', 'Clear requirements')) return;
             requirementRows(renewal).forEach(markDeleted);
             rows('[data-cert-group]', renewal).forEach(markDeleted);
             sync();
             $('[data-cert-add=requirement]', renewal).focus();
         }
-        if (button.hasAttribute('data-cert-copy')) copyInitial();
+        if (button.hasAttribute('data-cert-copy')) await copyInitial(button);
     });
 
-    function copyInitial() {
+    async function copyInitial(trigger) {
         const initial = $('[data-cert-stage=initial]'), renewal = $('[data-cert-stage=renewal]');
         const rolePanel = $('[data-cert-roles]');
         rolePanel.hidden = true;
         root.append(rolePanel);
-        if ((requirementRows(renewal).length || rows('[data-cert-group]', renewal).length) && !confirm('Replace independent renewal rules with a copy of initial requirements? This takes effect when you save.')) return;
+        if ((requirementRows(renewal).length || rows('[data-cert-group]', renewal).length) && !await confirmChange(trigger, 'Replace renewal rules?', 'Independent renewal rules will be replaced with a copy of the initial requirements when you save.', 'Replace rules')) return;
         requirementRows(renewal).forEach(markDeleted);
         rows('[data-cert-group]', renewal).forEach(markDeleted);
         const groupMap = new Map();
@@ -414,14 +419,14 @@ if (root) {
         $('[data-cert-add=requirement]', renewal).focus();
     }
 
-    root.addEventListener('change', (event) => {
+    root.addEventListener('change', async (event) => {
         const input = event.target;
         const row = input.closest('[data-cert-requirement]');
         if (input.matches('[data-cert-kind]')) {
             const previous = input.dataset.previous ?? '';
             if (previous && previous !== input.value) {
                 const destructive = previous === 'tool_submission' || input.value === 'attestation';
-                if (destructive && !confirm('Changing this type clears incompatible submission rules and filters. Keep the requirement name and notes?')) { input.value = previous; return; }
+                if (destructive && !await confirmChange(input, 'Change requirement type?', 'Incompatible submission rules and filters will be cleared. The requirement name and notes are kept.', 'Change type')) { input.value = previous; return; }
                 if (previous === 'tool_submission') { resetRules(row); $('[data-cert-tool]', row).value = ''; }
                 if (input.value === 'attestation') {
                     ['family', 'type', 'role', 'window'].forEach((field) => { $(`[data-cert-${field}]`, row).value = ''; });
@@ -431,21 +436,21 @@ if (root) {
             input.dataset.previous = input.value;
         }
         if (input.matches('[data-cert-tool]')) {
-            if (input.dataset.previous !== input.value && rows('[data-cert-rule]', row).length && !confirm('Changing tools clears the coverage and quota rules for the previous tool. Continue?')) { input.value = input.dataset.previous ?? ''; return; }
+            if (input.dataset.previous !== input.value && rows('[data-cert-rule]', row).length && !await confirmChange(input, 'Change tool?', 'Coverage and quota rules for the previous tool will be cleared.', 'Change tool')) { input.value = input.dataset.previous ?? ''; return; }
             if (input.dataset.previous !== input.value) resetRules(row);
             input.dataset.previous = input.value;
         }
         if (input.matches('[data-cert-dimension]')) {
             const rule = input.closest('[data-cert-rule]');
             if (input.dataset.previous !== input.value) {
-                if ($$('[data-cert-options] input:checked', rule).length && !confirm('Changing dimensions clears the selected categories. Continue?')) { input.value = input.dataset.previous ?? ''; return; }
+                if ($$('[data-cert-options] input:checked', rule).length && !await confirmChange(input, 'Change dimension?', 'The selected categories will be cleared.', 'Change dimension')) { input.value = input.dataset.previous ?? ''; return; }
                 $$('[data-cert-options] input', rule).forEach((option) => { option.checked = false; });
             }
             input.dataset.previous = input.value;
         }
         if (input.matches('[name=renewal_matches_initial][type=checkbox]') && input.checked) {
             const renewal = $('[data-cert-stage=renewal]');
-            if ((requirementRows(renewal).length || rows('[data-cert-group]', renewal).length) && !confirm('Following initial requirements removes the independent renewal rules when you save. Continue?')) { input.checked = false; return; }
+            if ((requirementRows(renewal).length || rows('[data-cert-group]', renewal).length) && !await confirmChange(input, 'Follow initial requirements?', 'Independent renewal rules will be removed when you save.', 'Follow initial')) { input.checked = false; return; }
             requirementRows(renewal).forEach(markDeleted);
             rows('[data-cert-group]', renewal).forEach(markDeleted);
         }

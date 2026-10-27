@@ -22,6 +22,7 @@
         />
     </div>
 
+    <input type="hidden" name="per_page" value="{{ \App\Support\TablePagination::perPage(request()) }}">
     <input type="hidden" name="sort" value="{{ $sort ?? 'name' }}">
     <input type="hidden" name="direction" value="{{ $direction ?? 'asc' }}">
 </form>

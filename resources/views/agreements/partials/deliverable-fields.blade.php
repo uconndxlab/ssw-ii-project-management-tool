@@ -361,7 +361,7 @@
                 </div>
             </div>
 
-            <div class="border rounded overflow-auto" style="min-height: 140px; max-height: 280px; background-color: #e9ecef;">
+            <div class="border rounded overflow-auto" style="min-height: 140px; max-height: 280px; background-color: var(--app-surface-fill);">
                 <div class="small text-muted px-3 py-2 border-bottom bg-body sticky-top d-flex justify-content-between align-items-center">
                     <span>Agreement members</span>
                     <span class="me-2 d-none" data-deliverable-target-column-label>

@@ -7,9 +7,9 @@
 @endphp
 
 <div class="card shadow-sm app-index-table-card">
-    <div class="table-responsive">
+    <x-table-scroll>
         <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
+            <thead>
                 <tr>
                     <th>
                         <x-table-sort-link column="name" label="Name" :sort="$s" :direction="$d" :url="$url('name')" target="#teams-table" />
@@ -26,26 +26,22 @@
                     <th>
                         <x-table-sort-link column="programs" label="Programs" :sort="$s" :direction="$d" :url="$url('programs')" target="#teams-table" />
                     </th>
-                    <th class="text-end" style="width:170px;">Actions</th>
+                    <th class="app-col-actions"><span class="visually-hidden">Actions</span></th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($teams as $team)
                 <tr>
                     <td>
-                        <a href="{{ route('teams.show', $team) }}" class="fw-semibold text-decoration-none text-dark">
+                        <a href="{{ route('teams.show', $team) }}" class="app-link app-link--strong app-row-link">
                             {{ $team->name }}
                         </a>
                     </td>
                     <td>
-                        <span class="badge bg-secondary">{{ $team->users_count }} {{ Str::plural('member', $team->users_count) }}</span>
+                        <span class="app-count">{{ $team->users_count }} {{ Str::plural('member', $team->users_count) }}</span>
                     </td>
                     <td>
-                        @if($team->active)
-                            <span class="badge bg-success">Active</span>
-                        @else
-                            <span class="badge bg-secondary">Inactive</span>
-                        @endif
+                        <x-status-badge :active="$team->active" />
                     </td>
                     <td>
                         <x-table-badge-list
@@ -63,36 +59,26 @@
                             :empty-label="$scopeEmptyLabel($team->program_scope_mode, 'All programs', 'No programs')"
                         />
                     </td>
-                    <td class="text-end text-nowrap">
+                    <td class="app-col-actions">
                         @php $actionKey = 'team-actions-' . $team->id; @endphp
-                        <div class="btn-group btn-group-sm" role="group" aria-label="Team actions for {{ $team->name }}">
-                            <a href="{{ route('teams.show', $team) }}"
-                               class="btn btn-outline-primary"
-                               data-bs-toggle="tooltip"
-                               data-bs-title="View team"
-                               aria-label="View team">
-                                <i class="bi bi-eye"></i>
-                            </a>
+                        <div class="dropdown app-row-actions d-inline-block">
+                            <button type="button" class="btn btn-sm btn-link app-row-actions-toggle" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" aria-label="Team actions for {{ $team->name }}"><i class="bi bi-three-dots" aria-hidden="true"></i></button>
+                            <div class="dropdown-menu dropdown-menu-end">
+                            <a href="{{ route('teams.show', $team) }}" class="dropdown-item"><i class="bi bi-eye me-2" aria-hidden="true"></i>View team</a>
                             @can('update', $team)
-                            <a href="{{ route('teams.edit', $team) }}"
-                               class="btn btn-outline-secondary"
-                               data-bs-toggle="tooltip"
-                               data-bs-title="Edit team"
-                               aria-label="Edit team">
-                                <i class="bi bi-pencil-square"></i>
-                            </a>
+                            <a href="{{ route('teams.edit', $team) }}" class="dropdown-item"><i class="bi bi-pencil-square me-2" aria-hidden="true"></i>Edit team</a>
                             @endcan
                             @can('delete', $team)
+                            <hr class="dropdown-divider">
                             <button type="submit"
                                     form="{{ $actionKey }}-delete"
-                                    class="btn btn-outline-danger"
-                                    data-bs-toggle="tooltip"
-                                    data-bs-title="Delete team"
-                                    aria-label="Delete team"
-                                    onclick="return confirm('Delete team {{ addslashes($team->name) }}?')">
-                                <i class="bi bi-trash"></i>
-                            </button>
+                                    data-confirm
+                                    data-confirm-title="Delete team?"
+                                    data-confirm-record="{{ $team->name }}"
+                                    data-confirm-message="This action cannot be undone."
+                                    data-confirm-action="Delete team" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete team</button>
                             @endcan
+                            </div>
                         </div>
                         @can('delete', $team)
                         <form id="{{ $actionKey }}-delete" method="POST" action="{{ route('teams.destroy', $team) }}" class="d-none">
@@ -114,8 +100,8 @@
                 @endforelse
             </tbody>
         </table>
-    </div>
-    <div class="card-footer bg-white">
+    </x-table-scroll>
+    <div class="card-footer">
         <x-htmx-pagination :paginator="$teams" target="#teams-table" />
     </div>
 </div>

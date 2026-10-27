@@ -19,16 +19,9 @@ test('certification tool create page loads repeater script outside row templates
 
     expect($firstTemplate)->not->toContain("addBtn = e.target.closest('[data-repeater-add]')");
 
-    // The shared repeater stylesheet must render at layout level, never inside a
-    // <template>: row templates are pre-rendered via view()->render(), which would
-    // poison an @once block inside the component and strip the styles from the page.
-    expect($html)->toContain('.repeater-row-card');
-
-    $templateContentStart = strpos($html, '<template data-repeater-template>');
-    $templateContentEnd = strrpos($html, '</template>');
-    $allTemplates = substr($html, $templateContentStart, $templateContentEnd - $templateContentStart);
-
-    expect($allTemplates)->not->toContain('.repeater-row-card');
+    // Repeater styles ship in app.css; neither the page nor its row templates may carry a <style> block.
+    expect($html)->not->toContain('.repeater-row-card');
+    expect($html)->not->toContain('<style');
 });
 
 test('certification tool edit page renders existing rows as collapsible display cards', function () {
@@ -61,7 +54,7 @@ test('certification tool edit page renders existing rows as collapsible display 
     expect($html)->toContain('options</span>');
 });
 
-test('certificate edit page renders requirement rows with option count context', function () {
+test('certificate edit page renders requirement rows with dimension options', function () {
     $admin = createSystemAdmin();
     $tool = CertificationTool::factory()->create();
     $dimension = CertificationToolDimension::factory()->for($tool, 'tool')->create(['name' => 'Review Mode']);
@@ -79,8 +72,9 @@ test('certificate edit page renders requirement rows with option count context',
 
     $html = $this->actingAs($admin)->get(route('certificates.edit', $certificate))->getContent();
 
-    expect($html)->toContain('data-repeater-mode="display"');
-    expect($html)->toContain('data-repeater-sortable');
-    expect($html)->toContain('data-summary-selected-options');
-    expect($html)->toContain('data-summary-dimension-options');
+    expect($html)->toContain('data-certificate-editor');
+    expect($html)->toContain('data-cert-requirement="0"');
+    expect($html)->toContain('Submit reviews');
+    expect($html)->toContain('data-cert-options="'.$dimension->id.'"');
+    expect($html)->toContain('Partial');
 });

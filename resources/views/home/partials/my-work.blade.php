@@ -1,6 +1,6 @@
 @if($myActivities?->count() > 0 || $myAgreements?->count() > 0 || $myAssignedDeliverables?->count() > 0)
 <div class="card shadow-sm mb-4">
-    <div class="card-header bg-light">
+    <div class="card-header">
         <h5 class="mb-0">My Work</h5>
     </div>
     <div class="card-body">
@@ -25,7 +25,7 @@
                                         @endif
                                     </small>
                                 </div>
-                                <span class="badge bg-secondary rounded-pill">{{ $agreement->activities_count ?? 0 }}</span>
+                                <span class="app-count">{{ $agreement->activities_count ?? 0 }}</span>
                             @if($agreement->isLinkable())
                                 </a>
                             @else
