@@ -1158,7 +1158,7 @@ html[data-rail="unpinned"] .app-rail-pin-on {
     }
 
     /* Keep icons anchored while the buttons and their rounded edges follow the rail width. */
-    .app-rail-label {
+    .app-rail-label:not(.app-rail-name) {
         flex-shrink: 0;
         white-space: nowrap;
     }
