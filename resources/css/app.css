@@ -587,6 +587,12 @@ main {
     transform: translateX(0);
 }
 
+@media (prefers-reduced-motion: reduce) {
+    .form-drawer-panel {
+        transition: none;
+    }
+}
+
 .form-drawer-header,
 .form-drawer-footer {
     display: flex;
@@ -2635,12 +2641,15 @@ a.app-row-link:focus-visible::after {
         padding: 0;
         white-space: normal;
         border: 0;
+        min-width: 0;
+        overflow-wrap: anywhere;
     }
 
     .app-cards .app-col-name,
     .app-cards .app-card-lead {
         grid-column: 1;
         grid-row: 1;
+        min-width: 0;
     }
 
     .app-cards .app-col-actions {
@@ -2663,9 +2672,17 @@ a.app-row-link:focus-visible::after {
         content: attr(data-label);
     }
 
+    .app-cards td[data-label] {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0.125rem 0.5rem;
+    }
+
     .app-cards td[data-label] .app-chip-list {
         display: inline-flex;
         vertical-align: middle;
+        max-width: 100%;
     }
 
     .app-cards td:has(> .app-chip-list > .text-muted:only-child),
@@ -2676,6 +2693,21 @@ a.app-row-link:focus-visible::after {
     .app-cards .app-row-actions-toggle {
         width: 2.5rem;
         height: 2.5rem;
+    }
+
+    .app-home .list-group-item {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .app-home .min-w-0,
+    .app-home .app-chip {
+        max-width: 100%;
+    }
+
+    .app-home .app-chip {
+        white-space: normal;
+        overflow-wrap: anywhere;
     }
 }
 

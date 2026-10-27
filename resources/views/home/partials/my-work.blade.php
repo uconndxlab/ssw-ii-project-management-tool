@@ -15,7 +15,7 @@
                             @else
                                 <div class="list-group-item d-flex justify-content-between align-items-center">
                             @endif
-                                <div>
+                                <div class="min-w-0">
                                     <div class="fw-bold">{{ $agreement->name }}</div>
                                     <small class="text-muted">
                                         @if($agreement->organizations?->isNotEmpty())
@@ -48,7 +48,7 @@
                         @foreach($myActivities->take(5) as $activity)
                             @php $canManage = auth()->user()->can('update', $activity); @endphp
                             <div class="list-group-item">
-                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start gap-3">
                                     <div class="flex-grow-1 min-w-0">
                                         <div class="fw-bold mb-1">
                                             <a href="{{ route('activities.show', $activity) }}" class="text-decoration-none text-body">{{ $activity->activityType?->name ?? 'Activity' }}</a>
@@ -70,7 +70,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="btn-group btn-group-sm" role="group" aria-label="My recent activity actions">
+                                    <div class="btn-group btn-group-sm flex-shrink-0 align-self-end align-self-sm-start" role="group" aria-label="My recent activity actions">
                                         <a href="{{ route('activities.show', $activity) }}" class="btn btn-outline-primary" aria-label="View activity">
                                             <i class="bi bi-eye"></i>
                                         </a>

@@ -7,7 +7,7 @@
 
 <div class="card shadow-sm app-index-table-card">
     <x-table-scroll>
-        <table class="table table-hover align-middle mb-0">
+        <table class="table table-hover align-middle mb-0 app-cards">
             <thead>
                 <tr>
                     <th>
@@ -26,22 +26,22 @@
             <tbody>
                 @forelse($programs as $program)
                 <tr>
-                    <td>
+                    <td class="app-card-lead">
                         <a href="{{ route('programs.show', $program) }}" class="app-link app-link--strong app-row-link">
                             {{ $program->name }}
                         </a>
                     </td>
-                    <td>
+                    <td data-label="Projects">
                         <x-table-badge-list
                             kind="project"
                             :items="$program->projects"
                             route-name="projects.show"
                         />
                     </td>
-                    <td>
+                    <td class="app-card-status">
                         <x-status-badge :active="$program->active" />
                     </td>
-                    <td class="text-muted small">{{ $program->created_at->format('M d, Y') }}</td>
+                    <td data-label="Created" class="text-muted small">{{ $program->created_at->format('M d, Y') }}</td>
                     <td class="app-col-actions">
                         @php $actionKey = 'program-actions-' . $program->id; @endphp
                         <div class="dropdown app-row-actions d-inline-block">

@@ -7,7 +7,7 @@
         <div class="list-group list-group-flush">
             @foreach($recentActivities as $activity)
                 @php $canManage = auth()->user()->can('update', $activity); @endphp
-                <div class="list-group-item px-3 py-2 d-flex justify-content-between align-items-start gap-3">
+                <div class="list-group-item px-3 py-2 d-flex flex-column flex-sm-row justify-content-between align-items-start gap-3">
                     <div class="flex-grow-1 min-w-0">
                         <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
                             <x-user-link :user="$activity->user" class="text-decoration-none fw-semibold" />
@@ -31,7 +31,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="text-end d-flex align-items-start gap-2">
+                    <div class="text-end d-flex flex-shrink-0 align-self-end align-self-sm-start align-items-start gap-2">
                         <a href="{{ route('activities.show', $activity) }}" class="btn btn-outline-primary btn-sm" aria-label="View activity">
                             <i class="bi bi-eye"></i>
                         </a>

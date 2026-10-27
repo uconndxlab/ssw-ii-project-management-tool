@@ -121,7 +121,7 @@ If a later version needs connections, first define whether an edge represents a 
 
 ## Acceptance checks
 
-Status: the retention, access, clear, role-navigation, active-state and control checks are covered by feature tests (`RecentRecordsTest`, `AppShellNavigationTest`). Hover, pin, peek, Recent and the mobile menu were checked in a browser at 1440px and 390px. Not verified: screen readers, real touch hardware, Safari and Firefox, and reduced-motion behavior.
+Status: the retention, access, clear, role-navigation, active-state and control checks are covered by feature tests (`RecentRecordsTest`, `AppShellNavigationTest`). Hover, pin, peek, Recent and the mobile menu were checked in Chromium at 1440px and 390px. The October 27 follow-up keeps icons anchored, fades labels, preserves rounded button edges, centers the TA mark, combines Recent's fade and slide, and clears its active button state when closing starts. Overlay scroll locks preserve the page width. Width and reveal transitions are scoped to no-preference motion; drawers now also remove their slide for reduced motion. Still unverified: screen readers, real touch hardware, Safari and Firefox.
 
 - Hover reveals labels; leaving the combined navigation/panel area does not prematurely close the active interaction. Expanding navigation does not shift content.
 - Keyboard focus and touch can open and use the same destinations without hover. Escape and focus return work for navigation groups and Recent.

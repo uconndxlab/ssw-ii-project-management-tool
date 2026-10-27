@@ -7,7 +7,7 @@
 
 <div class="card shadow-sm app-index-table-card">
     <x-table-scroll>
-        <table class="table table-hover align-middle mb-0">
+        <table class="table table-hover align-middle mb-0 app-cards">
             <thead>
                 <tr>
                     <th>
@@ -26,20 +26,20 @@
             <tbody>
                 @forelse($projects as $project)
                 <tr>
-                    <td>
+                    <td class="app-card-lead">
                         <a href="{{ route('projects.show', $project) }}" class="app-link app-link--strong app-row-link">
                             {{ $project->name }}
                         </a>
                     </td>
-                    <td class="text-muted small">{{ Str::limit($project->description, 60) ?: '—' }}</td>
-                    <td>
+                    <td data-label="Description" class="text-muted small">{{ Str::limit($project->description, 60) ?: '—' }}</td>
+                    <td data-label="Programs">
                         <x-table-badge-list
                             kind="program"
                             :items="$project->programs"
                             route-name="programs.show"
                         />
                     </td>
-                    <td>
+                    <td class="app-card-status">
                         <x-status-badge :active="$project->active" />
                     </td>
                     <td class="app-col-actions">

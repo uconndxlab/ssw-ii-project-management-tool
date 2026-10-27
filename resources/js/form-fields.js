@@ -82,9 +82,70 @@ function linkBareLabels(root = document) {
     });
 }
 
+let errorTargetCount = 0;
+
+function linkErrorSummaries(root = document) {
+    const items = root.querySelectorAll('[data-error-name]');
+    if (items.length === 0) {
+        return;
+    }
+
+    const scope = root.closest?.('.app-form-shell') ?? document;
+    const normalize = (name) => name.replace(/\[([^\]]*)\]/g, '.$1').replace(/\.$/, '');
+    const candidates = [...scope.querySelectorAll('[data-field-name], [data-token-picker], input[name], select[name], textarea[name]')];
+
+    items.forEach((item) => {
+        if (item.querySelector('a')) {
+            return;
+        }
+
+        const name = item.dataset.errorName;
+        const candidateName = (node) => normalize(node.dataset.fieldName ?? node.dataset.name ?? node.name);
+        let field = candidates.find((node) => candidateName(node) === name)
+            ?? candidates.find((node) => name.startsWith(`${candidateName(node)}.`));
+        if (field?.type === 'hidden') {
+            field = field.closest('[data-form-field], [data-token-picker]') ?? field;
+        }
+        const control = field?.matches('[data-form-field]')
+            ? findControl(field) ?? field.querySelector('input:not([type="hidden"]), select, textarea')
+            : field?.matches('[data-token-picker]') ? field.querySelector('[data-token-search]') : field;
+
+        if (!control || control.type === 'hidden') {
+            return;
+        }
+
+        control.id ||= `app-error-target-${++errorTargetCount}`;
+        const link = document.createElement('a');
+        link.href = `#${control.id}`;
+        link.dataset.errorTarget = control.id;
+        link.textContent = item.textContent;
+        item.replaceChildren(link);
+    });
+}
+
+document.addEventListener('click', (event) => {
+    const link = event.target.closest('[data-error-target]');
+    const control = link && document.getElementById(link.dataset.errorTarget);
+
+    if (!control) {
+        return;
+    }
+
+    event.preventDefault();
+    control.dispatchEvent(new CustomEvent('form-error:focus', { bubbles: true }));
+    for (let parent = control.parentElement; parent; parent = parent.parentElement) {
+        if (parent.matches('details')) {
+            parent.open = true;
+        }
+    }
+    control.focus({ preventScroll: true });
+    control.scrollIntoView({ block: 'center' });
+});
+
 function enhanceAll(root = document) {
     enhanceFields(root);
     linkBareLabels(root);
+    linkErrorSummaries(root);
 }
 
 document.addEventListener('DOMContentLoaded', () => enhanceAll());

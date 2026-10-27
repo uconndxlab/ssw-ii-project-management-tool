@@ -8,7 +8,7 @@
 
 <div class="card shadow-sm app-index-table-card">
     <x-table-scroll>
-        <table class="table table-hover align-middle mb-0">
+        <table class="table table-hover align-middle mb-0 app-cards">
             <thead>
                 <tr>
                     <th><x-table-sort-link column="name" label="Name" :sort="$s" :direction="$d" :url="$url('name')" target="#certificates-table" /></th>
@@ -23,15 +23,15 @@
             <tbody>
                 @forelse($certificates as $certificate)
                 <tr>
-                    <td class="fw-semibold">
+                    <td class="app-card-lead fw-semibold">
                         {{ $certificate->name }}
                         @if($certificate->retired_at)
                             <span class="app-tag ms-1">Retired</span>
                         @endif
                     </td>
-                    <td>{{ $certificate->requirements_count }}</td>
-                    <td>{{ $certificate->validity_months ? $certificate->validity_months . ' mo' : 'Never' }}</td>
-                    <td>
+                    <td data-label="Requirements">{{ $certificate->requirements_count }}</td>
+                    <td data-label="Expires">{{ $certificate->validity_months ? $certificate->validity_months . ' mo' : 'Never' }}</td>
+                    <td data-label="Projects">
                         <x-table-badge-list
                             kind="project"
                             :items="$certificate->projects"
@@ -39,7 +39,7 @@
                             :empty-label="$scopeEmptyLabel($certificate->program_scope_mode, 'All projects', 'No projects')"
                         />
                     </td>
-                    <td>
+                    <td data-label="Programs">
                         <x-table-badge-list
                             kind="program"
                             :items="$certificate->programs"
@@ -47,7 +47,7 @@
                             :empty-label="$scopeEmptyLabel($certificate->program_scope_mode, 'All programs', 'No programs')"
                         />
                     </td>
-                    <td>
+                    <td class="app-card-status">
                         <x-status-badge :active="$certificate->active" />
                     </td>
                     <td class="app-col-actions">

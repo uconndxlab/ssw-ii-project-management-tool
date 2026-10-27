@@ -8,7 +8,7 @@
 
 <div class="card shadow-sm app-index-table-card">
     <x-table-scroll>
-        <table class="table table-hover align-middle mb-0">
+        <table class="table table-hover align-middle mb-0 app-cards">
             <thead>
                 <tr>
                     <th>
@@ -41,20 +41,20 @@
             <tbody>
                 @forelse($organizations as $organization)
                 <tr>
-                    <td>
+                    <td class="app-card-lead">
                         <a href="{{ route('organizations.show', $organization) }}" class="app-link app-link--strong app-row-link">
                             {{ $organization->name }}
                         </a>
                     </td>
-                    <td class="text-muted small">{{ $organization->po_number ?: '—' }}</td>
-                    <td>
+                    <td data-label="PO" class="text-muted small">{{ $organization->po_number ?: '—' }}</td>
+                    <td data-label="States">
                         <x-table-badge-list
                             kind="state"
                             :items="$organization->states"
                             route-name="states.show"
                         />
                     </td>
-                    <td>
+                    <td data-label="Projects">
                         <x-table-badge-list
                             kind="project"
                             :items="$organization->projects"
@@ -62,7 +62,7 @@
                             :empty-label="$scopeEmptyLabel($organization->program_scope_mode, 'All projects', 'No projects')"
                         />
                     </td>
-                    <td>
+                    <td data-label="Programs">
                         <x-table-badge-list
                             kind="program"
                             :items="$organization->programs"
@@ -70,13 +70,13 @@
                             :empty-label="$scopeEmptyLabel($organization->program_scope_mode, 'All programs', 'No programs')"
                         />
                     </td>
-                    <td>
+                    <td class="app-card-status">
                         <x-status-badge :active="$organization->active" />
                     </td>
-                    <td>
+                    <td data-label="Agreements">
                         <span class="app-count">{{ $organization->agreements_count ?? $organization->agreements->count() }}</span>
                     </td>
-                    <td class="text-muted small">{{ $organization->created_at->format('M d, Y') }}</td>
+                    <td data-label="Created" class="text-muted small">{{ $organization->created_at->format('M d, Y') }}</td>
                     <td class="app-col-actions">
                         @php $actionKey = 'organization-actions-' . $organization->id; @endphp
                         <div class="dropdown app-row-actions d-inline-block">

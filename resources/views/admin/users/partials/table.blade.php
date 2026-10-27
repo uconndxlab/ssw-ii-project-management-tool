@@ -10,7 +10,7 @@
 
 <div class="card shadow-sm app-index-table-card">
     <x-table-scroll>
-        <table class="table table-hover align-middle mb-0">
+        <table class="table table-hover align-middle mb-0 app-cards">
             <thead>
                 <tr>
                     <th>
@@ -44,25 +44,25 @@
                 @forelse($users as $user)
                 @php $scope = $user->getScopeBySource(); @endphp
                 <tr>
-                    <td>
+                    <td class="app-card-lead">
                         <x-user-link :user="$user" class="app-link app-link--strong app-row-link d-block" />
                     </td>
-                    <td class="text-muted small">{{ $user->email }}</td>
-                    <td class="text-muted small">{{ $user->po_number ?: '—' }}</td>
-                    <td>
+                    <td data-label="Email" class="text-muted small">{{ $user->email }}</td>
+                    <td data-label="PO" class="text-muted small">{{ $user->po_number ?: '—' }}</td>
+                    <td data-label="Access">
                         <x-category-badge kind="role">{{ $user->accessLabel() }}</x-category-badge>
                     </td>
-                    <td class="small">
+                    <td data-label="Supervisor" class="small">
                         @if($user->supervisor)
                             <x-user-link :user="$user->supervisor" class="text-decoration-none" />
                         @else
                             <span class="text-muted">—</span>
                         @endif
                     </td>
-                    <td>
+                    <td class="app-card-status">
                         <x-status-badge :active="$user->active" />
                     </td>
-                    <td>
+                    <td data-label="Projects">
                         <x-table-badge-list
                             kind="project"
                             :items="($user->program_scope_mode?->value ?? null) === 'all'
@@ -77,7 +77,7 @@
                             :empty-label="$scopeEmptyLabel($user->program_scope_mode, 'All projects', 'No projects')"
                         />
                     </td>
-                    <td>
+                    <td data-label="Programs">
                         <x-table-badge-list
                             kind="program"
                             :items="($user->program_scope_mode?->value ?? null) === 'all'

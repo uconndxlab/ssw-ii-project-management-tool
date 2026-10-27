@@ -460,6 +460,15 @@ if (root) {
     form.addEventListener('project-program-scope:change', sync);
     form.addEventListener('submit', () => sync());
     let handlingInvalid = false;
+    root.addEventListener('form-error:focus', (event) => {
+        const section = event.target.closest('[data-cert-section]');
+        if (section) navigate(section.dataset.certSection);
+        const row = event.target.closest('[data-cert-requirement]');
+        if (row) openRequirement(row);
+        const roles = event.target.closest('[data-cert-roles]');
+        if (roles) roles.hidden = false;
+    });
+
     form.addEventListener('invalid', (event) => {
         if (handlingInvalid) {
             event.preventDefault();

@@ -8,7 +8,7 @@
 
 <div class="card shadow-sm app-index-table-card">
     <x-table-scroll>
-        <table class="table table-hover align-middle mb-0">
+        <table class="table table-hover align-middle mb-0 app-cards">
             <thead>
                 <tr>
                     <th>
@@ -32,8 +32,8 @@
             <tbody>
                 @forelse($contactFamilies as $family)
                 <tr>
-                    <td class="fw-semibold">{{ $family->name }}</td>
-                    <td>
+                    <td class="app-card-lead fw-semibold">{{ $family->name }}</td>
+                    <td data-label="Projects">
                         <x-table-badge-list
                             kind="project"
                             :items="$family->projects"
@@ -41,7 +41,7 @@
                             :empty-label="$scopeEmptyLabel($family->program_scope_mode, 'All projects', 'No projects')"
                         />
                     </td>
-                    <td>
+                    <td data-label="Programs">
                         <x-table-badge-list
                             kind="program"
                             :items="$family->programs"
@@ -49,8 +49,8 @@
                             :empty-label="$scopeEmptyLabel($family->program_scope_mode, 'All programs', 'No programs')"
                         />
                     </td>
-                    <td><span class="app-count">{{ $family->activity_types_count }}</span></td>
-                    <td>
+                    <td data-label="Activity types"><span class="app-count">{{ $family->activity_types_count }}</span></td>
+                    <td class="app-card-status">
                         <x-status-badge :active="$family->active" />
                     </td>
                     <td class="app-col-actions">

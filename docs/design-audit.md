@@ -11,6 +11,8 @@ The original audit was documentation only. Resolution statuses below track subse
 
 **Update (2026-10-22, enterprise restyle).** The visual world was replaced: a cool neutral ramp, one cobalt accent, hairline borders, a 4/6/8 radius scale and 14px type, applied through Bootstrap's variables and `resources/css/app.css` (see [`DESIGN.md`](../DESIGN.md)). The sidebar is docked, the compact form bar is light, entity hues are gone in favor of quiet chips, index tables got one-line rows with a visible "+N", and the relationship ledgers are flat disclosures. Sections 3, 5, 6 and 7 are resolved except where marked open below. A review the same day found the restyle too plain and too hard to scan in places; section 8 lists what is left and the roadmap orders it.
 
+**Update (2026-10-27, merged-app follow-up).** The remaining implementation fixes are complete: phone cards now cover every index listing (including Certificates, Certification Tools and Supervisees); Home activity actions fit phone widths; reduced motion removes the drawer slide; charts use current design tokens; and validation summaries link to their fields, including nested certificate editors. Table headers now have a distinct darker fill. Sidebar, Recent, scrollbar locks and immediate active-state reset were checked in Chromium during the integration work. This is a targeted completion update, not a new audit or health score. Cross-browser, screen-reader and physical-touch checks remain open.
+
 ## Severity
 
 | Level | Meaning | Count |
@@ -125,7 +127,7 @@ The original findings remain below as a resolution checklist.
 
 ## 4. Fields and form controls
 
-**Status: mostly resolved.** Both BLOCKERs are fixed: token pickers are named comboboxes with a listbox, arrow-key and Enter selection, named remove buttons and a live announcement; open drawers make the rest of the page inert and return focus. Also fixed: errors and help are linked to their fields (with `aria-invalid` and `aria-required`), radio groups are fieldsets or named radio groups, index filters have accessible names, control outlines are 3:1, and the two save bar findings (the bar is gone). Also fixed: the drawer's focus, page lock, close buttons and Escape now live in the shared `form-drawer.js` (a page only toggles `.is-open`), labels without a `for` are linked to the control beside them (the certificate requirement rows, including rows added by script), and editing only a token picker now marks the form as having unsaved changes. The restyle also aligned the picker's minimum height with the 36px fields and set labels to 500 weight. Still open: the drawer's reduced-motion override and the subsection rule (now 2px, still flagged by the detector as intentional).
+**Status: resolved for the implementation findings.** Named comboboxes, keyboard selection, field descriptions and error states, required/group semantics, control contrast, shared drawer focus/scroll/Escape handling, dynamic labels and dirty-state tracking are implemented. The October 27 follow-up adds field links from validation summaries and removes the drawer slide for reduced motion. The 2px subsection rule is an intentional system choice.
 
 `form-field`, `form-switch`, `form-radio-card`, `form-subsection`, `form-options`, `form-errors`, `token-picker`, `save-bar`, `form-drawer`
 
@@ -147,15 +149,15 @@ The original findings remain below as a resolution checklist.
 
 ### NIT
 
-- `form-switch` and `form-field` emit errors as `text-danger small`, while `form-errors` uses an alert. Keep both, but put a link from each summary item to its field.
+- [x] `form-switch` and `form-field` retain inline errors while `form-errors` supplies a summary. Summary messages now link to their matching controls, including nested inputs and token pickers; non-field errors remain plain text.
 - [x] Every label is 600 weight, so labels compete with `h5` section titles. Current product UIs use 500 for labels.
 - `.form-subsection`'s 4px left rule (flagged by the detector as `side-tab`) is documented and intentional. It's fine, but the same accent on dropdown items (`app.css:285`) adds a second meaning for the same mark.
-- The drawer has no `prefers-reduced-motion` override for its 0.2s slide. That's low risk, but DESIGN.md already notes the gap.
+- [x] The drawer now removes its panel slide for `prefers-reduced-motion: reduce`; the backdrop fade remains.
 - [x] `token-picker` hard-codes `min-height: 42px`, while `.form-control` is 38px, so pickers and inputs in the same row don't line up.
 
 ## 5. Tables
 
-**Status: resolved (2026-10-22).** Sort state, pagination names and htmx loading feedback were fixed earlier. The restyle added one-line cells with two-line name clamps (rows 48–56px; 63px for a two-line name), phone cards and a collapsed "Filters (n)" panel for the agreements and activities lists, an embedded activity table without its Agreements column, one link style, a three-dots row menu in place of icon strips, and visible sort carets. The other index tables keep a scrolling wrapper on phones. The shared confirmation dialog now replaces all 20 native confirmation sites.
+**Status: resolved (updated 2026-10-27).** Sort state, pagination names, htmx feedback, linked row targets and shared confirmations are implemented. Every index listing now uses labeled phone cards; Agreements and Activities additionally collapse their filters. Embedded and report data tables retain local horizontal scrolling. Table headers use the darker header token and stronger text, separate from the canvas.
 
 `agreements/partials/table.blade.php` (representative of the index partials), `recent-activity-table`, `table-sort-link`, `table-filter-clear`, `htmx-pagination`
 
@@ -176,7 +178,7 @@ The original findings remain below as a resolution checklist.
 - [x] Clear-filters uses `btn-outline-danger` red for a non-destructive action. Use outline-secondary.
 - [x] Unsorted columns show a 50%-opacity double caret on every header, which adds noise. Show the caret on hover or focus only.
 - [x] `recent-activity-table` and `relationship-scroll-panel` restyle WebKit scrollbars with off-palette grays (`#8d98a5`, `#97a3af`). Native scrollbars are the expectation in product UI.
-- Dates and counts aren't `font-variant-numeric: tabular-nums`, so columns jitter.
+- [x] Tables use `font-variant-numeric: tabular-nums`, so dates and counts align.
 - [x] Column widths are set inline in each table partial (`style="min-width:140px"`) instead of shared classes.
 
 ## 6. Buttons
@@ -233,10 +235,10 @@ Sortable-column discoverability was also restored: inactive columns always show 
 ### NIT
 
 - Breadcrumb links are accent blue while every other link is ink with a grey underline. Pick one link treatment for breadcrumbs.
-- The phone card layout covers only the agreements and activities lists; the other index tables still scroll sideways.
-- The Recent panel, an unpinned sidebar peek and the drawer were not re-checked after the restyle.
+- [x] Phone cards now cover all index listings, including reference/admin lists, Certificates, Certification Tools and Supervisees.
+- [x] Recent, the sidebar peek and the drawer have been rechecked in Chromium; integration follow-ups fixed transition timing, active-state delay, icon alignment and scrollbar-induced page shifts. Assistive-technology and other-browser checks remain open.
 
-## Roadmap (updated 2026-10-22, after the post-restyle review)
+## Roadmap (updated 2026-10-27, after integration fixes)
 
 **Done.** Shell and navigation, headers and breadcrumbs, the field and table accessibility pass, and the enterprise restyle (tokens through Bootstrap's variables, docked sidebar, light compact bar, quiet chips with "+N" menus, one-line tables with row menus and phone cards, flat ledgers, button sizes, CSS consolidation). Two regressions from the restyle are fixed (the collapsed search hint; the activity date is a link).
 
@@ -253,11 +255,11 @@ Sortable-column discoverability was also restored: inactive columns always show 
    **Summary and record hierarchy follow-up — complete.** Summary ledgers now honor an explicit closed default at every count, including one record; wider Relationships panels retain their open default. Preview names form one clipped comma-separated line with an ellipsis, with no +N suffix; the heading retains the total count. Header facts and prominent existing Summary totals now cover organizations, projects, programs, states, teams, users/profiles, logging fields and activities. Organization YTD totals lead, redundant identity/status rows are removed, and user scope-source labels, team status, required-field flags and contact actions remain available. Agreement candidates and attachments also use closed Summary disclosures. The views use already-loaded records and existing totals; controller queries are unchanged.
    **Useful facts and table edge cues — complete.** Removed created/updated/added/joined record facts rather than filling every header strip. Organization PO and logging-field type are compact labels; absent identifiers and repeated organization relationship counts are omitted. Useful agreement/activity dates and user contact/supervisor details remain. All listing tables share directional scroll shadows that clear at the corresponding boundaries and update after resize or htmx replacement. The cues sit below column headings and above pagination, with pointer input passing through.
 
-5. **Confirmations — complete; remaining accessibility:** the approved dialog now replaces all 20 native confirmation sites, including both certificate-form handlers. One shared modal has named records, explicit actions, Cancel-first focus, Escape/focus restoration, single form submission and reduced-motion support. Project deletion copy now accurately explains that programs are kept and orphaned-program deletion is blocked. Still open: a reduced-motion override for the drawer, and a re-check of the Recent panel, sidebar peek and drawer.
+5. **Confirmations and drawer accessibility — complete.** Shared confirmations retain named records, explicit actions, Cancel-first focus, Escape/focus restoration and reduced-motion support. Drawers now remove their panel slide under reduced motion. Recent, sidebar peek and drawer integration checks passed in Chromium, including stable page width during scroll locks and immediate clearing of Recent's active state. Screen-reader, Safari/Firefox and real-touch checks remain open.
    **Unsaved navigation — complete.** Dirty-form ordinary same-tab links and Cancel use the shared dialog with an exit icon, Keep editing and Discard changes. Values and focus survive cancellation; approved navigation resumes the original link without a second prompt. Modified/new-tab links, downloads and same-page anchors retain their normal behavior. Native browser protection remains for refresh, close and browser-driven navigation, where custom styling is unavailable.
-6. **Phone cards for the other index tables** (projects, programs, states, teams, organizations, users, admin lists): add `app-cards` and `data-label`. Include Home's existing horizontal overflow at 390px: its row action groups extend beyond the viewport. Confirmed unchanged by the soft-elevation update.
+6. **Phone cards and Home overflow — complete.** All index templates now use `app-cards`, lead/status placement and labeled detail cells. This includes projects, programs, states, teams, organizations, users/Supervisees, logging fields, activity families/types, certificates and certification tools. Home activity actions stack on phones, and long linked names wrap within the available space.
 7. **Page patterns:** record pages with tabs (Overview, Deliverables, Activity, People, Files); long forms with a sticky sections list in the empty gutter, or create-then-enrich; deliverables chosen by type first; separate screens for building certificate rules and checking them; a dashboard that shows what needs attention.
-8. **[NIT]** Breadcrumb link style, deliverable progress bars and charts (still stock Bootstrap colors), the page-header API refactor (27 props), the remaining inline `style=""` sizes.
+8. **[NIT]** Breadcrumb link style, the deferred page-header API refactor (27 props), and remaining one-off inline sizes. Deliverable chart colors now read current CSS tokens; semantic progress bars already use the shared Bootstrap variables. Validation summaries now link to matching controls.
 
 **Deferred or later.** Pinned or favorite destinations on Home, a dark theme, Recent connection diagrams. Open checks: screen reader testing, Safari and Firefox (the phone card CSS uses `:has()`), real touch hardware, and how much staff use phones.
 

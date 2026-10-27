@@ -8,7 +8,7 @@
 
 <div class="card shadow-sm app-index-table-card">
     <x-table-scroll>
-        <table class="table table-hover align-middle mb-0">
+        <table class="table table-hover align-middle mb-0 app-cards">
             <thead>
                 <tr>
                     <th>
@@ -38,9 +38,9 @@
             <tbody>
                 @forelse($activityTypes as $type)
                 <tr>
-                    <td class="fw-semibold">{{ $type->name }}</td>
-                    <td class="text-muted small">{{ $type->contactFamily->name }}</td>
-                    <td>
+                    <td class="app-card-lead fw-semibold">{{ $type->name }}</td>
+                    <td data-label="Family" class="text-muted small">{{ $type->contactFamily->name }}</td>
+                    <td data-label="Projects">
                         <x-table-badge-list
                             kind="project"
                             :items="$type->projects"
@@ -48,7 +48,7 @@
                             :empty-label="$scopeEmptyLabel($type->program_scope_mode, 'All projects', 'No projects')"
                         />
                     </td>
-                    <td>
+                    <td data-label="Programs">
                         <x-table-badge-list
                             kind="program"
                             :items="$type->programs"
@@ -56,9 +56,9 @@
                             :empty-label="$scopeEmptyLabel($type->program_scope_mode, 'All programs', 'No programs')"
                         />
                     </td>
-                    <td>{{ $type->duration_days }}</td>
-                    <td>{{ $type->duration_hours }}</td>
-                    <td>
+                    <td data-label="Days">{{ $type->duration_days }}</td>
+                    <td data-label="Hours">{{ $type->duration_hours }}</td>
+                    <td class="app-card-status">
                         <x-status-badge :active="$type->active" />
                     </td>
                     <td class="app-col-actions">

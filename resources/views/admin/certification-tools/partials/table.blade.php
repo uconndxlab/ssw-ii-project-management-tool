@@ -8,7 +8,7 @@
 
 <div class="card shadow-sm app-index-table-card">
     <x-table-scroll>
-        <table class="table table-hover align-middle mb-0">
+        <table class="table table-hover align-middle mb-0 app-cards">
             <thead>
                 <tr>
                     <th><x-table-sort-link column="name" label="Name" :sort="$s" :direction="$d" :url="$url('name')" target="#certification-tools-table" /></th>
@@ -23,15 +23,15 @@
             <tbody>
                 @forelse($certificationTools as $tool)
                 <tr>
-                    <td class="fw-semibold">
+                    <td class="app-card-lead fw-semibold">
                         {{ $tool->name }}
                         @if($tool->retired_at)
                             <span class="app-tag ms-1">Retired</span>
                         @endif
                     </td>
-                    <td>{{ $tool->dimensions_count }}</td>
-                    <td>{{ $tool->score_fields_count }}</td>
-                    <td>
+                    <td data-label="Dimensions">{{ $tool->dimensions_count }}</td>
+                    <td data-label="Score fields">{{ $tool->score_fields_count }}</td>
+                    <td data-label="Projects">
                         <x-table-badge-list
                             kind="project"
                             :items="$tool->projects"
@@ -39,7 +39,7 @@
                             :empty-label="$scopeEmptyLabel($tool->program_scope_mode, 'All projects', 'No projects')"
                         />
                     </td>
-                    <td>
+                    <td data-label="Programs">
                         <x-table-badge-list
                             kind="program"
                             :items="$tool->programs"
@@ -47,7 +47,7 @@
                             :empty-label="$scopeEmptyLabel($tool->program_scope_mode, 'All programs', 'No programs')"
                         />
                     </td>
-                    <td>
+                    <td class="app-card-status">
                         <x-status-badge :active="$tool->active" />
                     </td>
                     <td class="app-col-actions">

@@ -8,7 +8,7 @@
 
 <div class="card shadow-sm app-index-table-card">
     <x-table-scroll>
-        <table class="table table-hover align-middle mb-0">
+        <table class="table table-hover align-middle mb-0 app-cards">
             <thead>
                 <tr>
                     <th>
@@ -32,18 +32,18 @@
             <tbody>
                 @forelse($teams as $team)
                 <tr>
-                    <td>
+                    <td class="app-card-lead">
                         <a href="{{ route('teams.show', $team) }}" class="app-link app-link--strong app-row-link">
                             {{ $team->name }}
                         </a>
                     </td>
-                    <td>
+                    <td data-label="Members">
                         <span class="app-count">{{ $team->users_count }} {{ Str::plural('member', $team->users_count) }}</span>
                     </td>
-                    <td>
+                    <td class="app-card-status">
                         <x-status-badge :active="$team->active" />
                     </td>
-                    <td>
+                    <td data-label="Projects">
                         <x-table-badge-list
                             kind="project"
                             :items="$team->projects"
@@ -51,7 +51,7 @@
                             :empty-label="$scopeEmptyLabel($team->program_scope_mode, 'All projects', 'No projects')"
                         />
                     </td>
-                    <td>
+                    <td data-label="Programs">
                         <x-table-badge-list
                             kind="program"
                             :items="$team->programs"

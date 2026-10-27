@@ -2,6 +2,8 @@
 
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\MessageBag;
+use Illuminate\Support\ViewErrorBag;
 
 function pageDom(string $html): DOMXPath
 {
@@ -66,6 +68,28 @@ test('fields with help text give it an id the control can point at', function ()
 
     expect($help->length)->toBeGreaterThan(0)
         ->and($help->item(0)->getAttribute('id'))->toEndWith('-help');
+});
+
+test('validation summaries keep separate fields with the same message and escape their content', function () {
+    $errors = (new ViewErrorBag)->put('default', new MessageBag([
+        'name' => ['Provide a value.'],
+        'requirements.2.label' => ['Provide a value.'],
+        'description' => ['Invalid <script>alert(1)</script> value.'],
+    ]));
+
+    $html = $this->actingAs(createSystemAdmin())
+        ->withSession(['errors' => $errors])
+        ->get(route('certificates.create'))
+        ->assertOk()
+        ->getContent();
+    $xpath = pageDom($html);
+    $items = $xpath->query('//li[@data-error-name]');
+
+    expect($items->length)->toBe(3);
+    expect($items->item(0)->getAttribute('data-error-name'))->toBe('name');
+    expect($items->item(1)->getAttribute('data-error-name'))->toBe('requirements.2.label');
+    expect($xpath->query('//li[@data-error-name]//script')->length)->toBe(0);
+    expect($items->item(2)->textContent)->toBe('Invalid <script>alert(1)</script> value.');
 });
 
 test('every index filter control has an accessible name', function (string $route) {

@@ -5,6 +5,7 @@ colors:
   canvas: "#f0f2f5"
   surface: "#ffffff"
   fill: "#f0f2f5"
+  table-header: "#e1e6ed"
   hover: "#eef0f4"
   line: "#d4dbe3"
   line-strong: "#cfd5dd"
@@ -193,7 +194,8 @@ A cool, low-chroma neutral ramp with a single cobalt accent. Frontmatter values 
 ### Neutral
 - **Canvas** (`canvas`): the cool grey page background beneath elevated white working surfaces.
 - **Surface** (`surface`): cards, fields, the sidebar, drawers and menus.
-- **Fill** (`fill`): table headers, disclosure headers, selected picker tokens, inset wells and disabled fields.
+- **Fill** (`fill`): disclosure headers, selected picker tokens, inset wells and disabled fields.
+- **Table Header** (`table-header`): a darker cool grey band, distinct from the canvas; labels use the stronger neutral emphasis text.
 - **Hover** (`hover`): row and menu-item hover.
 - **Hairline** (`line`, `line-strong`): internal dividers and sidebar edges (`line`); picker-token and well edges (`line-strong`). Linked chips use the stronger control outline. Ordinary cards have transparent outer borders; semantic borders such as danger and selected rows remain visible.
 - **Control Outline** (`control-outline`): field, select, checkbox and radio outlines, 3:1 on white.
@@ -216,7 +218,7 @@ A cool, low-chroma neutral ramp with a single cobalt accent. Frontmatter values 
 - **Body:** controls and content (0.875rem, 400, 1.5).
 - **Label:** field labels (0.875rem, 500); required markers are appended in Error Red.
 - **Small:** help, meta and descriptions (0.8125rem). Absolute, not em-based, so nested small text does not shrink twice.
-- **Table head:** 0.78125rem, 600, muted, sentence case.
+- **Table head:** 0.78125rem, 600, neutral emphasis ink, sentence case.
 - **Chip:** 0.75rem, 500.
 - **Subsection:** muted uppercase labels (0.75rem, 600, 0.04em tracking), reserved for form subsections, record-page sub-headings and entity-type tags.
 
@@ -230,7 +232,7 @@ Desktop listing pages fit the viewport. Their title, filters and pagination rema
 
 Lists and record pages use the room beside the sidebar up to a maximum container width of 1680px. Create and edit forms use the shared centered form column (maximum 68rem). Section cards have 1rem body padding and 1.5rem spacing between them; field groups use 1rem.
 
-Page headers wrap their title and action area with a 1rem gap; actions align with the top of the title, and long record names wrap. Below 768px, index tables marked `app-cards` become one card per row (name and menu on top, status, then labeled lines) and index filters collapse behind a "Filters" button that shows how many are active. Other tables keep a horizontally scrollable wrapper. Below 992px the sidebar becomes a slide-in menu opened from the phone top bar. Radio-card rows use two equal columns.
+Page headers wrap their title and action area with a 1rem gap; actions align with the top of the title, and long record names wrap. Below 768px, all index tables use `app-cards`: one card per row with name and menu on top, status, then labeled lines. Agreements and Activities collapse filters behind a "Filters" button that shows how many are active. Embedded data and report tables keep a horizontally scrollable wrapper. Home activity actions stack below their content on phones so long names do not push controls outside the page. Below 992px the sidebar becomes a slide-in menu opened from the phone top bar. Radio-card rows use two equal columns.
 
 Drawers attach to the right edge at a maximum width of 52rem, filling narrower viewports. Their bodies scroll independently.
 
@@ -308,7 +310,7 @@ A "Skip to content" link is the first keyboard stop. The sidebar navigation has 
 
 ### Tables and Relationship Ledgers
 
-Index tables use a Fill header in sentence case (0.78125rem, 600, muted), 1px row dividers, a hover tint, and one-line cells with names clamped to two lines. Rows are 48–56px. Record names, people and other links share one style: ink, 500 weight, a grey underline at rest, cobalt on hover (`.app-link`). Sort links retain visible carets at rest. Row actions are a single three-dots menu (View, Edit, Duplicate, then Delete in red after a divider), not a strip of icon buttons. Destructive actions still confirm.
+Index tables use the darker Table Header fill in sentence case (0.78125rem, 600, neutral emphasis ink), 1px row dividers, a hover tint, and one-line cells with names clamped to two lines. Rows are 48–56px. Record names, people and other links share one style: ink, 500 weight, a grey underline at rest, cobalt on hover (`.app-link`). Sort links retain visible carets at rest. Row actions are a single three-dots menu (View, Edit, Duplicate, then Delete in red after a divider), not a strip of icon buttons. Destructive actions still confirm. Deliverable charts read accent, success, muted text and grid colors from the same CSS tokens; expected pace retains its dashed line so meaning does not rely on color alone.
 
 When a row has a permitted record-view link, stretch that native anchor across the row with `.app-row-link`; this also applies to embedded recent activities. Related links, chips and menu controls sit above the target and retain their own actions. Keyboard focus outlines the row without adding a second tab stop. Native modified-click and open-in-new-tab behavior remain available. Keep any two-line text clamp inside `.app-row-link-label` so it does not clip the stretched target. Records without a view link, and administrative lists without a record-view page, do not gain a row target.
 
@@ -336,7 +338,7 @@ Form actions live in the page header, not in a bottom bar: a status line (idle, 
 
 Ordinary same-tab links and Cancel on a dirty form first use the shared confirmation, with the exit icon, record name, Keep editing and Discard changes. Keep editing receives focus and preserves values; confirming resumes the original link without a second native prompt. New-tab/modified links, downloads, same-document anchors and local UI controls pass through. Saving retains its original validation and submission flow. Refresh, tab close and browser-driven navigation retain the browser-owned `beforeunload` safeguard; its appearance is not customizable. Restored pages reset the navigation bypass so retained unsaved values remain protected.
 
-Drawers behave as modals: the rest of the page is inert while one is open, Escape closes it, and focus returns to the control that opened it. They are a white panel with 1.25rem padding, hairline header and footer, a 35% ink backdrop and the drawer shadow, sliding in over 0.2s. The drawer CSS has no reduced-motion override.
+Drawers behave as modals: the rest of the page is inert while one is open, Escape closes it, and focus returns to the control that opened it. They are a white panel with 1.25rem padding, hairline header and footer, a 35% ink backdrop and the drawer shadow, sliding in over 0.2s. Reduced motion removes the panel slide while retaining the backdrop fade. The document reserves scrollbar space while overlays lock scrolling, preventing a sideways page shift.
 
 ### Alerts, Dropdowns and Pagination
 

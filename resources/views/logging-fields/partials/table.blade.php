@@ -8,7 +8,7 @@
 
 <div class="card shadow-sm app-index-table-card">
     <x-table-scroll>
-        <table class="table table-hover align-middle mb-0">
+        <table class="table table-hover align-middle mb-0 app-cards">
             <thead>
                 <tr>
                     <th>
@@ -35,7 +35,7 @@
             <tbody>
                 @forelse($loggingFields as $field)
                 <tr>
-                    <td>
+                    <td class="app-card-lead">
                         <a href="{{ route('logging-fields.show', $field) }}" class="app-link app-link--strong app-row-link">
                             {{ $field->name }}
                         </a>
@@ -43,8 +43,8 @@
                             <br><small class="text-muted">{{ Str::limit($field->help_text, 60) }}</small>
                         @endif
                     </td>
-                    <td><span class="badge app-tag">{{ $field->fieldTypeLabel() }}</span></td>
-                    <td>
+                    <td data-label="Type"><span class="badge app-tag">{{ $field->fieldTypeLabel() }}</span></td>
+                    <td data-label="Projects">
                         <x-table-badge-list
                             kind="project"
                             :items="$field->projects"
@@ -52,7 +52,7 @@
                             :empty-label="$scopeEmptyLabel($field->program_scope_mode, 'All projects', 'No projects')"
                         />
                     </td>
-                    <td>
+                    <td data-label="Programs">
                         <x-table-badge-list
                             kind="program"
                             :items="$field->programs"
@@ -60,7 +60,7 @@
                             :empty-label="$scopeEmptyLabel($field->program_scope_mode, 'All programs', 'No programs')"
                         />
                     </td>
-                    <td>
+                    <td data-label="Available in">
                         <div class="d-flex flex-wrap gap-1">
                             @if($field->available_in_agreements)
                                 <span class="badge app-tag">Agreements</span>
@@ -76,7 +76,7 @@
                             @endif
                         </div>
                     </td>
-                    <td>
+                    <td class="app-card-status">
                         <x-status-badge :active="$field->is_active" />
                     </td>
                     <td class="app-col-actions">
