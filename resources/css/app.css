@@ -3,6 +3,7 @@
 :root {
     --app-page-bg: #f0f2f5;
     --app-surface-fill: #f0f2f5;
+    --app-table-header-bg: #e1e6ed;
     --app-surface-inset: #eef0f4;
     --app-line: #d4dbe3;
     --app-line-strong: #cfd5dd;
@@ -352,7 +353,7 @@ main {
     [data-index-table] .app-table-scroll-frame > .table-responsive::-webkit-scrollbar {
         width: 0.5rem;
         height: 0.5rem;
-        background: var(--app-surface-fill);
+        background: var(--app-table-header-bg);
     }
 
     [data-index-table] .app-table-scroll-frame > .table-responsive::-webkit-scrollbar-track {
@@ -392,7 +393,7 @@ main {
         position: sticky;
         top: 0;
         z-index: 6;
-        background-color: var(--app-surface-fill);
+        background-color: var(--app-table-header-bg);
     }
 }
 
@@ -1866,15 +1867,15 @@ textarea.form-control {
 .table > thead > tr > th {
     font-size: 0.78125rem;
     font-weight: 600;
-    color: var(--bs-secondary-color);
+    color: var(--bs-secondary-text-emphasis);
     white-space: nowrap;
-    background-color: var(--app-surface-fill);
+    background-color: var(--app-table-header-bg);
     border-bottom-color: var(--app-line);
 }
 
 .table-light {
-    --bs-table-bg: var(--app-surface-fill);
-    --bs-table-color: var(--bs-secondary-color);
+    --bs-table-bg: var(--app-table-header-bg);
+    --bs-table-color: var(--bs-secondary-text-emphasis);
     --bs-table-border-color: var(--app-line);
 }
 
