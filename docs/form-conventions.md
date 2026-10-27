@@ -46,3 +46,13 @@ Create/edit forms share one shell and the same components. Do not invent a per-p
   headers after the previous editor collapses, while retaining keyboard focus on the editor toggle.
 - Enrollment progress links retain the source agreement for breadcrumbs. Only visible roster-linked
   agreements can appear in that navigation context; agreement context never limits certificate credit.
+
+## Certification lifecycle actions
+
+- Endorse, withdraw, return to coach, award, revoke and change coach are inline `<details>` panels on
+  the enrollment progress page, like coach confirmations. Each posts only its own action, never the
+  page. Unavailable actions are explained in the Next step text instead of shown as disabled buttons.
+- Required reasons (return, revoke) use `x-form-field` with the error name only for the submitted
+  panel, so one failed panel does not mark the others invalid. A hidden `lifecycle_form` reopens it.
+- Lifecycle forms post the cycle and the endorsement they were opened against; a stale or duplicate
+  submission returns an error flash that says nothing was saved.

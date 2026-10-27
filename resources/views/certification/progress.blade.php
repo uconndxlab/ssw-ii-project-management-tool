@@ -2,27 +2,19 @@
 @section('title', $enrollment->candidate->name.' — '.$enrollment->certificate->name)
 @section('content')
 <x-form-shell>
+    @php $badge = $enrollment->lifecycleBadge(); @endphp
     <x-page-header :title="$enrollment->candidate->name" :description="$enrollment->certificate->name" entity-type="Certificate enrollment">
+        <x-slot:badges><span class="badge rounded-pill {{ $badge['class'] }}">{{ $badge['label'] }}</span></x-slot:badges>
         <x-slot:meta>
             <span>{{ ucfirst($enrollment->phase->value) }} · Cycle {{ $enrollment->cycle }}</span>
-            @if($enrollment->supervisingCoach)<span>Coach: {{ $enrollment->supervisingCoach->name }}</span>@endif
+            <span>{{ $summary['met'] }} / {{ $summary['total'] }} requirements met</span>
+            <span>Supervising coach: {{ $enrollment->supervisingCoach?->name ?? 'none' }}</span>
         </x-slot:meta>
     </x-page-header>
     <x-form-errors />
-    <x-section-card title="Progress">
-        <div class="d-flex flex-wrap align-items-center gap-3">
-            <strong>{{ $summary['met'] }} / {{ $summary['total'] }} requirements met</strong>
-            <span class="badge {{ $summary['satisfied'] ? 'text-bg-success' : 'text-bg-secondary' }}">{{ $summary['satisfied'] ? 'Requirements met' : 'In progress' }}</span>
-        </div>
-        @if($progress)
-            <p class="small text-muted mt-2 mb-0">Progress is calculated from current evidence. Requirements met still needs coach endorsement and a manager’s award.</p>
-            @if($progress['cycle_blocked'])<p class="alert alert-warning mt-3 mb-0">This cycle needs its previous award date before activity evidence can count.</p>@endif
-        @else
-            <p class="small text-muted mt-2 mb-0">Detailed progress and evidence are available to admins, certification coaches, and managers in scope.</p>
-        @endif
-    </x-section-card>
+    @include('certification.partials.lifecycle-status')
     @if($progress)
-        <x-section-card :title="ucfirst($enrollment->phase->value).' requirements'">
+        <x-section-card :title="ucfirst($enrollment->phase->value).' requirements · cycle '.$enrollment->cycle">
             @forelse($progress['requirements']->groupBy(fn ($row) => $row['requirement']->certificate_requirement_group_id ?? 'ungrouped') as $groupId => $members)
                 @php $groupResult = $progress['groups']->first(fn ($row) => (string) $row['group']->id === (string) $groupId); @endphp
                 @if($groupResult)
@@ -114,5 +106,6 @@
             @empty<p class="text-muted mb-0">No requirements configured for this phase.</p>@endforelse
         </x-section-card>
     @endif
+    @include('certification.partials.awards-history')
 </x-form-shell>
 @endsection

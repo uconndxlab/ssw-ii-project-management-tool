@@ -14,8 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * One (candidate, certificate) assignment, global regardless of how many agreements the candidate
  * appears on. Sponsorship is provenance/display only, never a progress-scoping boundary (spine
- * decision 2). Requirements-met/endorsement/award/renewal fields are deliberately absent until
- * Docs 3-4 need them.
+ * decision 2). Requirements met is computed live; endorsements and awards live in certificate_awards.
  *
  * @property CertificateEnrollmentStatus $status
  * @property CertificateRequirementPhase $phase
@@ -75,6 +74,38 @@ class CertificateEnrollment extends Model
     public function attestations(): HasMany
     {
         return $this->hasMany(CertificateAttestation::class);
+    }
+
+    /** @return HasMany<CertificateAward, $this> */
+    public function awards(): HasMany
+    {
+        return $this->hasMany(CertificateAward::class)->orderByDesc('cycle');
+    }
+
+    /** @return HasMany<CertificateActionLog, $this> */
+    public function actionLogs(): HasMany
+    {
+        return $this->hasMany(CertificateActionLog::class)->latest('created_at')->latest('id');
+    }
+
+    /**
+     * One status for every surface: the credential first, then the current cycle. Requirements met
+     * is live progress and is shown on the progress page, never stored here.
+     *
+     * @return array{label: string, class: string}
+     */
+    public function lifecycleBadge(): array
+    {
+        $latest = $this->awards->whereNotNull('awarded_at')->sortByDesc('cycle')->first();
+
+        return match (true) {
+            $this->status === CertificateEnrollmentStatus::Revoked => ['label' => 'Revoked', 'class' => 'text-bg-danger'],
+            $latest?->isLive() === true => ['label' => $latest->expires_at ? 'Certified · until '.$latest->expires_at->format('M j, Y') : 'Certified · no expiry', 'class' => 'text-bg-success'],
+            $latest?->isExpired() === true => ['label' => 'Expired '.$latest->expires_at?->format('M j, Y'), 'class' => 'text-bg-secondary'],
+            $this->awards->contains(fn (CertificateAward $award) => $award->cycle === $this->cycle && $award->awarded_at === null) => ['label' => 'Endorsed', 'class' => 'text-bg-warning'],
+            $this->isUnstarted() => ['label' => 'Assigned', 'class' => 'bg-secondary-subtle text-secondary-emphasis border'],
+            default => ['label' => 'In progress', 'class' => 'bg-secondary-subtle text-secondary-emphasis border'],
+        };
     }
 
     public function isUnstarted(): bool

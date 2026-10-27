@@ -7,7 +7,7 @@ use App\Enums\CertificateRequirementPhase;
 use App\Models\CertificateAttestation;
 use App\Models\CertificateEnrollment;
 use App\Models\CertificateRequirement;
-use App\Services\CertificateProgressService;
+use App\Services\CertificateLifecycleService;
 use App\Support\Authorization\CertificateProgressAccess;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -16,14 +16,17 @@ use Illuminate\Support\Facades\DB;
 
 class CertificateProgressController extends Controller
 {
-    public function __construct(private CertificateProgressAccess $access, private CertificateProgressService $progress) {}
+    public function __construct(private CertificateProgressAccess $access, private CertificateLifecycleService $lifecycle) {}
 
     public function show(CertificateEnrollment $certificateEnrollment): View
     {
         abort_unless($this->access->canView($this->actor(), $certificateEnrollment), 403);
-        $certificateEnrollment->loadMissing(['candidate', 'certificate.programs', 'supervisingCoach']);
-        $result = $this->progress->evaluate($certificateEnrollment);
-        $details = $this->access->canViewDetails($this->actor(), $certificateEnrollment);
+        $certificateEnrollment->loadMissing(['candidate', 'certificate.programs', 'supervisingCoach', 'awards.endorsedBy', 'awards.awardedBy', 'awards.revokedBy']);
+        $result = $this->lifecycle->evaluate($certificateEnrollment);
+        $actor = $this->actor();
+        $details = $this->access->canViewDetails($actor, $certificateEnrollment);
+        $canManage = $this->access->canManage($actor, $certificateEnrollment);
+        $coach = $certificateEnrollment->supervisingCoach;
         $summary = ['met' => $result['met'], 'total' => $result['total'], 'satisfied' => $result['satisfied']];
         if ($details) {
             foreach ($result['requirements'] as $row) {
@@ -36,7 +39,19 @@ class CertificateProgressController extends Controller
         return view('certification.progress', [
             'enrollment' => $certificateEnrollment, 'summary' => $summary,
             'progress' => $details ? $result : null,
-            'canConfirm' => $details && $this->access->canConfirm($this->actor(), $certificateEnrollment),
+            'canConfirm' => $details && $this->access->canConfirm($actor, $certificateEnrollment),
+            'lifecycle' => [
+                'pending' => $certificateEnrollment->awards->first(fn ($award) => $award->cycle === $certificateEnrollment->cycle && $award->awarded_at === null),
+                'awards' => $certificateEnrollment->awards->whereNotNull('awarded_at')->values(),
+                'previousAwardDate' => $this->lifecycle->previousAwardDate($certificateEnrollment),
+                'prerequisites' => $this->lifecycle->prerequisites($certificateEnrollment),
+                'expiresAt' => $this->lifecycle->expiresAt($certificateEnrollment, now()),
+                'coachCanEndorse' => $coach !== null && $this->access->canEndorse($coach, $certificateEnrollment),
+                'canEndorse' => $this->access->canEndorse($actor, $certificateEnrollment),
+                'canManage' => $canManage,
+                'coaches' => $canManage ? $this->lifecycle->eligibleCoaches($actor, $certificateEnrollment) : collect(),
+                'history' => $details ? $certificateEnrollment->actionLogs()->with('user')->get() : collect(),
+            ],
         ]);
     }
 

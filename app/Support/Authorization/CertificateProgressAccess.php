@@ -49,4 +49,19 @@ class CertificateProgressAccess
         return $enrollment->certificate !== null && $this->canView($actor, $enrollment)
             && array_intersect($this->programIds($enrollment->certificate), $actor->certification()->coachProgramIds()) !== [];
     }
+
+    /**
+     * Lifecycle duties are checked here rather than in a policy so the system-admin Gate::before
+     * bypass never grants coach judgment or manager authority.
+     */
+    public function canEndorse(User $actor, CertificateEnrollment $enrollment): bool
+    {
+        return $enrollment->supervising_coach_user_id === $actor->id && $this->canConfirm($actor, $enrollment);
+    }
+
+    public function canManage(User $actor, CertificateEnrollment $enrollment): bool
+    {
+        return $enrollment->certificate !== null && $this->canView($actor, $enrollment)
+            && array_intersect($this->programIds($enrollment->certificate), $actor->certification()->managerProgramIds()) !== [];
+    }
 }

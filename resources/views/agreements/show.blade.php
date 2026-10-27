@@ -291,7 +291,7 @@
                                             @if($enrollment->enrolled_at) · Assigned {{ $enrollment->enrolled_at->format('M j, Y') }}@endif
                                         </div>
                                     </div>
-                                    <div class="d-flex flex-wrap align-items-center gap-2"><span class="badge bg-secondary-subtle text-secondary-emphasis border">{{ $enrollment->isUnstarted() ? 'Assigned' : ($enrollment->status === \App\Enums\CertificateEnrollmentStatus::NotStarted ? 'In progress' : $enrollment->status->label()) }}</span>
+                                    <div class="d-flex flex-wrap align-items-center gap-2">@php $lifecycleBadge = $enrollment->lifecycleBadge(); @endphp<span class="badge {{ $lifecycleBadge['class'] }}">{{ $lifecycleBadge['label'] }}</span>
                                         <a href="{{ route('certificate-enrollments.show', ['certificateEnrollment' => $enrollment, 'agreement_id' => $agreement->id]) }}" class="small">Progress</a>
                                     </div>
                                 </div>

@@ -159,12 +159,13 @@ certificate_enrollments           IMPLEMENTED (Doc 2) with only the fields that 
                                   nullable (nullOnDelete — provenance only, survives agreement
                                   deletion), supervising_coach_user_id nullable (nullOnDelete),
                                   status, phase, cycle, enrolled_at, notes.
-                                  unique(certification_candidate_id, certificate_id). Doc 4 adds
-                                  requirements_met_at/endorsed_at/endorsed_by_user_id/award fields via
-                                  a NEW migration when actually needed — they do not exist yet.
-certificate_awards                PLANNED (Doc 4): certificate_enrollment_id, cycle, phase, awarded_at, awarded_by_user_id,
-                                  expires_at, requirements_snapshot json, revoked_at, revoked_by_user_id,
-                                  revoke_reason, pdf_path, pdf_generated_at
+                                  unique(certification_candidate_id, certificate_id). Doc 4 added NO
+                                  enrollment columns: endorsements and awards live in certificate_awards.
+certificate_awards                IMPLEMENTED (Doc 4): certificate_enrollment_id, cycle, phase, endorsed_at,
+                                  endorsed_by_user_id, endorsement_note, requirements_snapshot json,
+                                  awarded_at (null = endorsed, awaiting award), awarded_by_user_id,
+                                  award_note, expires_at date, revoked_at, revoked_by_user_id,
+                                  revoke_reason. unique(enrollment, cycle). pdf_* deferred to Doc 5.
 certificate_attestations          IMPLEMENTED (Doc 3): certificate_enrollment_id,
                                   certificate_requirement_id, cycle, satisfied, satisfied_at,
                                   satisfied_by_user_id, note. No evidence upload/file column.
@@ -183,8 +184,9 @@ certification_tool_submission_dimension_values
 certification_tool_submission_scores
                                   certification_tool_submission_id, certification_tool_score_field_id,
                                   value decimal. unique(submission, score_field)
-certificate_action_logs           PLANNED (Doc 4): certificate_enrollment_id, certificate_award_id nullable, user_id
-                                  nullable, action, context json, reason text; created_at only
+certificate_action_logs           IMPLEMENTED (Doc 4): certificate_enrollment_id, certificate_award_id nullable,
+                                  user_id nullable (null = system), action, cycle, context json, reason
+                                  text; created_at only
 user_certification_duties         user_id, duty (coach|manager), scope_type (system|project|program),
                                   scope_id nullable, granted_by_user_id, created_at, revoked_at,
                                   revoked_by_user_id. Self-auditing; no separate audit table.
@@ -239,6 +241,7 @@ errors. Fix with `./vendor/bin/sail artisan view:clear`. See the repo memory `do
 3. Capture & progress — activity-form tagging + submissions, attestation UI, CertificateProgressService.
    **COMPLETE IN WORKING TREE; UNCOMMITTED** — see `doc-3-capture-and-progress.md`.
 4. Lifecycle — statuses, endorsement gate, award/revoke, expiry + renewal cycles, action log.
+   **COMPLETE IN WORKING TREE; UNCOMMITTED** — see `doc-4-lifecycle-and-completion.md`.
 5. Surfacing (deferrable) — central indexes, candidate detail, PDF generation
    (needs `barryvdh/laravel-dompdf`), expiration notifications.
 
@@ -490,3 +493,20 @@ committed or released. Doc 1's shipped schema stays unchanged. See the completed
 - Checks passed: composer check (298 tests / 1,271 assertions, audit, Pint, PHPStan), build, and
   desktop/mobile Playwright checks for the navigation, badge and editor-scroll fixes. Screenshots
   and independent critique artifacts are gitignored under `.artifacts/doc3/`.
+
+### Doc 4 — Lifecycle & Completion (COMPLETE IN WORKING TREE; UNCOMMITTED)
+
+- Branch `feature/certificates-doc4` from `feature/certificates-doc3` @ `3ec5e7b`; nothing staged or
+  committed. One forward migration (`2026_10_27_132318`) adds `certificate_awards` and
+  `certificate_action_logs`; applied locally without resetting data.
+- Supervising coach endorses (freezes the snapshot, including scores and notes) → a different
+  manager awards (prerequisites re-checked against live awards) → expiring certificates open renewal
+  cycle N+1 automatically, and the progress service receives the previous award date. On-time renewal
+  extends the previous expiry; late renewal runs from the award date. Expired is computed.
+- Only the current live award can be revoked. Revocation needs a reason and closes the enrollment.
+  Duties are enforced in `CertificateProgressAccess`, outside the system-admin Gate bypass.
+- The NWIC guide does not define endorsement/award roles; the gate rests on spine decision 9.
+- `composer check` passed (312 tests); build passed; Playwright desktop/mobile with no console errors;
+  impeccable detector zero findings. Local demo records are labeled `Doc 4 Demo` (see Doc 4).
+- Doc 5 still owns PDFs, notifications, indexes and the candidate directory. Reinstatement after
+  revocation and COMET inter-rater sequencing remain deferred.
