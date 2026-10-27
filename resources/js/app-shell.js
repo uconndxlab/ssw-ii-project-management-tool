@@ -206,8 +206,11 @@ if (panel) {
 
     panel.addEventListener('shown.bs.offcanvas', () => search.focus());
 
-    panel.addEventListener('hidden.bs.offcanvas', () => {
+    panel.addEventListener('hide.bs.offcanvas', () => {
         trigger?.setAttribute('aria-expanded', 'false');
+    });
+
+    panel.addEventListener('hidden.bs.offcanvas', () => {
         document.body.classList.remove('app-recent-open');
         holdRail('recent', false);
         search.value = '';

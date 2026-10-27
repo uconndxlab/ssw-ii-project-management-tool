@@ -81,6 +81,18 @@
     --entity-org-border: #d5d9e0;
 }
 
+html {
+    scrollbar-gutter: stable;
+}
+
+/* The stable gutter replaces Bootstrap's inline body padding compensation. */
+@supports (scrollbar-gutter: stable) {
+    body.modal-open,
+    body:has(.offcanvas[aria-modal="true"], .offcanvas-lg[aria-modal="true"]) {
+        padding-right: 0 !important;
+    }
+}
+
 body {
     display: flex;
     flex-direction: column;
@@ -1129,12 +1141,32 @@ html[data-rail="unpinned"] .app-rail-pin-on {
         border: 0;
         border-right: 1px solid var(--app-line);
         border-radius: 0;
+        overflow: hidden;
     }
 
     .app-rail .app-rail-body {
         flex-grow: 1;
         height: 100%;
         padding: 0.75rem;
+    }
+
+    /* Keep icons anchored while the buttons and their rounded edges follow the rail width. */
+    .app-rail-label {
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
+
+    .app-rail-who {
+        flex: none;
+        width: 8.5rem;
+    }
+
+    .app-rail-search {
+        padding-inline: 0.6875rem;
+    }
+
+    .app-rail-log {
+        padding-inline: 0.75rem;
     }
 
     /* Tighter rows on desktop so an admin's full list fits a 900px-tall window. */
@@ -1145,10 +1177,22 @@ html[data-rail="unpinned"] .app-rail-pin-on {
 
     /* Headings keep one height whether the rail is open or collapsed, so icons never shift. */
     .app-rail-heading {
+        position: relative;
         display: flex;
         align-items: center;
         height: 1.25rem;
         padding-block: 0;
+        white-space: nowrap;
+    }
+
+    .app-rail-group + .app-rail-group .app-rail-heading::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 0;
+        width: calc(var(--app-rail-closed) - 1.5rem - 1px);
+        border-top: 1px solid var(--bs-border-color);
+        opacity: 0;
     }
 
     .app-rail-search,
@@ -1162,6 +1206,7 @@ html[data-rail="unpinned"] .app-rail-pin-on {
 
     .app-rail-head {
         min-height: 2.25rem;
+        padding-inline: 0.375rem;
     }
 
     .app-rail-group + .app-rail-group {
@@ -1178,45 +1223,31 @@ html[data-rail="unpinned"] .app-rail-pin-on {
     }
 
     html[data-rail="unpinned"] .app-rail:not(.is-peek) .app-rail-label {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        overflow: hidden;
-        clip: rect(0, 0, 0, 0);
-        white-space: nowrap;
+        opacity: 0;
+        pointer-events: none;
     }
 
-    html[data-rail="unpinned"] .app-rail:not(.is-peek) .app-rail-pin,
-    html[data-rail="unpinned"] .app-rail:not(.is-peek) .app-rail-search-input,
-    html[data-rail="unpinned"] .app-rail:not(.is-peek) .app-rail-kbd {
+    html[data-rail="unpinned"] .app-rail:not(.is-peek) .app-rail-nav {
+        scrollbar-width: none;
+    }
+
+    html[data-rail="unpinned"] .app-rail:not(.is-peek) .app-rail-pin {
         display: none;
     }
 
-    html[data-rail="unpinned"] .app-rail:not(.is-peek) .app-rail-head {
-        justify-content: center;
-    }
-
-    html[data-rail="unpinned"] .app-rail:not(.is-peek) .app-rail-link,
-    html[data-rail="unpinned"] .app-rail:not(.is-peek) .app-rail-account,
-    html[data-rail="unpinned"] .app-rail:not(.is-peek) .app-rail-log,
-    html[data-rail="unpinned"] .app-rail:not(.is-peek) .app-rail-search {
-        justify-content: center;
-        padding-inline: 0;
+    html[data-rail="unpinned"] .app-rail:not(.is-peek) .app-rail-search-input,
+    html[data-rail="unpinned"] .app-rail:not(.is-peek) .app-rail-kbd {
+        opacity: 0;
+        visibility: hidden;
     }
 
     /* Collapsed headings keep their space; a divider stands in for the text between groups. */
     html[data-rail="unpinned"] .app-rail:not(.is-peek) .app-rail-heading {
-        position: relative;
-        overflow: hidden;
         color: transparent;
-        white-space: nowrap;
     }
 
     html[data-rail="unpinned"] .app-rail:not(.is-peek) .app-rail-group + .app-rail-group .app-rail-heading::after {
-        content: '';
-        position: absolute;
-        inset: 50% 0 auto;
-        border-top: 1px solid var(--bs-border-color);
+        opacity: 1;
     }
 
     html[data-rail="unpinned"] .app-rail.is-peek {
@@ -1232,6 +1263,24 @@ html[data-rail="unpinned"] .app-rail-pin-on {
 
         .offcanvas-lg.app-rail {
             transition: width 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s;
+        }
+
+        .app-rail-label,
+        .app-rail-search-input,
+        .app-rail-kbd {
+            transition: opacity 0.12s ease-out 0.06s;
+        }
+
+        .app-rail-heading {
+            transition: color 0.12s ease-out 0.06s;
+        }
+
+        .app-rail-heading::after {
+            transition: opacity 0.12s ease-out;
+        }
+
+        html[data-rail="unpinned"] .app-rail:not(.is-peek) :is(.app-rail-label, .app-rail-search-input, .app-rail-kbd, .app-rail-heading) {
+            transition-delay: 0s;
         }
     }
 }
@@ -1398,9 +1447,10 @@ html[data-rail="unpinned"] .app-rail-pin-on {
         transform: translateX(-1rem);
     }
 
-    .app-recent.showing,
-    .app-recent.show:not(.hiding) {
+    .offcanvas.app-recent.showing,
+    .offcanvas.app-recent.show:not(.hiding) {
         opacity: 1;
+        transform: none;
     }
 
     /* The panel closes on outside click via JS, so the rail and page stay clickable underneath. */
