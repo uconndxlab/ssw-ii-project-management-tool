@@ -1904,9 +1904,163 @@ textarea.form-control {
     border-radius: var(--bs-dropdown-item-border-radius);
 }
 
+/* Notes: a tinted panel with a 4px tone rule on the left, the same rule toasts use. */
 .alert {
-    --bs-alert-border-radius: var(--bs-border-radius);
+    --bs-alert-border-radius: 0 var(--bs-border-radius) var(--bs-border-radius) 0;
     --bs-alert-padding-y: 0.625rem;
+    --app-note-rule: var(--app-control-border);
+    border-width: 0 0 0 0.25rem;
+    border-left-color: var(--app-note-rule);
+}
+
+.alert-primary,
+.alert-info {
+    --app-note-rule: var(--app-accent);
+}
+
+.alert-success {
+    --app-note-rule: var(--bs-success);
+}
+
+.alert-warning {
+    --app-note-rule: var(--bs-warning);
+}
+
+.alert-danger {
+    --app-note-rule: var(--bs-danger);
+}
+
+/* Toasts float top right (below the phone top bar). Timed toasts shrink a bar along the bottom edge; it pauses on
+   hover, keyboard focus and while the tab is hidden. toasts.js owns the timing. */
+.app-toasts {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 1090;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: min(24rem, calc(100vw - 2rem));
+    pointer-events: none;
+}
+
+@media (max-width: 991.98px) {
+    .app-toasts {
+        top: 4.25rem;
+    }
+}
+
+.app-toast {
+    --app-toast-tone: var(--app-accent);
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    padding: 0.75rem 0.75rem 0.875rem 0.875rem;
+    overflow: hidden;
+    color: var(--bs-body-color);
+    background-color: var(--bs-body-bg);
+    border-left: 0.25rem solid var(--app-toast-tone);
+    border-radius: var(--bs-border-radius-lg);
+    box-shadow: var(--app-shadow-pop);
+    pointer-events: auto;
+}
+
+.app-toast--success {
+    --app-toast-tone: var(--bs-success);
+}
+
+.app-toast--warning {
+    --app-toast-tone: var(--bs-warning);
+}
+
+.app-toast--danger {
+    --app-toast-tone: var(--bs-danger);
+}
+
+.app-toast-icon {
+    flex: none;
+    font-size: 1.125rem;
+    line-height: 1.25rem;
+    color: var(--app-toast-tone);
+}
+
+.app-toast-body {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-top: 0.0625rem;
+    overflow-wrap: anywhere;
+}
+
+.app-toast-title {
+    font-weight: 600;
+    color: var(--app-ink);
+}
+
+.app-toast-body ul {
+    margin: 0.25rem 0 0;
+    padding-left: 1.125rem;
+}
+
+.app-toast-close {
+    flex: none;
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0;
+    margin: -0.25rem -0.25rem 0 0;
+    background-size: 0.625rem;
+}
+
+@media (pointer: coarse) {
+    .app-toast-close {
+        width: 2.5rem;
+        height: 2.5rem;
+        margin: -0.625rem -0.625rem -0.5rem 0;
+    }
+}
+
+.app-toast-timer {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 0.1875rem;
+    background-color: var(--app-toast-tone);
+    transform-origin: left center;
+    animation-name: app-toast-timer;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+}
+
+.app-toasts.is-paused .app-toast-timer,
+.app-toast:hover .app-toast-timer,
+.app-toast:focus-within .app-toast-timer {
+    animation-play-state: paused;
+}
+
+@keyframes app-toast-timer {
+    from { transform: scaleX(1); }
+    to { transform: scaleX(0); }
+}
+
+.app-toast.is-leaving {
+    opacity: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .app-toast {
+        animation: app-toast-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        transition: opacity 0.15s ease-out, transform 0.15s ease-out;
+    }
+
+    .app-toast.is-leaving {
+        transform: translateX(0.5rem);
+    }
+}
+
+@keyframes app-toast-in {
+    from { opacity: 0; transform: translateX(1rem); }
+    to { opacity: 1; transform: none; }
 }
 
 .pagination {
