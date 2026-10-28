@@ -9,3 +9,4 @@ import './table-filters.js';
 import './relationship-scroll.js';
 import './table-scroll.js';
 import './confirmation-dialog.js';
+import './toasts.js';

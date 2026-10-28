@@ -1,7 +1,7 @@
-/* Design tokens: a cool low-chroma neutral ramp, one cobalt accent, hairline borders, a 4/6/8 radius scale and
-   14px base type, pushed through Bootstrap's variables so every stock component follows. DESIGN.md has the rationale. */
+/* Design tokens: the Innovations brand palette (navy ink, a steel-tinted canvas, one steel accent with a teal focus
+   ring) over a cool neutral ramp, hairline borders, a 4/6/8 radius scale and 14px base type, pushed through Bootstrap's variables so every stock component follows. DESIGN.md has the rationale. */
 :root {
-    --app-page-bg: #f0f2f5;
+    --app-page-bg: #e2eef1;
     --app-surface-fill: #f0f2f5;
     --app-table-header-bg: #e1e6ed;
     --app-surface-inset: #eef0f4;
@@ -9,15 +9,16 @@
     --app-line-strong: #cfd5dd;
     /* Control outlines at 3:1 on white (WCAG 1.4.11). Controls always sit on white surfaces. */
     --app-control-border: #8c959f;
-    --app-ink: #151a23;
+    --app-ink: #000e2f;
     --app-muted: #5d6675;
-    --app-accent: #2250c4;
-    --app-accent-hover: #1b43a8;
-    --app-accent-active: #163787;
-    --app-accent-subtle: #eaf0fd;
-    --app-accent-line: #c7d5f7;
-    --app-accent-ink: #1a3e9a;
-    --app-ring: 0 0 0 0.1875rem rgba(34, 80, 196, 0.28);
+    --app-accent: #116e88;
+    --app-accent-hover: #01495e;
+    --app-accent-active: #022f3d;
+    --app-accent-subtle: #ecf3f5;
+    --app-accent-line: #b8d4db;
+    --app-accent-ink: #01495e;
+    /* White gap plus solid teal, so the ring keeps 3.4:1 against its white inner edge on any surface. */
+    --app-ring: 0 0 0 0.125rem #fff, 0 0 0 0.25rem #0a9aa8;
     --app-shadow-bar: 0 0.25rem 1rem rgba(21, 26, 35, 0.1);
     --app-shadow-pop: 0 0.5rem 1.5rem rgba(21, 26, 35, 0.12), 0 0.125rem 0.375rem rgba(21, 26, 35, 0.06);
     --app-shadow-button: 0 1px 2px rgba(21, 26, 35, 0.08);
@@ -28,9 +29,9 @@
     --bs-body-font-size: 0.875rem;
     --bs-body-color: #232a36;
     --bs-body-color-rgb: 35, 42, 54;
-    --bs-emphasis-color: #151a23;
-    --bs-emphasis-color-rgb: 21, 26, 35;
-    --bs-heading-color: #151a23;
+    --bs-emphasis-color: #000e2f;
+    --bs-emphasis-color-rgb: 0, 14, 47;
+    --bs-heading-color: #000e2f;
     --bs-secondary-color: #5d6675;
     --bs-secondary-color-rgb: 93, 102, 117;
     --bs-secondary-bg: #f0f2f5;
@@ -41,17 +42,23 @@
     --bs-border-radius-sm: 0.25rem;
     --bs-border-radius-lg: 0.5rem;
     --bs-border-radius-xl: 0.5rem;
-    --bs-focus-ring-color: rgba(34, 80, 196, 0.28);
+    --bs-focus-ring-color: rgba(10, 154, 168, 0.45);
 
-    --bs-primary: #2250c4;
-    --bs-primary-rgb: 34, 80, 196;
-    --bs-primary-text-emphasis: #1a3e9a;
-    --bs-primary-bg-subtle: #eaf0fd;
-    --bs-primary-border-subtle: #c7d5f7;
-    --bs-link-color: #2250c4;
-    --bs-link-color-rgb: 34, 80, 196;
-    --bs-link-hover-color: #1b43a8;
-    --bs-link-hover-color-rgb: 27, 67, 168;
+    --bs-primary: #116e88;
+    --bs-primary-rgb: 17, 110, 136;
+    --bs-primary-text-emphasis: #01495e;
+    --bs-primary-bg-subtle: #ecf3f5;
+    --bs-primary-border-subtle: #b8d4db;
+    --bs-link-color: #116e88;
+    --bs-link-color-rgb: 17, 110, 136;
+    --bs-link-hover-color: #01495e;
+    --bs-link-hover-color-rgb: 1, 73, 94;
+    /* Info shares the accent so stock info alerts and icons stay on the brand palette. */
+    --bs-info: #116e88;
+    --bs-info-rgb: 17, 110, 136;
+    --bs-info-text-emphasis: #01495e;
+    --bs-info-bg-subtle: #ecf3f5;
+    --bs-info-border-subtle: #b8d4db;
 
     /* Darker than Bootstrap's success so white text on it clears 4.5:1 with margin. */
     --bs-success: #157347;
@@ -74,8 +81,8 @@
     --bs-secondary-border-subtle: #d5d9e0;
     --bs-light: #f0f2f5;
     --bs-light-rgb: 240, 242, 245;
-    --bs-dark: #151a23;
-    --bs-dark-rgb: 21, 26, 35;
+    --bs-dark: #000e2f;
+    --bs-dark-rgb: 0, 14, 47;
 
     --entity-org-bg: #eceef2;
     --entity-org-text: #434b59;
@@ -838,8 +845,9 @@ html[data-rail="unpinned"] {
     height: 2rem;
     font-size: 0.75rem;
     font-weight: 700;
+    letter-spacing: 0.04em;
     color: var(--bs-white);
-    background-color: var(--bs-primary);
+    background-color: var(--app-ink);
     border-radius: var(--bs-border-radius);
 }
 
@@ -1039,6 +1047,7 @@ html[data-rail="unpinned"] .app-rail-pin-on {
     font-weight: 600;
     color: var(--bs-primary-text-emphasis);
     background-color: var(--bs-primary-bg-subtle);
+    box-shadow: inset 0.1875rem 0 0 var(--app-accent);
 }
 
 .app-rail-link.is-section .bi {
@@ -1499,6 +1508,10 @@ html[data-rail="unpinned"] .app-rail-pin-on {
     }
 }
 
+.btn {
+    --bs-btn-focus-box-shadow: var(--app-ring);
+}
+
 .btn-primary {
     --bs-btn-bg: var(--app-accent);
     --bs-btn-border-color: var(--app-accent);
@@ -1508,7 +1521,7 @@ html[data-rail="unpinned"] .app-rail-pin-on {
     --bs-btn-active-border-color: var(--app-accent-active);
     --bs-btn-disabled-bg: var(--app-accent);
     --bs-btn-disabled-border-color: var(--app-accent);
-    --bs-btn-focus-shadow-rgb: 34, 80, 196;
+    --bs-btn-focus-shadow-rgb: 10, 154, 168;
 }
 
 .btn-outline-primary {
@@ -1520,7 +1533,7 @@ html[data-rail="unpinned"] .app-rail-pin-on {
     --bs-btn-active-border-color: var(--app-accent-active);
     --bs-btn-disabled-color: var(--app-accent);
     --bs-btn-disabled-border-color: var(--app-accent);
-    --bs-btn-focus-shadow-rgb: 34, 80, 196;
+    --bs-btn-focus-shadow-rgb: 10, 154, 168;
 }
 
 .btn-outline-secondary {
@@ -2309,7 +2322,7 @@ a.badge.app-chip:focus-visible {
 
 .app-more-btn:hover,
 .app-more-btn[aria-expanded="true"] {
-    background-color: #dce6fb;
+    background-color: #d9e8ec;
 }
 
 .app-more-btn:focus-visible {
@@ -2718,8 +2731,13 @@ a.badge.app-chip:focus-visible {
 }
 
 /* Stretch the native record link while keeping related links and menus independently usable. */
-.table tbody tr:has(a.app-row-link) {
+.table tbody tr:has(a.app-row-link),
+.list-group-item:has(a.app-row-link) {
     position: relative;
+}
+
+.list-group-item:has(a.app-row-link):hover {
+    background-color: var(--app-surface-inset);
 }
 
 a.app-row-link::after {
@@ -2740,7 +2758,9 @@ a.app-row-link:focus-visible::after {
 }
 
 .table tr:has(a.app-row-link) :is(a, button):not(.app-row-link),
-.table tbody .dropdown {
+.list-group-item:has(a.app-row-link) :is(a, button):not(.app-row-link),
+.table tbody .dropdown,
+.list-group-item .dropdown {
     position: relative;
     z-index: 2;
 }
@@ -3356,4 +3376,116 @@ a.app-row-link:focus-visible::after {
     .cert-row-actions { width: 100%; }
     .cert-sections .nav-link { padding: .5rem .65rem; }
     .cert-row-actions .btn, .cert-group > .d-flex .btn { min-width: 44px; min-height: 44px; }
+}
+
+/* Sign-in: one centered card on the brand canvas, led by the II mark and product name. */
+.app-auth {
+    display: grid;
+    place-items: center;
+    min-height: calc(100dvh - 3rem);
+}
+
+.app-auth-panel {
+    width: min(100%, 25rem);
+}
+
+.app-auth-panel .card-body {
+    padding: 2rem;
+}
+
+.app-auth-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.app-auth-mark {
+    width: 2.5rem;
+    height: 2.5rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.875rem;
+}
+
+.app-auth-title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+}
+
+.app-auth-org {
+    margin: 0.25rem 0 0;
+    font-size: 0.8125rem;
+    color: var(--app-muted);
+}
+
+/* Native disclosures inside records: ink text and a chevron that turns when open. Panels add a hover fill and keep
+   the chevron at the right edge, like the ledger disclosure headers. */
+.app-details > summary {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    width: fit-content;
+    font-weight: 500;
+    color: var(--app-ink);
+    list-style: none;
+    cursor: pointer;
+    border-radius: var(--bs-border-radius);
+}
+
+.app-details > summary::-webkit-details-marker {
+    display: none;
+}
+
+.app-details > summary::after {
+    flex: none;
+    font-family: 'bootstrap-icons';
+    font-size: 0.75rem;
+    color: var(--app-muted);
+    content: '\f282';
+}
+
+.app-details[open] > summary::after {
+    transform: rotate(180deg);
+}
+
+.app-details > summary:hover {
+    color: var(--app-accent);
+}
+
+.app-details > summary:focus-visible {
+    outline: none;
+    box-shadow: var(--app-ring);
+}
+
+.app-details--panel > summary {
+    gap: 0.5rem;
+    width: auto;
+}
+
+.app-details--panel > summary::after {
+    margin-left: auto;
+}
+
+.app-details--panel > summary:hover {
+    color: var(--app-ink);
+    background-color: var(--app-surface-inset);
+}
+
+.app-details--panel > summary > .bi {
+    color: var(--app-muted);
+}
+
+.app-details--panel > summary.text-primary-emphasis > .bi,
+.app-details--panel > summary.text-danger-emphasis > .bi {
+    color: inherit;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .app-details > summary::after {
+        transition: transform 0.15s;
+    }
 }

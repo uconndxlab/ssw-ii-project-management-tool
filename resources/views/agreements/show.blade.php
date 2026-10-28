@@ -275,7 +275,7 @@
                 <h2 class="h5 mb-0" id="certificate-assignments-heading">Certificate assignments</h2>
                 <span class="text-muted small">{{ $certificationRosterDisplay->count() }} {{ \Illuminate\Support\Str::plural('candidate', $certificationRosterDisplay->count()) }}</span>
                 @can('update', $agreement)
-                    <a href="{{ route('agreements.edit', $agreement) }}#certification-candidates" class="btn btn-sm btn-outline-primary ms-auto">Manage assignments</a>
+                    <a href="{{ route('agreements.edit', $agreement) }}#certification-candidates" class="btn btn-sm btn-outline-secondary ms-auto">Manage assignments</a>
                 @endcan
             </div>
             <div class="card-body">
@@ -292,7 +292,7 @@
                                     @if($person->email)<div class="small text-muted text-break">{{ $person->email }}</div>@endif
                                 </div>
                                 @can('update', $agreement)
-                                    <a class="small ms-auto" href="{{ route('agreements.edit', $agreement) }}#certification-candidate-{{ $person->id }}">{{ $assignments->isEmpty() ? 'Assign a certificate' : 'Edit assignments' }}</a>
+                                    <a class="app-link small ms-auto" href="{{ route('agreements.edit', $agreement) }}#certification-candidate-{{ $person->id }}">{{ $assignments->isEmpty() ? 'Assign a certificate' : 'Edit assignments' }}</a>
                                 @endcan
                             </div>
                             @forelse($assignments as $enrollment)
@@ -305,7 +305,7 @@
                                         </div>
                                     </div>
                                     <div class="d-flex flex-wrap align-items-center gap-2">@php $lifecycleBadge = $enrollment->lifecycleBadge(); @endphp<span class="{{ $lifecycleBadge['class'] }}">{{ $lifecycleBadge['label'] }}</span>
-                                        <a href="{{ route('certificate-enrollments.show', ['certificateEnrollment' => $enrollment, 'agreement_id' => $agreement->id]) }}" class="small">Progress</a>
+                                        <a href="{{ route('certificate-enrollments.show', ['certificateEnrollment' => $enrollment, 'agreement_id' => $agreement->id]) }}" class="app-link small">Progress</a>
                                     </div>
                                 </div>
                             @empty

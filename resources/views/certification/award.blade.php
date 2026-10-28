@@ -46,8 +46,8 @@
                     <div class="small mt-1">{{ $row['attestation']['satisfied'] ? 'Confirmed' : 'Not confirmed' }} by {{ $row['attestation']['by'] ?? 'a former staff member' }}@if($row['attestation']['at']) on {{ \Illuminate\Support\Carbon::parse($row['attestation']['at'])->format('M j, Y') }}@endif.@if($row['attestation']['note']) <span class="text-muted">{{ $row['attestation']['note'] }}</span>@endif</div>
                 @endif
                 @if($row['counted'] !== [])
-                    <details class="mt-2">
-                        <summary class="small text-primary">Counted evidence: {{ count($row['counted']) }}</summary>
+                    <details class="app-details mt-2">
+                        <summary class="small">Counted evidence: {{ count($row['counted']) }}</summary>
                         <div class="table-responsive mt-2">
                             <table class="table table-sm small align-middle mb-0">
                                 <thead><tr><th scope="col">Date</th><th scope="col">Activity</th><th scope="col">Evidence</th></tr></thead>

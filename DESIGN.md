@@ -2,7 +2,7 @@
 name: TA Tracker
 description: The Working Ledger — a calm, hairline-ruled enterprise interface for agreements, activities and the records around them.
 colors:
-  canvas: "#f0f2f5"
+  canvas: "#e2eef1"
   surface: "#ffffff"
   fill: "#f0f2f5"
   table-header: "#e1e6ed"
@@ -10,15 +10,16 @@ colors:
   line: "#d4dbe3"
   line-strong: "#cfd5dd"
   control-outline: "#8c959f"
-  ink: "#151a23"
+  ink: "#000e2f"
   body: "#232a36"
   muted: "#5d6675"
-  accent: "#2250c4"
-  accent-hover: "#1b43a8"
-  accent-active: "#163787"
-  accent-subtle: "#eaf0fd"
-  accent-line: "#c7d5f7"
-  accent-ink: "#1a3e9a"
+  accent: "#116e88"
+  accent-hover: "#01495e"
+  accent-active: "#022f3d"
+  accent-subtle: "#ecf3f5"
+  accent-line: "#b8d4db"
+  accent-ink: "#01495e"
+  focus: "#0a9aa8"
   success: "#157347"
   success-subtle: "#e6f4ec"
   success-ink: "#0f5a36"
@@ -164,14 +165,14 @@ components:
 
 **Creative North Star: "The Working Ledger"**
 
-A calm, orderly interface for working with agreements, activities, organizations and the records that connect them. Enterprise structure with minimal surfaces: a cool neutral ramp, one cobalt accent, internal hairline dividers, a modest 4/6/8 radius scale and 14px system type. White working surfaces separate from the canvas through soft elevation; card titles stay white and buttons stay flat, without gloss or gradients.
+A calm, orderly interface for working with agreements, activities, organizations and the records that connect them. Enterprise structure with minimal surfaces: the Innovations brand palette (navy ink, a steel-tinted canvas, one steel accent with a teal focus ring) over a cool neutral ramp, internal hairline dividers, a modest 4/6/8 radius scale and 14px system type. White working surfaces separate from the canvas through soft elevation; card titles stay white and buttons stay flat, without gloss or gradients.
 
 The look was chosen for the Operate mode PRODUCT.md describes: scanability and consistency beat expression. Color is spent in two places only. The accent marks actions, the current place and focus; status (success, warning, danger, neutral) is the only other place color carries meaning, and it always comes with text.
 
 **Key Characteristics:**
 - Cool grey canvas, white working surfaces and white card titles; soft card elevation with stronger shadows for overlays.
-- One cobalt accent for actions, selection and focus; semantic color only for status.
-- Linked record chips use cobalt ink on white with a visible outline and no link icon; non-clickable categories use muted filled tags.
+- One steel accent for actions and selection, a teal focus ring; semantic color only for status.
+- Linked record chips use deep-steel ink on white with a visible outline and no link icon; non-clickable categories use muted filled tags.
 - Dense but calm tables: one-line cells, 48–56px rows, a visible "+N" instead of a wall of chips.
 - 14px system type, tabular numerals in tables, 36px controls (32px small, 40px on touch).
 
@@ -179,12 +180,13 @@ This file replaces the earlier scan of the stock-Bootstrap implementation. Sourc
 
 ## Colors
 
-A cool, low-chroma neutral ramp with a single cobalt accent. Frontmatter values are normative; Bootstrap's `--bs-*` variables and the `--app-*` properties in `app.css` carry them.
+The client-supplied Innovations palette over a cool, low-chroma neutral ramp, with a single steel accent. Primary and accent colors come from that palette; tertiary colors are reserved for future charts and reports. Frontmatter values are normative; Bootstrap's `--bs-*` variables and the `--app-*` properties in `app.css` carry them.
 
 ### Primary
-- **Cobalt** (`accent`): primary buttons, the current sidebar section's icon, focus rings, selected radio-card borders and the active page in pagination. White text on it is 6.97:1.
-- **Deep Cobalt** (`accent-hover`, `accent-active`): hover and pressed states of accent buttons and links.
-- **Cobalt Mist / Cobalt Ink** (`accent-subtle`, `accent-line`, `accent-ink`): the current sidebar section, hovered linked chips, the "+N" button and selected options.
+- **Steel** (`accent`, #116E88): primary buttons, the current sidebar section's icon and left rule, selected radio-card borders and the active page in pagination. White text on it is 5.8:1.
+- **Teal** (`focus`, #0A9AA8): the focus ring only. It is 3.4:1 on white, so never use it for text or as a fill behind white text.
+- **Deep / Ink Steel** (`accent-hover` #01495E, `accent-active` #022F3D): hover and pressed states of accent buttons and links.
+- **Steel Mist / Steel Ink** (`accent-subtle`, `accent-line`, `accent-ink`): the current sidebar section, hovered linked chips, the "+N" button and selected options.
 
 ### Secondary
 - **Status Green** (`success`, `success-subtle`, `success-ink`): Active and completed. A darker green so white text on it clears 4.5:1.
@@ -192,7 +194,7 @@ A cool, low-chroma neutral ramp with a single cobalt accent. Frontmatter values 
 - **Error Red** (`danger`, `danger-hover`, `danger-subtle`, `danger-ink`): validation errors, required markers, cancelled and destructive actions.
 
 ### Neutral
-- **Canvas** (`canvas`): the cool grey page background beneath elevated white working surfaces.
+- **Canvas** (`canvas`): a 12% steel tint beneath elevated white working surfaces, so cards stand out. Muted text on it is 4.9:1.
 - **Surface** (`surface`): cards, fields, the sidebar, drawers and menus.
 - **Fill** (`fill`): disclosure headers, selected picker tokens, inset wells and disabled fields.
 - **Table Header** (`table-header`): a darker cool grey band, distinct from the canvas; labels use the stronger neutral emphasis text.
@@ -202,7 +204,7 @@ A cool, low-chroma neutral ramp with a single cobalt accent. Frontmatter values 
 - **Ink / Body / Muted** (`ink`, `body`, `muted`): headings and links, running text, and secondary text (5.8:1 on white, 5.2:1 on the canvas).
 - **Neutral Chip** (`neutral-subtle`, `neutral-ink`): inactive status and non-clickable tags.
 
-**The One Accent Rule.** Cobalt means "act here" or "you are here". Never use it to decorate, and never use a second hue for record kinds; kind is shown by label and icon.
+**The One Accent Rule.** Steel means "act here" or "you are here". Never use it to decorate, and never use a second hue for record kinds; kind is shown by label and icon.
 
 **The White-Surface Rule.** Controls sit on white surfaces only. The control outline passes 3:1 on white but not on the canvas, so a bare field on the page background is a bug.
 
@@ -246,7 +248,7 @@ Soft elevation, approved as option C in the layering study. White cards and whit
 - **Compact header bar:** `0 4px 16px rgba(21,26,35,.10)`.
 - **Menus, popovers, the Recent panel and a peeking sidebar:** `0 8px 24px rgba(21,26,35,.12), 0 2px 6px rgba(21,26,35,.06)`.
 - **Drawer:** `-0.5rem 0 1.5rem rgba(21,26,35,.12)` over a 35% ink backdrop.
-- **Focus ring:** `0 0 0 3px rgba(34,80,196,.28)`.
+- **Focus ring:** `0 0 0 3px rgba(10,154,168,.45)` (teal).
 
 **The Elevation Rule.** Working surfaces use the shared soft card shadow. Overlays use the stronger popover or drawer shadow; do not stack extra shadows on nested ledger rows.
 
@@ -264,11 +266,11 @@ Familiar filled and outline variants at two sizes: 36px (default) and 32px (smal
 
 Reuse `x-page-header` with its `badges`, `meta`, `controls` and `more` slots. Page headings use `.app-page-title`; the record's Active/Inactive status chip belongs in the header metadata and is not repeated in Summary. Record and form headers omit entity-type badges: the breadcrumb and record icon already establish the entity. Metadata is optional and its row disappears when empty.
 
-Show-page headers add a 40px cobalt-mist record-kind icon beside the title. User/profile headers use the people icon while retaining the meaningful access-profile label. Create/edit headers retain their title and action composition without a type badge. The optional `facts` slot carries useful working information: agreement dates and principal investigators, user contact/supervisor details, and activity date, logger and family. Activity facts appear once in the labeled strip, without a duplicate subtitle; Internal only, Cancelled and Not yet complete remain in metadata. Person links retain their policy checks. A populated organization PO number and logging-field type use compact metadata labels; missing identifiers are omitted.
+Show-page headers add a 40px steel-mist record-kind icon beside the title. User/profile headers use the people icon while retaining the meaningful access-profile label. Create/edit headers retain their title and action composition without a type badge. The optional `facts` slot carries useful working information: agreement dates and principal investigators, user contact/supervisor details, and activity date, logger and family. Activity facts appear once in the labeled strip, without a duplicate subtitle; Internal only, Cancelled and Not yet complete remain in metadata. Person links retain their policy checks. A populated organization PO number and logging-field type use compact metadata labels; missing identifiers are omitted.
 
 **The Useful Facts Rule.** Do not fill a header strip for symmetry. Created, updated, added and joined dates are bookkeeping metadata and stay out of the record display. Relationship counts already visible in the wider panel headings do not need repeating above the page. Projects, programs, states and teams can have no facts strip at all; keep useful business dates on agreements and activities.
 
-Summary is a quick-facts column. Existing YTD figures lead on agreements and organizations; other entities lead with their existing totals or completion/duration figures. Use 26px semibold tabular numerals and 13px labels; only actual year-to-date figures carry a cobalt-ink period label. Related-record disclosures in Summary start closed at every item count. Wider relationship and reporting sections can start open. This extends selected Hierarchy C across record pages without new metrics or entity hues.
+Summary is a quick-facts column. Existing YTD figures lead on agreements and organizations; other entities lead with their existing totals or completion/duration figures. Use 26px semibold tabular numerals and 13px labels; only actual year-to-date figures carry a steel-ink period label. Related-record disclosures in Summary start closed at every item count. Wider relationship and reporting sections can start open. This extends selected Hierarchy C across record pages without new metrics or entity hues.
 
 Header actions are captured once and repeated in the compact bar. In the full header the form status sits under the buttons; in the compact bar it sits beside them. Icon-only buttons and Save (with its shortcut) get tooltips. A `more` slot adds an overflow menu. In the compact bar only Save keeps its label; on phones Save is an icon too.
 
@@ -282,14 +284,14 @@ White, 8px, with the shared soft shadow and a transparent outer border. Use `x-s
 
 ### Inputs / Fields
 
-White 36px fields (32px small) with the control outline, 6px radius and 0.875rem text. Focus swaps the border to cobalt and adds the 3px ring. Invalid fields use Error Red and associated feedback; disabled fields use the Fill color. Help and error text are linked to their field (`aria-describedby`, `aria-invalid`, `aria-required`), a set of radios is a fieldset with a legend, and token pickers are named comboboxes with arrow-key and Enter selection and a live "added" or "removed" announcement. Pickers share the 36px minimum height of the fields beside them.
+White 36px fields (32px small) with the control outline, 6px radius and 0.875rem text. Focus swaps the border to steel and adds the 3px teal ring. Invalid fields use Error Red and associated feedback; disabled fields use the Fill color. Help and error text are linked to their field (`aria-describedby`, `aria-invalid`, `aria-required`), a set of radios is a fieldset with a legend, and token pickers are named comboboxes with arrow-key and Enter selection and a live "added" or "removed" announcement. Pickers share the 36px minimum height of the fields beside them.
 
-Reuse `x-form-field` for labels, required markers, one-line help and inline errors. Use switches inside Options subsections and radio cards for choices with consequences. Selected radio cards use a cobalt border and the cobalt mist fill. Checked checkboxes, radios and switches are cobalt.
+Reuse `x-form-field` for labels, required markers, one-line help and inline errors. Use switches inside Options subsections and radio cards for choices with consequences. Selected radio cards use a steel border and the steel mist fill. Checked checkboxes, radios and switches are steel.
 
 ### Chips, Tags and Status
 
 Four distinct things, each with one treatment:
-- **Linked chip** (`a.app-chip`): a related record the user can open. White, 1px control outline, cobalt ink, at least 24px high, 4px radius, no link icon. Hover goes to cobalt mist with an underline. Selected picker tokens retain their neutral fill and remove button.
+- **Linked chip** (`a.app-chip`): a related record the user can open. White, 1px control outline, steel ink, at least 24px high, 4px radius, no link icon. Hover goes to steel mist with an underline. Selected picker tokens retain their neutral fill and remove button.
 - **Plain text** (`.app-plain`): a related record the user cannot open. Never a chip, so a chip always means clickable. Access follows `isLinkable()` (the `view` policy), exactly as before.
 - **Tag** (`.app-tag`): a non-clickable label (role, flag, record kind). Tinted, no border.
 - **Status chip** (`.app-status`): tinted fill, dark ink, a dot and text. Tones: success, neutral, warning, danger. `x-status-badge` takes `active` and an optional `tone`. Meaning never rests on color alone.
@@ -300,17 +302,17 @@ Counts are plain numbers (`.app-count`). In tables a related-record cell shows t
 
 A docked, full-height white sidebar with a hairline on its right edge; there is no desktop top bar. Below 992px a slim light top bar carries only the menu button, the brand and Log Activity.
 
-The sidebar has three zones. **Actions** at the top: the brand mark (a cobalt square) and name with a pin button, a search field (a "/" hint; pressing "/" focuses it) and the accent Log Activity button. **Destinations** in the middle: links come from `AppNav::railGroups()`, which reuses the role rules in `primaryLinks()` and `adminSections()`: Work, then Reference Data, Agreement Setup, Activity Setup, Certification Setup and People for admins. Every group is always listed. Each link is a Bootstrap Icon plus a 14px label. The section that owns the current route gets the cobalt mist fill, semibold cobalt-ink text and `aria-current` (`page` on the index, `true` on child pages). **Personal** at the bottom: Recent, then an account row (initials avatar, name, access profile) whose menu opens upward with Profile and Log out. An open Recent button turns solid cobalt, distinct from the tinted current section.
+The sidebar has three zones. **Actions** at the top: the brand mark (a navy square reading "II" for Innovate Impact) and name with a pin button, a search field (a "/" hint; pressing "/" focuses it) and the accent Log Activity button. **Destinations** in the middle: links come from `AppNav::railGroups()`, which reuses the role rules in `primaryLinks()` and `adminSections()`: Work, then Reference Data, Agreement Setup, Activity Setup, Certification Setup and People for admins. Every group is always listed. Each link is a Bootstrap Icon plus a 14px label. The section that owns the current route gets the steel mist fill, a 3px steel rule on its left edge, semibold steel-ink text and `aria-current` (`page` on the index, `true` on child pages). **Personal** at the bottom: Recent, then an account row (initials avatar, name, access profile) whose menu opens upward with Profile and Log out. An open Recent button turns solid steel, distinct from the tinted current section.
 
 The sidebar is pinned open (15rem, docked, the page makes room) or unpinned (4.25rem icons, the page does not move). Unpinned, it peeks open over the page on pointer hover (120ms in, 250ms out), keyboard focus, the search shortcut, or while the Recent panel or account menu is showing, with the popover shadow; Escape dismisses a peek. Unpinning with the mouse collapses at once and only peeks again after the pointer leaves and re-enters. The pin choice is remembered per user in `localStorage`, and new users start pinned at 1200px and wider. Below 992px the same markup is a Bootstrap offcanvas menu; links are at least 44px high.
 
 Recent is a floating 8px panel beside the sidebar, sized to its content, listing up to 30 records opened in the last seven days with a labeled search, a Clear action, and empty, no-match and load-error states. It closes on Escape or an outside click and returns focus to its button. Entries are stored per user in `recent_records` and rechecked with the `view` policy each time the panel opens.
 
-A "Skip to content" link is the first keyboard stop. The sidebar navigation has a landmark name, the pin is a toggle button with `aria-pressed`, collapsed links keep their labels as accessible names, and flash-message dismiss buttons are named "Close". Bootstrap, Bootstrap Icons and htmx retain their pinned CDN versions with SRI hashes.
+A "Skip to content" link is the first keyboard stop. The sidebar navigation has a landmark name, the pin is a toggle button with `aria-pressed`, collapsed links keep their labels as accessible names, and toast dismiss buttons are named "Dismiss notification". Bootstrap, Bootstrap Icons and htmx retain their pinned CDN versions with SRI hashes.
 
 ### Tables and Relationship Ledgers
 
-Index tables use the darker Table Header fill in sentence case (0.78125rem, 600, neutral emphasis ink), 1px row dividers, a hover tint, and one-line cells with names clamped to two lines. Rows are 48–56px. Record names, people and other links share one style: ink, 500 weight, a grey underline at rest, cobalt on hover (`.app-link`). Sort links retain visible carets at rest. Row actions are a single three-dots menu (View, Edit, Duplicate, then Delete in red after a divider), not a strip of icon buttons. Destructive actions still confirm. Deliverable charts read accent, success, muted text and grid colors from the same CSS tokens; expected pace retains its dashed line so meaning does not rely on color alone.
+Index tables use the darker Table Header fill in sentence case (0.78125rem, 600, neutral emphasis ink), 1px row dividers, a hover tint, and one-line cells with names clamped to two lines. Rows are 48–56px. Record names, people and other links share one style: ink, 500 weight, a grey underline at rest, steel on hover (`.app-link`). Sort links retain visible carets at rest. Row actions are a single three-dots menu (View, Edit, Duplicate, then Delete in red after a divider), not a strip of icon buttons. Destructive actions still confirm. Deliverable charts read accent, success, muted text and grid colors from the same CSS tokens; expected pace retains its dashed line so meaning does not rely on color alone.
 
 When a row has a permitted record-view link, stretch that native anchor across the row with `.app-row-link`; this also applies to embedded recent activities. Related links, chips and menu controls sit above the target and retain their own actions. Keyboard focus outlines the row without adding a second tab stop. Native modified-click and open-in-new-tab behavior remain available. Keep any two-line text clamp inside `.app-row-link-label` so it does not clip the stretched target. Records without a view link, and administrative lists without a record-view page, do not gain a row target.
 
@@ -340,9 +342,13 @@ Ordinary same-tab links and Cancel on a dirty form first use the shared confirma
 
 Drawers behave as modals: the rest of the page is inert while one is open, Escape closes it, and focus returns to the control that opened it. They are a white panel with 1.25rem padding, hairline header and footer, a 35% ink backdrop and the drawer shadow, sliding in over 0.2s. Reduced motion removes the panel slide while retaining the backdrop fade. The document reserves scrollbar space while overlays lock scrolling, preventing a sideways page shift.
 
-### Alerts, Dropdowns and Pagination
+### Notes, Toasts, Dropdowns and Pagination
 
-Alerts and dropdowns follow the semantic subtle colors and the 8px menu radius. Pagination uses ink text, a hairline border and a cobalt current page. Empty table states keep a muted sentence and, where permitted, the accent create button.
+Notes (Bootstrap `.alert`, used for inline guidance such as an enrollment's Next step) are a tinted panel with a 4px tone rule on the left edge and square left corners: steel for primary and info, then success, warning, danger, or the control outline for secondary.
+
+Flash messages are toasts (`x-toasts`, `resources/js/toasts.js`), floating top right (below the phone top bar). A toast is a white 8px panel with the popover shadow, the same 4px tone rule, a filled tone icon, ink text with an optional semibold title, and a close button named "Dismiss notification". Success and info close after a timeout shown as a 3px tone bar shrinking along the bottom edge; it pauses on hover, keyboard focus and while the tab is hidden. Warnings, errors and toasts containing a link stay until closed; Escape closes a focused toast. Errors use `role="alert"`; other toasts are announced through the polite `#app-live` region, shortly after page load so screen readers do not skip them. The default timeout (6s) is the stack's `data-toast-timeout`; `window.appToast(message, { tone, title, timeout })` can override it per toast, and `timeout: 0` keeps a toast open. Validation errors stay inline beside their fields and in the form summary, not in toasts. Guest pages render their own inline notes.
+
+Dropdowns follow the semantic subtle colors and the 8px menu radius. Pagination uses ink text, a hairline border and a steel current page. Empty table states keep a muted sentence and, where permitted, the accent create button.
 
 ## Do's and Don'ts
 
