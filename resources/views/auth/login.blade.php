@@ -8,9 +8,8 @@
         <div class="card">
             <div class="card-body">
                 <div class="app-auth-brand">
-                    <span class="app-rail-mark app-auth-mark" aria-hidden="true">II</span>
+                    <span class="app-rail-mark app-auth-mark" aria-hidden="true">ii</span>
                     <h1 class="app-auth-title">{{ config('app.name') }}</h1>
-                    <p class="app-auth-org">Innovate Impact</p>
                 </div>
 
                 @if(session('error'))

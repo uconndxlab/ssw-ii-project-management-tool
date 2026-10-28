@@ -106,7 +106,7 @@
                             @include('admin.certificates.partials.dimension-rule-row', ['row' => $rule])
                         @endforeach
                     </div>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" data-cert-add="rule">Add coverage or quota</button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-cert-add="rule">Add coverage or quota</button>
                     <p class="form-text mb-0" data-cert-add-rule-help></p>
                     <template data-cert-rule-template>@include('admin.certificates.partials.dimension-rule-row', ['row' => [], 'ruleIndex' => '__RULE__'])</template>
                 </fieldset>
@@ -125,7 +125,7 @@
                 <textarea class="form-control" id="req-{{ $reqIndex }}-notes" name="{{ $field }}[notes]" rows="2" data-cert-notes>{{ $row['notes'] ?? '' }}</textarea>
             </x-form-field>
         </div>
-        <button type="button" class="btn btn-secondary btn-sm" data-cert-done>Done editing requirement</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-cert-done>Done editing requirement</button>
         <span class="text-muted small ms-2">Save the certificate to keep changes.</span>
     </div>
 </article>

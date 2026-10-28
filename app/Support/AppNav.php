@@ -24,7 +24,7 @@ class AppNav
         ];
 
         if (! $access->isInput()) {
-            $links[] = self::link('Agreements', 'agreements.index', ['agreements.*'], 'bi-file-earmark-text', 'work');
+            $links[] = self::link('Agreements', 'agreements.index', ['agreements.*', 'certificate-enrollments.*'], 'bi-file-earmark-text', 'work');
         }
 
         $links[] = self::link('Activities', 'activities.index', ['activities.*'], 'bi-journal-check', 'work');

@@ -72,3 +72,25 @@ document.addEventListener('submit', async (event) => {
         button.setAttribute('aria-busy', 'true');
     }
 }, true);
+
+// htmx actions marked with data-confirm-title ask through the same dialog before the request goes out.
+document.addEventListener('htmx:confirm', async (event) => {
+    const element = event.detail.elt;
+    if (!element.matches('[data-confirm-title]')) {
+        return;
+    }
+
+    event.preventDefault();
+    const confirmed = await window.appConfirm({
+        title: element.dataset.confirmTitle,
+        message: element.dataset.confirmMessage,
+        action: element.dataset.confirmAction,
+        icon: element.dataset.confirmIcon,
+        tone: element.dataset.confirmTone,
+        trigger: element,
+    });
+
+    if (confirmed) {
+        event.detail.issueRequest(true);
+    }
+});

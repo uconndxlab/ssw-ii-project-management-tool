@@ -261,7 +261,7 @@
                 @foreach($agreement->attachments as $attachment)
                     <x-relationship-ledger-row :title="$attachment->filename">
                         <x-slot:actions>
-                            <a href="{{ $attachment->download_url }}" class="btn btn-sm btn-outline-primary text-nowrap" target="_blank">View / Download</a>
+                            <a href="{{ $attachment->download_url }}" class="btn btn-sm btn-outline-secondary text-nowrap" target="_blank">View / Download</a>
                         </x-slot:actions>
                     </x-relationship-ledger-row>
                 @endforeach
@@ -275,7 +275,7 @@
                 <h2 class="h5 mb-0" id="certificate-assignments-heading">Certificate assignments</h2>
                 <span class="text-muted small">{{ $certificationRosterDisplay->count() }} {{ \Illuminate\Support\Str::plural('candidate', $certificationRosterDisplay->count()) }}</span>
                 @can('update', $agreement)
-                    <a href="{{ route('agreements.edit', $agreement) }}#certification-candidates" class="btn btn-sm btn-outline-secondary ms-auto">Manage assignments</a>
+                    <a href="{{ route('agreements.edit', $agreement) }}#certification-candidates" class="btn btn-sm btn-outline-primary ms-auto">Manage assignments</a>
                 @endcan
             </div>
             <div class="card-body">

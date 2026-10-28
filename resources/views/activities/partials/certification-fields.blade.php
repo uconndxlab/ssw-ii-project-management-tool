@@ -25,7 +25,7 @@
     <div class="d-flex align-items-center gap-2 flex-wrap mt-3 mb-2" data-certification-bulk hidden>
         <label for="certification-bulk-role" class="small">Set role for all</label>
         <select id="certification-bulk-role" class="form-select form-select-sm w-auto" data-certification-bulk-role><option value="">Choose role…</option></select>
-        <button type="button" class="btn btn-sm btn-outline-secondary" data-certification-apply-role>Apply to eligible candidates</button>
+        <button type="button" class="btn btn-sm btn-outline-primary" data-certification-apply-role>Apply to eligible candidates</button>
     </div>
     <div class="mt-2" data-certification-rows></div>
     <div class="visually-hidden" role="status" aria-live="polite" data-certification-status></div>

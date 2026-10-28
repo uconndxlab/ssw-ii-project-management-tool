@@ -143,7 +143,7 @@
                             <li class="mt-2">Valid {{ $lifecycle['expiresAt'] ? 'until '.$lifecycle['expiresAt']->format('M j, Y').'. Renewal cycle '.($enrollment->cycle + 1).' opens automatically.' : 'with no expiry.' }}</li>
                         </ul>
                         <x-form-field label="Note" for="award-note"><textarea class="form-control" rows="2" name="note" id="award-note"></textarea></x-form-field>
-                        <button type="submit" class="btn btn-sm btn-success">Award certificate</button>
+                        <button type="submit" class="btn btn-sm btn-primary">Award certificate</button>
                     </form>
                 </details>
             @endif
@@ -158,7 +158,7 @@
                         <x-form-field label="Reason" for="return-reason" :name="$returnSubmitted ? 'reason' : null" required>
                             <textarea class="form-control @if($returnSubmitted && $errors->has('reason')) is-invalid @endif" rows="2" name="reason" id="return-reason" required>{{ $returnSubmitted ? old('reason') : '' }}</textarea>
                         </x-form-field>
-                        <button type="submit" class="btn btn-sm btn-outline-primary">Return to coach</button>
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">Return to coach</button>
                     </form>
                 </details>
             @endunless

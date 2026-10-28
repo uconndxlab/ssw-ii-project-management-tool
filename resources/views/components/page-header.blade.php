@@ -187,7 +187,7 @@
 @endif
 @if($hasMore)
     <div class="dropdown">
-        <button type="button" class="btn btn-outline-secondary app-header-btn app-header-btn--icon" data-bs-toggle="dropdown" aria-expanded="false" data-tip="More actions" aria-label="More actions">
+        <button type="button" class="btn btn-outline-primary app-header-btn app-header-btn--icon" data-bs-toggle="dropdown" aria-expanded="false" data-tip="More actions" aria-label="More actions">
             <i class="bi bi-three-dots" aria-hidden="true"></i>
         </button>
         <ul class="dropdown-menu dropdown-menu-end">

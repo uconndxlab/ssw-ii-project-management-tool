@@ -156,7 +156,7 @@
                     <x-form-switch name="renewal_matches_initial" label="Follow initial requirements" help="Linked: changes to initial requirements also change the renewal rules." :checked="$renewalMatchesInitial" />
                     <p class="text-muted" data-cert-linked-note @if(!$renewalMatchesInitial) hidden @endif>Renewal uses the initial requirements above, including their groups, filters and counting windows.</p>
                     <div class="d-flex flex-wrap gap-2 mb-3" data-cert-renewal-actions @if($renewalMatchesInitial) hidden @endif>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" data-cert-copy>Copy initial as independent rules</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm" data-cert-copy>Copy initial as independent rules</button>
                         <button type="button" class="btn btn-outline-danger btn-sm" data-cert-clear>Clear renewal rules</button>
                     </div>
                 @endif
@@ -178,7 +178,7 @@
                     <p class="text-muted py-3 mb-0" data-cert-empty>No requirements yet. Add the work or confirmation this certificate needs.</p>
                     <div class="d-flex flex-wrap gap-2 mt-3">
                         <button type="button" class="btn btn-outline-primary" data-cert-add="requirement">Add requirement</button>
-                        <button type="button" class="btn btn-outline-secondary" data-cert-add="group">Add requirement group</button>
+                        <button type="button" class="btn btn-outline-primary" data-cert-add="group">Add requirement group</button>
                     </div>
                 </div>
             </x-section-card>
@@ -198,8 +198,8 @@
             @endforeach
         </div>
         <div class="d-flex flex-wrap gap-2">
-            <button type="button" class="btn btn-outline-secondary btn-sm" data-cert-add="role">Add role</button>
-            <button type="button" class="btn btn-secondary btn-sm" data-cert-close-roles>Done editing roles</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" data-cert-add="role">Add role</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-cert-close-roles>Done editing roles</button>
         </div>
     </div>
     <div class="visually-hidden" role="status" aria-live="polite" data-cert-status></div>

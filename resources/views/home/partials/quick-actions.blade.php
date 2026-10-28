@@ -8,17 +8,17 @@
                 <i class="bi bi-plus-circle" aria-hidden="true"></i> Log Activity
             </a>
             @can('create', App\Models\Agreement::class)
-            <a href="{{ route('agreements.create') }}" class="btn btn-outline-secondary btn-sm">
+            <a href="{{ route('agreements.create') }}" class="btn btn-outline-primary btn-sm">
                 <i class="bi bi-file-earmark-plus" aria-hidden="true"></i> Create Agreement
             </a>
             @endcan
             @can('create', App\Models\Organization::class)
-            <a href="{{ route('organizations.create') }}" class="btn btn-outline-secondary btn-sm">
+            <a href="{{ route('organizations.create') }}" class="btn btn-outline-primary btn-sm">
                 <i class="bi bi-building" aria-hidden="true"></i> Add Organization
             </a>
             @endcan
             @can('create', App\Models\User::class)
-            <a href="{{ route('admin.users.create') }}" class="btn btn-outline-secondary btn-sm">
+            <a href="{{ route('admin.users.create') }}" class="btn btn-outline-primary btn-sm">
                 <i class="bi bi-person-plus" aria-hidden="true"></i> Add User
             </a>
             @endcan

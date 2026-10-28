@@ -7,6 +7,7 @@ colors:
   fill: "#f0f2f5"
   table-header: "#e1e6ed"
   hover: "#eef0f4"
+  press: "#e3e7ed"
   line: "#d4dbe3"
   line-strong: "#cfd5dd"
   control-outline: "#8c959f"
@@ -19,6 +20,7 @@ colors:
   accent-subtle: "#ecf3f5"
   accent-line: "#b8d4db"
   accent-ink: "#01495e"
+  accent-press: "#d9e8ec"
   focus: "#0a9aa8"
   success: "#157347"
   success-subtle: "#e6f4ec"
@@ -107,7 +109,7 @@ components:
     padding: "0.40625rem 0.875rem"
     height: "36px"
   button-outline-hover:
-    backgroundColor: "{colors.fill}"
+    backgroundColor: "{colors.hover}"
     textColor: "{colors.ink}"
   button-small:
     rounded: "{rounded.md}"
@@ -198,7 +200,7 @@ The client-supplied Innovations palette over a cool, low-chroma neutral ramp, wi
 - **Surface** (`surface`): cards, fields, the sidebar, drawers and menus.
 - **Fill** (`fill`): disclosure headers, selected picker tokens, inset wells and disabled fields.
 - **Table Header** (`table-header`): a darker cool grey band, distinct from the canvas; labels use the stronger neutral emphasis text.
-- **Hover** (`hover`): row and menu-item hover.
+- **Hover / Press** (`hover`, `press`): the one neutral hover for every row, menu item, option, sidebar link and neutral button, and the one pressed state. Steel outline buttons use Steel Mist on hover and `accent-press` when pressed. Steel Mist otherwise means selected or current, never hover.
 - **Hairline** (`line`, `line-strong`): internal dividers and sidebar edges (`line`); picker-token and well edges (`line-strong`). Linked chips use the stronger control outline. Ordinary cards have transparent outer borders; semantic borders such as danger and selected rows remain visible.
 - **Control Outline** (`control-outline`): field, select, checkbox and radio outlines, 3:1 on white.
 - **Ink / Body / Muted** (`ink`, `body`, `muted`): headings and links, running text, and secondary text (5.8:1 on white, 5.2:1 on the canvas).
@@ -248,7 +250,7 @@ Soft elevation, approved as option C in the layering study. White cards and whit
 - **Compact header bar:** `0 4px 16px rgba(21,26,35,.10)`.
 - **Menus, popovers, the Recent panel and a peeking sidebar:** `0 8px 24px rgba(21,26,35,.12), 0 2px 6px rgba(21,26,35,.06)`.
 - **Drawer:** `-0.5rem 0 1.5rem rgba(21,26,35,.12)` over a 35% ink backdrop.
-- **Focus ring:** `0 0 0 3px rgba(10,154,168,.45)` (teal).
+- **Focus ring:** a crisp 1px teal edge inside a soft teal glow, `0 0 0 1px #0a9aa8, 0 0 0 4px rgba(10,154,168,.3)`. Fields also turn their border steel. Controls inside a scrolling container (the sidebar, Recent) draw it inset, `inset 0 0 0 2px #0a9aa8`, so it is never clipped.
 
 **The Elevation Rule.** Working surfaces use the shared soft card shadow. Overlays use the stronger popover or drawer shadow; do not stack extra shadows on nested ledger rows.
 
@@ -260,7 +262,18 @@ Three radii: 4px (`sm`) for chips, tags and menu items; 6px (`md`) for buttons, 
 
 ### Buttons
 
-Familiar filled and outline variants at two sizes: 36px (default) and 32px (small, for row and section actions), growing to 40px on touch (`pointer: coarse`). The accent button is the single primary action; outline buttons use ink text and the control outline; destructive actions are red outline that fills on hover. Log Activity is always the accent button, in the sidebar, the phone top bar and an agreement's activity table. A disabled button says why next to it ("This agreement is inactive."). Buttons are 500 weight with the soft lift above and a 0.15s state transition under Bootstrap's reduced-motion handling.
+Two sizes: 36px (default) and 32px (small, for row and section actions), growing to 40px on touch (`pointer: coarse`). Buttons are 500 weight with the soft lift and a 0.15s color transition under Bootstrap's reduced-motion handling. Choose the variant from the button's job and level, never from the page's look:
+
+| Variant | Class | Job | Rest → hover → pressed |
+|---|---|---|---|
+| Primary | `btn-primary` | The one commit action in a region: Save, Create, Log Activity, Confirm, Endorse, Award. | Steel fill → Deep Steel → Ink Steel |
+| Secondary | `btn-outline-primary` | Page- and section-level actions that add or change something: header Edit and its "⋯" menu, Add…, Manage assignments, Apply to eligible candidates, Home's create actions. | White, steel border and text → Steel Mist → `accent-press` |
+| Neutral | `btn-outline-secondary` | Navigation and utility (Cancel, View all, links to another page such as Manage Logging Fields, filters, Apply/Reset/Clear, Done), reversals (Withdraw, Return to coach) and every action inside a repeated row (row Edit, reorder, Duplicate). | White, control outline, ink → `hover` → `press` |
+| Destructive | `btn-outline-danger` | Triggers that remove or delete. They always confirm. | White, red border, red ink → Danger Mist → danger border tint |
+| Destructive commit | `btn-danger` | Only the button that commits a destructive confirmation or form (dialog Delete, Revoke award). | Red fill → darker red |
+| Ghost | `btn-link`, `.app-row-actions-toggle` | Inline text actions and the row "⋯" toggle. | Text or icon → `hover` fill for icon toggles |
+
+Every outline variant behaves the same: white at rest, its own tint on hover, a deeper tint when pressed, never a solid fill. Icon-only buttons take the variant of their job and keep an accessible name. Custom controls (ledger header actions, repeater icon buttons, "+N") use the same `hover`, `press` and focus tokens. `btn-secondary`, `btn-success` and other stock variants are not used. Log Activity is always the primary button, in the sidebar, the phone top bar and an agreement's activity table. A disabled button says why next to it ("This agreement is inactive.").
 
 ### Page Headers and Breadcrumbs
 
@@ -302,11 +315,11 @@ Counts are plain numbers (`.app-count`). In tables a related-record cell shows t
 
 A docked, full-height white sidebar with a hairline on its right edge; there is no desktop top bar. Below 992px a slim light top bar carries only the menu button, the brand and Log Activity.
 
-The sidebar has three zones. **Actions** at the top: the brand mark (a navy square reading "II" for Innovate Impact) and name with a pin button, a search field (a "/" hint; pressing "/" focuses it) and the accent Log Activity button. **Destinations** in the middle: links come from `AppNav::railGroups()`, which reuses the role rules in `primaryLinks()` and `adminSections()`: Work, then Reference Data, Agreement Setup, Activity Setup, Certification Setup and People for admins. Every group is always listed. Each link is a Bootstrap Icon plus a 14px label. The section that owns the current route gets the steel mist fill, a 3px steel rule on its left edge, semibold steel-ink text and `aria-current` (`page` on the index, `true` on child pages). **Personal** at the bottom: Recent, then an account row (initials avatar, name, access profile) whose menu opens upward with Profile and Log out. An open Recent button turns solid steel, distinct from the tinted current section.
+The sidebar has three zones. **Actions** at the top: the brand mark (a navy square reading "ii" for Innovate Impact) and name with a pin button, a search field (a "/" hint; pressing "/" focuses it) and the accent Log Activity button. **Destinations** in the middle: links come from `AppNav::railGroups()`, which reuses the role rules in `primaryLinks()` and `adminSections()`: Work, then Reference Data, Agreement Setup, Activity Setup, Certification Setup and People for admins. Every group is always listed. Each link is a Bootstrap Icon plus a 14px label. The section that owns the current route gets the steel mist fill, a 3px steel rule on its left edge, semibold steel-ink text and `aria-current` (`page` on the index, `true` on child pages). The owning section follows the breadcrumb root, so certificate enrollment pages, reached from an agreement, highlight Agreements. Collapsed to icons, the current section is a solid steel tile with a white icon instead. Links sit 2px apart so a hover never touches the current section; they fade hover and press fills over 0.12s and draw the inset focus ring. **Personal** at the bottom: Recent, then an account row (initials avatar, name, access profile) whose menu opens upward with Profile and Log out. An open Recent button turns solid steel, distinct from the tinted current section.
 
 The sidebar is pinned open (15rem, docked, the page makes room) or unpinned (4.25rem icons, the page does not move). Unpinned, it peeks open over the page on pointer hover (120ms in, 250ms out), keyboard focus, the search shortcut, or while the Recent panel or account menu is showing, with the popover shadow; Escape dismisses a peek. Unpinning with the mouse collapses at once and only peeks again after the pointer leaves and re-enters. The pin choice is remembered per user in `localStorage`, and new users start pinned at 1200px and wider. Below 992px the same markup is a Bootstrap offcanvas menu; links are at least 44px high.
 
-Recent is a floating 8px panel beside the sidebar, sized to its content, listing up to 30 records opened in the last seven days with a labeled search, a Clear action, and empty, no-match and load-error states. It closes on Escape or an outside click and returns focus to its button. Entries are stored per user in `recent_records` and rechecked with the `view` policy each time the panel opens.
+Recent is a floating 8px panel beside the sidebar, sized to its content, listing up to 30 records opened in the last seven days with a labeled search, a Clear action that confirms through the shared dialog, and empty, no-match and load-error states. It closes on Escape or an outside click and returns focus to its button. Entries are stored per user in `recent_records` and rechecked with the `view` policy each time the panel opens.
 
 A "Skip to content" link is the first keyboard stop. The sidebar navigation has a landmark name, the pin is a toggle button with `aria-pressed`, collapsed links keep their labels as accessible names, and toast dismiss buttons are named "Dismiss notification". Bootstrap, Bootstrap Icons and htmx retain their pinned CDN versions with SRI hashes.
 
@@ -334,7 +347,7 @@ Long lists use the selected Scrolling B: a styled 8px native scrollbar, a visibl
 
 ### Form Actions and Drawers
 
-Confirmations use one shared HTML dialog, styled as a flat white 8px surface with the popover shadow and a 35% ink backdrop. A small semantic icon accompanies the sentence-case title; the full record name and a plain consequence follow. Delete/remove actions use danger, duplicate actions use the accent. Cancel receives initial focus; Escape and the close button cancel, and focus returns to the visible trigger. Confirm resumes the original form once, retaining CSRF and method fields. Certificate-form changes use the same asynchronous confirmation without saving the form. The body scrolls in short windows while the action footer remains reachable. A restrained 140ms entrance is disabled for reduced motion. Use `textContent` and escaped data attributes for names; never interpolate record names into inline JavaScript.
+Confirmations use one shared HTML dialog (form buttons with `data-confirm`, htmx controls with `data-confirm-title`), styled as a flat white 8px surface with the popover shadow and a 35% ink backdrop. A small semantic icon accompanies the sentence-case title; the full record name and a plain consequence follow. Delete/remove actions use danger, duplicate actions use the accent. Cancel receives initial focus; Escape and the close button cancel, and focus returns to the visible trigger. Confirm resumes the original form once, retaining CSRF and method fields. Certificate-form changes use the same asynchronous confirmation without saving the form. The body scrolls in short windows while the action footer remains reachable. A restrained 140ms entrance is disabled for reduced motion. Use `textContent` and escaped data attributes for names; never interpolate record names into inline JavaScript.
 
 Form actions live in the page header, not in a bottom bar: a status line (idle, unsaved, saving, saved, error through text and icon, announced politely once), Cancel and the primary Save/Create button. Save calls `requestSubmit()`, so Enter inside token pickers keeps its own behavior. Ctrl/⌘ + S saves, and a `beforeunload` guard protects unsaved edits.
 
@@ -346,7 +359,7 @@ Drawers behave as modals: the rest of the page is inert while one is open, Escap
 
 Notes (Bootstrap `.alert`, used for inline guidance such as an enrollment's Next step) are a tinted panel with a 4px tone rule on the left edge and square left corners: steel for primary and info, then success, warning, danger, or the control outline for secondary.
 
-Flash messages are toasts (`x-toasts`, `resources/js/toasts.js`), floating top right (below the phone top bar). A toast is a white 8px panel with the popover shadow, the same 4px tone rule, a filled tone icon, ink text with an optional semibold title, and a close button named "Dismiss notification". Success and info close after a timeout shown as a 3px tone bar shrinking along the bottom edge; it pauses on hover, keyboard focus and while the tab is hidden. Warnings, errors and toasts containing a link stay until closed; Escape closes a focused toast. Errors use `role="alert"`; other toasts are announced through the polite `#app-live` region, shortly after page load so screen readers do not skip them. The default timeout (6s) is the stack's `data-toast-timeout`; `window.appToast(message, { tone, title, timeout })` can override it per toast, and `timeout: 0` keeps a toast open. Validation errors stay inline beside their fields and in the form summary, not in toasts. Guest pages render their own inline notes.
+Flash messages are toasts (`x-toasts`, `resources/js/toasts.js`), floating top right (below the phone top bar). A toast is a white 8px panel with the popover shadow, the same 4px tone rule, a filled tone icon, ink text with an optional semibold title, and a close button named "Dismiss notification". Success and info close after a timeout shown as a 2px tone hairline, inset from every edge and aligned with the content, that shrinks near the bottom; it pauses on hover, keyboard focus and while the tab is hidden. Warnings, errors and toasts containing a link stay until closed; Escape closes a focused toast. Errors use `role="alert"`; other toasts are announced through the polite `#app-live` region, shortly after page load so screen readers do not skip them. The default timeout (6s) is the stack's `data-toast-timeout`; `window.appToast(message, { tone, title, timeout })` can override it per toast, and `timeout: 0` keeps a toast open. Validation errors stay inline beside their fields and in the form summary, not in toasts. Guest pages render their own inline notes.
 
 Dropdowns follow the semantic subtle colors and the 8px menu radius. Pagination uses ink text, a hairline border and a steel current page. Empty table states keep a muted sentence and, where permitted, the accent create button.
 
