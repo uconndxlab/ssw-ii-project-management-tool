@@ -8,7 +8,7 @@
         <div class="card">
             <div class="card-body">
                 <div class="app-auth-brand">
-                    <span class="app-rail-mark app-auth-mark" aria-hidden="true">ii</span>
+                    <span class="app-rail-mark app-auth-mark" aria-hidden="true">II</span>
                     <h1 class="app-auth-title">{{ config('app.name') }}</h1>
                 </div>
 

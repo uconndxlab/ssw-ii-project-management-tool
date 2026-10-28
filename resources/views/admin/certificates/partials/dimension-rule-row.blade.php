@@ -52,5 +52,5 @@
         <p class="form-text" data-cert-category-help></p>
     </x-form-field>
     <p class="small" data-cert-rule-summary></p>
-    <button type="button" class="btn btn-sm btn-link text-danger px-0" data-cert-remove="rule">Remove rule</button>
+    <button type="button" class="btn btn-sm btn-outline-danger" data-cert-remove="rule">Remove rule</button>
 </div>

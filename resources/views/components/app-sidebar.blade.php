@@ -18,7 +18,7 @@
         <div class="offcanvas-body app-rail-body">
             <div class="app-rail-head d-none d-lg-flex">
                 <a class="app-rail-brand" href="{{ route('dashboard') }}">
-                    <span class="app-rail-mark" aria-hidden="true">ii</span>
+                    <span class="app-rail-mark" aria-hidden="true">II</span>
                     <span class="app-rail-label app-rail-name">{{ config('app.name') }}</span>
                 </a>
                 <button type="button"

@@ -72,7 +72,7 @@
 @endphp
 
 <div data-certificate-editor data-errors='@json($errors->keys())'>
-    <nav class="nav nav-pills gap-2 mb-3 cert-sections" aria-label="Certificate sections">
+    <nav class="nav nav-pills gap-4 mb-3 cert-sections" aria-label="Certificate sections">
         @foreach(['basics' => 'Basics', 'initial' => 'Initial requirements', 'renewal' => 'Renewal', 'review' => 'Review rules'] as $key => $label)
             <button type="button" class="nav-link {{ $key === 'basics' ? 'active' : '' }}" data-cert-nav="{{ $key }}" aria-controls="cert-section-{{ $key }}" @if($key === 'basics') aria-current="page" @endif>{{ $label }}</button>
         @endforeach
