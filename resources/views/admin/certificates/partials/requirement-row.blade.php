@@ -14,10 +14,10 @@
             <span class="d-block small text-muted mt-1" data-cert-summary></span>
             <span class="d-inline-block small text-primary mt-1">Edit requirement</span>
         </button>
-        <div class="d-flex flex-wrap gap-1 cert-row-actions">
-            <button type="button" class="btn btn-sm btn-outline-secondary" data-cert-move="up" aria-label="Move requirement up">↑</button>
-            <button type="button" class="btn btn-sm btn-outline-secondary" data-cert-move="down" aria-label="Move requirement down">↓</button>
-            <button type="button" class="btn btn-sm btn-link text-danger" data-cert-remove="requirement">Remove</button>
+        <div class="d-flex flex-shrink-0 gap-1 cert-row-actions">
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-cert-move="up" aria-label="Move requirement up"><i class="bi bi-arrow-up" aria-hidden="true"></i></button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-cert-move="down" aria-label="Move requirement down"><i class="bi bi-arrow-down" aria-hidden="true"></i></button>
+            <button type="button" class="btn btn-sm btn-outline-danger" data-cert-remove="requirement">Remove</button>
         </div>
     </div>
     <div class="border-top p-3" id="cert-editor-{{ $reqIndex }}" data-cert-editor hidden>
@@ -106,7 +106,7 @@
                             @include('admin.certificates.partials.dimension-rule-row', ['row' => $rule])
                         @endforeach
                     </div>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" data-cert-add="rule">Add coverage or quota</button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-cert-add="rule">Add coverage or quota</button>
                     <p class="form-text mb-0" data-cert-add-rule-help></p>
                     <template data-cert-rule-template>@include('admin.certificates.partials.dimension-rule-row', ['row' => [], 'ruleIndex' => '__RULE__'])</template>
                 </fieldset>
@@ -125,7 +125,7 @@
                 <textarea class="form-control" id="req-{{ $reqIndex }}-notes" name="{{ $field }}[notes]" rows="2" data-cert-notes>{{ $row['notes'] ?? '' }}</textarea>
             </x-form-field>
         </div>
-        <button type="button" class="btn btn-secondary btn-sm" data-cert-done>Done editing requirement</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-cert-done>Done editing requirement</button>
         <span class="text-muted small ms-2">Save the certificate to keep changes.</span>
     </div>
 </article>

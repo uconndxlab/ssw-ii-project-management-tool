@@ -343,7 +343,7 @@
                     <span class="ms-1" data-deliverable-allocation-status></span>
                 </div>
                 <div class="d-flex flex-wrap align-items-center gap-3">
-                    <button type="button" class="btn btn-sm btn-secondary" data-deliverable-split-evenly>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-deliverable-split-evenly>
                         Distribute total evenly
                     </button>
                     <div class="d-flex align-items-center gap-2 small">
@@ -356,7 +356,7 @@
                                step="0.1"
                                aria-label="Amount for empty target rows"
                                data-deliverable-default-target>
-                        <button type="button" class="btn btn-sm btn-secondary" data-deliverable-fill-empty>Update</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-deliverable-fill-empty>Update</button>
                     </div>
                 </div>
             </div>

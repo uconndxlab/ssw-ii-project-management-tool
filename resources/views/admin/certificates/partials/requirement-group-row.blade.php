@@ -6,9 +6,9 @@
     <div class="d-flex flex-wrap justify-content-between gap-2 mb-3">
         <h3 class="h6 mb-0" data-cert-group-summary>Requirement group</h3>
         <div class="d-flex gap-1">
-            <button type="button" class="btn btn-sm btn-outline-secondary" data-cert-move="up" aria-label="Move group up">↑</button>
-            <button type="button" class="btn btn-sm btn-outline-secondary" data-cert-move="down" aria-label="Move group down">↓</button>
-            <button type="button" class="btn btn-sm btn-link text-danger" data-cert-remove="group">Ungroup</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-cert-move="up" aria-label="Move group up"><i class="bi bi-arrow-up" aria-hidden="true"></i></button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-cert-move="down" aria-label="Move group down"><i class="bi bi-arrow-down" aria-hidden="true"></i></button>
+            <button type="button" class="btn btn-sm btn-outline-danger" data-cert-remove="group">Ungroup</button>
         </div>
     </div>
     <div class="row g-3">

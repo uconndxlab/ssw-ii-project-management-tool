@@ -39,8 +39,8 @@
                                 <p class="small mb-2">{{ $attestation->satisfied ? 'Confirmed' : 'Confirmation removed' }} by {{ $attestation->satisfiedBy?->name ?? 'Former staff member' }}@if($attestation->satisfied_at) on {{ $attestation->satisfied_at->format('M j, Y') }}@endif.@if($attestation->note) <span class="text-muted">{{ $attestation->note }}</span>@endif</p>
                             @endif
                             @if($canConfirm)
-                                <details @if($errors->any() && (string) old('requirement_id') === (string) $requirement->id) open @endif>
-                                    <summary class="small text-primary">{{ $attestation?->satisfied ? 'Change confirmation' : 'Confirm requirement…' }}</summary>
+                                <details class="app-details" @if($errors->any() && (string) old('requirement_id') === (string) $requirement->id) open @endif>
+                                    <summary class="small">{{ $attestation?->satisfied ? 'Change confirmation' : 'Confirm requirement…' }}</summary>
                                     <form class="mt-3" method="POST" action="{{ route('certificate-enrollments.attest', ['certificateEnrollment' => $enrollment, 'requirement' => $requirement, 'agreement_id' => request()->integer('agreement_id') ?: null]) }}">
                                         @csrf @method('PUT')
                                         <input type="hidden" name="requirement_id" value="{{ $requirement->id }}">
@@ -69,8 +69,8 @@
                             </ul>
                             @if($row['window_start'])<p class="small text-muted mb-2">Work on or after {{ $row['window_start']->format('M j, Y') }} is within the rolling window.</p>@endif
                             @if($requirement->threshold_note)<p class="small text-muted mb-2">Guidance: {{ $requirement->threshold_note }} Coach judgment decides passing.</p>@endif
-                            <details>
-                                <summary class="small text-primary">Evidence: {{ $row['evidence']->whereNull('reason')->count() }} counted · {{ $row['evidence']->whereNotNull('reason')->count() }} not counted</summary>
+                            <details class="app-details">
+                                <summary class="small">Evidence: {{ $row['evidence']->whereNull('reason')->count() }} counted · {{ $row['evidence']->whereNotNull('reason')->count() }} not counted</summary>
                                 <div class="table-responsive mt-2">
                                     <table class="table table-sm small align-middle mb-2">
                                         <thead><tr><th>Date</th><th>Activity</th><th>Evidence</th><th>Outcome / credit</th></tr></thead>

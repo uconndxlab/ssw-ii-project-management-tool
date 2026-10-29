@@ -261,7 +261,7 @@
                 @foreach($agreement->attachments as $attachment)
                     <x-relationship-ledger-row :title="$attachment->filename">
                         <x-slot:actions>
-                            <a href="{{ $attachment->download_url }}" class="btn btn-sm btn-outline-primary text-nowrap" target="_blank">View / Download</a>
+                            <a href="{{ $attachment->download_url }}" class="btn btn-sm btn-outline-secondary text-nowrap" target="_blank">View / Download</a>
                         </x-slot:actions>
                     </x-relationship-ledger-row>
                 @endforeach
@@ -292,7 +292,7 @@
                                     @if($person->email)<div class="small text-muted text-break">{{ $person->email }}</div>@endif
                                 </div>
                                 @can('update', $agreement)
-                                    <a class="small ms-auto" href="{{ route('agreements.edit', $agreement) }}#certification-candidate-{{ $person->id }}">{{ $assignments->isEmpty() ? 'Assign a certificate' : 'Edit assignments' }}</a>
+                                    <a class="app-link small ms-auto" href="{{ route('agreements.edit', $agreement) }}#certification-candidate-{{ $person->id }}">{{ $assignments->isEmpty() ? 'Assign a certificate' : 'Edit assignments' }}</a>
                                 @endcan
                             </div>
                             @forelse($assignments as $enrollment)
@@ -305,7 +305,7 @@
                                         </div>
                                     </div>
                                     <div class="d-flex flex-wrap align-items-center gap-2">@php $lifecycleBadge = $enrollment->lifecycleBadge(); @endphp<span class="{{ $lifecycleBadge['class'] }}">{{ $lifecycleBadge['label'] }}</span>
-                                        <a href="{{ route('certificate-enrollments.show', ['certificateEnrollment' => $enrollment, 'agreement_id' => $agreement->id]) }}" class="small">Progress</a>
+                                        <a href="{{ route('certificate-enrollments.show', ['certificateEnrollment' => $enrollment, 'agreement_id' => $agreement->id]) }}" class="app-link small">Progress</a>
                                     </div>
                                 </div>
                             @empty

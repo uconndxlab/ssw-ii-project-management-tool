@@ -51,7 +51,7 @@
         <div class="border rounded p-3 d-flex flex-wrap align-items-center gap-3 mb-3">
             <i class="bi {{ $icon }} {{ $iconClass }} fs-4" aria-hidden="true"></i>
             <div class="flex-grow-1 min-w-0"><div class="fw-semibold">{{ $title }}</div><div class="small text-muted text-break">{{ $line }}</div></div>
-            @if($details)<a class="small" href="{{ route('certificate-enrollments.awards.show', ['certificateEnrollment' => $enrollment, 'award' => $current, 'agreement_id' => $agreementId]) }}">View award</a>@endif
+            @if($details)<a class="app-link small" href="{{ route('certificate-enrollments.awards.show', ['certificateEnrollment' => $enrollment, 'award' => $current, 'agreement_id' => $agreementId]) }}">View award</a>@endif
         </div>
     @endif
 
@@ -73,7 +73,7 @@
         </ol>
     @endunless
 
-    <div class="border-start border-4 border-{{ $nextTone }} {{ $nextTone === 'primary' ? 'bg-light' : 'bg-'.$nextTone.'-subtle' }} rounded-end px-3 py-2 mb-3">
+    <div class="alert alert-{{ $nextTone }} mb-3">
         <div class="small fw-semibold text-uppercase text-muted">Next step</div>
         <div>{{ $nextText }}@if(! $closed && $lifecycle['previousAwardDate']) Work after {{ $lifecycle['previousAwardDate']->format('M j, Y') }} counts toward cycle {{ $enrollment->cycle }}.@endif</div>
     </div>
@@ -101,8 +101,8 @@
 
     @unless($closed)
         @if($lifecycle['canEndorse'] && ! $pending && $summary['satisfied'])
-            <details class="border rounded mt-3" @if(old('lifecycle_form') === 'endorse') open @endif>
-                <summary class="px-3 py-2 fw-medium text-primary"><i class="bi bi-patch-check" aria-hidden="true"></i> Endorse for award…</summary>
+            <details class="app-details app-details--panel border rounded mt-3" @if(old('lifecycle_form') === 'endorse') open @endif>
+                <summary class="px-3 py-2 text-primary-emphasis"><i class="bi bi-patch-check" aria-hidden="true"></i> Endorse for award…</summary>
                 <form class="p-3 border-top" method="POST" action="{{ route('certificate-enrollments.endorse', ['certificateEnrollment' => $enrollment, 'agreement_id' => $agreementId]) }}">
                     @csrf
                     <input type="hidden" name="lifecycle_form" value="endorse"><input type="hidden" name="cycle" value="{{ $enrollment->cycle }}">
@@ -116,8 +116,8 @@
         @endif
 
         @if($coachSide)
-            <details class="border rounded mt-3" @if(old('lifecycle_form') === 'withdraw') open @endif>
-                <summary class="px-3 py-2 fw-medium text-secondary"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Withdraw endorsement…</summary>
+            <details class="app-details app-details--panel border rounded mt-3" @if(old('lifecycle_form') === 'withdraw') open @endif>
+                <summary class="px-3 py-2"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Withdraw endorsement…</summary>
                 <form class="p-3 border-top" method="POST" action="{{ route('certificate-enrollments.withdraw', ['certificateEnrollment' => $enrollment, 'agreement_id' => $agreementId]) }}">
                     @csrf @method('DELETE')
                     <input type="hidden" name="lifecycle_form" value="withdraw"><input type="hidden" name="cycle" value="{{ $enrollment->cycle }}"><input type="hidden" name="award_id" value="{{ $pending->id }}">
@@ -131,8 +131,8 @@
             @if($pending->endorsed_by_user_id === $actorId)
                 <p class="small text-muted mt-3 mb-0">You endorsed this cycle, so another certification manager awards it.</p>
             @elseif($prerequisites['satisfied'])
-                <details class="border rounded mt-3" open>
-                    <summary class="px-3 py-2 fw-medium text-primary"><i class="bi bi-award" aria-hidden="true"></i> Award certificate…</summary>
+                <details class="app-details app-details--panel border rounded mt-3" open>
+                    <summary class="px-3 py-2 text-primary-emphasis"><i class="bi bi-award" aria-hidden="true"></i> Award certificate…</summary>
                     <form class="p-3 border-top" method="POST" action="{{ route('certificate-enrollments.award', ['certificateEnrollment' => $enrollment, 'agreement_id' => $agreementId]) }}">
                         @csrf
                         <input type="hidden" name="cycle" value="{{ $enrollment->cycle }}"><input type="hidden" name="award_id" value="{{ $pending->id }}">
@@ -143,14 +143,14 @@
                             <li class="mt-2">Valid {{ $lifecycle['expiresAt'] ? 'until '.$lifecycle['expiresAt']->format('M j, Y').'. Renewal cycle '.($enrollment->cycle + 1).' opens automatically.' : 'with no expiry.' }}</li>
                         </ul>
                         <x-form-field label="Note" for="award-note"><textarea class="form-control" rows="2" name="note" id="award-note"></textarea></x-form-field>
-                        <button type="submit" class="btn btn-sm btn-success">Award certificate</button>
+                        <button type="submit" class="btn btn-sm btn-primary">Award certificate</button>
                     </form>
                 </details>
             @endif
             @unless($coachSide)
                 @php $returnSubmitted = old('lifecycle_form') === 'return'; @endphp
-                <details class="border rounded mt-2" @if($returnSubmitted) open @endif>
-                    <summary class="px-3 py-2 fw-medium text-secondary"><i class="bi bi-arrow-return-left" aria-hidden="true"></i> Return to coach…</summary>
+                <details class="app-details app-details--panel border rounded mt-2" @if($returnSubmitted) open @endif>
+                    <summary class="px-3 py-2"><i class="bi bi-arrow-return-left" aria-hidden="true"></i> Return to coach…</summary>
                     <form class="p-3 border-top" method="POST" action="{{ route('certificate-enrollments.withdraw', ['certificateEnrollment' => $enrollment, 'agreement_id' => $agreementId]) }}">
                         @csrf @method('DELETE')
                         <input type="hidden" name="lifecycle_form" value="return"><input type="hidden" name="cycle" value="{{ $enrollment->cycle }}"><input type="hidden" name="award_id" value="{{ $pending->id }}">
@@ -158,7 +158,7 @@
                         <x-form-field label="Reason" for="return-reason" :name="$returnSubmitted ? 'reason' : null" required>
                             <textarea class="form-control @if($returnSubmitted && $errors->has('reason')) is-invalid @endif" rows="2" name="reason" id="return-reason" required>{{ $returnSubmitted ? old('reason') : '' }}</textarea>
                         </x-form-field>
-                        <button type="submit" class="btn btn-sm btn-outline-primary">Return to coach</button>
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">Return to coach</button>
                     </form>
                 </details>
             @endunless
@@ -166,8 +166,8 @@
 
         @if($lifecycle['canChangeCoach'])
             @php $coachSubmitted = old('lifecycle_form') === 'coach'; @endphp
-            <details class="border rounded mt-2" @if($coachSubmitted || ! $lifecycle['coachCanEndorse']) open @endif>
-                <summary class="px-3 py-2 fw-medium text-primary"><i class="bi bi-person-gear" aria-hidden="true"></i> Change supervising coach…</summary>
+            <details class="app-details app-details--panel border rounded mt-2" @if($coachSubmitted || ! $lifecycle['coachCanEndorse']) open @endif>
+                <summary class="px-3 py-2"><i class="bi bi-person-gear" aria-hidden="true"></i> Change supervising coach…</summary>
                 <form class="p-3 border-top" method="POST" action="{{ route('certificate-enrollments.coach', ['certificateEnrollment' => $enrollment, 'agreement_id' => $agreementId]) }}">
                     @csrf @method('PUT')
                     <input type="hidden" name="lifecycle_form" value="coach">

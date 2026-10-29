@@ -48,10 +48,10 @@
                         @foreach($myActivities->take(5) as $activity)
                             @php $canManage = auth()->user()->can('update', $activity); @endphp
                             <div class="list-group-item">
-                                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start gap-3">
+                                <div class="d-flex justify-content-between align-items-start gap-2">
                                     <div class="flex-grow-1 min-w-0">
-                                        <div class="fw-bold mb-1">
-                                            <a href="{{ route('activities.show', $activity) }}" class="text-decoration-none text-body">{{ $activity->activityType?->name ?? 'Activity' }}</a>
+                                        <div class="mb-1">
+                                            <a href="{{ route('activities.show', $activity) }}" class="app-link app-link--strong app-row-link">{{ $activity->activityType?->name ?? 'Activity' }}</a>
                                             @if($activity->cancelled)
                                                 <x-status-badge :active="false" inactive-label="Cancelled" class="ms-1" />
                                             @endif
@@ -70,16 +70,15 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="btn-group btn-group-sm flex-shrink-0 align-self-end align-self-sm-start" role="group" aria-label="My recent activity actions">
-                                        <a href="{{ route('activities.show', $activity) }}" class="btn btn-outline-primary" aria-label="View activity">
-                                            <i class="bi bi-eye"></i>
-                                        </a>
-                                        @if($canManage)
-                                            <a href="{{ route('activities.edit', $activity) }}" class="btn btn-outline-secondary" aria-label="Edit activity">
-                                                <i class="bi bi-pencil-square"></i>
-                                            </a>
-                                        @endif
-                                    </div>
+                                    @if($canManage)
+                                        <div class="dropdown app-row-actions flex-shrink-0">
+                                            <button type="button" class="btn btn-sm btn-link app-row-actions-toggle" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" aria-label="Activity actions for {{ $activity->activityType?->name ?? 'activity' }}"><i class="bi bi-three-dots" aria-hidden="true"></i></button>
+                                            <div class="dropdown-menu dropdown-menu-end">
+                                                <a href="{{ route('activities.show', $activity) }}" class="dropdown-item"><i class="bi bi-eye me-2" aria-hidden="true"></i>View activity</a>
+                                                <a href="{{ route('activities.edit', $activity) }}" class="dropdown-item"><i class="bi bi-pencil-square me-2" aria-hidden="true"></i>Edit activity</a>
+                                            </div>
+                                        </div>
+                                    @endif
                                 </div>
                             </div>
                         @endforeach

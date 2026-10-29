@@ -1,7 +1,7 @@
 {{-- Revocation of one live award; shared by the progress page and the award record. --}}
 @php $submitted = old('lifecycle_form') === 'revoke-'.$award->id; @endphp
-<details class="border rounded mt-2" @if($submitted) open @endif>
-    <summary class="px-3 py-2 fw-medium text-danger"><i class="bi bi-x-octagon" aria-hidden="true"></i> Revoke award…</summary>
+<details class="app-details app-details--panel border rounded mt-2" @if($submitted) open @endif>
+    <summary class="px-3 py-2 text-danger-emphasis"><i class="bi bi-x-octagon" aria-hidden="true"></i> Revoke award…</summary>
     <form class="p-3 border-top" method="POST" action="{{ route('certificate-enrollments.revoke', ['certificateEnrollment' => $enrollment, 'award' => $award, 'agreement_id' => request()->integer('agreement_id') ?: null]) }}">
         @csrf
         <input type="hidden" name="lifecycle_form" value="revoke-{{ $award->id }}">

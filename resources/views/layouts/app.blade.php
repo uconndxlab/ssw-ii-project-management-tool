@@ -34,6 +34,7 @@
     <a href="#main" class="visually-hidden-focusable app-skip-link">Skip to content</a>
     <div id="app-live" class="visually-hidden" role="status" aria-live="polite"></div>
     @auth
+        <x-toasts />
         <x-app-navbar />
         <div class="app-body">
             <x-app-sidebar />
@@ -41,32 +42,6 @@
 
     <main id="main" @class(['py-4', 'app-main' => auth()->check()]) tabindex="-1">
         <div class="container">
-            @if(session('success') || session('status'))
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    {{ session('success') ?? session('status') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            @endif
-
-            @if(session('allocation_warnings') && count(session('allocation_warnings')) > 0)
-                <div class="alert alert-warning alert-dismissible fade show" role="alert">
-                    <div class="fw-semibold mb-1">Deliverable allocation needs attention</div>
-                    <ul class="mb-0 small">
-                        @foreach(session('allocation_warnings') as $warning)
-                            <li>{{ $warning }}</li>
-                        @endforeach
-                    </ul>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            @endif
-
-            @if(session('error'))
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    {{ session('error') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            @endif
-
             @yield('content')
         </div>
     </main>

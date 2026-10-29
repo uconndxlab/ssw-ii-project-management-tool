@@ -3,11 +3,14 @@
 @section('title', 'Login')
 
 @section('content')
-<div class="row justify-content-center">
-    <div class="col-md-5">
-        <div class="card shadow-sm">
-            <div class="card-body p-5">
-                <h3 class="card-title text-center mb-4">Login</h3>
+<div class="app-auth">
+    <div class="app-auth-panel">
+        <div class="card">
+            <div class="card-body">
+                <div class="app-auth-brand">
+                    <span class="app-rail-mark app-auth-mark" aria-hidden="true">II</span>
+                    <h1 class="app-auth-title">{{ config('app.name') }}</h1>
+                </div>
 
                 @if(session('error'))
                     <div class="alert alert-danger">{{ session('error') }}</div>
@@ -37,6 +40,7 @@
                                id="email" 
                                name="email" 
                                value="{{ old('email') }}" 
+                               autocomplete="username"
                                required 
                                autofocus>
                         @error('email')
@@ -50,6 +54,7 @@
                                class="form-control @error('password') is-invalid @enderror" 
                                id="password" 
                                name="password" 
+                               autocomplete="current-password"
                                required>
                         @error('password')
                             <div class="invalid-feedback">{{ $message }}</div>

@@ -3,7 +3,7 @@
         {{-- Rows inserted by JS --}}
     </div>
 
-    <button type="button" class="btn btn-sm btn-outline-secondary mt-3" id="add-participant-time-btn">
+    <button type="button" class="btn btn-sm btn-outline-primary mt-3" id="add-participant-time-btn">
         <i class="bi bi-plus-lg"></i> Add Row Manually
     </button>
 </div>

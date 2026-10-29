@@ -621,7 +621,7 @@
                                 data-time-tracking-subsection="user"
                             >
                                     <div class="d-flex justify-content-end mb-3">
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="copy-contact-time-to-users">
+                                        <button type="button" class="btn btn-sm btn-outline-primary" id="copy-contact-time-to-users">
                                             Sync Contact Time to Users
                                         </button>
                                     </div>

@@ -64,7 +64,7 @@
                         height="220px" />
                 </x-form-field>
             </div>
-            <button type="button" class="btn btn-sm btn-outline-primary mb-3" data-new-candidate @if($personMode !== 'search') hidden @endif>Create a new candidate</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary mb-3" data-new-candidate @if($personMode !== 'search') hidden @endif>Create a new candidate</button>
             <button type="button" class="btn btn-sm btn-link p-0 mb-3" data-back-to-search @if($personMode !== 'new') hidden @endif>Back to candidate search</button>
         @endif
         <div data-candidate-details @if($personMode === 'search') hidden @endif>
@@ -89,7 +89,7 @@
             <div class="col-12" data-email-match hidden>
                 <div class="alert alert-info mb-0" role="status">
                     <span data-email-match-message></span>
-                    <button type="button" class="btn btn-sm btn-outline-primary ms-2" data-use-email-match>Use existing candidate</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary ms-2" data-use-email-match>Use existing candidate</button>
                 </div>
             </div>
         </div>

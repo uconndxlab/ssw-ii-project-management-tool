@@ -231,7 +231,7 @@ if (panel) {
 
     // The desktop backdrop is click-through so the rail stays usable, so close on outside clicks here.
     document.addEventListener('mousedown', (event) => {
-        if (!panel.classList.contains('show') || panel.contains(event.target) || trigger?.contains(event.target)) {
+        if (!panel.classList.contains('show') || panel.contains(event.target) || trigger?.contains(event.target) || event.target.closest?.('[data-confirm-dialog]')) {
             return;
         }
 
