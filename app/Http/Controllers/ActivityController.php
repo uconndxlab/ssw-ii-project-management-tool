@@ -26,6 +26,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -404,6 +405,10 @@ class ActivityController extends Controller
             $this->activityActionLogService->record($activity, ActivityAction::Create);
         });
 
+        if ($request->boolean('save_and_duplicate')) {
+            return $this->redirectToPrefilledCopy($request, 'Activity logged. Review the copy below and save it to log another.');
+        }
+
         return redirect()
             ->route('activities.index')
             ->with('success', 'Activity logged successfully.');
@@ -634,7 +639,37 @@ class ActivityController extends Controller
             $this->activityActionLogService->record($activity, ActivityAction::Update);
         });
 
+        if ($request->boolean('save_and_duplicate')) {
+            return $this->redirectToPrefilledCopy($request, 'Activity updated. Review the copy below and save it to log another.');
+        }
+
         return $this->redirectAfterSave($activity, 'Activity updated successfully.');
+    }
+
+    /**
+     * Opens an unsaved create form prefilled with the just-saved input. Certification tag and
+     * submission ids belong to the saved activity, so they are dropped and the rows saved as new.
+     * Uploaded documents cannot be flashed to the session and are not carried over.
+     */
+    private function redirectToPrefilledCopy(Request $request, string $message): RedirectResponse
+    {
+        $withoutSavedIds = fn (array $rows): array => collect($rows)
+            ->reject(fn ($row) => ! is_array($row) || ! empty($row['_delete']))
+            ->map(fn (array $row) => Arr::except($row, ['id', '_delete']))
+            ->values()
+            ->all();
+
+        $certificationRows = collect($withoutSavedIds((array) $request->input('certification_candidates', [])))
+            ->map(fn (array $row) => array_merge($row, ['submissions' => $withoutSavedIds((array) ($row['submissions'] ?? []))]))
+            ->all();
+
+        return redirect()
+            ->route('activities.create')
+            ->withInput(array_merge(
+                $request->except(['_token', '_method', 'save_and_duplicate']),
+                ['certification_candidates' => $certificationRows],
+            ))
+            ->with('success', $message);
     }
 
     public function duplicate(Activity $activity): RedirectResponse

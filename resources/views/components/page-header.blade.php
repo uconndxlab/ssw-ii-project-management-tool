@@ -25,6 +25,7 @@
     'actionIconClass' => null,
     'formId' => null,
     'saveLabel' => null,
+    'duplicateLabel' => null,
     'lastSavedAt' => null,
     'sticky' => null,
 ])
@@ -171,6 +172,12 @@
         <a href="{{ $cancelUrl }}" class="btn btn-outline-secondary app-header-btn" data-form-cancel data-tip="Cancel" aria-label="Cancel">
             <i class="bi bi-x-lg" aria-hidden="true"></i><span class="app-header-btn-label">Cancel</span>
         </a>
+    @endif
+    @if(filled($duplicateLabel))
+        {{-- A real submit button so the server sees save_and_duplicate; the save script blocks a second submit. --}}
+        <button type="submit" form="{{ $formId }}" name="save_and_duplicate" value="1" class="btn btn-outline-primary app-header-btn" data-tip="{{ $duplicateLabel }}" aria-label="{{ $duplicateLabel }}">
+            <i class="bi bi-files" aria-hidden="true"></i><span class="app-header-btn-label">{{ $duplicateLabel }}</span>
+        </button>
     @endif
     <button type="button" class="btn btn-primary app-header-btn" data-form-save data-tip="{{ $saveLabel }} (Ctrl/⌘ + S)" aria-label="{{ $saveLabel }}">
         <i class="bi bi-check-lg" aria-hidden="true"></i><span class="app-header-btn-label app-header-btn-label--keep">{{ $saveLabel }}</span>

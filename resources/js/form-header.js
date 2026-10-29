@@ -95,7 +95,12 @@ if (header) {
             }
         });
 
-        form.addEventListener('submit', () => {
+        form.addEventListener('submit', (event) => {
+            if (submitted) {
+                event.preventDefault();
+                return;
+            }
+
             submitted = true;
             dirty = false;
             setState('saving');

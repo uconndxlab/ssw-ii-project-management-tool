@@ -17,7 +17,7 @@ function logCertificationFixture(array $f, array $payload): Activity
     return Activity::query()->latest('id')->firstOrFail();
 }
 
-test('training tags and review flag save without submissions and duplication copies neither', function () {
+test('training tags and review flag save without submissions and duplication copies both', function () {
     $f = certificationActivityFixture();
     $payload = $f['payload'] + ['needs_certification_review' => true];
     foreach (range(1, 5) as $index) {
@@ -31,8 +31,26 @@ test('training tags and review flag save without submissions and duplication cop
     expect($activity->certification_review_requested_at)->not->toBeNull();
     $this->post(route('activities.duplicate', $activity))->assertRedirect();
     $copy = Activity::query()->latest('id')->firstOrFail();
-    expect($copy->certificationCandidates)->toBeEmpty();
-    expect($copy->certification_review_requested_at)->toBeNull();
+    expect($copy->certificationCandidates)->toHaveCount(6);
+    expect($copy->certification_review_requested_at)->not->toBeNull();
+});
+
+test('duplication copies recorded submissions with their dimensions and scores', function () {
+    $f = certificationActivityFixture();
+    UserCertificationDuty::factory()->coach()->atProgram($f['program'])->create(['user_id' => $f['actor']->id]);
+    $payload = $f['payload'];
+    $payload['certification_candidates'][0]['submissions'] = [certificationSubmissionPayload($f)];
+    $activity = logCertificationFixture($f, $payload);
+
+    $this->post(route('activities.duplicate', $activity))->assertRedirect();
+
+    $copy = Activity::query()->latest('id')->firstOrFail();
+    $submission = $copy->certificationCandidates->sole()->submissions->sole();
+    expect($submission->outcome->value)->toBe('passed')
+        ->and($submission->recorded_by_user_id)->toBe($f['actor']->id)
+        ->and($submission->dimensionValues->sole()->certification_tool_dimension_option_id)->toBe($f['option']->id)
+        ->and($submission->scores->sole()->value)->toBe('5.0000')
+        ->and($activity->certificationCandidates->sole()->submissions)->toHaveCount(1);
 });
 
 test('coach records multiple independent submissions with required dimensions and explicit outcomes', function () {
@@ -219,4 +237,27 @@ test('a coach duty must intersect the activity tool and candidate certificate', 
     $payload = $f['payload'];
     $payload['certification_candidates'][0]['submissions'] = [certificationSubmissionPayload($f)];
     $this->actingAs($f['actor'])->post(route('activities.store'), $payload)->assertSessionHasErrors('certification_candidates.0.submissions.0');
+});
+
+test('save and duplicate reopens the create form with certification evidence that saves as a new copy', function () {
+    $f = certificationActivityFixture();
+    UserCertificationDuty::factory()->coach()->atProgram($f['program'])->create(['user_id' => $f['actor']->id]);
+    $payload = $f['payload'];
+    $payload['certification_candidates'][0]['submissions'] = [certificationSubmissionPayload($f)];
+    $activity = logCertificationFixture($f, $payload);
+    $tag = $activity->certificationCandidates->first();
+    $payload['certification_candidates'][0]['id'] = $tag->id;
+    $payload['certification_candidates'][0]['submissions'][0]['id'] = $tag->submissions->first()->id;
+
+    $this->put(route('activities.update', $activity), $payload + ['save_and_duplicate' => 1])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('activities.create'))
+        ->assertSessionHasInput('engagement_date', '2026-10-26');
+    expect(Activity::query()->count())->toBe(1);
+
+    $copy = logCertificationFixture($f, session()->getOldInput());
+    expect($copy->id)->not->toBe($activity->id)
+        ->and($copy->certificationCandidates)->toHaveCount(1)
+        ->and($copy->certificationCandidates->first()->submissions)->toHaveCount(1)
+        ->and($tag->submissions()->count())->toBe(1);
 });

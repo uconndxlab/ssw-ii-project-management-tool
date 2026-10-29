@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Activity;
+use App\Models\ActivityCertificationCandidate;
 use App\Models\ActivityLoggingFieldAnswer;
 use Illuminate\Support\Facades\DB;
 
@@ -25,6 +26,8 @@ class ActivityDuplicationService
             'participantTimes',
             'agreementFundingSources',
             'loggingFieldAnswers',
+            'certificationCandidates.submissions.dimensionValues',
+            'certificationCandidates.submissions.scores',
         ]);
 
         return DB::transaction(function () use ($source, $userId) {
@@ -38,6 +41,8 @@ class ActivityDuplicationService
                 'internal_only' => $source->internal_only,
                 'cancelled' => $source->cancelled,
                 'not_yet_complete' => $source->not_yet_complete,
+                'certification_review_requested_at' => $source->certification_review_requested_at,
+                'certification_review_requested_by_user_id' => $source->certification_review_requested_by_user_id,
             ]);
 
             $copy->agreements()->sync($source->agreements->pluck('id')->all());
@@ -78,6 +83,10 @@ class ActivityDuplicationService
                 $this->copyLoggingFieldAnswer($copy, $answer);
             }
 
+            foreach ($source->certificationCandidates as $tag) {
+                $this->copyCertificationCandidate($copy, $tag);
+            }
+
             $this->deliverableContributionService->syncForActivity($copy);
 
             $fresh = $copy->fresh([
@@ -97,6 +106,26 @@ class ActivityDuplicationService
 
             return $fresh;
         });
+    }
+
+    /** Submissions keep their original recorder: the copy carries the same coach-judged evidence. */
+    private function copyCertificationCandidate(Activity $copy, ActivityCertificationCandidate $tag): void
+    {
+        $tagCopy = $copy->certificationCandidates()->create($tag->only([
+            'certification_candidate_id', 'agreement_id', 'certification_role_id', 'completion_units', 'notes',
+        ]));
+
+        foreach ($tag->submissions as $submission) {
+            $submissionCopy = $tagCopy->submissions()->create($submission->only([
+                'certification_tool_id', 'outcome', 'recorded_by_user_id', 'notes',
+            ]));
+            $submissionCopy->dimensionValues()->createMany($submission->dimensionValues->map->only([
+                'certification_tool_dimension_id', 'certification_tool_dimension_option_id',
+            ])->all());
+            $submissionCopy->scores()->createMany($submission->scores->map->only([
+                'certification_tool_score_field_id', 'value',
+            ])->all());
+        }
     }
 
     private function copyLoggingFieldAnswer(Activity $copy, ActivityLoggingFieldAnswer $answer): void
