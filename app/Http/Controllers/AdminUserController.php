@@ -275,7 +275,9 @@ class AdminUserController extends Controller
             $this->syncScopeAssignments($user, $validated);
         }
 
-        $this->syncPrivileges($user, $validated, $request);
+        if (! $request->isEditingSelf()) {
+            $this->syncPrivileges($user, $validated, $request);
+        }
 
         $this->syncCertificationDuties($user, $request);
 
@@ -338,6 +340,7 @@ class AdminUserController extends Controller
 
         return [
             'user' => $user,
+            'isEditingSelf' => $user->exists && $user->is($this->actor()),
             'supervisors' => $this->supervisorOptions($user->exists ? $user : null),
             'projects' => $projects,
             'teams' => $teams,

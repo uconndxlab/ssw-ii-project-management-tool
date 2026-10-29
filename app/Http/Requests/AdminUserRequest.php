@@ -58,7 +58,7 @@ class AdminUserRequest extends FormRequest
             ],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($userId)],
             'password' => [$userId ? 'nullable' : 'required', Password::defaults()],
-            'access_profile' => ['required', Rule::in(AccessProfile::values())],
+            'access_profile' => $this->isEditingSelf() ? ['exclude'] : ['required', Rule::in(AccessProfile::values())],
             'is_supervisor' => ['nullable', 'boolean'],
             'privilege_coverage' => ['nullable', Rule::in(['system', 'specific'])],
             'privilege_system_admin' => ['nullable', 'boolean'],
@@ -97,10 +97,6 @@ class AdminUserRequest extends FormRequest
             assert($actor instanceof User);
             $access = UserAccess::for($actor);
 
-            if ($user instanceof User && $actor->id === $user->id) {
-                $validator->errors()->add('access_profile', 'You cannot change your own permissions.');
-            }
-
             if (! $this->boolean('active')) {
                 if ($user instanceof User && $actor->id === $user->id) {
                     $validator->errors()->add('active', 'You cannot deactivate your own user account.');
@@ -111,7 +107,7 @@ class AdminUserRequest extends FormRequest
                 }
             }
 
-            if ($user instanceof User && $access->lastActiveSystemAdminWouldBeRemoved($user)) {
+            if ($user instanceof User && ! $this->isEditingSelf() && $access->lastActiveSystemAdminWouldBeRemoved($user)) {
                 $keepsSystemAdmin = $this->input('access_profile') === AccessProfile::AdminViewer->value
                     && $this->input('privilege_coverage') === 'system'
                     && $this->boolean('privilege_system_admin')
@@ -121,7 +117,7 @@ class AdminUserRequest extends FormRequest
                 }
             }
 
-            $profile = AccessProfile::tryFrom((string) $this->input('access_profile'));
+            $profile = $this->isEditingSelf() ? null : AccessProfile::tryFrom((string) $this->input('access_profile'));
 
             if ($profile === AccessProfile::AdminViewer) {
                 $coverage = $this->input('privilege_coverage', 'specific');
@@ -200,6 +196,16 @@ class AdminUserRequest extends FormRequest
                 }
             }
         });
+    }
+
+    /**
+     * A system admin editing their own account keeps their permissions; privilege input is ignored.
+     */
+    public function isEditingSelf(): bool
+    {
+        $user = $this->route('user');
+
+        return $user instanceof User && $this->user()?->is($user) === true;
     }
 
     private function wouldCreateCircularReference(User $user, int $supervisorId, int $maxDepth = 50): bool

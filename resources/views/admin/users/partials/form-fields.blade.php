@@ -68,15 +68,19 @@
         </select>
     </x-form-field>
 
-    <x-form-options>
-        <x-form-switch
-            name="active"
-            label="Active"
-            help="Inactive users cannot log in and are removed from teams, agreements, and assignment pickers. Activity history is kept."
-            :checked="old('active', $user->exists ? $user->active : true)"
-            class="mb-0"
-        />
-    </x-form-options>
+    @if($isEditingSelf ?? false)
+        <input type="hidden" name="active" value="1">
+    @else
+        <x-form-options>
+            <x-form-switch
+                name="active"
+                label="Active"
+                help="Inactive users cannot log in and are removed from teams, agreements, and assignment pickers. Activity history is kept."
+                :checked="old('active', $user->exists ? $user->active : true)"
+                class="mb-0"
+            />
+        </x-form-options>
+    @endif
 </x-section-card>
 
 <x-section-card title="Scope">
@@ -104,6 +108,9 @@
 </x-section-card>
 
 <x-section-card title="Permissions">
+    @if($isEditingSelf ?? false)
+    <p class="mb-0">System administrator. You can't change your own permissions or deactivate your own account; ask another system administrator. You can still assign yourself certification duties below.</p>
+    @else
     <x-form-field label="Role" name="access_profile" :required="true" group>
         <div class="d-grid gap-2" data-access-profile-cards>
             <x-form-radio-card
@@ -153,6 +160,7 @@
             />
         </x-form-options>
     </div>
+    @endif
 </x-section-card>
 
 @if($isEdit && $canGrantCertificationDuties)
