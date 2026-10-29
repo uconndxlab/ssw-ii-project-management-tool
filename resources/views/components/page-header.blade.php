@@ -186,8 +186,9 @@
     </a>
 @endif
 @if($hasMore)
-    <div class="dropdown">
-        <button type="button" class="btn btn-outline-primary app-header-btn app-header-btn--icon" data-bs-toggle="dropdown" aria-expanded="false" data-tip="More actions" aria-label="More actions">
+    {{-- The tooltip sits on the wrapper: Bootstrap allows one component instance per element, and the button needs its Dropdown. --}}
+    <div class="dropdown" data-tip="More actions">
+        <button type="button" class="btn btn-outline-primary app-header-btn app-header-btn--icon" data-bs-toggle="dropdown" aria-expanded="false" aria-label="More actions">
             <i class="bi bi-three-dots" aria-hidden="true"></i>
         </button>
         <ul class="dropdown-menu dropdown-menu-end">

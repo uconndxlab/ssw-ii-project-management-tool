@@ -2477,7 +2477,9 @@ a.badge.app-chip:focus-visible {
 .app-row-actions-toggle:hover,
 .app-row-actions-toggle[aria-expanded="true"] {
     color: var(--app-ink);
-    background-color: var(--app-surface-inset);
+    /* Raised chip: the hovered row already uses the inset fill. */
+    background-color: var(--bs-body-bg);
+    box-shadow: 0 0 0 1px var(--app-line-strong), 0 1px 2px rgb(0 14 47 / 0.08);
 }
 
 .app-row-actions-toggle:active {
