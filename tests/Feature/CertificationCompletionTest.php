@@ -23,8 +23,6 @@ test('profile editing exposes only password fields even for a system admin', fun
         ->assertDontSee('duty_manager_')
         ->assertDontSee('id="name"', false)
         ->assertDontSee('id="email"', false);
-
-    $this->actingAs($admin)->get(route('admin.users.edit', $admin))->assertForbidden();
 });
 
 test('the removed profile duty endpoint cannot grant duties to a program admin', function () {

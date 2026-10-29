@@ -573,6 +573,42 @@ function initializeCertificationAssignments() {
     const people = @json($certificationPeople);
     const ids = (value) => JSON.parse(value || '[]').map(String);
     const intersects = (a, b) => a.some(id => b.includes(String(id)));
+    const membership = form.querySelector('[data-agreement-membership-section]');
+    const staffPickers = () => ({
+        teams: membership && form.querySelector('#' + membership.dataset.teamPickerId),
+        users: membership && form.querySelector('#' + membership.dataset.userPickerId),
+    });
+    const pickerIds = picker => Array.from(picker?.querySelectorAll('[data-token-inputs] input') || []).map(input => input.value);
+    const staffIds = () => {
+        const {teams, users} = staffPickers();
+        const members = JSON.parse(membership?.dataset.teamMembers || '{}');
+        return new Set([...pickerIds(users), ...pickerIds(teams).flatMap(id => members[id] || [])].map(String));
+    };
+    const snapshotStaff = () => ({teams: pickerIds(staffPickers().teams), users: pickerIds(staffPickers().users), ids: staffIds()});
+    const staffName = id => JSON.parse(membership?.dataset.userNames || '{}')[id] || 'The previous coach';
+    let staffSnapshot = null;
+    let restoringStaff = false;
+
+    async function confirmStaffRemoval(trigger) {
+        const before = staffSnapshot;
+        staffSnapshot = snapshotStaff();
+        if (restoringStaff || !before) return;
+        const affected = Array.from(form.querySelectorAll('[data-coach-select]:not([data-locked]):not(:disabled)'))
+            .filter(coach => coach.value && before.ids.has(coach.value) && !staffSnapshot.ids.has(coach.value));
+        if (!affected.length) return;
+        const names = [...new Set(affected.map(coach => staffName(coach.value)))].join(', ');
+        const count = `${affected.length} certificate assignment${affected.length === 1 ? '' : 's'}`;
+        if (await window.appConfirm({title: 'Remove supervising coach?', message: `Removing ${names} from staff also removes them as supervising coach on ${count}.`, action: 'Remove from staff', trigger})) {
+            affected.forEach(coach => { coach.value = ''; });
+            return;
+        }
+        restoringStaff = true;
+        const {teams, users} = staffPickers();
+        teams?.dispatchEvent(new CustomEvent('token-picker:set', {detail: before.teams, bubbles: true}));
+        users?.dispatchEvent(new CustomEvent('token-picker:set', {detail: before.users, bubbles: true}));
+        restoringStaff = false;
+        staffSnapshot = snapshotStaff();
+    }
 
     function appliesToPrograms(assignment, mode, programs) {
         return mode !== 'none' && (mode === 'all' || programs.length > 0) && (mode === 'all' || assignment.certificate_scope === 'all'
@@ -606,14 +642,16 @@ function initializeCertificationAssignments() {
             coach.add(new Option(`${assignment.coach_name || 'Current coach'} (currently unavailable)`, coachId));
         }
         coach.value = coach.dataset.originalCoach = coachId;
-        const coachHelp = item.querySelector('[data-coach-field] .form-text');
+        const coachHelp = item.querySelector('[data-coach-field] [data-field-help]');
         if (coachHelp) coachHelp.textContent = 'Changing the coach updates this person’s shared assignment.';
         if (!assignment.can_manage) {
+            Array.from(coach.options).filter(option => option.value && option.value !== coachId).forEach(option => option.remove());
+            coach.disabled = true;
+            coach.dataset.locked = '';
+            if (coachHelp) coachHelp.textContent = `Locked. ${assignment.locked_reason || 'You can’t manage this shared assignment.'}`;
+        }
+        if (!assignment.can_remove) {
             item.querySelector('[data-repeater-remove]').remove();
-            const text = document.createElement('p');
-            text.className = 'small text-muted mb-0';
-            text.textContent = `Coach: ${assignment.coach_name || 'No coach selected'}. This shared assignment cannot be changed here.`;
-            item.querySelector('[data-coach-field]').replaceWith(text);
         } else {
             item.querySelector('[data-repeater-remove]').setAttribute('aria-label', `Remove assignment ${assignment.certificate_name}`);
         }
@@ -627,6 +665,8 @@ function initializeCertificationAssignments() {
         const mode = form.querySelector('[name="program_scope_mode"]:checked')?.value || 'specific';
         const programs = mode === 'all' ? allPrograms.map(String)
             : Array.from(form.querySelectorAll('input[name="program_ids[]"]:not(:disabled)')).map(input => input.value);
+        const staff = staffIds();
+        const joinable = new Set(JSON.parse(membership?.dataset.programAllowedUserIds || '[]').map(String));
         const rosterIds = Array.from(form.querySelectorAll('[data-candidate-row]'))
             .filter(row => row.querySelector('[data-repeater-delete]').value !== '1')
             .map(row => row.querySelector('[data-candidate-select]').value).filter(Boolean);
@@ -693,7 +733,7 @@ function initializeCertificationAssignments() {
             const changing = Boolean(record)
                 && (name.value !== row.dataset.originalName || email.value !== row.dataset.originalEmail);
             name.required = email.required = Boolean(!removed && (creating || changing));
-            row.querySelectorAll('input:not([type="hidden"]),select,textarea').forEach(input => { input.disabled = removed; });
+            row.querySelectorAll('input:not([type="hidden"]),select,textarea').forEach(input => { input.disabled = removed || input.hasAttribute('data-locked'); });
 
             assignments.forEach(assignment => {
                 const certificate = assignment.querySelector('[data-certificate-select]');
@@ -713,16 +753,32 @@ function initializeCertificationAssignments() {
                 const certificateScope = option?.dataset.programScope || assignment.dataset.certificateScope;
                 const relevant = certificateScope === 'all' ? programs : ids(option?.dataset.programIds || assignment.dataset.certificatePrograms).filter(id => programs.includes(id));
                 const coach = assignment.querySelector('[data-coach-select]');
-                if (coach) {
+                if (coach && !coach.hasAttribute('data-locked')) {
                     Array.from(coach.options).forEach(option => {
                         const allowed = !option.value || (intersects(ids(option.dataset.dutyPrograms), relevant)
-                            && (option.dataset.canViewAgreement === '1' || intersects(ids(option.dataset.viewPrograms), programs)));
+                            && (staff.has(option.value) || joinable.has(option.value)));
                         option.hidden = !allowed && option.value !== coach.value;
                         option.disabled = !allowed && option.value !== coach.value;
                         option.dataset.allowed = String(allowed);
+                        if (option.dataset.name) {
+                            option.textContent = `${option.dataset.name} · ${staff.has(option.value) ? 'On staff' : (allowed ? 'Will be added to staff' : 'Not on staff')}`;
+                        }
                     });
                     coach.setCustomValidity(coach.value && coach.value !== coach.dataset.originalCoach
-                        && coach.selectedOptions[0]?.dataset.allowed === 'false' ? 'Choose a coach with access and a duty in this certificate’s programs.' : '');
+                        && coach.selectedOptions[0]?.dataset.allowed === 'false' ? 'Choose a coach with a duty in this certificate’s programs who can join this agreement’s staff.' : '');
+                    const coachHelp = assignment.querySelector('[data-coach-field] [data-field-help]');
+                    if (coachHelp) {
+                        coachHelp.dataset.defaultHelp ??= coachHelp.textContent;
+                        const previous = coach.dataset.previousCoach ?? coach.dataset.originalCoach ?? '';
+                        const noCoaches = (!certificate || certificate.value)
+                            && !Array.from(coach.options).some(option => option.value && option.dataset.allowed === 'true');
+                        let help = noCoaches
+                            ? `No ${coach.value ? 'other ' : ''}coaches available for this certificate. A coach needs a coach duty in its programs and must belong to one of this agreement’s programs so they can join its staff.`
+                            : coachHelp.dataset.defaultHelp;
+                        if (coach.value && coach.dataset.addedToStaff === coach.value) help = `${staffName(coach.value)} was added to this agreement’s staff.`;
+                        if (previous && coach.value !== previous && staff.has(previous)) help += ` ${staffName(previous)} stays on this agreement’s staff.`;
+                        coachHelp.textContent = help;
+                    }
                 }
                 if (assignment.querySelector('[data-repeater-delete]').value === '1' || assignment.dataset.scopeHidden === 'true' || removed) {
                     assignment.querySelectorAll('select').forEach(select => { select.disabled = true; select.setCustomValidity(''); });
@@ -747,10 +803,25 @@ function initializeCertificationAssignments() {
         });
     }
 
+    form.addEventListener('change', event => {
+        const coach = event.target.closest?.('[data-coach-select]');
+        if (!coach) return;
+        coach.dataset.previousCoach = coach.dataset.currentCoach ?? coach.dataset.originalCoach ?? '';
+        coach.dataset.currentCoach = coach.value;
+        const {users} = staffPickers();
+        if (!coach.value || !users || staffIds().has(coach.value)) return;
+        coach.dataset.addedToStaff = coach.value;
+        users.dispatchEvent(new CustomEvent('token-picker:set', {detail: [...pickerIds(users), coach.value], bubbles: true}));
+    });
     form.addEventListener('change', refresh);
     form.addEventListener('token-picker:change', async event => {
         const picker = event.target.closest('[data-candidate-picker] [data-token-picker]');
-        if (!picker) { refresh(); return; }
+        if (!picker) {
+            const {teams, users} = staffPickers();
+            if (event.target === teams || event.target === users) await confirmStaffRemoval(event.target);
+            refresh();
+            return;
+        }
         const row = picker.closest('[data-candidate-row]');
         const identity = row.querySelector('[data-candidate-select]');
         const selectedId = picker.querySelector('[data-token-inputs] input')?.value || '';
@@ -888,6 +959,7 @@ function initializeCertificationAssignments() {
         form.querySelectorAll('[data-candidate-row]').forEach(row => { row.dataset.repeaterMode = row === linkedRow ? 'edit' : 'display'; });
         setTimeout(() => linkedRow.scrollIntoView({block:'center'}), 0);
     }
+    staffSnapshot = snapshotStaff();
     refresh();
 }
 if (document.readyState === 'loading') {

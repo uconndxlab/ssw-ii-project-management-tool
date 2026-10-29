@@ -122,3 +122,47 @@ test('eligible coach user ids include system-scope and matching program-scope du
     expect($ids)->toContain($programCoach->id);
     expect($ids)->not->toContain($otherProgramCoach->id);
 });
+
+test('a system admin can grant themselves a duty from their own user form without changing permissions', function () {
+    $admin = createSystemAdmin();
+
+    $this->actingAs($admin)->get(route('admin.users.edit', $admin))
+        ->assertOk()
+        ->assertSee('You can’t change your own permissions')
+        ->assertDontSee('data-access-profile-cards', false);
+
+    $this->actingAs($admin)
+        ->put(route('admin.users.update', $admin), adminUserUpdatePayload($admin, [
+            'access_profile' => 'input',
+            'duty_manager_system' => '1',
+        ]))
+        ->assertSessionHasNoErrors();
+
+    $admin = $admin->fresh();
+    expect($admin->certification()->isManager())->toBeTrue()
+        ->and($admin->access()->isSystemAdmin())->toBeTrue()
+        ->and($admin->active)->toBeTrue();
+});
+
+test('a system admin cannot deactivate their own account', function () {
+    $admin = createSystemAdmin();
+
+    $this->actingAs($admin)
+        ->put(route('admin.users.update', $admin), adminUserUpdatePayload($admin, ['active' => '0']))
+        ->assertSessionHasErrors(['active' => 'You cannot deactivate your own user account.']);
+
+    expect($admin->fresh()->active)->toBeTrue();
+});
+
+test('only a system admin may edit their own account and nobody may delete themselves', function () {
+    [, $program] = createProjectWithProgram();
+    $systemAdmin = createSystemAdmin();
+    $programAdmin = createProgramAdmin($program);
+
+    expect($systemAdmin->can('update', $systemAdmin))->toBeTrue()
+        ->and($systemAdmin->can('delete', $systemAdmin))->toBeFalse()
+        ->and($programAdmin->can('update', $programAdmin))->toBeFalse()
+        ->and($programAdmin->can('delete', $programAdmin))->toBeFalse();
+
+    $this->actingAs($programAdmin)->get(route('admin.users.edit', $programAdmin))->assertForbidden();
+});

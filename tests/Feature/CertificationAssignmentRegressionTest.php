@@ -1,12 +1,15 @@
 <?php
 
+use App\Enums\CertificateAction;
 use App\Enums\CertificateEnrollmentStatus;
 use App\Enums\CertificateRequirementPhase;
 use App\Models\Agreement;
 use App\Models\AgreementCertificationCandidate;
 use App\Models\Certificate;
+use App\Models\CertificateActionLog;
 use App\Models\CertificateEnrollment;
 use App\Models\CertificationCandidate;
+use App\Models\Team;
 use App\Models\User;
 use App\Models\UserCertificationDuty;
 use Illuminate\Support\Facades\DB;
@@ -219,17 +222,58 @@ test('editing an agreement preserves an inactive roster candidate in its selecto
         ->assertViewHas('certificationCandidateOptions', fn ($options) => $options->contains('id', $candidate->id));
 });
 
-test('a coach with system-wide visibility remains selectable without explicit program privileges', function () {
+test('an ordinary user with a coach duty is selectable without prior agreement access', function () {
     $admin = createSystemAdmin();
     [, $program] = createProjectWithProgram();
     $agreement = Agreement::factory()->create();
     $agreement->programs()->attach($program);
-    $coach = createSystemAdmin();
+    $coach = User::factory()->create();
     UserCertificationDuty::factory()->coach()->atProgram($program)->create(['user_id' => $coach->id]);
 
-    expect($coach->access()->viewProgramIds())->toBe([]);
+    expect($coach->can('view', $agreement))->toBeFalse();
     $this->actingAs($admin)->get(route('agreements.edit', $agreement))->assertOk()
-        ->assertViewHas('eligibleCoaches', fn ($coaches) => $coaches->firstWhere('id', $coach->id)?->getAttribute('can_view_assignment_agreement') === true);
+        ->assertViewHas('eligibleCoaches', fn ($coaches) => $coaches->contains('id', $coach->id));
+});
+
+test('a newly chosen coach must be on the submitted agreement staff', function () {
+    $admin = createSystemAdmin();
+    [$project, $program] = createProjectWithProgram();
+    $certificate = Certificate::factory()->forProgram($program)->create();
+    $coach = User::factory()->create(['name' => 'Casey Coach']);
+    $coach->programs()->attach($program);
+    UserCertificationDuty::factory()->coach()->atProgram($program)->create(['user_id' => $coach->id]);
+
+    $this->actingAs($admin)->post(route('agreements.store'), agreementStorePayload($project, $program, [
+        'certification_candidates' => [[
+            'name' => 'Candidate', 'email' => 'staff-check@example.test',
+            'assignments' => [['certificate_id' => $certificate->id, 'coach_user_id' => $coach->id]],
+        ]],
+    ]))->assertSessionHasErrors([
+        'certification_candidates.0.assignments.0.coach_user_id' => "Add Casey Coach to this agreement's staff, or choose another coach.",
+    ]);
+
+    expect(CertificateEnrollment::count())->toBe(0);
+});
+
+test('a coach on a staffed team counts as agreement staff', function () {
+    $admin = createSystemAdmin();
+    [$project, $program] = createProjectWithProgram();
+    $certificate = Certificate::factory()->forProgram($program)->create();
+    $coach = User::factory()->create();
+    UserCertificationDuty::factory()->coach()->atProgram($program)->create(['user_id' => $coach->id]);
+    $team = Team::factory()->create();
+    $team->programs()->attach($program);
+    $team->users()->attach($coach);
+
+    $this->actingAs($admin)->post(route('agreements.store'), agreementStorePayload($project, $program, [
+        'team_ids' => [$team->id],
+        'certification_candidates' => [[
+            'name' => 'Candidate', 'email' => 'team-coach@example.test',
+            'assignments' => [['certificate_id' => $certificate->id, 'coach_user_id' => $coach->id]],
+        ]],
+    ]))->assertSessionHasNoErrors();
+
+    expect(CertificateEnrollment::sole()->supervising_coach_user_id)->toBe($coach->id);
 });
 
 test('updating unrelated user fields preserves certification duties', function () {
@@ -289,35 +333,39 @@ test('an authorized coach correction preserves the existing enrollment and its s
         'certification_candidate_id' => $roster->candidate->id, 'certificate_id' => $certificate->id,
         'sponsoring_agreement_id' => $agreement->id,
     ]);
-    $coach = createProgramViewer($program);
+    $coach = User::factory()->create();
+    $coach->programs()->attach($program);
     UserCertificationDuty::factory()->coach()->atProgram($program)->create(['user_id' => $coach->id]);
-
-    $this->actingAs($admin)->put(route('agreements.update', $agreement), agreementStorePayload($project, $program, [
+    $payload = agreementStorePayload($project, $program, [
         'certification_candidates' => [[
             'id' => $roster->id, 'certification_candidate_id' => $roster->candidate->id,
             'assignments' => [[
                 'enrollment_id' => $enrollment->id, 'certificate_id' => $certificate->id, 'coach_user_id' => $coach->id,
             ]],
         ]],
-    ]))->assertSessionHasNoErrors();
+    ]);
+    $payload['user_ids'][] = $coach->id;
+
+    $this->actingAs($admin)->put(route('agreements.update', $agreement), $payload)->assertSessionHasNoErrors();
 
     expect($enrollment->fresh()->supervising_coach_user_id)->toBe($coach->id)
         ->and($enrollment->fresh()->sponsoring_agreement_id)->toBe($agreement->id)
-        ->and(CertificateEnrollment::count())->toBe(1);
+        ->and(CertificateEnrollment::count())->toBe(1)
+        ->and($agreement->users()->whereKey($coach->id)->exists())->toBeTrue();
 });
 
-test('coach correction cannot mutate an assignment beyond its initial unstarted cycle', function (array $attributes) {
+test('an agreement editor can change the coach after progress starts and the change is logged', function (array $attributes) {
     $admin = createSystemAdmin();
     [$project, $program] = createProjectWithProgram();
     $agreement = Agreement::factory()->create();
     $agreement->programs()->attach($program);
     $roster = AgreementCertificationCandidate::factory()->create(['agreement_id' => $agreement->id]);
     $certificate = Certificate::factory()->forProgram($program)->create();
+    $previousCoach = User::factory()->create(['name' => 'Previous Coach']);
     $enrollment = CertificateEnrollment::factory()->create(array_merge([
         'certification_candidate_id' => $roster->candidate->id, 'certificate_id' => $certificate->id,
-        'sponsoring_agreement_id' => $agreement->id, 'supervising_coach_user_id' => User::factory(),
+        'sponsoring_agreement_id' => $agreement->id, 'supervising_coach_user_id' => $previousCoach->id,
     ], $attributes));
-    $coachId = $enrollment->supervising_coach_user_id;
 
     $this->actingAs($admin)->put(route('agreements.update', $agreement), agreementStorePayload($project, $program, [
         'certification_candidates' => [[
@@ -326,9 +374,13 @@ test('coach correction cannot mutate an assignment beyond its initial unstarted 
                 'enrollment_id' => $enrollment->id, 'certificate_id' => $certificate->id, 'coach_user_id' => null,
             ]],
         ]],
-    ]))->assertSessionHasErrors('certification_candidates.0.assignments.0.coach_user_id');
+    ]))->assertSessionHasNoErrors();
 
-    expect($enrollment->fresh()->supervising_coach_user_id)->toBe($coachId);
+    $log = CertificateActionLog::query()->where('certificate_enrollment_id', $enrollment->id)->sole();
+    expect($enrollment->fresh()->supervising_coach_user_id)->toBeNull()
+        ->and($log->action)->toBe(CertificateAction::CoachChanged)
+        ->and($log->user_id)->toBe($admin->id)
+        ->and($log->context)->toBe(['from' => 'Previous Coach', 'to' => null]);
 })->with([
     'in progress' => [['status' => CertificateEnrollmentStatus::InProgress]],
     'renewal' => [['phase' => CertificateRequirementPhase::Renewal]],
@@ -415,4 +467,45 @@ test('legacy candidate migration preserves separate people and roster metadata',
         DB::statement("select set_config('search_path', ?, true)", [$searchPath]);
         DB::statement("DROP SCHEMA {$schema} CASCADE");
     }
+});
+
+test('a started assignment keeps an editable coach field on the agreement form', function () {
+    $admin = createSystemAdmin();
+    [, $program] = createProjectWithProgram();
+    $agreement = Agreement::factory()->create();
+    $agreement->programs()->attach($program);
+    $roster = AgreementCertificationCandidate::factory()->create(['agreement_id' => $agreement->id]);
+    CertificateEnrollment::factory()->create([
+        'certification_candidate_id' => $roster->candidate->id,
+        'certificate_id' => Certificate::factory()->forProgram($program)->create()->id,
+        'status' => CertificateEnrollmentStatus::InProgress,
+    ]);
+
+    $this->actingAs($admin)->get(route('agreements.edit', $agreement))
+        ->assertOk()
+        ->assertSee('Changing the coach updates this person’s shared assignment.')
+        ->assertDontSee('data-field-help>Locked.', false);
+});
+
+test('agreement edit explains a lock from another agreement without naming one the editor cannot see', function () {
+    [, $program] = createProjectWithProgram();
+    [, $otherProgram] = createProjectWithProgram();
+    $admin = createProgramAdmin($program);
+    $agreement = Agreement::factory()->create();
+    $agreement->programs()->attach($program);
+    $otherAgreement = Agreement::factory()->create(['name' => 'Hidden Partner Agreement']);
+    $otherAgreement->programs()->attach($otherProgram);
+    $roster = AgreementCertificationCandidate::factory()->create(['agreement_id' => $agreement->id]);
+    AgreementCertificationCandidate::factory()->create([
+        'agreement_id' => $otherAgreement->id, 'certification_candidate_id' => $roster->candidate->id,
+    ]);
+    CertificateEnrollment::factory()->create([
+        'certification_candidate_id' => $roster->candidate->id,
+        'certificate_id' => Certificate::factory()->forProgram($program)->create()->id,
+    ]);
+
+    $this->actingAs($admin)->get(route('agreements.edit', $agreement))
+        ->assertOk()
+        ->assertSee('data-field-help>Locked. This person is also on another agreement, which you can’t edit.', false)
+        ->assertDontSee('Hidden Partner Agreement');
 });

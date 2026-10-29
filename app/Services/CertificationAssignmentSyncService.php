@@ -2,12 +2,14 @@
 
 namespace App\Services;
 
+use App\Enums\CertificateAction;
 use App\Enums\CertificateEnrollmentStatus;
 use App\Enums\CertificateRequirementPhase;
 use App\Enums\ProgramScopeMode;
 use App\Models\Agreement;
 use App\Models\AgreementCertificationCandidate;
 use App\Models\Certificate;
+use App\Models\CertificateActionLog;
 use App\Models\CertificateEnrollment;
 use App\Models\CertificationCandidate;
 use App\Models\Program;
@@ -16,6 +18,7 @@ use App\Support\Authorization\CertificationAccess;
 use App\Support\ProjectProgramScope;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator as ValidatorFacade;
 use Illuminate\Validation\ValidationException;
@@ -57,15 +60,16 @@ class CertificationAssignmentSyncService
     }
 
     /**
-     * Active staff with an active coach duty reaching the agreement's program scope. A duty never
-     * grants implicit visibility, so this is further intersected by the caller's own staff pool.
+     * Active staff with an active coach duty reaching these programs whom the actor can see. A duty
+     * never grants visibility: agreement forms add the chosen coach to the agreement's staff, and the
+     * progress page further requires the coach to see the enrollment.
      *
-     * @param  list<int>  $agreementProgramIds
+     * @param  list<int>  $programIds
      * @return Collection<int, User>
      */
-    public function eligibleCoaches(array $agreementProgramIds, User $actor, ?Agreement $agreement = null): Collection
+    public function eligibleCoaches(array $programIds, User $actor): Collection
     {
-        $userIds = CertificationAccess::eligibleCoachUserIds($agreementProgramIds);
+        $userIds = CertificationAccess::eligibleCoachUserIds($programIds);
 
         if ($userIds === []) {
             return new Collection;
@@ -73,13 +77,8 @@ class CertificationAssignmentSyncService
 
         return User::query()->active()->whereIn('id', $userIds)
             ->visibleTo($actor)
-            ->with(['certificationDuties', 'privileges', 'programs'])
-            ->orderBy('name')->get()
-            ->filter(function (User $coach) use ($agreement, $agreementProgramIds) {
-                return $coach->access()->hasSystemView()
-                    || array_intersect($coach->access()->viewProgramIds(), $agreementProgramIds) !== []
-                    || ($agreement !== null && ! $coach->access()->hasView() && $coach->can('view', $agreement));
-            })->values();
+            ->with(['certificationDuties', 'programs'])
+            ->orderBy('name')->get();
     }
 
     /**
@@ -108,6 +107,7 @@ class CertificationAssignmentSyncService
     /**
      * @param  array<int|string, mixed>  $rows
      * @param  list<int>  $agreementProgramIds
+     * @param  list<int>|null  $staffUserIds  Submitted agreement staff; null reads the saved staff.
      */
     public function validateRows(
         Validator $validator,
@@ -116,13 +116,15 @@ class CertificationAssignmentSyncService
         array $rows,
         ProgramScopeMode $agreementMode,
         array $agreementProgramIds,
+        ?array $staffUserIds = null,
     ): void {
         if ($agreementMode === ProgramScopeMode::All) {
             $agreementProgramIds = array_values(Program::query()->where('active', true)->pluck('id')->map(fn ($id) => (int) $id)->all());
         }
 
         $eligibleCertificates = $this->eligibleCertificates($actor, $agreementMode, $agreementProgramIds)->keyBy('id');
-        $eligibleCoaches = $this->eligibleCoaches($agreementProgramIds, $actor, $agreement)->keyBy('id');
+        $eligibleCoaches = $this->eligibleCoaches($agreementProgramIds, $actor)->keyBy('id');
+        $staffUserIds ??= $agreement ? $this->staffUserIds($agreement) : [];
 
         $existingRoster = $agreement ? $agreement->certificationCandidates()->get()->keyBy('id') : new Collection;
         $existingRosterIds = $existingRoster->modelKeys();
@@ -299,12 +301,8 @@ class CertificationAssignmentSyncService
                     && array_key_exists('coach_user_id', $assignmentRow)
                     && $coachUserId !== $existingEnrollment->supervising_coach_user_id;
 
-                if ($coachChanged) {
-                    if (! $existingEnrollment->isUnstarted()) {
-                        $validator->errors()->add("{$fieldPrefix}.coach_user_id", 'Only a not-started assignment can be corrected here.');
-                    } elseif (! $this->canManageEnrollment($actor, $existingEnrollment)) {
-                        $validator->errors()->add("{$fieldPrefix}.coach_user_id", 'You cannot change the coach for this shared assignment.');
-                    }
+                if ($coachChanged && ($blocker = $this->manageBlocker($actor, $existingEnrollment)) !== null) {
+                    $validator->errors()->add("{$fieldPrefix}.coach_user_id", "You cannot change this coach. {$blocker}");
                 }
 
                 if ($coachUserId !== null && ($existingEnrollment === null || $coachChanged)) {
@@ -315,7 +313,9 @@ class CertificationAssignmentSyncService
                         : array_intersect($certificate?->programs->pluck('id')->all() ?? [], $agreementProgramIds);
 
                     if ($coach === null || array_intersect($coach->certification()->coachProgramIds(), $certificateProgramIds) === []) {
-                        $validator->errors()->add("{$fieldPrefix}.coach_user_id", 'Select a coach who can view this agreement and has a coach duty in the certificate\'s programs.');
+                        $validator->errors()->add("{$fieldPrefix}.coach_user_id", 'Select a coach who has a coach duty in the certificate\'s programs.');
+                    } elseif (! in_array($coachUserId, $staffUserIds, true)) {
+                        $validator->errors()->add("{$fieldPrefix}.coach_user_id", "Add {$coach->name} to this agreement's staff, or choose another coach.");
                     }
                 }
             }
@@ -446,8 +446,14 @@ class CertificationAssignmentSyncService
                     if (filled($assignmentRow['enrollment_id'] ?? null)
                         && array_key_exists('coach_user_id', $assignmentRow)
                         && $coachUserId !== $existingEnrollment->supervising_coach_user_id) {
+                        $from = $existingEnrollment->supervisingCoach?->name;
                         $existingEnrollment->update([
                             'supervising_coach_user_id' => $coachUserId,
+                        ]);
+                        CertificateActionLog::query()->create([
+                            'certificate_enrollment_id' => $existingEnrollment->id, 'user_id' => $actor->id,
+                            'action' => CertificateAction::CoachChanged, 'cycle' => $existingEnrollment->cycle,
+                            'context' => ['from' => $from, 'to' => $existingEnrollment->load('supervisingCoach')->supervisingCoach?->name],
                         ]);
                     }
 
@@ -558,22 +564,71 @@ class CertificationAssignmentSyncService
 
     public function canManageEnrollment(User $actor, CertificateEnrollment $enrollment): bool
     {
+        return $this->manageBlocker($actor, $enrollment) === null;
+    }
+
+    /**
+     * Why the actor cannot change this shared assignment from an agreement, or null when they can.
+     */
+    public function manageBlocker(User $actor, CertificateEnrollment $enrollment): ?string
+    {
         if ($actor->access()->isSystemAdmin()) {
-            return true;
+            return null;
         }
 
         $candidate = $enrollment->candidate;
-        if ($candidate === null || ! $this->canEditCandidate($actor, $candidate)) {
-            return false;
+        if ($candidate === null) {
+            return 'This assignment has no person attached.';
+        }
+
+        if (! $this->canEditCandidate($actor, $candidate)) {
+            $blocking = $candidate->rosterLinks->pluck('agreement')->filter()->unique('id')
+                ->reject(fn (Agreement $agreement) => $actor->can('update', $agreement));
+
+            return $blocking->isEmpty()
+                ? 'This person is not on an agreement you can edit.'
+                : 'This person is also on '.$this->describeAgreements($actor, $blocking).', which you can’t edit. Ask someone who can edit every agreement they are on.';
         }
 
         $certificate = $enrollment->certificate;
         if ($certificate === null || ($certificate->program_scope_mode !== ProgramScopeMode::All && ! $actor->can('update', $certificate))) {
-            return false;
+            return 'You can’t edit the '.($certificate->name ?? 'assigned').' certificate.';
         }
 
         $sponsor = $enrollment->sponsoringAgreement;
+        if ($sponsor !== null && ! $actor->can('update', $sponsor)) {
+            return 'It was assigned through '.$this->describeAgreements($actor, collect([$sponsor])).', which you can’t edit.';
+        }
 
-        return $sponsor === null || $actor->can('update', $sponsor);
+        return null;
+    }
+
+    /**
+     * Direct users plus team members, as saved.
+     *
+     * @return list<int>
+     */
+    private function staffUserIds(Agreement $agreement): array
+    {
+        return array_values($agreement->users()->pluck('users.id')
+            ->merge(User::query()->whereHas('teams', fn ($teams) => $teams->whereIn('teams.id', $agreement->teams()->select('teams.id')))->pluck('id'))
+            ->map(fn ($id) => (int) $id)->unique()->all());
+    }
+
+    /**
+     * Names the agreements the actor may see; the rest are only counted so they stay private.
+     *
+     * @param  SupportCollection<int, Agreement>  $agreements
+     */
+    private function describeAgreements(User $actor, SupportCollection $agreements): string
+    {
+        $names = $agreements->filter(fn (Agreement $agreement) => $actor->can('view', $agreement))
+            ->map(fn (Agreement $agreement) => '“'.$agreement->name.'”')->values();
+        $hidden = $agreements->count() - $names->count();
+        if ($hidden > 0) {
+            $names->push($hidden === 1 ? 'another agreement' : "{$hidden} other agreements");
+        }
+
+        return $names->join(', ', ' and ');
     }
 }

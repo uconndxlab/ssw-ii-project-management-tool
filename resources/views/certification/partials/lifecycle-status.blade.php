@@ -164,7 +164,7 @@
             @endunless
         @endif
 
-        @if($lifecycle['canManage'])
+        @if($lifecycle['canChangeCoach'])
             @php $coachSubmitted = old('lifecycle_form') === 'coach'; @endphp
             <details class="border rounded mt-2" @if($coachSubmitted || ! $lifecycle['coachCanEndorse']) open @endif>
                 <summary class="px-3 py-2 fw-medium text-primary"><i class="bi bi-person-gear" aria-hidden="true"></i> Change supervising coach…</summary>
@@ -181,6 +181,8 @@
                     <button type="submit" class="btn btn-sm btn-primary">Change coach</button>
                 </form>
             </details>
+        @endif
+        @if($lifecycle['canManage'])
             @if($current?->isLive())
                 @include('certification.partials.revoke-form', ['award' => $current])
             @endif

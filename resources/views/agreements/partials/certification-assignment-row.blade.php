@@ -45,27 +45,25 @@
         </x-form-field>
         </div>
     @endif
-    @if($canManage)
-        <div data-coach-field>
-        <x-form-field label="Supervising coach" :for="$fieldId.'-coach'" :name="$prefix.'.coach_user_id'" class="mb-0"
-                      :help="$isExisting ? 'Changing the coach updates this person’s shared assignment.' : 'Optional. A coach needs a matching duty and access to this agreement.'">
-            <select class="form-select" id="{{ $fieldId }}-coach" data-coach-select
-                    data-original-coach="{{ $originalCoachId }}"
-                    name="certification_candidates[{{ $candidateIndex }}][assignments][{{ $assignmentIndex }}][coach_user_id]">
-                <option value="">No coach</option>
+    <div data-coach-field>
+    <x-form-field label="Supervising coach" :for="$fieldId.'-coach'" :name="$prefix.'.coach_user_id'" class="mb-0"
+                  :help="! $canManage ? 'Locked. '.($row['locked_reason'] ?? 'You can’t manage this shared assignment.') : ($isExisting ? 'Changing the coach updates this person’s shared assignment.' : 'Optional. Choosing a coach who isn’t on this agreement adds them to its staff.')">
+        <select class="form-select" id="{{ $fieldId }}-coach" data-coach-select
+                data-original-coach="{{ $originalCoachId }}" @disabled(! $canManage) @if(! $canManage) data-locked @endif
+                name="certification_candidates[{{ $candidateIndex }}][assignments][{{ $assignmentIndex }}][coach_user_id]">
+            <option value="">No coach</option>
+            @if(! $canManage)
+                @if(filled($row['coach_user_id'] ?? null))<option value="{{ $row['coach_user_id'] }}" selected>{{ $row['coach_name'] ?? 'Current coach' }}</option>@endif
+            @else
                 @if(filled($row['coach_user_id'] ?? null) && ! $eligibleCoaches->contains('id', (int) $row['coach_user_id']))
                     <option value="{{ $row['coach_user_id'] }}" selected data-preserved-coach>{{ $row['coach_name'] ?? 'Current coach' }} (currently unavailable)</option>
                 @endif
                 @foreach($eligibleCoaches as $coach)
-                    <option value="{{ $coach->id }}" data-duty-programs='@json($coach->certification()->coachProgramIds())'
-                            data-view-programs='@json($coach->access()->viewProgramIds())'
-                            data-can-view-agreement="{{ $coach->getAttribute('can_view_assignment_agreement') ? '1' : '0' }}"
+                    <option value="{{ $coach->id }}" data-name="{{ $coach->name }}" data-duty-programs='@json($coach->certification()->coachProgramIds())'
                             @selected((string) ($row['coach_user_id'] ?? '') === (string) $coach->id)>{{ $coach->name }}</option>
                 @endforeach
-            </select>
-        </x-form-field>
-        </div>
-    @else
-        <p class="form-text mb-0">Coach: {{ $row['coach_name'] ?? 'No coach' }}. This shared assignment cannot be changed here.</p>
-    @endif
+            @endif
+        </select>
+    </x-form-field>
+    </div>
 </div>

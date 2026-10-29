@@ -826,6 +826,7 @@ class AgreementRequest extends FormRequest
                     is_array($this->input('certification_candidates')) ? $this->input('certification_candidates') : [],
                     $programScopeMode,
                     array_values($selectedProgramIdSet->all()),
+                    array_values($effectiveUserIds->all()),
                 );
             }
         });

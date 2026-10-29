@@ -26,6 +26,7 @@ class CertificateProgressController extends Controller
         $actor = $this->actor();
         $details = $this->access->canViewDetails($actor, $certificateEnrollment);
         $canManage = $this->access->canManage($actor, $certificateEnrollment);
+        $canChangeCoach = $this->lifecycle->canChangeCoach($actor, $certificateEnrollment);
         $coach = $certificateEnrollment->supervisingCoach;
         $summary = ['met' => $result['met'], 'total' => $result['total'], 'satisfied' => $result['satisfied']];
         if ($details) {
@@ -49,7 +50,8 @@ class CertificateProgressController extends Controller
                 'coachCanEndorse' => $coach !== null && $this->access->canEndorse($coach, $certificateEnrollment),
                 'canEndorse' => $this->access->canEndorse($actor, $certificateEnrollment),
                 'canManage' => $canManage,
-                'coaches' => $canManage ? $this->lifecycle->eligibleCoaches($actor, $certificateEnrollment) : collect(),
+                'canChangeCoach' => $canChangeCoach,
+                'coaches' => $canChangeCoach ? $this->lifecycle->eligibleCoaches($actor, $certificateEnrollment) : collect(),
                 'history' => $details ? $certificateEnrollment->actionLogs()->with('user')->get() : collect(),
             ],
         ]);

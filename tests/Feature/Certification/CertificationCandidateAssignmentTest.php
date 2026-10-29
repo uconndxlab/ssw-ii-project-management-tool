@@ -173,7 +173,8 @@ test('assigning an ineligible coach is rejected and an eligible coach is accepte
     [$project, $program] = createProjectWithProgram();
     $certificate = Certificate::factory()->forProgram($program)->create();
     $ineligibleCoach = User::factory()->create();
-    $eligibleCoach = createProgramViewer($program);
+    $eligibleCoach = User::factory()->create();
+    $eligibleCoach->programs()->attach($program);
     UserCertificationDuty::factory()->coach()->atProgram($program)->create([
         'user_id' => $eligibleCoach->id,
     ]);
@@ -204,6 +205,8 @@ test('assigning an ineligible coach is rejected and an eligible coach is accepte
             ],
         ],
     ]);
+
+    $goodPayload['user_ids'][] = $eligibleCoach->id;
 
     $this->actingAs($admin)->post(route('agreements.store'), $goodPayload)->assertSessionHasNoErrors();
 

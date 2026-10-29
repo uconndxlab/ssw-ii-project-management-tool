@@ -1129,11 +1129,7 @@ class AgreementController extends Controller
             ->get();
         $allCertificationProgramIds = array_values(Program::query()->where('active', true)->pluck('id')->map(fn ($id) => (int) $id)->all());
         $eligibleCertificates = $this->certificationAssignmentSync->eligibleCertificates($this->actor(), ProgramScopeMode::All, []);
-        $eligibleCoaches = $this->certificationAssignmentSync->eligibleCoaches($allCertificationProgramIds, $this->actor(), $agreement);
-        foreach ($eligibleCoaches as $coach) {
-            $coach->setAttribute('can_view_assignment_agreement', $coach->access()->hasSystemView()
-                || ($agreement !== null && ! $coach->access()->hasView() && $coach->can('view', $agreement)));
-        }
+        $eligibleCoaches = $this->certificationAssignmentSync->eligibleCoaches($allCertificationProgramIds, $this->actor());
         $certificationCandidateOptions = $this->certificationAssignmentSync->reachableCandidates($this->actor());
 
         if ($agreement) {
@@ -1166,8 +1162,7 @@ class AgreementController extends Controller
         foreach ($certificationRosterDisplay as $entry) {
             foreach ($entry['enrollments'] as $enrollment) {
                 $enrollment->setRelation('candidate', $entry['roster']->candidate);
-                $enrollment->setAttribute('can_manage_assignment', $enrollment->isUnstarted()
-                    && $this->certificationAssignmentSync->canManageEnrollment($this->actor(), $enrollment));
+                $enrollment->setAttribute('can_manage_assignment', $this->certificationAssignmentSync->canManageEnrollment($this->actor(), $enrollment));
             }
         }
         $certificationCandidateOptions = $certificationCandidateOptions
@@ -1180,7 +1175,8 @@ class AgreementController extends Controller
                 ->filter(fn (CertificateEnrollment $enrollment) => in_array($enrollment->certificate_id, $visibleCertificateIds, true))
                 ->map(function (CertificateEnrollment $enrollment) use ($candidate): array {
                     $enrollment->setRelation('candidate', $candidate);
-                    $canManage = $enrollment->isUnstarted() && $this->certificationAssignmentSync->canManageEnrollment($this->actor(), $enrollment);
+                    $lockedReason = $this->certificationAssignmentSync->manageBlocker($this->actor(), $enrollment);
+                    $canManage = $lockedReason === null;
 
                     return [
                         'enrollment_id' => $enrollment->id, 'certificate_id' => $enrollment->certificate_id,
@@ -1191,7 +1187,8 @@ class AgreementController extends Controller
                         'original_coach_user_id' => $enrollment->supervising_coach_user_id,
                         'coach_name' => $enrollment->supervisingCoach?->name,
                         'can_manage' => $canManage,
-                        'can_remove' => $canManage,
+                        'can_remove' => $canManage && $enrollment->isUnstarted(),
+                        'locked_reason' => $lockedReason,
                     ];
                 })->values()->all());
         }

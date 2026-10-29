@@ -188,7 +188,7 @@ class CertificateLifecycleService
     {
         DB::transaction(function () use ($actor, $enrollment, $coachId, $reason): void {
             $enrollment = CertificateEnrollment::query()->lockForUpdate()->with('supervisingCoach')->findOrFail($enrollment->id);
-            if (! $this->access->canManage($actor, $enrollment)) {
+            if (! $this->canChangeCoach($actor, $enrollment)) {
                 throw new AuthorizationException;
             }
             $coach = $this->eligibleCoaches($actor, $enrollment)->firstWhere('id', $coachId);
@@ -202,6 +202,15 @@ class CertificateLifecycleService
             $enrollment->update(['supervising_coach_user_id' => $coach->id]);
             $this->log($enrollment, $actor, CertificateAction::CoachChanged, null, $reason, $context);
         });
+    }
+
+    /**
+     * Certification managers, or anyone who could change this coach from the agreement form.
+     */
+    public function canChangeCoach(User $actor, CertificateEnrollment $enrollment): bool
+    {
+        return $this->access->canManage($actor, $enrollment)
+            || ($this->access->canView($actor, $enrollment) && $this->assignments->canManageEnrollment($actor, $enrollment));
     }
 
     /** @return Collection<int, User> */

@@ -255,6 +255,25 @@ test('managers change the supervising coach only to an eligible coach and keep a
     expect($f['enrollment']->actionLogs()->first()->context)->toBe(['from' => $f['coach']->name, 'to' => $replacement->name]);
 });
 
+test('agreement editors change the coach on the progress page without manager duty but cannot award', function () {
+    $f = lifecycleFixture();
+    $replacement = lifecycleUser($f, 'coach');
+    $replacement->programs()->attach($f['program']);
+    $agreementAdmin = createProgramAdmin($f['program']);
+    $viewer = createProgramViewer($f['program']);
+
+    $this->actingAs($agreementAdmin)->get(route('certificate-enrollments.show', $f['enrollment']))->assertOk()
+        ->assertSee('Change supervising coach…')->assertDontSee('Award certificate…');
+    $this->actingAs($viewer)->get(route('certificate-enrollments.show', $f['enrollment']))->assertOk()
+        ->assertDontSee('Change supervising coach…');
+
+    $change = fn (User $actor) => $this->actingAs($actor)->put(route('certificate-enrollments.coach', $f['enrollment']), ['coach_id' => $replacement->id]);
+    $change($viewer)->assertForbidden();
+    $change($agreementAdmin)->assertSessionHas('success');
+
+    expect($f['enrollment']->fresh()->supervising_coach_user_id)->toBe($replacement->id);
+});
+
 test('award records render the frozen snapshot only for detailed viewers', function () {
     $f = lifecycleFixture();
     endorseAs($f['coach'], $f['enrollment']);
