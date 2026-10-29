@@ -128,7 +128,7 @@ test('a system admin can grant themselves a duty from their own user form withou
 
     $this->actingAs($admin)->get(route('admin.users.edit', $admin))
         ->assertOk()
-        ->assertSee('You can’t change your own permissions')
+        ->assertSeeText("You can't change your own permissions", false)
         ->assertDontSee('data-access-profile-cards', false);
 
     $this->actingAs($admin)
