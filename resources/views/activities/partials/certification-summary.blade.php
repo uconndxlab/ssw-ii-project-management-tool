@@ -11,7 +11,7 @@
         <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
             <div class="d-flex flex-wrap align-items-center gap-2">
                 <h2 class="h5 mb-0">Certification</h2>
-                @if($flagged && ! $isReviewer)<span class="app-status app-status--warning">Needs certification review</span>@endif
+                @if($flagged)<span class="app-status app-status--warning">Needs certification review</span>@endif
             </div>
             @if($isCoach)
                 @unless($isReviewer)<a href="{{ route('activities.certification.edit', $activity) }}#activity-certification" class="btn btn-sm btn-outline-primary">Edit certification evidence</a>@endunless

@@ -231,7 +231,7 @@ test('the review page edits only the certification section and the show page pro
         ->assertSeeInOrder([$f['actor']->name, 'asked you to review certification for', $f['activity']->activityType->name])
         ->assertSee('Review &amp; record submissions', false)
         ->assertDontSee('Other candidates')
-        ->assertDontSee('Needs certification review');
+        ->assertSee('Needs certification review');
     $this->actingAs($f['actor'])->get(route('activities.show', $f['activity']))
         ->assertDontSee('asked you to review certification')
         ->assertSee('Needs certification review');
