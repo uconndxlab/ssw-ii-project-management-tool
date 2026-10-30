@@ -94,11 +94,12 @@ class AgreementDuplicationService
                 ->all();
             $copy->agreementLoggingFields()->sync($loggingFieldSync);
 
-            foreach ($source->certificationCandidates as $candidate) {
+            foreach ($source->certificationCandidates as $roster) {
                 $copy->certificationCandidates()->create([
-                    'name' => $candidate->name,
-                    'program_id' => $candidate->program_id,
-                    'notes' => $candidate->notes,
+                    'certification_candidate_id' => $roster->certification_candidate_id,
+                    'program_id' => $roster->program_id,
+                    'notes' => $roster->notes,
+                    'sort_order' => $roster->sort_order,
                 ]);
             }
 

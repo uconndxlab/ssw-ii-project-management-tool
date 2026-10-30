@@ -88,7 +88,7 @@
         </div>
     </div>
 
-    <div class="border rounded overflow-hidden d-flex flex-column" style="background-color: #e9ecef;">
+    <div class="border rounded overflow-hidden d-flex flex-column" style="background-color: var(--app-surface-fill);">
         <div class="small text-muted px-3 py-2 border-bottom bg-body">
             Selected organizations
         </div>
@@ -321,7 +321,7 @@
             const button = document.createElement('button');
             button.type = 'button';
             button.className = isSelected
-                ? 'badge bg-primary-subtle text-primary-emphasis border border-primary-subtle d-inline-flex align-items-center px-3 py-2 rounded-pill'
+                ? 'badge app-tag d-inline-flex align-items-center px-3 py-2 rounded-pill'
                 : 'badge bg-white text-body border d-inline-flex align-items-center px-3 py-2 rounded-pill';
             button.textContent = number;
             button.style.cursor = 'pointer';

@@ -3,10 +3,48 @@
 use App\Enums\CertificateDimensionRuleMode;
 use App\Enums\CertificateRequirementKind;
 use App\Enums\CertificateRequirementPhase;
+use App\Models\ActivityType;
+use App\Models\Agreement;
+use App\Models\AgreementCertificationCandidate;
+use App\Models\AgreementDeliverable;
 use App\Models\Certificate;
+use App\Models\CertificateEnrollment;
+use App\Models\CertificationCandidate;
 use App\Models\CertificationTool;
 use App\Models\CertificationToolDimension;
 use App\Models\CertificationToolDimensionOption;
+use App\Models\CertificationToolScoreField;
+use App\Models\ContactFamily;
+use App\Models\Organization;
+use App\Models\Program;
+use App\Models\Project;
+use App\Models\State;
+use App\Models\User;
+
+/**
+ * @return array<string, mixed>
+ */
+function agreementStorePayload(Project $project, Program $program, array $overrides = []): array
+{
+    $state = State::factory()->create();
+    $member = User::factory()->create();
+    $member->programs()->attach($program->id);
+
+    return array_merge([
+        'name' => 'Agreement '.uniqid(),
+        'program_scope_mode' => 'specific',
+        'project_ids' => [$project->id],
+        'program_ids' => [$program->id],
+        'state_ids' => [$state->id],
+        'user_ids' => [$member->id],
+        'principal_investigator_ids' => [$member->id],
+        'time_tracking_mode' => 'none',
+        'require_payor' => 0,
+        'require_payee' => 0,
+        'start_date' => now()->toDateString(),
+        'end_date' => now()->addYear()->toDateString(),
+    ], $overrides);
+}
 
 function certificateStorePayload(array $overrides = [], bool $withNestedFixture = false): array
 {
@@ -128,5 +166,48 @@ function minimalCertificatePayload(array $overrides = []): array
         'project_ids' => [$project->id],
         'program_ids' => [$program->id],
         'prerequisite_mode' => 'all',
+    ], $overrides);
+}
+
+function certificationActivityFixture(): array
+{
+    [$project, $program] = createProjectWithProgram();
+    $actor = createSystemAdmin();
+    $state = State::factory()->create();
+    $organization = Organization::factory()->create();
+    $organization->states()->attach($state);
+    $family = ContactFamily::factory()->create();
+    $type = ActivityType::factory()->for($family)->create();
+    $agreement = Agreement::factory()->current()->create();
+    $agreement->programs()->attach($program);
+    $agreement->states()->attach($state);
+    $agreement->organizations()->attach($organization, ['payor_source' => false, 'recipient' => false]);
+    AgreementDeliverable::factory()->for($agreement)->completionByContact()->create(['contact_family_id' => $family->id, 'program_id' => $program->id]);
+    $candidate = CertificationCandidate::factory()->create();
+    $roster = AgreementCertificationCandidate::factory()->create(['agreement_id' => $agreement->id, 'certification_candidate_id' => $candidate->id, 'program_id' => $program->id]);
+    $certificate = Certificate::factory()->forProgram($program)->create();
+    $enrollment = CertificateEnrollment::factory()->create(['certificate_id' => $certificate->id, 'certification_candidate_id' => $candidate->id, 'sponsoring_agreement_id' => $agreement->id]);
+    $tool = CertificationTool::factory()->forProgram($program)->create();
+    $dimension = CertificationToolDimension::factory()->for($tool, 'tool')->create(['name' => 'Phase']);
+    $option = CertificationToolDimensionOption::factory()->for($dimension, 'dimension')->create(['label' => 'Phase 2']);
+    $score = CertificationToolScoreField::factory()->for($tool, 'tool')->create();
+    $payload = [
+        'agreement_ids' => [$agreement->id], 'state_ids' => [$state->id], 'organization_ids' => [$organization->id],
+        'project_ids' => [$project->id], 'program_ids' => [$program->id], 'engagement_date' => '2026-10-26',
+        'contact_family_id' => $family->id, 'activity_type_id' => $type->id, 'completion_count' => 1,
+        'certification_candidates' => [[
+            'certification_candidate_id' => $candidate->id, 'agreement_id' => $agreement->id, 'completion_units' => 1,
+        ]],
+    ];
+
+    return compact('project', 'program', 'actor', 'state', 'organization', 'family', 'type', 'agreement', 'candidate', 'roster', 'certificate', 'enrollment', 'tool', 'dimension', 'option', 'score', 'payload');
+}
+
+function certificationSubmissionPayload(array $fixture, array $overrides = []): array
+{
+    return array_merge([
+        'certification_tool_id' => $fixture['tool']->id, 'outcome' => 'passed',
+        'dimensions' => [$fixture['dimension']->id => $fixture['option']->id],
+        'scores' => [$fixture['score']->id => 5],
     ], $overrides);
 }

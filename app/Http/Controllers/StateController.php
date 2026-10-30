@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\State;
+use App\Support\TablePagination;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -43,7 +44,7 @@ class StateController extends Controller
                 break;
         }
 
-        $states = $query->paginate(20)->withQueryString();
+        $states = $query->paginate(TablePagination::perPage($request))->withQueryString();
 
         // HTMX: table only
         if ($request->header('HX-Request') === 'true') {

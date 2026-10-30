@@ -6,9 +6,9 @@
 @endphp
 
 <div class="card shadow-sm app-index-table-card">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
+    <x-table-scroll>
+        <table class="table table-hover align-middle mb-0 app-cards">
+            <thead>
                 <tr>
                     <th>
                         <x-table-sort-link column="name" label="Name" :sort="$s" :direction="$d" :url="$url('name')" target="#states-table" />
@@ -22,54 +22,44 @@
                     <th class="text-nowrap">
                         <x-table-sort-link column="created" label="Created" :sort="$s" :direction="$d" :url="$url('created')" target="#states-table" />
                     </th>
-                    <th class="text-end" style="width:130px;">Actions</th>
+                    <th class="app-col-actions"><span class="visually-hidden">Actions</span></th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($states as $state)
                 <tr>
-                    <td>
-                        <a href="{{ route('states.show', $state) }}" class="fw-semibold text-decoration-none text-dark">
+                    <td class="app-card-lead">
+                        <a href="{{ route('states.show', $state) }}" class="app-link app-link--strong app-row-link">
                             {{ $state->name }}
                         </a>
                     </td>
-                    <td>
-                        <span class="badge bg-secondary">{{ $state->organizations_count }}</span>
+                    <td data-label="Organizations">
+                        <span class="app-count">{{ $state->organizations_count }}</span>
                     </td>
-                    <td>
-                        <span class="badge bg-secondary">{{ $state->agreements_count }}</span>
+                    <td data-label="Agreements">
+                        <span class="app-count">{{ $state->agreements_count }}</span>
                     </td>
-                    <td class="text-muted small">{{ $state->created_at->format('M d, Y') }}</td>
-                    <td class="text-end text-nowrap">
+                    <td data-label="Created" class="text-muted small">{{ $state->created_at->format('M d, Y') }}</td>
+                    <td class="app-col-actions">
                         @php $actionKey = 'state-actions-' . $state->id; @endphp
-                        <div class="btn-group btn-group-sm" role="group" aria-label="State actions for {{ $state->name }}">
-                            <a href="{{ route('states.show', $state) }}"
-                               class="btn btn-outline-primary"
-                               data-bs-toggle="tooltip"
-                               data-bs-title="View state"
-                               aria-label="View state">
-                                <i class="bi bi-eye"></i>
-                            </a>
+                        <div class="dropdown app-row-actions d-inline-block">
+                            <button type="button" class="btn btn-sm btn-link app-row-actions-toggle" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" aria-label="State actions for {{ $state->name }}"><i class="bi bi-three-dots" aria-hidden="true"></i></button>
+                            <div class="dropdown-menu dropdown-menu-end">
+                            <a href="{{ route('states.show', $state) }}" class="dropdown-item"><i class="bi bi-eye me-2" aria-hidden="true"></i>View state</a>
                             @can('update', $state)
-                            <a href="{{ route('states.edit', $state) }}"
-                               class="btn btn-outline-secondary"
-                               data-bs-toggle="tooltip"
-                               data-bs-title="Edit state"
-                               aria-label="Edit state">
-                                <i class="bi bi-pencil-square"></i>
-                            </a>
+                            <a href="{{ route('states.edit', $state) }}" class="dropdown-item"><i class="bi bi-pencil-square me-2" aria-hidden="true"></i>Edit state</a>
                             @endcan
                             @can('delete', $state)
+                            <hr class="dropdown-divider">
                             <button type="submit"
                                     form="{{ $actionKey }}-delete"
-                                    class="btn btn-outline-danger"
-                                    data-bs-toggle="tooltip"
-                                    data-bs-title="Delete state"
-                                    aria-label="Delete state"
-                                    onclick="return confirm('Delete state {{ addslashes($state->name) }}?')">
-                                <i class="bi bi-trash"></i>
-                            </button>
+                                    data-confirm
+                                    data-confirm-title="Delete state?"
+                                    data-confirm-record="{{ $state->name }}"
+                                    data-confirm-message="This action cannot be undone."
+                                    data-confirm-action="Delete state" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete state</button>
                             @endcan
+                            </div>
                         </div>
                         @can('delete', $state)
                         <form id="{{ $actionKey }}-delete" method="POST" action="{{ route('states.destroy', $state) }}" class="d-none">
@@ -91,8 +81,8 @@
                 @endforelse
             </tbody>
         </table>
-    </div>
-    <div class="card-footer bg-white">
+    </x-table-scroll>
+    <div class="card-footer">
         <x-htmx-pagination :paginator="$states" target="#states-table" />
     </div>
 </div>

@@ -2,14 +2,14 @@
     $s    = $sort ?? 'sort_order';
     $d    = $direction ?? 'asc';
     $flip = fn($col) => ($s === $col && $d === 'asc') ? 'desc' : 'asc';
-    $url  = fn($col) => route('contact-families.index', array_merge(request()->query(), ['sort' => $col, 'direction' => $flip($col)]));
+    $url  = fn($col) => route('contact-families.index', array_merge(request()->query(), ['sort' => $col, 'direction' => $flip($col), 'page' => 1]));
     $scopeEmptyLabel = fn ($mode, string $allLabel, string $noneLabel) => ($mode?->value ?? $mode) === 'none' ? $noneLabel : $allLabel;
 @endphp
 
 <div class="card shadow-sm app-index-table-card">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
+    <x-table-scroll>
+        <table class="table table-hover align-middle mb-0 app-cards">
+            <thead>
                 <tr>
                     <th>
                         <x-table-sort-link column="name" label="Name" :sort="$s" :direction="$d" :url="$url('name')" target="#cf-table" />
@@ -26,14 +26,14 @@
                     <th>
                         <x-table-sort-link column="active" label="Status" :sort="$s" :direction="$d" :url="$url('active')" target="#cf-table" />
                     </th>
-                    <th class="text-end" style="width:140px;">Actions</th>
+                    <th class="app-col-actions"><span class="visually-hidden">Actions</span></th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($contactFamilies as $family)
                 <tr>
-                    <td class="fw-semibold">{{ $family->name }}</td>
-                    <td>
+                    <td class="app-card-lead fw-semibold">{{ $family->name }}</td>
+                    <td data-label="Projects">
                         <x-table-badge-list
                             kind="project"
                             :items="$family->projects"
@@ -41,7 +41,7 @@
                             :empty-label="$scopeEmptyLabel($family->program_scope_mode, 'All projects', 'No projects')"
                         />
                     </td>
-                    <td>
+                    <td data-label="Programs">
                         <x-table-badge-list
                             kind="program"
                             :items="$family->programs"
@@ -49,37 +49,29 @@
                             :empty-label="$scopeEmptyLabel($family->program_scope_mode, 'All programs', 'No programs')"
                         />
                     </td>
-                    <td><span class="badge bg-secondary">{{ $family->activity_types_count }}</span></td>
-                    <td>
-                        @if($family->active)
-                            <span class="badge bg-success">Active</span>
-                        @else
-                            <span class="badge bg-secondary">Inactive</span>
-                        @endif
+                    <td data-label="Activity types"><span class="app-count">{{ $family->activity_types_count }}</span></td>
+                    <td class="app-card-status">
+                        <x-status-badge :active="$family->active" />
                     </td>
-                    <td class="text-end text-nowrap">
+                    <td class="app-col-actions">
                         @php $actionKey = 'contact-family-actions-' . $family->id; @endphp
-                        <div class="btn-group btn-group-sm" role="group" aria-label="Activity family actions for {{ $family->name }}">
+                        <div class="dropdown app-row-actions d-inline-block">
+                            <button type="button" class="btn btn-sm btn-link app-row-actions-toggle" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" aria-label="Activity family actions for {{ $family->name }}"><i class="bi bi-three-dots" aria-hidden="true"></i></button>
+                            <div class="dropdown-menu dropdown-menu-end">
                             @can('update', $family)
-                            <a href="{{ route('contact-families.edit', $family) }}"
-                               class="btn btn-outline-secondary"
-                               data-bs-toggle="tooltip"
-                               data-bs-title="Edit activity family"
-                               aria-label="Edit activity family">
-                                <i class="bi bi-pencil-square"></i>
-                            </a>
+                            <a href="{{ route('contact-families.edit', $family) }}" class="dropdown-item"><i class="bi bi-pencil-square me-2" aria-hidden="true"></i>Edit activity family</a>
                             @endcan
                             @can('delete', $family)
+                            <hr class="dropdown-divider">
                             <button type="submit"
                                     form="{{ $actionKey }}-delete"
-                                    class="btn btn-outline-danger"
-                                    data-bs-toggle="tooltip"
-                                    data-bs-title="Delete activity family"
-                                    aria-label="Delete activity family"
-                                    onclick="return confirm('Delete {{ addslashes($family->name) }}?')">
-                                <i class="bi bi-trash"></i>
-                            </button>
+                                    data-confirm
+                                    data-confirm-title="Delete activity family?"
+                                    data-confirm-record="{{ $family->name }}"
+                                    data-confirm-message="This action cannot be undone."
+                                    data-confirm-action="Delete activity family" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete activity family</button>
                             @endcan
+                            </div>
                         </div>
                         @can('delete', $family)
                         <form id="{{ $actionKey }}-delete" method="POST" action="{{ route('contact-families.destroy', $family) }}" class="d-none">
@@ -101,6 +93,9 @@
                 @endforelse
             </tbody>
         </table>
+    </x-table-scroll>
+    <div class="card-footer">
+        <x-htmx-pagination :paginator="$contactFamilies" target="#cf-table" />
     </div>
 </div>
 

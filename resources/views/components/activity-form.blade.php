@@ -26,6 +26,7 @@
     'allottedDurationHours' => null,
     'allottedDurationDays' => null,
     'activity' => null,
+    'certificationForm' => [],
 ])
 
 @php
@@ -361,7 +362,7 @@
                 @method('PUT')
             @endif
 
-            <x-page-header :form-id="$formId" :save-label="$saveLabel" :last-saved-at="$activity?->updated_at"
+            <x-page-header :form-id="$formId" :save-label="$saveLabel" duplicate-label="Save & Duplicate" :last-saved-at="$activity?->updated_at"
                 context="form"
                 :title="$isEditMode ? $recordName : null"
                 entity-type="Activity"
@@ -523,6 +524,8 @@
                         </x-form-options>
                     </x-section-card>
 
+                    @include('activities.partials.certification-fields')
+
                     <x-section-card title="Time Tracking" id="time-tracking-section">
                         <div class="form-subsections">
                             <x-form-subsection title="Duration" meta="Completions multiply allotted totals." id="activity-duration-section">
@@ -618,7 +621,7 @@
                                 data-time-tracking-subsection="user"
                             >
                                     <div class="d-flex justify-content-end mb-3">
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="copy-contact-time-to-users">
+                                        <button type="button" class="btn btn-sm btn-outline-primary" id="copy-contact-time-to-users">
                                             Sync Contact Time to Users
                                         </button>
                                     </div>
@@ -845,6 +848,37 @@
     let coverageInteractionDetected = false;
 
     if (!form) return;
+
+    // Files and submissions this user cannot edit are not sent with the form, so the prefilled copy cannot include them.
+    form.addEventListener('click', async (event) => {
+        const button = event.target.closest('button[name="save_and_duplicate"]');
+        const attachmentCount = form.querySelectorAll('[data-logging-document-file]:not(.d-none)').length;
+        const lockedSubmissionCount = form.querySelectorAll('[data-submission-locked]').length;
+
+        if (!button || (!attachmentCount && !lockedSubmissionCount)) {
+            return;
+        }
+
+        event.preventDefault();
+        const plural = (count, noun) => count + ' ' + noun + (count === 1 ? '' : 's');
+        const dropped = [
+            attachmentCount ? plural(attachmentCount, 'attachment') : null,
+            lockedSubmissionCount ? plural(lockedSubmissionCount, 'certification submission') + ' you cannot edit' : null,
+        ].filter(Boolean).join(' and ');
+        const confirmed = await window.appConfirm({
+            title: 'Some items will not be copied',
+            message: 'This activity will be saved as is, but ' + dropped + ' will not carry over to the new copy.',
+            action: 'Save & Duplicate',
+            cancelLabel: 'Keep editing',
+            icon: 'bi-files',
+            tone: 'primary',
+            trigger: button,
+        });
+
+        if (confirmed) {
+            form.requestSubmit(button);
+        }
+    });
 
     function selectedValues(name) {
         return Array.from(form.querySelectorAll('input[type="hidden"][name="' + name + '"]')).map(i => i.value);
@@ -1422,7 +1456,7 @@
 
             labelWrap.className = 'd-flex flex-wrap align-items-center gap-2';
             label.textContent = row.dataset.participantName;
-            historicalBadge.className = 'badge bg-secondary';
+            historicalBadge.className = 'badge app-tag';
             historicalBadge.textContent = 'Historical';
             historicalBadge.classList.toggle('d-none', !isHistoricalParticipant(userId));
 

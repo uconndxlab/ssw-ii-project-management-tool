@@ -10,6 +10,8 @@ use App\Models\AgreementActivityHistory;
 use App\Models\AgreementAttachment;
 use App\Models\AgreementCertificationCandidate;
 use App\Models\AgreementDeliverable;
+use App\Models\Certificate;
+use App\Models\CertificateEnrollment;
 use App\Models\ContactFamily;
 use App\Models\KfsAccount;
 use App\Models\LoggingField;
@@ -20,6 +22,7 @@ use App\Models\State;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\AgreementDuplicationService;
+use App\Services\CertificationAssignmentSyncService;
 use App\Services\DeliverableContributionService;
 use App\Services\PrivateFileService;
 use App\Support\ActivityTypeDuration;
@@ -30,6 +33,7 @@ use App\Support\DeliverableActivityHistogram;
 use App\Support\DeliverableAssignmentTargets;
 use App\Support\DeliverableHistoryScope;
 use App\Support\ProjectProgramScope;
+use App\Support\TablePagination;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -46,6 +50,7 @@ class AgreementController extends Controller
         private DeliverableContributionService $deliverableContributionService,
         private AgreementDuplicationService $agreementDuplicationService,
         private PrivateFileService $privateFiles,
+        private CertificationAssignmentSyncService $certificationAssignmentSync,
     ) {}
 
     public function index(Request $request): View
@@ -106,7 +111,7 @@ class AgreementController extends Controller
 
         $this->applyAgreementIndexSort($query, $sort, $direction);
 
-        $agreements = $query->paginate(20)->withQueryString();
+        $agreements = $query->paginate(TablePagination::perPage($request))->withQueryString();
 
         if ($request->header('HX-Request') === 'true' && $request->input('partial') === 'filters') {
             return view('agreements.partials.filters', compact(
@@ -265,7 +270,8 @@ class AgreementController extends Controller
             'deliverables.contributions.contributor',
             'deliverables.contributions.activityHistory',
             'attachments',
-            'certificationCandidates',
+            'certificationCandidates.candidate.enrollments.certificate.programs',
+            'certificationCandidates.candidate.enrollments.supervisingCoach',
             'principalInvestigators',
         ]);
 
@@ -307,6 +313,8 @@ class AgreementController extends Controller
             && $deliverableTo
             && $deliverableTo->toDateString() === $extensionEnd->toDateString();
 
+        $certificationRosterDisplay = $this->certificationRosterDisplay($agreement);
+
         return view('agreements.show', compact(
             'agreement',
             'recentActivities',
@@ -318,11 +326,51 @@ class AgreementController extends Controller
             'deliverableFrom',
             'deliverableTo',
             'usingExtendedEnd',
+            'certificationRosterDisplay',
         ) + [
             'missingAgreementDates' => ! $startDate || ! $effectiveEnd,
             'startDateAfterToday' => $startDate
                 && $startDate->toDateString() > now()->toDateString(),
         ]);
+    }
+
+    /**
+     * Compact assignment summary for the agreement show page: each roster candidate with the
+     * enrollments whose certificate applies to this agreement's own effective program scope and
+     * is visible to the viewer. Not a progress view — no percentages or completion counts.
+     *
+     * @return Collection<int, array{roster: AgreementCertificationCandidate, enrollments: Collection<int, CertificateEnrollment>}>
+     */
+    private function certificationRosterDisplay(Agreement $agreement): Collection
+    {
+        $agreementMode = $agreement->program_scope_mode;
+        $agreementProgramIds = $agreementMode === ProgramScopeMode::All
+            ? Program::query()->where('active', true)->pluck('id')->map(fn ($id) => (int) $id)->values()->all()
+            : $agreement->programs->pluck('id')->map(fn ($id) => (int) $id)->values()->all();
+
+        $visibleCertificateIds = Certificate::query()->visibleTo($this->actor())->pluck('id')->map(fn ($id) => (int) $id)->values()->all();
+
+        return $agreement->certificationCandidates->map(function (AgreementCertificationCandidate $roster) use ($agreementMode, $agreementProgramIds, $visibleCertificateIds) {
+            $candidate = $roster->candidate;
+            $enrollmentModels = $candidate !== null ? $candidate->enrollments->all() : [];
+
+            $enrollments = collect($enrollmentModels)->filter(function (CertificateEnrollment $enrollment) use ($agreementMode, $agreementProgramIds, $visibleCertificateIds) {
+                $certificate = $enrollment->certificate;
+
+                if ($certificate === null || ! in_array($certificate->id, $visibleCertificateIds, true)) {
+                    return false;
+                }
+
+                return ProjectProgramScope::scopedEntityVisibleToCertificatePrograms(
+                    $certificate->program_scope_mode,
+                    $certificate->programs->pluck('id'),
+                    $agreementMode,
+                    $agreementProgramIds,
+                );
+            })->values();
+
+            return ['roster' => $roster, 'enrollments' => $enrollments];
+        })->values();
     }
 
     public function edit(Agreement $agreement): View
@@ -989,45 +1037,11 @@ class AgreementController extends Controller
     }
 
     /**
-     * @param  list<array<string, mixed>>  $rows
+     * @param  array<int|string, mixed>  $rows
      */
     private function syncAgreementCertificationCandidates(Agreement $agreement, array $rows): void
     {
-        $existingCandidates = $agreement->certificationCandidates()->get()->keyBy('id');
-
-        foreach ($rows as $row) {
-            $rowId = isset($row['id']) && $row['id'] !== '' ? (int) $row['id'] : null;
-            $markedForDeletion = filter_var($row['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN);
-            $value = trim((string) ($row['value'] ?? ''));
-
-            if ($markedForDeletion) {
-                if ($rowId && $existingCandidates->has($rowId)) {
-                    $candidate = $existingCandidates->get($rowId);
-                    if ($candidate instanceof AgreementCertificationCandidate) {
-                        $candidate->delete();
-                    }
-                }
-
-                continue;
-            }
-
-            if ($value === '') {
-                continue;
-            }
-
-            if ($rowId && $existingCandidates->has($rowId)) {
-                $candidate = $existingCandidates->get($rowId);
-                if ($candidate instanceof AgreementCertificationCandidate) {
-                    $candidate->update(['name' => $value]);
-                }
-            } else {
-                $agreement->certificationCandidates()->create([
-                    'name' => $value,
-                    'program_id' => null,
-                    'notes' => null,
-                ]);
-            }
-        }
+        $this->certificationAssignmentSync->sync($agreement, $this->actor(), $rows);
     }
 
     /**
@@ -1113,12 +1127,10 @@ class AgreementController extends Controller
             ->where('available_in_agreements', true)
             ->with(['programs.projects'])
             ->get();
-        $candidateNameSuggestions = AgreementCertificationCandidate::query()
-            ->distinct()
-            ->orderBy('name')
-            ->pluck('name')
-            ->filter()
-            ->values();
+        $allCertificationProgramIds = array_values(Program::query()->where('active', true)->pluck('id')->map(fn ($id) => (int) $id)->all());
+        $eligibleCertificates = $this->certificationAssignmentSync->eligibleCertificates($this->actor(), ProgramScopeMode::All, []);
+        $eligibleCoaches = $this->certificationAssignmentSync->eligibleCoaches($allCertificationProgramIds, $this->actor());
+        $certificationCandidateOptions = $this->certificationAssignmentSync->reachableCandidates($this->actor());
 
         if ($agreement) {
             $agreement->load([
@@ -1135,11 +1147,50 @@ class AgreementController extends Controller
                 'attachments',
                 'agreementLoggingFields.programs.projects',
                 'programs.projects',
-                'certificationCandidates',
+                'certificationCandidates.candidate.enrollments.certificate.programs',
+                'certificationCandidates.candidate.enrollments.supervisingCoach',
+                'certificationCandidates.candidate.enrollments.sponsoringAgreement.programs',
+                'certificationCandidates.candidate.rosterLinks.agreement.programs',
+                'certificationCandidates.program',
                 'principalInvestigators.programs',
                 'kfsAccounts',
                 'organizationKfsAccounts',
             ]);
+        }
+
+        $certificationRosterDisplay = $agreement ? $this->certificationRosterDisplay($agreement) : collect();
+        foreach ($certificationRosterDisplay as $entry) {
+            foreach ($entry['enrollments'] as $enrollment) {
+                $enrollment->setRelation('candidate', $entry['roster']->candidate);
+                $enrollment->setAttribute('can_manage_assignment', $this->certificationAssignmentSync->canManageEnrollment($this->actor(), $enrollment));
+            }
+        }
+        $certificationCandidateOptions = $certificationCandidateOptions
+            ->merge($agreement?->certificationCandidates->pluck('candidate')->filter() ?? collect())
+            ->unique('id')->sortBy('name')->values();
+        $visibleCertificateIds = Certificate::query()->visibleTo($this->actor())->pluck('id')->all();
+        foreach ($certificationCandidateOptions as $candidate) {
+            $candidate->setAttribute('can_edit_identity', $this->certificationAssignmentSync->canEditCandidate($this->actor(), $candidate));
+            $candidate->setAttribute('assignment_options', $candidate->enrollments
+                ->filter(fn (CertificateEnrollment $enrollment) => in_array($enrollment->certificate_id, $visibleCertificateIds, true))
+                ->map(function (CertificateEnrollment $enrollment) use ($candidate): array {
+                    $enrollment->setRelation('candidate', $candidate);
+                    $lockedReason = $this->certificationAssignmentSync->manageBlocker($this->actor(), $enrollment);
+                    $canManage = $lockedReason === null;
+
+                    return [
+                        'enrollment_id' => $enrollment->id, 'certificate_id' => $enrollment->certificate_id,
+                        'certificate_name' => $enrollment->certificate?->name,
+                        'certificate_scope' => $enrollment->certificate?->program_scope_mode->value,
+                        'certificate_program_ids' => $enrollment->certificate?->programs->modelKeys() ?? [],
+                        'coach_user_id' => $enrollment->supervising_coach_user_id,
+                        'original_coach_user_id' => $enrollment->supervising_coach_user_id,
+                        'coach_name' => $enrollment->supervisingCoach?->name,
+                        'can_manage' => $canManage,
+                        'can_remove' => $canManage && $enrollment->isUnstarted(),
+                        'locked_reason' => $lockedReason,
+                    ];
+                })->values()->all());
         }
 
         $teams = Team::query()
@@ -1168,7 +1219,11 @@ class AgreementController extends Controller
             'activityTypes',
             'projects',
             'agreementLoggingFields',
-            'candidateNameSuggestions',
+            'eligibleCertificates',
+            'eligibleCoaches',
+            'certificationCandidateOptions',
+            'certificationRosterDisplay',
+            'allCertificationProgramIds',
             'kfsAccounts'
         );
     }

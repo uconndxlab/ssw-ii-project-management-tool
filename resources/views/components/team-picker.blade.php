@@ -48,7 +48,7 @@
                 <label class="form-check-label" for="{{ $pickerId }}_team_{{ $team->id }}">
                     {{ $team->name }}
                     @if(!$team->active)
-                        <span class="badge bg-secondary">Inactive</span>
+                        <x-status-badge :active="false" />
                     @endif
                 </label>
             </div>
@@ -78,14 +78,13 @@
                 const label = item ? item.dataset.teamLabel : cb.value;
 
                 const chip = document.createElement('span');
-                chip.className = 'badge rounded-pill d-inline-flex align-items-center gap-1 px-2 py-1';
-                chip.style.cssText = 'background-color:#0d6efd22;color:#0d6efd;border:1px solid #0d6efd55;font-size:.75rem;font-weight:500;cursor:default;';
+                chip.className = 'badge app-chip gap-1';
                 chip.innerHTML = '<span>' + label + '</span>';
 
                 const btn = document.createElement('button');
                 btn.type = 'button';
                 btn.setAttribute('aria-label', 'Remove ' + label);
-                btn.style.cssText = 'background:none;border:none;padding:0;line-height:1;cursor:pointer;color:#0d6efd;font-size:.85rem;';
+                btn.className = 'app-chip-remove';
                 btn.innerHTML = '&times;';
                 btn.addEventListener('click', function () {
                     cb.checked = false;

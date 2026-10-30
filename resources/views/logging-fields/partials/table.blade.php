@@ -7,9 +7,9 @@
 @endphp
 
 <div class="card shadow-sm app-index-table-card">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
+    <x-table-scroll>
+        <table class="table table-hover align-middle mb-0 app-cards">
+            <thead>
                 <tr>
                     <th>
                         <x-table-sort-link column="name" label="Field Name" :sort="$s" :direction="$d" :url="$url('name')" target="#logging-fields-table" />
@@ -29,22 +29,22 @@
                     <th>
                         <x-table-sort-link column="is_active" label="Status" :sort="$s" :direction="$d" :url="$url('is_active')" target="#logging-fields-table" />
                     </th>
-                    <th class="text-end" style="width:200px;">Actions</th>
+                    <th class="app-col-actions"><span class="visually-hidden">Actions</span></th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($loggingFields as $field)
                 <tr>
-                    <td>
-                        <a href="{{ route('logging-fields.show', $field) }}" class="fw-semibold text-decoration-none text-dark">
+                    <td class="app-card-lead">
+                        <a href="{{ route('logging-fields.show', $field) }}" class="app-link app-link--strong app-row-link">
                             {{ $field->name }}
                         </a>
                         @if($field->help_text)
                             <br><small class="text-muted">{{ Str::limit($field->help_text, 60) }}</small>
                         @endif
                     </td>
-                    <td><span class="badge bg-secondary">{{ $field->fieldTypeLabel() }}</span></td>
-                    <td>
+                    <td data-label="Type"><span class="badge app-tag">{{ $field->fieldTypeLabel() }}</span></td>
+                    <td data-label="Projects">
                         <x-table-badge-list
                             kind="project"
                             :items="$field->projects"
@@ -52,7 +52,7 @@
                             :empty-label="$scopeEmptyLabel($field->program_scope_mode, 'All projects', 'No projects')"
                         />
                     </td>
-                    <td>
+                    <td data-label="Programs">
                         <x-table-badge-list
                             kind="program"
                             :items="$field->programs"
@@ -60,59 +60,45 @@
                             :empty-label="$scopeEmptyLabel($field->program_scope_mode, 'All programs', 'No programs')"
                         />
                     </td>
-                    <td>
+                    <td data-label="Available in">
                         <div class="d-flex flex-wrap gap-1">
                             @if($field->available_in_agreements)
-                                <span class="badge bg-primary">Agreements</span>
+                                <span class="badge app-tag">Agreements</span>
                             @endif
                             @if($field->available_in_contact_families)
-                                <span class="badge bg-info text-dark">Activity Families</span>
+                                <span class="badge app-tag">Activity Families</span>
                             @endif
                             @if($field->available_in_activities)
-                                <span class="badge bg-warning text-dark">Activity Types</span>
+                                <span class="badge app-tag">Activity Types</span>
                             @endif
                             @if(! $field->available_in_agreements && ! $field->available_in_contact_families && ! $field->available_in_activities)
-                                <span class="badge bg-light text-dark border">Unassigned</span>
+                                <span class="badge app-tag">Unassigned</span>
                             @endif
                         </div>
                     </td>
-                    <td>
-                        @if($field->is_active)
-                            <span class="badge bg-success">Active</span>
-                        @else
-                            <span class="badge bg-secondary">Inactive</span>
-                        @endif
+                    <td class="app-card-status">
+                        <x-status-badge :active="$field->is_active" />
                     </td>
-                    <td class="text-end text-nowrap">
+                    <td class="app-col-actions">
                         @php $actionKey = 'logging-field-actions-' . $field->id; @endphp
-                        <div class="btn-group btn-group-sm" role="group" aria-label="Logging field actions for {{ $field->name }}">
-                            <a href="{{ route('logging-fields.show', $field) }}"
-                               class="btn btn-outline-primary"
-                               data-bs-toggle="tooltip"
-                               data-bs-title="View logging field"
-                               aria-label="View logging field">
-                                <i class="bi bi-eye"></i>
-                            </a>
+                        <div class="dropdown app-row-actions d-inline-block">
+                            <button type="button" class="btn btn-sm btn-link app-row-actions-toggle" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" aria-label="Logging field actions for {{ $field->name }}"><i class="bi bi-three-dots" aria-hidden="true"></i></button>
+                            <div class="dropdown-menu dropdown-menu-end">
+                            <a href="{{ route('logging-fields.show', $field) }}" class="dropdown-item"><i class="bi bi-eye me-2" aria-hidden="true"></i>View logging field</a>
                             @can('update', $field)
-                            <a href="{{ route('logging-fields.edit', $field) }}"
-                               class="btn btn-outline-secondary"
-                               data-bs-toggle="tooltip"
-                               data-bs-title="Edit logging field"
-                               aria-label="Edit logging field">
-                                <i class="bi bi-pencil-square"></i>
-                            </a>
+                            <a href="{{ route('logging-fields.edit', $field) }}" class="dropdown-item"><i class="bi bi-pencil-square me-2" aria-hidden="true"></i>Edit logging field</a>
                             @endcan
                             @can('delete', $field)
+                            <hr class="dropdown-divider">
                             <button type="submit"
                                     form="{{ $actionKey }}-delete"
-                                    class="btn btn-outline-danger"
-                                    data-bs-toggle="tooltip"
-                                    data-bs-title="Delete logging field"
-                                    aria-label="Delete logging field"
-                                    onclick="return confirm('Delete field {{ addslashes($field->name) }}?')">
-                                <i class="bi bi-trash"></i>
-                            </button>
+                                    data-confirm
+                                    data-confirm-title="Delete logging field?"
+                                    data-confirm-record="{{ $field->name }}"
+                                    data-confirm-message="This action cannot be undone."
+                                    data-confirm-action="Delete field" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete logging field</button>
                             @endcan
+                            </div>
                         </div>
                         @can('delete', $field)
                         <form id="{{ $actionKey }}-delete" method="POST" action="{{ route('logging-fields.destroy', $field) }}" class="d-none">
@@ -134,8 +120,8 @@
                 @endforelse
             </tbody>
         </table>
-    </div>
-    <div class="card-footer bg-white">
+    </x-table-scroll>
+    <div class="card-footer">
         <x-htmx-pagination :paginator="$loggingFields" target="#logging-fields-table" />
     </div>
 </div>

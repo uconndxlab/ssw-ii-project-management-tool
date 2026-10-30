@@ -40,7 +40,7 @@ Desktop-first office work in long sessions with many records. Users move between
 
 ## Brand Commitments
 
-Product name: TA Tracker (organization: Innovate Impact, UConn SSW II). No logo, brand color, or voice commitments are confirmed; the current Bootstrap blue is a default, not a brand asset.
+Product name: TA Tracker (organization: Innovate Impact, UConn SSW II); the app mark reads "II". On 2026-10-28 the client supplied the palette used across Innovations: primary Navy #000E2F, Slate #4E4C59 and Mist #E8EBEF; accents #022F3D, #01495E, #116E88, #0A9AA8, #1A6C70 and #F0565A; tertiary colors for graphs and visualizations (#EC1751 excluded). The brightest blue (#0A9AA8) is the best liked. Each Impact program also has its own colors, which the app does not use. No logo or voice commitments are confirmed.
 
 ## Evidence on Hand
 

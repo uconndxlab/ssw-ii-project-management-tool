@@ -35,6 +35,10 @@
         <button type="button"
                 class="btn btn-link btn-sm p-0 flex-shrink-0"
                 hx-delete="{{ route('recent.clear') }}"
+                data-confirm-title="Clear recent records?"
+                data-confirm-message="This empties your Recent list on every device. The records themselves are not changed."
+                data-confirm-action="Clear recent"
+                data-confirm-icon="bi-clock-history"
                 hx-target="#recentList"
                 hx-swap="innerHTML">
             Clear recent

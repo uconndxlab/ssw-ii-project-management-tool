@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Support\Authorization\ScopeSync;
 use App\Support\CarbonDate;
 use App\Support\ProjectProgramScope;
+use App\Support\TablePagination;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -83,7 +84,7 @@ class OrganizationController extends Controller
 
         $this->applyOrganizationIndexSort($query, $sort, $direction);
 
-        $organizations = $query->paginate(20)->withQueryString();
+        $organizations = $query->paginate(TablePagination::perPage($request))->withQueryString();
 
         $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
         $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);

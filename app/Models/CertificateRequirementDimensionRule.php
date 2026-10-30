@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * @property CertificateDimensionRuleMode $mode
+ * @property array<int> $option_ids
  */
 class CertificateRequirementDimensionRule extends Model
 {

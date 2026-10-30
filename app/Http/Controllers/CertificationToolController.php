@@ -8,10 +8,12 @@ use App\Models\CertificationTool;
 use App\Models\CertificationToolDimension;
 use App\Models\CertificationToolDimensionOption;
 use App\Models\CertificationToolScoreField;
+use App\Models\CertificationToolSubmission;
 use App\Models\Program;
 use App\Models\Project;
 use App\Support\Authorization\ScopeSync;
 use App\Support\ProjectProgramScope;
+use App\Support\TablePagination;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -63,7 +65,7 @@ class CertificationToolController extends Controller
             default => $query->orderBy('certification_tools.sort_order')->orderBy('certification_tools.name', $direction),
         };
 
-        $certificationTools = $query->paginate(20)->withQueryString();
+        $certificationTools = $query->paginate(TablePagination::perPage($request))->withQueryString();
 
         $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
         $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
@@ -165,7 +167,7 @@ class CertificationToolController extends Controller
     {
         $this->authorize('delete', $certificationTool);
 
-        if ($certificationTool->requirements()->exists()) {
+        if ($certificationTool->requirements()->exists() || CertificationToolSubmission::query()->where('certification_tool_id', $certificationTool->id)->exists()) {
             $certificationTool->update(['retired_at' => now(), 'active' => false]);
 
             return redirect()
@@ -231,6 +233,9 @@ class CertificationToolController extends Controller
             );
 
             $this->validateNestedToolRows($validator, $request, $certificationTool);
+            if ($certificationTool !== null) {
+                $this->validateUsedDefinitions($validator, $request, $certificationTool);
+            }
         });
 
         $validated = $validator->validate();
@@ -240,6 +245,24 @@ class CertificationToolController extends Controller
         $validated['program_scope_mode'] = ProjectProgramScope::normalizeMode($validated['program_scope_mode'] ?? null, CertificationTool::class)->value;
 
         return $validated;
+    }
+
+    private function validateUsedDefinitions(ValidatorInstance $validator, Request $request, CertificationTool $tool): void
+    {
+        $dimensions = collect($request->array('dimensions'))->filter(fn ($row) => is_array($row) && ! filter_var($row['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN) && filled($row['name'] ?? null));
+        $dimensionIds = $dimensions->pluck('id')->filter()->all();
+        $optionIds = $dimensions->flatMap(fn ($row) => collect(is_array($row['options'] ?? null) ? $row['options'] : [])->filter(fn ($option) => is_array($option) && ! filter_var($option['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN) && filled($option['label'] ?? null))->pluck('id'))->filter()->all();
+        $used = DB::table('certification_tool_submission_dimension_values')->whereIn('certification_tool_dimension_id', $tool->dimensions()->pluck('id'))->get();
+        foreach ($used as $value) {
+            if (! in_array($value->certification_tool_dimension_id, $dimensionIds) || ! in_array($value->certification_tool_dimension_option_id, $optionIds)) {
+                $validator->errors()->add('dimensions', 'Dimensions and options used by recorded submissions cannot be removed. Retire the tool instead.');
+                break;
+            }
+        }
+        $scoreIds = collect($request->array('score_fields'))->filter(fn ($row) => is_array($row) && ! filter_var($row['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN) && filled($row['name'] ?? null))->pluck('id')->filter()->all();
+        if (DB::table('certification_tool_submission_scores')->whereIn('certification_tool_score_field_id', $tool->scoreFields()->pluck('id'))->whereNotIn('certification_tool_score_field_id', $scoreIds)->exists()) {
+            $validator->errors()->add('score_fields', 'Score fields used by recorded submissions cannot be removed. Retire the tool instead.');
+        }
     }
 
     private function validateNestedToolRows(ValidatorInstance $validator, Request $request, ?CertificationTool $tool): void

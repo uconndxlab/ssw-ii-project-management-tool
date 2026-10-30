@@ -13,39 +13,20 @@
 <x-entity-show>
     {{-- ── Summary ─────────────────────────────────────────────────────── --}}
     <x-slot:summary>
-        <dl class="row mb-0">
-            <dt class="col-5 text-muted fw-normal small">Name</dt>
-            <dd class="col-7 mb-2 fw-semibold">{{ $state->name }}</dd>
-
-            <dt class="col-5 text-muted fw-normal small">Organizations</dt>
-            <dd class="col-7 mb-2">
-                <x-entity-count-badge kind="organization" :count="$state->organizations->count()" />
-            </dd>
-
-            <dt class="col-5 text-muted fw-normal small">Agreements</dt>
-            <dd class="col-7 mb-2">
-                <x-entity-count-badge kind="agreement" :count="$state->agreements->count()" />
-            </dd>
-
-            <dt class="col-5 text-muted fw-normal small">Added</dt>
-            <dd class="col-7 mb-0 small text-muted">{{ $state->created_at->format('M d, Y') }}</dd>
+        <dl class="app-record-metrics">
+            <div><dt>Organizations</dt><dd>{{ $state->organizations->count() }}</dd></div>
+            <div><dt>Agreements</dt><dd>{{ $state->agreements->count() }}</dd></div>
         </dl>
 
-        <hr>
-        <h6 class="text-muted fw-normal small mb-2">Assigned Staff</h6>
-        @forelse($staffMembers as $member)
-            <div class="small py-1 {{ $loop->last ? '' : 'border-bottom' }}">
-                <x-user-link :user="$member" class="fw-semibold" />
-                @if($member->access_profile)
-                    <span class="text-muted">· {{ $member->accessLabel() }}</span>
-                @endif
-                @if($member->email)
-                    <div class="text-muted">{{ $member->email }}</div>
-                @endif
-            </div>
-        @empty
-            <p class="text-muted small mb-0">No staff linked to this state yet.</p>
-        @endforelse
+        <x-relationship-scroll-panel title="Assigned staff" kind="user" :count="$staffMembers->count()" collapsible collapsed class="mt-3">
+            @foreach($staffMembers as $member)
+                <x-staff-member-row :user="$member" :role="$member->access_profile ? $member->accessLabel() : null">
+                    @if($member->email)
+                        <x-slot:after><span>{{ $member->email }}</span></x-slot:after>
+                    @endif
+                </x-staff-member-row>
+            @endforeach
+        </x-relationship-scroll-panel>
     </x-slot:summary>
 
     {{-- ── Relationships ───────────────────────────────────────────────── --}}

@@ -10,27 +10,7 @@
         @csrf
         @method('PUT')
 
-        <x-page-header form-id="profile-edit-form" save-label="Save" context="form" title="Edit Profile" />
-
-        <x-section-card title="Account">
-            <x-form-field label="Name" for="name">
-                <input type="text"
-                       class="form-control"
-                       id="name"
-                       value="{{ $user->name }}"
-                       disabled
-                       aria-disabled="true">
-            </x-form-field>
-
-            <x-form-field label="Email" for="email" class="mb-0">
-                <input type="email"
-                       class="form-control"
-                       id="email"
-                       value="{{ $user->email }}"
-                       disabled
-                       aria-disabled="true">
-            </x-form-field>
-        </x-section-card>
+        <x-page-header form-id="profile-edit-form" save-label="Save password" context="form" title="Edit Profile" />
 
         <x-section-card title="Change password">
             <x-form-field label="Current Password" for="current_password" name="current_password" :required="true">

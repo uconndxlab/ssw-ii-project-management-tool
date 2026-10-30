@@ -206,8 +206,11 @@ if (panel) {
 
     panel.addEventListener('shown.bs.offcanvas', () => search.focus());
 
-    panel.addEventListener('hidden.bs.offcanvas', () => {
+    panel.addEventListener('hide.bs.offcanvas', () => {
         trigger?.setAttribute('aria-expanded', 'false');
+    });
+
+    panel.addEventListener('hidden.bs.offcanvas', () => {
         document.body.classList.remove('app-recent-open');
         holdRail('recent', false);
         search.value = '';
@@ -228,7 +231,7 @@ if (panel) {
 
     // The desktop backdrop is click-through so the rail stays usable, so close on outside clicks here.
     document.addEventListener('mousedown', (event) => {
-        if (!panel.classList.contains('show') || panel.contains(event.target) || trigger?.contains(event.target)) {
+        if (!panel.classList.contains('show') || panel.contains(event.target) || trigger?.contains(event.target) || event.target.closest?.('[data-confirm-dialog]')) {
             return;
         }
 

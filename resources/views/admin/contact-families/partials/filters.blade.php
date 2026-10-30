@@ -44,6 +44,7 @@
             :filter-keys="['search', 'project_id', 'program_id']"
         />
     </div>
+    <input type="hidden" name="per_page" value="{{ \App\Support\TablePagination::perPage(request()) }}">
     <input type="hidden" name="sort"      value="{{ $sort ?? 'sort_order' }}">
     <input type="hidden" name="direction" value="{{ $direction ?? 'asc' }}">
 </form>

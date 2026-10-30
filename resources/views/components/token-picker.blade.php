@@ -19,6 +19,7 @@
     'entityKind' => null,
     'labelledBy' => null,
     'ariaLabel' => null,
+    'single' => false,
 ])
 
 @php
@@ -50,7 +51,7 @@
                 data_get($item, 'contextLabels') ?? (data_get($item, 'context') ? [data_get($item, 'context')] : []),
                 fn ($label) => $label !== null && $label !== ''
             )),
-            'contextBadgeClass' => data_get($item, 'contextBadgeClass', $optionBadgeClass ?? $entityBadgeClass ?? 'bg-primary-subtle text-primary-emphasis border'),
+            'contextBadgeClass' => data_get($item, 'contextBadgeClass', $optionBadgeClass ?? $entityBadgeClass ?? 'app-chip'),
             'meta' => filled(data_get($item, 'meta'))
                 ? (string) data_get($item, 'meta')
                 : (filled(data_get($item, 'po_number')) ? (string) data_get($item, 'po_number') : null),
@@ -74,12 +75,13 @@
      data-open-on-focus="{{ $openOnFocus ? 'true' : 'false' }}"
      data-disabled="{{ $disabled ? 'true' : 'false' }}"
      data-show-selected="{{ $showSelected ? 'true' : 'false' }}"
+     data-single="{{ $single ? 'true' : 'false' }}"
      data-empty-selection-label="{{ $emptySelectionLabel ?? '' }}"
      data-selected-badge-class="{{ $entityBadgeClass ?? '' }}"
      data-selected='@json($selectedIds)'>
     <div class="d-flex flex-wrap gap-1 mb-2 {{ $showSelected ? '' : 'd-none' }}" data-token-selected></div>
 
-    <div class="form-control d-flex align-items-center py-1{{ $hasError ? ' is-invalid' : '' }}" style="min-height: 42px;" data-token-control>
+    <div class="form-control d-flex align-items-center py-1{{ $hasError ? ' is-invalid' : '' }}" data-token-control>
         <input type="text"
                class="border-0 flex-grow-1"
                style="outline: none; min-width: 160px;"
@@ -113,29 +115,6 @@
 </div>
 
 @once
-<style>
-    .token-picker-control-disabled {
-        background-color: var(--bs-secondary-bg);
-        opacity: 1;
-        cursor: not-allowed;
-    }
-
-    .token-picker-control-disabled [data-token-search] {
-        background-color: transparent;
-        cursor: not-allowed;
-    }
-
-    .token-option {
-        padding: 0.25rem 0.375rem;
-        cursor: pointer;
-        border-radius: var(--bs-border-radius);
-    }
-
-    .token-option:hover,
-    .token-option-active {
-        background-color: var(--bs-primary-bg-subtle);
-    }
-</style>
 <script>
 (function () {
     function parseJson(node, fallback) {
@@ -169,6 +148,7 @@
         const options = parseJson(optionsNode, []);
         const initialSelected = new Set(parseJson({ textContent: picker.dataset.selected || '[]' }, []));
         const selected = new Set(Array.from(initialSelected));
+        const single = picker.dataset.single === 'true';
         let allowedValues = null;
         let isDisabled = picker.dataset.disabled === 'true';
 
@@ -215,6 +195,7 @@
         }
 
         function choose(value, label) {
+            if (single) selected.clear();
             selected.add(String(value));
             renderSelected();
             renderList(true);
@@ -222,6 +203,10 @@
             picker.dispatchEvent(new CustomEvent('token-picker:change', { bubbles: true, detail: { user: true } }));
             announce(label + ' added');
             searchInput.focus();
+            if (single) {
+                searchInput.value = '';
+                closeList();
+            }
         }
 
         function selectedArray() {
@@ -346,7 +331,7 @@
 
             if (selected.size === 0 && emptySelectionLabel !== '') {
                 const allBadge = document.createElement('span');
-                allBadge.className = 'badge ' + (defaultSelectedBadgeClass !== '' ? defaultSelectedBadgeClass : 'bg-primary-subtle text-primary-emphasis border') + ' d-inline-flex align-items-center';
+                allBadge.className = 'badge ' + (defaultSelectedBadgeClass !== '' ? defaultSelectedBadgeClass : 'app-chip') + ' d-inline-flex align-items-center';
                 allBadge.textContent = emptySelectionLabel;
                 selectedWrap.appendChild(allBadge);
             }
@@ -375,7 +360,7 @@
         }
 
         function appendContextBadges(textWrap, opt) {
-            const badgeClass = opt.contextBadgeClass || 'bg-primary-subtle text-primary-emphasis border';
+            const badgeClass = opt.contextBadgeClass || 'app-chip';
             const labels = Array.isArray(opt.contextLabels) && opt.contextLabels.length > 0
                 ? opt.contextLabels
                 : (opt.context ? [String(opt.context)] : []);
@@ -383,6 +368,9 @@
             labels.forEach(function (label) {
                 const badge = document.createElement('span');
                 badge.className = 'badge ' + badgeClass;
+                if (single) {
+                    badge.classList.add('text-wrap', 'text-start', 'mw-100');
+                }
                 badge.textContent = String(label);
                 textWrap.appendChild(badge);
             });
@@ -411,6 +399,11 @@
             const list = filteredOptions(searchInput.value);
             listWrap.innerHTML = '';
 
+            if (single && list.length === 0) {
+                closeList();
+                return;
+            }
+
             if (list.length === 0) {
                 const empty = document.createElement('div');
                 empty.className = 'text-muted small';
@@ -434,6 +427,9 @@
 
                     const textWrap = document.createElement('div');
                     textWrap.className = 'form-check-label d-flex flex-wrap align-items-center gap-2';
+                if (single) {
+                    textWrap.classList.add('flex-grow-1', 'min-w-0');
+                }
 
                     appendOptionPrimaryLabel(textWrap, opt);
 
@@ -475,7 +471,7 @@
         picker.addEventListener('token-picker:set', function (event) {
             const values = Array.isArray(event.detail) ? event.detail : [];
             selected.clear();
-            values.forEach(function (value) {
+            (single ? values.slice(0, 1) : values).forEach(function (value) {
                 selected.add(String(value));
             });
             syncSelectionToAllowedValues();
@@ -531,6 +527,7 @@
             }
 
             if (detail.select !== false) {
+                if (single) selected.clear();
                 selected.add(String(option.value));
                 renderSelected();
                 writeHiddenInputs();
@@ -701,6 +698,9 @@
     });
 
     document.body.addEventListener('htmx:afterSwap', function (event) {
+        initTokenPickers(event.target);
+    });
+    document.addEventListener('repeater:row-added', function (event) {
         initTokenPickers(event.target);
     });
 })();

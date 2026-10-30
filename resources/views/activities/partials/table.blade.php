@@ -12,35 +12,39 @@
 @endphp
 
 <div class="card shadow-sm app-index-table-card">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
+    <x-table-scroll>
+        <table class="table table-hover align-middle mb-0 app-data-table app-cards">
+            <thead>
                 <tr>
                     <th class="text-nowrap">
                         <x-table-sort-link column="date" label="Date" :sort="$s" :direction="$d" :url="$url('date')" target="#activities-table" />
                     </th>
-                    <th style="min-width: 180px;">
+                    <th>
                         <x-table-sort-link column="agreement" label="Agreement" :sort="$s" :direction="$d" :url="$url('agreement')" target="#activities-table" />
                     </th>
-                    <th style="min-width: 140px;">
+                    <th>
                         <x-table-sort-link column="activity_type" label="Activity Type" :sort="$s" :direction="$d" :url="$url('activity_type')" target="#activities-table" />
                     </th>
-                    <th style="min-width: 120px;">
+                    <th>
                         <x-table-sort-link column="logged_by" label="Logged By" :sort="$s" :direction="$d" :url="$url('logged_by')" target="#activities-table" />
                     </th>
-                    <th class="text-end" style="width:160px;">Actions</th>
+                    <th class="app-col-actions"><span class="visually-hidden">Actions</span></th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($activities as $activity)
                 <tr>
-                    <td class="small text-nowrap">
-                        {{ $activity->engagement_date->format('M d, Y') }}
+                    <td class="text-nowrap app-card-lead">
+                        @if($activity->isLinkable())
+                            <a href="{{ route('activities.show', $activity) }}" class="app-link--strong app-row-link">{{ $activity->engagement_date->format('M d, Y') }}</a>
+                        @else
+                            {{ $activity->engagement_date->format('M d, Y') }}
+                        @endif
                         @if($activity->cancelled)
-                            <x-status-badge :active="false" inactive-label="Cancelled" class="ms-1" />
+                            <x-status-badge :active="false" inactive-label="Cancelled" tone="danger" class="ms-1" />
                         @endif
                     </td>
-                    <td>
+                    <td data-label="Agreement">
                         <x-table-badge-list
                             kind="agreement"
                             :items="$activity->agreements->map(fn ($agreement) => [
@@ -48,61 +52,55 @@
                                 'href' => $agreement->isLinkable() ? route('agreements.show', $agreement) : null,
                             ])"
                             href-key="href"
+                            container-class="app-chip-list app-chip-list--primary"
                         />
                     </td>
-                    <td>
-                        <span class="badge bg-info text-dark">{{ $activity->activityType->name }}</span>
+                    <td data-label="Type">
+                        <span class="app-tag">{{ $activity->activityType->name }}</span>
                     </td>
-                    <td class="small">
-                        <x-user-link :user="$activity->user" class="text-decoration-none" />
+                    <td data-label="Logged by">
+                        <x-user-link :user="$activity->user" />
                     </td>
-                    <td class="text-end text-nowrap">
+                    <td class="app-col-actions">
                         @php
                             $actionKey = 'activity-actions-' . $activity->id;
                             $canUpdate = auth()->user()->can('update', $activity);
                             $canDelete = auth()->user()->can('delete', $activity);
                             $canDuplicate = auth()->user()->can('duplicate', $activity);
+                            $canEditCertification = $activity->certification_candidates_count > 0 && auth()->user()->access()->isCertificationCoachOnActivity($activity);
                         @endphp
-                        <div class="btn-group btn-group-sm" role="group" aria-label="Activity actions for {{ $activity->engagement_date->format('M d, Y') }}">
-                            <a href="{{ route('activities.show', $activity) }}"
-                               class="btn btn-outline-primary"
-                               data-bs-toggle="tooltip"
-                               data-bs-title="View activity"
-                               aria-label="View activity">
-                                <i class="bi bi-eye"></i>
-                            </a>
-                            <x-activity-action-log-button :activity="$activity" />
+                        <div class="dropdown app-row-actions d-inline-block">
+                            <button type="button" class="btn btn-sm btn-link app-row-actions-toggle" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" aria-label="Activity actions for {{ $activity->engagement_date->format('M d, Y') }}"><i class="bi bi-three-dots" aria-hidden="true"></i></button>
+                            <div class="dropdown-menu dropdown-menu-end">
+                            <a href="{{ route('activities.show', $activity) }}" class="dropdown-item"><i class="bi bi-eye me-2" aria-hidden="true"></i>View activity</a>
+                            <x-activity-action-log-button :activity="$activity" menu />
                             @if($canUpdate)
-                                <a href="{{ route('activities.edit', $activity) }}"
-                                   class="btn btn-outline-secondary"
-                                   data-bs-toggle="tooltip"
-                                   data-bs-title="Edit activity"
-                                   aria-label="Edit activity">
-                                    <i class="bi bi-pencil-square"></i>
-                                </a>
+                                <a href="{{ route('activities.edit', $activity) }}" class="dropdown-item"><i class="bi bi-pencil-square me-2" aria-hidden="true"></i>Edit activity</a>
+                            @endif
+                            @if($canEditCertification)
+                                <a href="{{ route('activities.certification.edit', $activity) }}#activity-certification" class="dropdown-item"><i class="bi bi-patch-check me-2" aria-hidden="true"></i>Edit certification</a>
                             @endif
                             @if($canDuplicate)
                                 <button type="submit"
                                         form="{{ $actionKey }}-duplicate"
-                                        class="btn btn-outline-secondary"
-                                        data-bs-toggle="tooltip"
-                                        data-bs-title="Duplicate activity"
-                                        aria-label="Duplicate activity"
-                                        onclick="return confirm('Duplicate this activity? A new activity will be created with the same details.')">
-                                    <i class="bi bi-files"></i>
-                                </button>
+                                        data-confirm
+                                        data-confirm-title="Duplicate activity?"
+                                        data-confirm-record="{{ $activity->activityType?->name ?? 'Activity' }} · {{ $activity->engagement_date->format('M d, Y') }}"
+                                        data-confirm-message="A new activity will be created with the same details."
+                                        data-confirm-action="Duplicate activity"
+                                        data-confirm-tone="primary" class="dropdown-item"><i class="bi bi-files me-2" aria-hidden="true"></i>Duplicate activity</button>
                             @endif
                             @if($canDelete)
-                                <button type="submit"
+                                <hr class="dropdown-divider">
+                            <button type="submit"
                                         form="{{ $actionKey }}-delete"
-                                        class="btn btn-outline-danger"
-                                        data-bs-toggle="tooltip"
-                                        data-bs-title="Delete activity"
-                                        aria-label="Delete activity"
-                                        onclick="return confirm('Delete this activity?')">
-                                    <i class="bi bi-trash"></i>
-                                </button>
+                                        data-confirm
+                                        data-confirm-title="Delete activity?"
+                                        data-confirm-record="{{ $activity->activityType?->name ?? 'Activity' }} · {{ $activity->engagement_date->format('M d, Y') }}"
+                                        data-confirm-message="This action cannot be undone."
+                                        data-confirm-action="Delete activity" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete activity</button>
                             @endif
+                            </div>
                         </div>
                         @if($canDuplicate)
                             <form id="{{ $actionKey }}-duplicate" method="POST" action="{{ route('activities.duplicate', $activity) }}" class="d-none">
@@ -127,8 +125,8 @@
                 @endforelse
             </tbody>
         </table>
-    </div>
-    <div class="card-footer bg-white">
+    </x-table-scroll>
+    <div class="card-footer">
         <x-htmx-pagination :paginator="$activities" target="#activities-table" />
     </div>
 </div>

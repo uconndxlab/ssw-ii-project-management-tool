@@ -122,15 +122,15 @@ test('tool index supports search active and program filters', function () {
         ->assertDontSee('Beta Tool');
 });
 
-test('tool index paginates at twenty per page', function () {
+test('tool index defaults to twenty-five records per page', function () {
     $admin = createSystemAdmin();
     [$project, $program] = createProjectWithProgram();
 
-    CertificationTool::factory()->count(21)->forProgram($program)->create();
+    CertificationTool::factory()->count(26)->forProgram($program)->create();
 
     $response = $this->actingAs($admin)->get(route('certification-tools.index'));
     $response->assertOk();
-    expect($response->viewData('certificationTools')->perPage())->toBe(20);
+    expect($response->viewData('certificationTools')->perPage())->toBe(25);
 });
 
 test('tool store requires name and unique name', function () {

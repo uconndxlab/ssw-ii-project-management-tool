@@ -1,101 +1,56 @@
 @php
-    $ruleId = $row['id'] ?? null;
-    $isExisting = filled($ruleId);
-    $mode = $row['mode'] ?? \App\Enums\CertificateDimensionRuleMode::Coverage->value;
-    $selectedDimensionId = $row['certification_tool_dimension_id'] ?? null;
-    $selectedOptionIds = collect($row['option_ids'] ?? [])->map(fn ($id) => (int) $id)->all();
-    $selectedDimension = $certificationTools->flatMap(fn ($tool) => $tool->dimensions)->firstWhere('id', $selectedDimensionId);
-    $dimensionName = $selectedDimension?->name ?? '';
-    $modeLabel = \App\Enums\CertificateDimensionRuleMode::tryFrom($mode)?->label() ?? '';
-    $optionTotal = $selectedDimension?->options?->count() ?? 0;
-    $optionSelected = $selectedDimension
-        ? $selectedDimension->options->filter(fn ($option) => in_array($option->id, $selectedOptionIds, true))->count()
-        : 0;
+    $rulePrefix = 'requirements.'.$reqIndex.'.dimension_rules.'.$ruleIndex;
+    $ruleField = 'requirements['.$reqIndex.'][dimension_rules]['.$ruleIndex.']';
+    $ruleControl = 'req-'.$reqIndex.'-rule-'.$ruleIndex;
+    $ruleDeleted = filter_var($row['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN);
 @endphp
-<div class="repeater-row-card" data-repeater-row data-dimension-rule-row data-repeater-collapsible
-     data-existing="{{ $isExisting ? '1' : '0' }}"
-     data-repeater-mode="{{ $isExisting ? 'display' : 'edit' }}">
-    @if($isExisting)
-        <input type="hidden" name="requirements[{{ $reqIndex }}][dimension_rules][{{ $ruleIndex }}][id]" value="{{ $ruleId }}">
-    @endif
-    <input type="hidden" name="requirements[{{ $reqIndex }}][dimension_rules][{{ $ruleIndex }}][_delete]" value="0" data-repeater-delete>
-
-    <div class="repeater-row-toolbar" data-row-display-click>
-        <span class="repeater-row-drag" data-repeater-drag title="Drag to reorder" aria-hidden="true">
-            <i class="bi bi-grip-vertical"></i>
-        </span>
-        <div class="repeater-row-summary">
-            <span class="repeater-row-title" data-summary-value="dimension" data-summary-fallback="No dimension selected">{{ $dimensionName !== '' ? $dimensionName : 'No dimension selected' }}</span>
-            <span class="repeater-row-meta" data-summary-value="mode">{{ $modeLabel }}</span>
-            <span class="repeater-row-meta"><span data-summary-selected-options>{{ $optionSelected }} of {{ $optionTotal }}</span> options</span>
-        </div>
-        <div class="repeater-row-actions">
-            <button type="button" class="repeater-icon-btn" data-row-edit title="{{ $isExisting ? 'Edit rule' : 'Collapse rule' }}">
-                <i class="bi bi-pencil" data-icon-edit></i>
-                <i class="bi bi-chevron-up" data-icon-collapse></i>
-            </button>
-            <button type="button" class="repeater-icon-btn repeater-icon-btn-danger" data-repeater-remove title="Remove rule">
-                <i class="bi bi-x-circle"></i>
-            </button>
-        </div>
-    </div>
-
-    <div class="repeater-row-body repeater-row-body--form" data-row-edit-fields>
-        <div class="row g-3">
-            <div class="col-md-6">
-                <label class="form-label mb-1">Dimension <small class="text-muted fw-normal">(<span data-summary-dimension-options>{{ $optionTotal }}</span> options)</small></label>
-                <select class="form-select" data-dimension-select data-summary-source="dimension"
-                        name="requirements[{{ $reqIndex }}][dimension_rules][{{ $ruleIndex }}][certification_tool_dimension_id]">
-                    <option value="">Select dimension…</option>
+<div class="border-bottom mb-3 pb-2" data-cert-rule="{{ $ruleIndex }}" @if($ruleDeleted) hidden @endif>
+    @if(filled($row['id'] ?? null))<input type="hidden" name="{{ $ruleField }}[id]" value="{{ $row['id'] }}">@endif
+    <input type="hidden" name="{{ $ruleField }}[_delete]" value="{{ $ruleDeleted ? 1 : 0 }}" data-cert-delete>
+    <div class="row g-3">
+        <div class="col-md-6">
+            <x-form-field label="Dimension" :for="$ruleControl.'-dimension'" :name="$rulePrefix.'.certification_tool_dimension_id'">
+                <select class="form-select" id="{{ $ruleControl }}-dimension" name="{{ $ruleField }}[certification_tool_dimension_id]" data-cert-dimension>
+                    <option value="">Choose dimension…</option>
                     @foreach($certificationTools as $tool)
-                        @if($tool->dimensions->isNotEmpty())
-                            <optgroup label="{{ $tool->name }}" data-tool-id="{{ $tool->id }}">
-                                @foreach($tool->dimensions as $dimension)
-                                    <option value="{{ $dimension->id }}" data-tool-id="{{ $tool->id }}"
-                                            @selected((string) $selectedDimensionId === (string) $dimension->id)>
-                                        {{ $dimension->name }}
-                                    </option>
-                                @endforeach
-                            </optgroup>
-                        @endif
+                        @foreach($tool->dimensions as $dimension)
+                            <option value="{{ $dimension->id }}" data-tool="{{ $tool->id }}" @selected((string)($row['certification_tool_dimension_id'] ?? '') === (string)$dimension->id)>{{ $dimension->name }}</option>
+                        @endforeach
                     @endforeach
                 </select>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label mb-1">Rule</label>
-                <select class="form-select" data-mode-select data-summary-source="mode"
-                        name="requirements[{{ $reqIndex }}][dimension_rules][{{ $ruleIndex }}][mode]">
-                    @foreach(\App\Enums\CertificateDimensionRuleMode::cases() as $case)
-                        <option value="{{ $case->value }}" @selected($mode === $case->value)>{{ $case->label() }}</option>
-                    @endforeach
+            </x-form-field>
+        </div>
+        <div class="col-md-6">
+            <x-form-field label="Rule" :for="$ruleControl.'-mode'" :name="$rulePrefix.'.mode'">
+                <select class="form-select" id="{{ $ruleControl }}-mode" name="{{ $ruleField }}[mode]" data-cert-rule-mode>
+                    <option value="coverage" @selected(($row['mode'] ?? 'coverage') === 'coverage')>Cover every selected category</option>
+                    <option value="quota" @selected(($row['mode'] ?? '') === 'quota')>Minimum submissions in selected categories</option>
                 </select>
-            </div>
-            <div class="col-md-4" data-min-count-group style="{{ $mode === \App\Enums\CertificateDimensionRuleMode::Quota->value ? '' : 'display:none;' }}">
-                <label class="form-label mb-1">Min count <small class="text-muted fw-normal">(of <span data-summary-dimension-options>{{ $optionTotal }}</span> options)</small></label>
-                <input type="number" class="form-control" min="1"
-                       name="requirements[{{ $reqIndex }}][dimension_rules][{{ $ruleIndex }}][min_count]" value="{{ $row['min_count'] ?? '' }}">
-            </div>
-            <div class="col-12">
-                @foreach($certificationTools as $tool)
-                    @foreach($tool->dimensions as $dimension)
-                        <div class="d-flex flex-wrap gap-3 @if((string) $selectedDimensionId !== (string) $dimension->id) d-none @endif"
-                             data-option-group data-dimension-id="{{ $dimension->id }}">
-                            @foreach($dimension->options as $option)
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox"
-                                           id="req-{{ $reqIndex }}-rule-{{ $ruleIndex }}-opt-{{ $option->id }}"
-                                           name="requirements[{{ $reqIndex }}][dimension_rules][{{ $ruleIndex }}][option_ids][]"
-                                           value="{{ $option->id }}"
-                                           @checked(in_array($option->id, $selectedOptionIds, true))>
-                                    <label class="form-check-label" for="req-{{ $reqIndex }}-rule-{{ $ruleIndex }}-opt-{{ $option->id }}">
-                                        {{ $option->label }}
-                                    </label>
-                                </div>
-                            @endforeach
-                        </div>
-                    @endforeach
-                @endforeach
-            </div>
+            </x-form-field>
         </div>
     </div>
+    <div data-cert-quota>
+        <x-form-field label="Minimum qualifying submissions" :for="$ruleControl.'-minimum'" :name="$rulePrefix.'.min_count'" help="Counts submissions in any selected category; this is not the number of categories.">
+            <input type="number" class="form-control" id="{{ $ruleControl }}-minimum" name="{{ $ruleField }}[min_count]" min="1" value="{{ $row['min_count'] ?? '' }}" data-cert-minimum>
+        </x-form-field>
+    </div>
+    <x-form-field label="Categories" :for="$ruleControl.'-options'" :name="$rulePrefix.'.option_ids'" :group="true">
+        <div id="{{ $ruleControl }}-options">
+            @foreach($certificationTools as $tool)
+                @foreach($tool->dimensions as $dimension)
+                    <div data-cert-options="{{ $dimension->id }}">
+                        @foreach($dimension->options as $option)
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="{{ $ruleControl }}-option-{{ $option->id }}" name="{{ $ruleField }}[option_ids][]" value="{{ $option->id }}" @checked(in_array((string)$option->id, array_map('strval', $row['option_ids'] ?? []), true))>
+                                <label class="form-check-label" for="{{ $ruleControl }}-option-{{ $option->id }}">{{ $option->label }}</label>
+                            </div>
+                        @endforeach
+                    </div>
+                @endforeach
+            @endforeach
+        </div>
+        <p class="form-text" data-cert-category-help></p>
+    </x-form-field>
+    <p class="small" data-cert-rule-summary></p>
+    <button type="button" class="btn btn-sm btn-outline-danger" data-cert-remove="rule">Remove rule</button>
 </div>

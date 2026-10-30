@@ -20,7 +20,7 @@
     </div>
 </div>
 
-<div id="agreements-table">
+<div id="agreements-table" data-index-table>
     @include('agreements.partials.table', [
         'agreements' => $agreements,
         'sort'       => $sort,

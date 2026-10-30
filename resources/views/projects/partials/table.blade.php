@@ -6,11 +6,11 @@
 @endphp
 
 <div class="card shadow-sm app-index-table-card">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
+    <x-table-scroll>
+        <table class="table table-hover align-middle mb-0 app-cards">
+            <thead>
                 <tr>
-                    <th style="min-width: 160px;">
+                    <th>
                         <x-table-sort-link column="name" label="Name" :sort="$s" :direction="$d" :url="$url('name')" target="#projects-table" />
                     </th>
                     <th>Description</th>
@@ -20,62 +20,48 @@
                     <th>
                         <x-table-sort-link column="status" label="Status" :sort="$s" :direction="$d" :url="$url('status')" target="#projects-table" />
                     </th>
-                    <th class="text-end" style="width:130px;">Actions</th>
+                    <th class="app-col-actions"><span class="visually-hidden">Actions</span></th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($projects as $project)
                 <tr>
-                    <td>
-                        <a href="{{ route('projects.show', $project) }}" class="fw-semibold text-decoration-none text-dark">
+                    <td class="app-card-lead">
+                        <a href="{{ route('projects.show', $project) }}" class="app-link app-link--strong app-row-link">
                             {{ $project->name }}
                         </a>
                     </td>
-                    <td class="text-muted small">{{ Str::limit($project->description, 60) ?: '—' }}</td>
-                    <td>
+                    <td data-label="Description" class="text-muted small">{{ Str::limit($project->description, 60) ?: '—' }}</td>
+                    <td data-label="Programs">
                         <x-table-badge-list
                             kind="program"
                             :items="$project->programs"
                             route-name="programs.show"
                         />
                     </td>
-                    <td>
-                        @if($project->active)
-                            <span class="badge bg-success">Active</span>
-                        @else
-                            <span class="badge bg-secondary">Inactive</span>
-                        @endif
+                    <td class="app-card-status">
+                        <x-status-badge :active="$project->active" />
                     </td>
-                    <td class="text-end text-nowrap">
+                    <td class="app-col-actions">
                         @php $actionKey = 'project-actions-' . $project->id; @endphp
-                        <div class="btn-group btn-group-sm" role="group" aria-label="Project actions for {{ $project->name }}">
-                            <a href="{{ route('projects.show', $project) }}"
-                               class="btn btn-outline-primary"
-                               data-bs-toggle="tooltip"
-                               data-bs-title="View project"
-                               aria-label="View project">
-                                <i class="bi bi-eye"></i>
-                            </a>
+                        <div class="dropdown app-row-actions d-inline-block">
+                            <button type="button" class="btn btn-sm btn-link app-row-actions-toggle" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" aria-label="Project actions for {{ $project->name }}"><i class="bi bi-three-dots" aria-hidden="true"></i></button>
+                            <div class="dropdown-menu dropdown-menu-end">
+                            <a href="{{ route('projects.show', $project) }}" class="dropdown-item"><i class="bi bi-eye me-2" aria-hidden="true"></i>View project</a>
                             @can('update', $project)
-                            <a href="{{ route('projects.edit', $project) }}"
-                               class="btn btn-outline-secondary"
-                               data-bs-toggle="tooltip"
-                               data-bs-title="Edit project"
-                               aria-label="Edit project">
-                                <i class="bi bi-pencil-square"></i>
-                            </a>
+                            <a href="{{ route('projects.edit', $project) }}" class="dropdown-item"><i class="bi bi-pencil-square me-2" aria-hidden="true"></i>Edit project</a>
                             @endcan
                             @can('delete', $project)
+                            <hr class="dropdown-divider">
                             <button type="submit"
                                     form="{{ $actionKey }}-delete"
-                                    class="btn btn-outline-danger"
-                                    data-bs-toggle="tooltip"
-                                    data-bs-title="Delete project"
-                                    aria-label="Delete project"
-                                    onclick="return confirm('Delete {{ addslashes($project->name) }}? This will also delete all {{ $project->programs_count }} associated programs.')">
-                                <i class="bi bi-trash"></i>
-                            </button>
+                                    data-confirm
+                                    data-confirm-title="Delete project?"
+                                    data-confirm-record="{{ $project->name }}"
+                                    data-confirm-message="Programs are kept. If a program depends only on this project, assign it to another project before deleting."
+                                    data-confirm-action="Delete project" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete project</button>
                             @endcan
+                            </div>
                         </div>
                         @can('delete', $project)
                         <form id="{{ $actionKey }}-delete" method="POST" action="{{ route('projects.destroy', $project) }}" class="d-none">
@@ -97,8 +83,8 @@
                 @endforelse
             </tbody>
         </table>
-    </div>
-    <div class="card-footer bg-white">
+    </x-table-scroll>
+    <div class="card-footer">
         <x-htmx-pagination :paginator="$projects" target="#projects-table" />
     </div>
 </div>

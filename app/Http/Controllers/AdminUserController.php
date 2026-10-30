@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Enums\AccessProfile;
+use App\Enums\CertificationDuty;
+use App\Enums\PrivilegeScopeType;
 use App\Enums\ProgramScopeMode;
 use App\Http\Requests\AdminUserRequest;
 use App\Models\Program;
@@ -11,10 +13,12 @@ use App\Models\Team;
 use App\Models\User;
 use App\Services\UserDeactivationService;
 use App\Services\UserShowPageData;
+use App\Support\Authorization\CertificationDutySync;
 use App\Support\Authorization\PrivilegeSync;
 use App\Support\Authorization\ScopeSync;
 use App\Support\Authorization\UserAccess;
 use App\Support\ProjectProgramScope;
+use App\Support\TablePagination;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -87,7 +91,7 @@ class AdminUserController extends Controller
 
         $this->applyUserIndexSort($query, $sort, $direction);
 
-        $users = $query->paginate(20)->withQueryString();
+        $users = $query->paginate(TablePagination::perPage($request))->withQueryString();
 
         $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
         $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
@@ -184,7 +188,7 @@ class AdminUserController extends Controller
         $direction = $request->input('direction', 'asc') === 'desc' ? 'desc' : 'asc';
         $this->applyUserIndexSort($query, $sort, $direction);
 
-        $users = $query->paginate(20)->withQueryString();
+        $users = $query->paginate(TablePagination::perPage($request))->withQueryString();
         $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
         $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
         $superviseesIndex = true;
@@ -271,7 +275,11 @@ class AdminUserController extends Controller
             $this->syncScopeAssignments($user, $validated);
         }
 
-        $this->syncPrivileges($user, $validated, $request);
+        if (! $request->isEditingSelf()) {
+            $this->syncPrivileges($user, $validated, $request);
+        }
+
+        $this->syncCertificationDuties($user, $request);
 
         return $this->redirectAfterSave($user, 'User updated successfully.');
     }
@@ -332,11 +340,34 @@ class AdminUserController extends Controller
 
         return [
             'user' => $user,
+            'isEditingSelf' => $user->exists && $user->is($this->actor()),
             'supervisors' => $this->supervisorOptions($user->exists ? $user : null),
             'projects' => $projects,
             'teams' => $teams,
             'ledgerProjects' => $ledgerProjects->get(['id', 'name']),
             'ledgerPrograms' => $ledgerPrograms->get(['id', 'name']),
+            'canGrantCertificationDuties' => $access->isSystemAdmin() || $access->adminProgramIds() !== [],
+            'dutyProgramOptions' => $ledgerPrograms->get(['id', 'name']),
+            'existingCoachSystem' => $user->exists && $user->certificationDuties()
+                ->where('duty', CertificationDuty::Coach)
+                ->whereNull('revoked_at')
+                ->where('scope_type', PrivilegeScopeType::System)
+                ->exists(),
+            'existingCoachProgramIds' => $user->exists ? $user->certificationDuties()
+                ->where('duty', CertificationDuty::Coach)
+                ->whereNull('revoked_at')
+                ->where('scope_type', PrivilegeScopeType::Program)
+                ->pluck('scope_id')->all() : [],
+            'existingManagerSystem' => $user->exists && $user->certificationDuties()
+                ->where('duty', CertificationDuty::Manager)
+                ->whereNull('revoked_at')
+                ->where('scope_type', PrivilegeScopeType::System)
+                ->exists(),
+            'existingManagerProgramIds' => $user->exists ? $user->certificationDuties()
+                ->where('duty', CertificationDuty::Manager)
+                ->whereNull('revoked_at')
+                ->where('scope_type', PrivilegeScopeType::Program)
+                ->pluck('scope_id')->all() : [],
         ];
     }
 
@@ -367,5 +398,19 @@ class AdminUserController extends Controller
             $request->boolean('is_supervisor') && $profile !== AccessProfile::Input,
             PrivilegeSync::rowsFromRequest($request->all(), $this->actor()),
         );
+    }
+
+    private function syncCertificationDuties(User $user, Request $request): void
+    {
+        $submitted = [];
+
+        foreach (['coach', 'manager'] as $duty) {
+            if ($request->hasAny(["duty_{$duty}_present", "duty_{$duty}_system", "duty_{$duty}_program_ids"])) {
+                $submitted["{$duty}_system"] = $request->boolean("duty_{$duty}_system");
+                $submitted["{$duty}_program_ids"] = ProjectProgramScope::normalizeIds($request->input("duty_{$duty}_program_ids", []));
+            }
+        }
+
+        CertificationDutySync::apply($this->actor(), $user, $submitted);
     }
 }

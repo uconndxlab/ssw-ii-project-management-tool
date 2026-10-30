@@ -67,11 +67,19 @@
                 @endforeach
             </select>
         </div>
+        <div class="col-md-2">
+            <select aria-label="Filter by certification review" name="needs_certification_review" class="form-select form-select-sm"
+                hx-get="{{ route('activities.index') }}" hx-trigger="change" hx-target="#activities-table" hx-swap="innerHTML" hx-push-url="true" hx-include="#activity-filters">
+                <option value="">All certification reviews</option>
+                <option value="1" @selected(request('needs_certification_review') === '1')>Needs certification review</option>
+            </select>
+        </div>
         <x-table-filter-clear
             :href="route('activities.index')"
-            :filter-keys="['search', 'state_id', 'organization_id', 'agreement_id', 'activity_type_id']"
+            :filter-keys="['search', 'state_id', 'organization_id', 'agreement_id', 'activity_type_id', 'needs_certification_review']"
         />
     </div>
+    <input type="hidden" name="per_page" value="{{ \App\Support\TablePagination::perPage(request()) }}">
     <input type="hidden" name="sort" value="{{ $sort ?? 'date' }}">
     <input type="hidden" name="direction" value="{{ $direction ?? 'desc' }}">
 </form>

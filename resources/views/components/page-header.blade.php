@@ -13,7 +13,6 @@
     'containerClass' => null,
     'entityType' => null,
     'entityKind' => null,
-    'entityTypeBadgeClass' => null,
     'badgeKind' => null,
     'active' => null,
     'inactiveLabel' => 'Inactive',
@@ -26,6 +25,7 @@
     'actionIconClass' => null,
     'formId' => null,
     'saveLabel' => null,
+    'duplicateLabel' => null,
     'lastSavedAt' => null,
     'sticky' => null,
 ])
@@ -48,12 +48,6 @@
         $resolvedTitle = $mode === 'edit'
             ? 'Edit ' . $entityType
             : ($resolvedEntityKind === 'activity' ? 'Log Activity' : 'Create ' . $entityType);
-    }
-
-    $resolvedEntityTypeBadgeClass = $entityTypeBadgeClass;
-
-    if (blank($resolvedEntityTypeBadgeClass) && filled($resolvedEntityKind)) {
-        $resolvedEntityTypeBadgeClass = \App\Support\EntityBadge::typeClasses($resolvedEntityKind);
     }
 
     $resolvedBreadcrumbLabel = $breadcrumbLabel;
@@ -140,11 +134,23 @@
     $hasExplicitMeta = isset($meta) && filled(trim((string) $meta));
     $hasExplicitControls = isset($controls) && filled(trim((string) $controls));
     $inlineDescription = filled($description) && in_array($context, ['form', 'show'], true);
-    $showFormMeta = $isFormContext && filled($entityType);
-    $showStandardMeta = $showFormMeta || filled($entityType) || !is_null($active) || $inlineDescription;
-    $hasMeta = $hasExplicitMeta || $hasBadgeAugment || $showStandardMeta;
+    $hasRoleBadge = $badgeKind === 'role' && filled($entityType);
+    $hasMeta = $hasExplicitMeta || $hasBadgeAugment || $hasRoleBadge || !is_null($active) || $inlineDescription;
     $hasDefaultAction = filled($actionUrl) && filled($resolvedActionLabel) && filled($resolvedActionClass);
     $hasMore = isset($more) && filled(trim((string) $more));
+    $recordIcon = $context === 'show' && filled($entityType)
+        ? match ($badgeKind === 'role' ? 'user' : $resolvedEntityKind) {
+            'activity' => 'bi-calendar-check',
+            'organization' => 'bi-building',
+            'state' => 'bi-geo-alt',
+            'project' => 'bi-folder',
+            'program' => 'bi-diagram-3',
+            'team', 'user' => 'bi-people',
+            'certificate' => 'bi-award',
+            'logging-field' => 'bi-ui-checks',
+            default => 'bi-file-earmark-text',
+        }
+        : null;
 
     $hasFormActions = $isFormContext && filled($saveLabel);
     $stickyHeader = $sticky ?? $hasFormActions;
@@ -167,6 +173,12 @@
             <i class="bi bi-x-lg" aria-hidden="true"></i><span class="app-header-btn-label">Cancel</span>
         </a>
     @endif
+    @if(filled($duplicateLabel))
+        {{-- A real submit button so the server sees save_and_duplicate; the save script blocks a second submit. --}}
+        <button type="submit" form="{{ $formId }}" name="save_and_duplicate" value="1" class="btn btn-outline-primary app-header-btn" data-tip="{{ $duplicateLabel }}" aria-label="{{ $duplicateLabel }}">
+            <i class="bi bi-files" aria-hidden="true"></i><span class="app-header-btn-label">{{ $duplicateLabel }}</span>
+        </button>
+    @endif
     <button type="button" class="btn btn-primary app-header-btn" data-form-save data-tip="{{ $saveLabel }} (Ctrl/⌘ + S)" aria-label="{{ $saveLabel }}">
         <i class="bi bi-check-lg" aria-hidden="true"></i><span class="app-header-btn-label app-header-btn-label--keep">{{ $saveLabel }}</span>
     </button>
@@ -181,8 +193,9 @@
     </a>
 @endif
 @if($hasMore)
-    <div class="dropdown">
-        <button type="button" class="btn btn-outline-secondary app-header-btn app-header-btn--icon" data-bs-toggle="dropdown" aria-expanded="false" data-tip="More actions" aria-label="More actions">
+    {{-- The tooltip sits on the wrapper: Bootstrap allows one component instance per element, and the button needs its Dropdown. --}}
+    <div class="dropdown" data-tip="More actions">
+        <button type="button" class="btn btn-outline-primary app-header-btn app-header-btn--icon" data-bs-toggle="dropdown" aria-expanded="false" aria-label="More actions">
             <i class="bi bi-three-dots" aria-hidden="true"></i>
         </button>
         <ul class="dropdown-menu dropdown-menu-end">
@@ -226,6 +239,9 @@
     @endif
 
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+        @if($recordIcon)
+            <span class="app-record-icon" aria-hidden="true"><i class="bi {{ $recordIcon }}"></i></span>
+        @endif
         <div class="page-header-heading min-w-0">
             <h1 class="{{ $resolvedTitleClass }} {{ $resolvedTitleMarginClass }} {{ $resolvedTitleWeightClass }}">{{ $resolvedTitle }}</h1>
 
@@ -235,17 +251,11 @@
 
             @if($hasMeta)
                 <div class="{{ $resolvedMetaClass }}">
-                    @if($showStandardMeta)
-                        @if(filled($entityType))
-                            @if(filled($badgeKind))
-                                <x-category-badge :kind="$badgeKind">{{ $entityType }}</x-category-badge>
-                            @else
-                                <x-entity-type-badge :label="$entityType" :badge-class="$resolvedEntityTypeBadgeClass" />
-                            @endif
-                        @endif
-                        @if(! is_null($active))
-                            <x-status-badge :active="$active" :inactive-label="$inactiveLabel" />
-                        @endif
+                    @if($hasRoleBadge)
+                        <x-category-badge kind="role">{{ $entityType }}</x-category-badge>
+                    @endif
+                    @if(! is_null($active))
+                        <x-status-badge :active="$active" :inactive-label="$inactiveLabel" />
                     @endif
                     @if($hasBadgeAugment)
                         {{ $badges }}
@@ -269,4 +279,7 @@
             </div>
         @endif
     </div>
+    @isset($facts)
+        <dl class="app-record-facts">{{ $facts }}</dl>
+    @endisset
 </div>

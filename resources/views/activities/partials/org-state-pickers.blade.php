@@ -89,7 +89,7 @@
     <label class="form-label">
         Organizations
         @if(!empty($agreementIds))
-            <span class="badge bg-secondary ms-1">{{ $availableOrganizations->count() }}</span>
+            <span class="app-count">{{ $availableOrganizations->count() }}</span>
         @endif
     </label>
     <x-token-picker
@@ -112,7 +112,7 @@
     <label class="form-label">
         States
         @if(!empty($agreementIds))
-            <span class="badge bg-secondary ms-1">{{ $availableStates->count() }}</span>
+            <span class="app-count">{{ $availableStates->count() }}</span>
         @endif
     </label>
     <x-token-picker

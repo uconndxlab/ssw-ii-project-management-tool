@@ -9,14 +9,14 @@
 @endphp
 
 <div class="card shadow-sm app-index-table-card">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
+    <x-table-scroll>
+        <table class="table table-hover align-middle mb-0 app-cards">
+            <thead>
                 <tr>
-                    <th style="min-width: 160px;">
+                    <th>
                         <x-table-sort-link column="name" label="Name" :sort="$s" :direction="$d" :url="$url('name')" target="#users-table" />
                     </th>
-                    <th style="min-width: 180px;">
+                    <th>
                         <x-table-sort-link column="email" label="Email" :sort="$s" :direction="$d" :url="$url('email')" target="#users-table" />
                     </th>
                     <th>
@@ -25,44 +25,44 @@
                     <th>
                         <x-table-sort-link column="access_profile" label="Access" :sort="$s" :direction="$d" :url="$url('access_profile')" target="#users-table" />
                     </th>
-                    <th style="min-width: 140px;">
+                    <th>
                         <x-table-sort-link column="supervisor" label="Supervisor" :sort="$s" :direction="$d" :url="$url('supervisor')" target="#users-table" />
                     </th>
                     <th>
                         <x-table-sort-link column="active" label="Status" :sort="$s" :direction="$d" :url="$url('active')" target="#users-table" />
                     </th>
-                    <th style="min-width: 140px;">
+                    <th>
                         <x-table-sort-link column="projects" label="Projects" :sort="$s" :direction="$d" :url="$url('projects')" target="#users-table" />
                     </th>
-                    <th style="min-width: 140px;">
+                    <th>
                         <x-table-sort-link column="programs" label="Programs" :sort="$s" :direction="$d" :url="$url('programs')" target="#users-table" />
                     </th>
-                    <th class="text-end text-nowrap" style="width:220px;">Actions</th>
+                    <th class="app-col-actions"><span class="visually-hidden">Actions</span></th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($users as $user)
                 @php $scope = $user->getScopeBySource(); @endphp
                 <tr>
-                    <td>
-                        <x-user-link :user="$user" class="fw-semibold text-decoration-none text-dark d-block" />
+                    <td class="app-card-lead">
+                        <x-user-link :user="$user" class="app-link app-link--strong app-row-link d-block" />
                     </td>
-                    <td class="text-muted small">{{ $user->email }}</td>
-                    <td class="text-muted small">{{ $user->po_number ?: '—' }}</td>
-                    <td>
+                    <td data-label="Email" class="text-muted small">{{ $user->email }}</td>
+                    <td data-label="PO" class="text-muted small">{{ $user->po_number ?: '—' }}</td>
+                    <td data-label="Access">
                         <x-category-badge kind="role">{{ $user->accessLabel() }}</x-category-badge>
                     </td>
-                    <td class="small">
+                    <td data-label="Supervisor" class="small">
                         @if($user->supervisor)
                             <x-user-link :user="$user->supervisor" class="text-decoration-none" />
                         @else
                             <span class="text-muted">—</span>
                         @endif
                     </td>
-                    <td>
+                    <td class="app-card-status">
                         <x-status-badge :active="$user->active" />
                     </td>
-                    <td>
+                    <td data-label="Projects">
                         <x-table-badge-list
                             kind="project"
                             :items="($user->program_scope_mode?->value ?? null) === 'all'
@@ -77,7 +77,7 @@
                             :empty-label="$scopeEmptyLabel($user->program_scope_mode, 'All projects', 'No projects')"
                         />
                     </td>
-                    <td>
+                    <td data-label="Programs">
                         <x-table-badge-list
                             kind="program"
                             :items="($user->program_scope_mode?->value ?? null) === 'all'
@@ -92,39 +92,29 @@
                             :empty-label="$scopeEmptyLabel($user->program_scope_mode, 'All programs', 'No programs')"
                         />
                     </td>
-                    <td class="text-end text-nowrap">
+                    <td class="app-col-actions">
                         @php $actionKey = 'user-actions-' . $user->id; @endphp
-                        <div class="btn-group btn-group-sm" role="group" aria-label="User actions for {{ $user->name }}">
+                        <div class="dropdown app-row-actions d-inline-block">
+                            <button type="button" class="btn btn-sm btn-link app-row-actions-toggle" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" aria-label="User actions for {{ $user->name }}"><i class="bi bi-three-dots" aria-hidden="true"></i></button>
+                            <div class="dropdown-menu dropdown-menu-end">
                             @php $userHref = \App\Support\UserProfileLink::route($user); @endphp
                             @if($userHref)
-                            <a href="{{ $userHref }}"
-                               class="btn btn-outline-primary"
-                               data-bs-toggle="tooltip"
-                               data-bs-title="View user"
-                               aria-label="View user">
-                                <i class="bi bi-eye"></i>
-                            </a>
+                            <a href="{{ $userHref }}" class="dropdown-item"><i class="bi bi-eye me-2" aria-hidden="true"></i>View user</a>
                             @endif
                             @can('update', $user)
-                            <a href="{{ route('admin.users.edit', $user) }}"
-                               class="btn btn-outline-secondary"
-                               data-bs-toggle="tooltip"
-                               data-bs-title="Edit user"
-                               aria-label="Edit user">
-                                <i class="bi bi-pencil-square"></i>
-                            </a>
+                            <a href="{{ route('admin.users.edit', $user) }}" class="dropdown-item"><i class="bi bi-pencil-square me-2" aria-hidden="true"></i>Edit user</a>
                             @endcan
                             @can('delete', $user)
+                            <hr class="dropdown-divider">
                             <button type="submit"
                                     form="{{ $actionKey }}-delete"
-                                    class="btn btn-outline-danger"
-                                    data-bs-toggle="tooltip"
-                                    data-bs-title="Delete user"
-                                    aria-label="Delete user"
-                                    onclick="return confirm('Delete {{ addslashes($user->name) }}?')">
-                                <i class="bi bi-trash"></i>
-                            </button>
+                                    data-confirm
+                                    data-confirm-title="Delete user?"
+                                    data-confirm-record="{{ $user->name }}"
+                                    data-confirm-message="This action cannot be undone."
+                                    data-confirm-action="Delete user" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete user</button>
                             @endcan
+                            </div>
                         </div>
                         @can('delete', $user)
                         <form id="{{ $actionKey }}-delete" method="POST" action="{{ route('admin.users.destroy', $user) }}" class="d-none">
@@ -148,8 +138,8 @@
                 @endforelse
             </tbody>
         </table>
-    </div>
-    <div class="card-footer bg-white">
+    </x-table-scroll>
+    <div class="card-footer">
         <x-htmx-pagination :paginator="$users" target="#users-table" />
     </div>
 </div>
