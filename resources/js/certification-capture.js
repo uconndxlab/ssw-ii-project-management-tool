@@ -20,6 +20,7 @@ function initCertificationCapture() {
     const coach = (tool, person) => programIds().some(id => config.coach_program_ids.includes(id)
         && (!tool || tool.mode === 'all' || (tool.mode === 'specific' && tool.program_ids.includes(id)))
         && (!person || person.enrollments.some(enrollment => enrollment.mode === 'all' || (enrollment.mode === 'specific' && enrollment.program_ids.includes(id)))));
+    const assigned = person => person.active && person.enrollments.length > 0 && person.agreements.some(a => agreementIds().includes(Number(a.id)));
     const personFor = row => people.find(p => Number(p.id) === Number(row.certification_candidate_id));
     const matching = person => (person?.enrollments || []).filter(overlap).flatMap(enrollment => enrollment.requirements.filter(req => (!req.type_id || Number(req.type_id) === Number(form.querySelector('#activity_type_id')?.value)) && (!req.family_id || Number(req.family_id) === Number(form.querySelector('#contact_family_id')?.value))));
     const roles = row => [...new Map(matching(personFor(row)).filter(req => req.role_id).map(req => [String(req.role_id), { id: req.role_id, name: req.role_name }])).values()];
@@ -142,7 +143,7 @@ function initCertificationCapture() {
     function render() {
         const active = document.activeElement;
         const focus = root.contains(active) ? { name: active.name, candidate: active.closest('[data-candidate]')?.dataset.candidate, submission: active.closest('[data-submission]')?.dataset.submission, candidateAction: active.dataset.candidateAction, subAction: active.dataset.subAction } : null;
-        root.hidden = !config.review_requested && !rows.length && !people.some(person => person.active && person.agreements.some(a => agreementIds().includes(Number(a.id))));
+        root.hidden = !config.review_requested && !rows.length && !people.some(assigned);
         rowsRoot.innerHTML = rows.map(renderRow).join('');
         const roleOptions = [...new Map(rows.filter(row => !Number(row._delete)).flatMap(roles).map(role => [role.id, role])).values()];
         const bulk = root.querySelector('[data-certification-bulk]');
@@ -180,7 +181,7 @@ function initCertificationCapture() {
         }
     }
     function restrictPicker() {
-        const available = people.filter(person => person.active && !rows.some(row => Number(row.certification_candidate_id) === person.id && !Number(row._delete)) && person.agreements.some(a => agreementIds().includes(Number(a.id)))).map(person => String(person.id));
+        const available = people.filter(person => assigned(person) && !rows.some(row => Number(row.certification_candidate_id) === person.id && !Number(row._delete))).map(person => String(person.id));
         picker.dispatchEvent(new CustomEvent('token-picker:restrict', { detail: available }));
     }
     function scrollToCandidate(row) {
