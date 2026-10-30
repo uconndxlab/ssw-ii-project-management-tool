@@ -67,6 +67,7 @@
                             $canUpdate = auth()->user()->can('update', $activity);
                             $canDelete = auth()->user()->can('delete', $activity);
                             $canDuplicate = auth()->user()->can('duplicate', $activity);
+                            $canEditCertification = $activity->certification_candidates_count > 0 && auth()->user()->access()->isCertificationCoachOnActivity($activity);
                         @endphp
                         <div class="dropdown app-row-actions d-inline-block">
                             <button type="button" class="btn btn-sm btn-link app-row-actions-toggle" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" aria-label="Activity actions for {{ $activity->engagement_date->format('M d, Y') }}"><i class="bi bi-three-dots" aria-hidden="true"></i></button>
@@ -75,6 +76,9 @@
                             <x-activity-action-log-button :activity="$activity" menu />
                             @if($canUpdate)
                                 <a href="{{ route('activities.edit', $activity) }}" class="dropdown-item"><i class="bi bi-pencil-square me-2" aria-hidden="true"></i>Edit activity</a>
+                            @endif
+                            @if($canEditCertification)
+                                <a href="{{ route('activities.certification.edit', $activity) }}#activity-certification" class="dropdown-item"><i class="bi bi-patch-check me-2" aria-hidden="true"></i>Edit certification</a>
                             @endif
                             @if($canDuplicate)
                                 <button type="submit"

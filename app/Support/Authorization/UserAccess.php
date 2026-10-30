@@ -751,6 +751,30 @@ class UserAccess
             ->exists();
     }
 
+    // A coach for this activity: a reviewer on it, or holding a coach duty in one of its programs.
+    // Used to offer the focused certification editor; other editors get the whole form.
+    public function isCertificationCoachOnActivity(Activity $activity): bool
+    {
+        $activity->loadMissing('programs:id');
+
+        return $this->isCertificationReviewerOnActivity($activity)
+            || array_intersect($activity->programs->modelKeys(), $this->user->certification()->coachProgramIds()) !== [];
+    }
+
+    /**
+     * Resolves reviewer standing for a whole page of activities in one query, so row menus that ask
+     * about each activity do not run one query per row.
+     *
+     * @param  array<int>  $activityIds
+     */
+    public function primeCertificationReviewers(array $activityIds): void
+    {
+        $reviewing = Activity::query()->whereKey($activityIds)->where(fn (Builder $builder) => $this->orCertificationReviewer($builder))->pluck('id')->map(fn ($id) => (int) $id)->all();
+        foreach ($activityIds as $id) {
+            $this->certificationReviewerActivityIds[(int) $id] = in_array((int) $id, $reviewing, true);
+        }
+    }
+
     // Owner, supervisor of owner, or enhanced viewer/admin whose view scope covers the activity
     // (program visibility — not merely Delivered By).
     public function canViewActivityActionLog(Activity $activity): bool

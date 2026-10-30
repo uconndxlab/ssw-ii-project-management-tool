@@ -3,17 +3,21 @@
         $candidates = collect($certificationForm['candidates']);
         $flagged = $activity->certification_review_requested_at;
         $isReviewer = $flagged && auth()->user()->access()->isCertificationReviewerOnActivity($activity);
-        $askedCoaches = $activity->reviewRequests->pluck('coach.name')->filter()->join(', ');
+        $isCoach = auth()->user()->access()->isCertificationCoachOnActivity($activity);
+        $askedCoaches = $activity->reviewRequests->whereNull('cleared_at')->pluck('coach.name')->filter()->join(', ');
         $mine = $activity->supervisedCandidateNames([auth()->id()]);
-        $names = collect($certificationForm['saved'])->map(fn ($tag) => $candidates->firstWhere('id', $tag['certification_candidate_id'])['name'] ?? null)->filter();
     @endphp
     <div class="card mb-3">
         <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
             <div class="d-flex flex-wrap align-items-center gap-2">
                 <h2 class="h5 mb-0">Certification</h2>
-                @if($flagged)<span class="app-status app-status--warning">Needs certification review</span>@endif
+                @if($flagged && ! $isReviewer)<span class="app-status app-status--warning">Needs certification review</span>@endif
             </div>
-            @can('update', $activity)<a href="{{ route('activities.edit', $activity) }}#activity-certification" class="btn btn-sm btn-outline-primary">Edit certification evidence</a>@endcan
+            @if($isCoach)
+                @unless($isReviewer)<a href="{{ route('activities.certification.edit', $activity) }}#activity-certification" class="btn btn-sm btn-outline-primary">Edit certification evidence</a>@endunless
+            @else
+                @can('update', $activity)<a href="{{ route('activities.edit', $activity) }}#activity-certification" class="btn btn-sm btn-outline-primary">Edit certification evidence</a>@endcan
+            @endif
         </div>
         <div class="card-body">
             @if($isReviewer)
@@ -23,14 +27,6 @@
                         <div class="app-review-banner__meta">Requested {{ $flagged->format('M j, Y') }}</div>
                     </div>
                     <a href="{{ route('activities.certification.edit', $activity) }}#activity-certification" class="btn btn-primary flex-shrink-0">Review &amp; record submissions</a>
-                    <dl class="app-review-banner__people">
-                        @if($mine->isNotEmpty())
-                            <dt>You supervise</dt><dd>@foreach($mine as $name)<span>{{ $name }}</span>@endforeach</dd>
-                        @endif
-                        @if($names->diff($mine)->isNotEmpty())
-                            <dt>{{ $mine->isNotEmpty() ? 'Other candidates' : 'Candidates' }}</dt><dd>@foreach($names->diff($mine) as $name)<span>{{ $name }}</span>@endforeach</dd>
-                        @endif
-                    </dl>
                 </div>
             @elseif($askedCoaches)
                 <p class="small text-muted mb-3">Review requested from {{ $askedCoaches }}.</p>

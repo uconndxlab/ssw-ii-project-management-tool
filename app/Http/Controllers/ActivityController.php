@@ -55,7 +55,7 @@ class ActivityController extends Controller
 
         $query = Activity::query()
             ->visibleTo($this->actor())
-            ->with(['agreements.organizations', 'agreements.states', 'user', 'activityType', 'organizations', 'states']);
+            ->with(['agreements.organizations', 'agreements.states', 'user', 'activityType', 'organizations', 'states', 'programs:id']);
 
         // Search
         $search = trim((string) $request->input('search', ''));
@@ -202,7 +202,8 @@ class ActivityController extends Controller
                 break;
         }
 
-        $activities = $query->paginate(TablePagination::perPage($request))->withQueryString();
+        $activities = $query->withCount('certificationCandidates')->paginate(TablePagination::perPage($request))->withQueryString();
+        $this->actor()->access()->primeCertificationReviewers($activities->getCollection()->pluck('id')->map(fn ($id) => (int) $id)->all());
 
         // HTMX: refresh cascading filters and table together
         if ($request->header('HX-Request') === 'true' && $request->input('partial') === 'filters') {

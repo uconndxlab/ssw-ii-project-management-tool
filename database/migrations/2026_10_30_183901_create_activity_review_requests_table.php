@@ -13,6 +13,7 @@ return new class extends Migration
             $table->foreignId('activity_id')->constrained()->cascadeOnDelete();
             $table->foreignId('coach_user_id')->constrained('users')->cascadeOnDelete();
             $table->foreignId('requested_by_user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamp('cleared_at')->nullable();
             $table->timestamps();
             $table->unique(['activity_id', 'coach_user_id']);
         });

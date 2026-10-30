@@ -184,7 +184,7 @@ class CertificationEvidenceService
                 $activity->update(['certification_review_requested_at' => $requested ? now() : null, 'certification_review_requested_by_user_id' => $requested ? $actor->id : null]);
             }
             if (! $requested) {
-                $activity->reviewRequests()->delete();
+                $activity->reviewRequests()->whereNull('cleared_at')->update(['cleared_at' => now()]);
             } elseif ($coachIds !== null) {
                 $this->syncReviewRequests($activity, $actor, $programIds, $coachIds);
             }
@@ -200,15 +200,22 @@ class CertificationEvidenceService
      */
     private function syncReviewRequests(Activity $activity, User $actor, array $programIds, array $coachIds): void
     {
-        $existing = $activity->reviewRequests()->pluck('coach_user_id')->map(fn ($id) => (int) $id)->all();
-        $allowed = array_merge($existing, $this->reviewCoachOptions($activity, $programIds)->keys()->map(fn ($id) => (int) $id)->all());
+        $rows = $activity->reviewRequests()->get()->keyBy('coach_user_id');
+        $allowed = array_merge($rows->keys()->map(fn ($id) => (int) $id)->all(), $this->reviewCoachOptions($activity, $programIds)->keys()->map(fn ($id) => (int) $id)->all());
         if (array_diff($coachIds, $allowed) !== []) {
             $this->invalid('review_coach_user_ids', 'Choose coaches who supervise a tagged candidate or coach on the selected agreements.');
         }
-        $activity->reviewRequests()->whereNotIn('coach_user_id', $coachIds)->delete();
-        $added = array_values(array_diff($coachIds, $existing));
-        foreach ($added as $coachId) {
-            $activity->reviewRequests()->create(['coach_user_id' => $coachId, 'requested_by_user_id' => $actor->id]);
+        $activity->reviewRequests()->whereNull('cleared_at')->whereNotIn('coach_user_id', $coachIds)->delete();
+        $added = [];
+        foreach ($coachIds as $coachId) {
+            $row = $rows->get($coachId);
+            if ($row === null) {
+                $activity->reviewRequests()->create(['coach_user_id' => $coachId, 'requested_by_user_id' => $actor->id]);
+                $added[] = $coachId;
+            } elseif ($row->cleared_at !== null) {
+                // Asked again after a cleared review: shown as requested again, but not re-emailed.
+                $row->update(['cleared_at' => null]);
+            }
         }
         User::query()->whereKey(array_diff($added, [$actor->id]))->where('active', true)->get()
             ->each(fn (User $coach) => $coach->notify(new ActivityReviewRequested($activity, $actor)));
@@ -366,7 +373,7 @@ class CertificationEvidenceService
             'coach_program_ids' => $actor->certification()->coachProgramIds(),
             'agreement_coaches' => $agreements->flatMap(fn (Agreement $agreement) => $agreement->allUsers()->where('active', true)->map(fn (User $user) => ['id' => $user->id, 'name' => $user->name, 'program_ids' => $user->certification()->coachProgramIds(), 'agreement_id' => $agreement->id]))
                 ->filter(fn (array $coach) => $coach['program_ids'] !== [])->unique(fn (array $coach) => $coach['id'].'-'.$coach['agreement_id'])->values()->all(),
-            'reviewers' => $activity?->reviewRequests()->with('coach:id,name')->get()->map(fn (ActivityReviewRequest $request) => ['id' => $request->coach_user_id, 'name' => $request->coach->name])->values()->all() ?? [],
+            'reviewers' => $activity?->reviewRequests()->whereNull('cleared_at')->with('coach:id,name')->get()->map(fn (ActivityReviewRequest $request) => ['id' => $request->coach_user_id, 'name' => $request->coach->name])->values()->all() ?? [],
             'tools' => $tools->map(fn ($tool) => [
                 'id' => $tool->id, 'name' => $tool->name, 'description' => $tool->description,
                 'active' => $tool->active && $tool->retired_at === null, 'mode' => $tool->program_scope_mode->value,

@@ -101,9 +101,7 @@ test('a supervisor loses inherited access when their report is no longer the sup
     expect($supervisor->fresh()->can('view', $f['activity']))->toBeFalse();
 });
 
-
-test('a coach asked to review gets access only while the review request exists', function () {
-    // could be problematic
+test('a coach asked to review keeps access after the review is cleared but loses it if un-asked', function () {
     $f = reviewFixture();
     $asked = reviewUser($f, coach: true);
     $request = ActivityReviewRequest::factory()->create(['activity_id' => $f['activity']->id, 'coach_user_id' => $asked->id]);
@@ -111,9 +109,36 @@ test('a coach asked to review gets access only while the review request exists',
     expect($asked->can('view', $f['activity']))->toBeTrue()
         ->and($asked->can('reviewCertification', $f['activity']))->toBeTrue();
 
+    $request->update(['cleared_at' => now()]);
+
+    expect(User::query()->find($asked->id)->can('reviewCertification', $f['activity']))->toBeTrue();
+
     $request->delete();
 
     expect(User::query()->find($asked->id)->can('view', $f['activity']))->toBeFalse();
+});
+
+test('the activities list offers Edit certification only to coaches, who also keep Edit activity if they may edit it', function () {
+    $f = reviewFixture();
+    $certification = route('activities.certification.edit', $f['activity']);
+    $edit = route('activities.edit', $f['activity']);
+
+    $this->actingAs($f['coach'])->get(route('activities.index'))->assertSee($certification, false)->assertDontSee($edit, false);
+    $this->actingAs($f['actor'])->get(route('activities.index'))->assertSee($edit, false)->assertDontSee($certification, false);
+
+    UserCertificationDuty::factory()->coach()->atProgram($f['program'])->create(['user_id' => $f['actor']->id]);
+    $this->actingAs($f['actor']->fresh())->get(route('activities.index'))->assertSee($edit, false)->assertSee($certification, false);
+});
+
+test('the show page sends a coach to the focused certification editor and a plain editor to the full form', function () {
+    $f = reviewFixture();
+
+    $this->actingAs($f['coach'])->get(route('activities.show', $f['activity']))
+        ->assertSee('Edit certification evidence')
+        ->assertSee(route('activities.certification.edit', $f['activity']).'#activity-certification', false);
+    $this->actingAs($f['actor'])->get(route('activities.show', $f['activity']))
+        ->assertSee(route('activities.edit', $f['activity']).'#activity-certification', false)
+        ->assertDontSee(route('activities.certification.edit', $f['activity']), false);
 });
 
 test('a reviewer records submissions on the review page without changing the rest of the activity', function () {
@@ -204,7 +229,10 @@ test('the review page edits only the certification section and the show page pro
     $this->actingAs($f['coach'])->get(route('activities.show', $f['activity']))
         ->assertOk()
         ->assertSeeInOrder([$f['actor']->name, 'asked you to review certification for', $f['activity']->activityType->name])
-        ->assertSee('Review &amp; record submissions', false);
+        ->assertSee('Review &amp; record submissions', false)
+        ->assertDontSee('Other candidates')
+        ->assertDontSee('Needs certification review');
     $this->actingAs($f['actor'])->get(route('activities.show', $f['activity']))
-        ->assertDontSee('asked you to review certification');
+        ->assertDontSee('asked you to review certification')
+        ->assertSee('Needs certification review');
 });

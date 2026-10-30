@@ -15,8 +15,15 @@ A reviewer can **view** the activity and **edit only its certification evidence*
 editable only by people who already have edit access (`ActivityPolicy::update`). Ability:
 `ActivityPolicy::reviewCertification`.
 
-Review request rows exist only while the activity's review flag is on. Clearing the flag deletes them,
-so asked-reviewer access ends with the review. Supervising-coach access follows the tags and does not.
+Clearing the activity's review flag marks its request rows cleared (`cleared_at`) instead of deleting
+them, so a coach who was asked keeps access to the evidence they reviewed. Asking the same coach again
+reopens the row without a second email: only the first request emails. Removing a coach's chip before the
+review deletes the row. Supervising-coach access follows the tags and never expires.
+
+Coaches (a reviewer on the activity, or a coach duty in one of its programs) get an "Edit certification"
+action in the activities list and an "Edit certification evidence" button on the activity page. Both open the
+focused certification page. Other editors see only the whole-activity edit. A coach who may also edit the
+whole activity sees both.
 
 ## Supervisors act for their direct reports, per candidate
 
