@@ -4,6 +4,8 @@ namespace App\Support\Authorization;
 
 use App\Enums\CertificationDuty;
 use App\Enums\PrivilegeScopeType;
+use App\Models\CertificateEnrollment;
+use App\Models\CertificationCandidate;
 use App\Models\Program;
 use App\Models\Project;
 use App\Models\User;
@@ -76,6 +78,37 @@ class CertificationAccess
     public function managerProgramIds(): array
     {
         return $this->managerProgramIds ??= $this->programIdsForDuty(CertificationDuty::Manager);
+    }
+
+    /**
+     * Coach programs a supervisor may act in for one enrollment, and nothing wider: only when the
+     * enrollment's assigned supervising coach is one of their direct reports, and only in the
+     * programs that report coaches. This never marks the supervisor as a coach (assignment
+     * eligibility and duty administration keep using coachProgramIds()).
+     *
+     * @return array<int>
+     */
+    public function coachProgramIdsViaSupervisee(CertificateEnrollment $enrollment): array
+    {
+        $coachId = $enrollment->supervising_coach_user_id;
+        if ($coachId === null || ! in_array($coachId, $this->user->access()->directReportIds(), true)) {
+            return [];
+        }
+        $enrollment->loadMissing('supervisingCoach');
+
+        return $enrollment->supervisingCoach?->certification()->coachProgramIds() ?? [];
+    }
+
+    /**
+     * The same, across every enrollment of one candidate.
+     *
+     * @return array<int>
+     */
+    public function coachProgramIdsViaSuperviseesFor(CertificationCandidate $candidate): array
+    {
+        $candidate->loadMissing('enrollments.supervisingCoach');
+
+        return array_values(array_unique(array_merge([], ...$candidate->enrollments->map(fn (CertificateEnrollment $enrollment) => $this->coachProgramIdsViaSupervisee($enrollment))->all())));
     }
 
     public function coachesProgram(int $programId): bool

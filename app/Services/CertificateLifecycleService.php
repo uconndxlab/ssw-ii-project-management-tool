@@ -110,7 +110,7 @@ class CertificateLifecycleService
             $enrollment = $this->lock($enrollment, $cycle);
             $pending = $this->pendingOpenedAs($enrollment, $awardId);
             $asCoach = $this->access->canConfirm($actor, $enrollment)
-                && in_array($actor->id, [$pending->endorsed_by_user_id, $enrollment->supervising_coach_user_id], true);
+                && array_intersect($actor->access()->activityReferenceUserIds(), array_filter([$pending->endorsed_by_user_id, $enrollment->supervising_coach_user_id])) !== [];
             if (! $asCoach && ! $this->access->canManage($actor, $enrollment)) {
                 throw new AuthorizationException;
             }

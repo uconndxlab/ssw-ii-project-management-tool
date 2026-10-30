@@ -12,14 +12,20 @@ function initCertificationCapture() {
     let nextKey = Math.max(0, ...rows.map(row => Number(row.key) + 1));
     let open = null;
     let picking = false;
+    let reviewers = (config.reviewers || []).map(coach => ({ id: Number(coach.id), name: coach.name }));
+    let choosing = false;
+    let reviewFocus = null;
     const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const ids = name => [...form.querySelectorAll(`input[name="${name}[]"]`)].map(input => Number(input.value));
     const programIds = () => ids('program_ids');
     const agreementIds = () => ids('agreement_ids');
     const overlap = item => item.mode === 'all' || (item.mode === 'specific' && item.program_ids.some(id => programIds().includes(Number(id))));
-    const coach = (tool, person) => programIds().some(id => config.coach_program_ids.includes(id)
+    // A supervisor is a coach only for candidates whose assigned coach reports to them: the server sends each
+    // person's own coach programs, which include those inherited through a supervisee.
+    const coachFor = (tool, person) => programIds().some(id => (person?.coach_program_ids ?? config.coach_program_ids).includes(id)
         && (!tool || tool.mode === 'all' || (tool.mode === 'specific' && tool.program_ids.includes(id)))
         && (!person || person.enrollments.some(enrollment => enrollment.mode === 'all' || (enrollment.mode === 'specific' && enrollment.program_ids.includes(id)))));
+    const coach = (tool, person) => person ? coachFor(tool, person) : coachFor(tool) || rows.some(row => !Number(row._delete) && coachFor(tool, personFor(row)));
     const assigned = person => person.active && person.enrollments.length > 0 && person.agreements.some(a => agreementIds().includes(Number(a.id)));
     const personFor = row => people.find(p => Number(p.id) === Number(row.certification_candidate_id));
     const matching = person => (person?.enrollments || []).filter(overlap).flatMap(enrollment => enrollment.requirements.filter(req => (!req.type_id || Number(req.type_id) === Number(form.querySelector('#activity_type_id')?.value)) && (!req.family_id || Number(req.family_id) === Number(form.querySelector('#contact_family_id')?.value))));
@@ -38,6 +44,58 @@ function initCertificationCapture() {
     };
     const dirty = () => form.dispatchEvent(new Event('input', { bubbles: true }));
     const announce = message => { root.querySelector('[data-certification-status]').textContent = message; };
+    const activeRows = () => rows.filter(row => !Number(row._delete));
+    const supervisedBy = coachId => activeRows().filter(row => personFor(row)?.supervising_coaches?.some(coach => Number(coach.id) === coachId)).map(row => personFor(row).name);
+    const agreementCoaches = () => [...new Map((config.agreement_coaches || [])
+        .filter(coach => agreementIds().includes(Number(coach.agreement_id)) && coach.program_ids.some(id => programIds().includes(Number(id))) && !reviewers.some(chosen => chosen.id === Number(coach.id)))
+        .map(coach => [coach.id, coach])).values()];
+    function renderReview() {
+        const zone = root.querySelector('[data-certification-review]');
+        const people = activeRows();
+        zone.hidden = !people.length && !reviewers.length;
+        const none = '<div class="alert alert-warning small mb-0" role="status"><strong>No coach is assigned to these agreements.</strong> Nobody will be emailed. Ask an admin to assign a coach. You can still save, and this activity stays marked as needing review.</div>';
+        const choices = agreementCoaches();
+        const picker = id => `<select class="form-select form-select-sm w-auto" id="${id}" data-review-select aria-label="Choose a coach"><option value="">Choose coach…</option>${choices.map(coach => `<option value="${esc(coach.id)}">${esc(coach.name)}</option>`).join('')}</select>`;
+        let html = reviewers.map(coach => hidden('review_coach_user_ids[]', coach.id)).join('') + hidden('review_coach_user_ids[]', '');
+        if (reviewers.length) {
+            html += '<div class="form-subsection-title mb-2" id="certification-review-label">Review requested from</div><div class="d-flex flex-wrap align-items-center gap-2" role="group" aria-labelledby="certification-review-label">';
+            html += reviewers.map(coach => {
+                const supervised = supervisedBy(coach.id);
+                return `<span class="badge app-chip">${esc(coach.name)}${supervised.length ? ` <span class="text-body-secondary fw-normal">· supervises ${esc(supervised.join(', '))}</span>` : ''}<button type="button" class="btn-close" data-review-action="remove" data-id="${esc(coach.id)}" aria-label="Remove ${esc(coach.name)}"></button></span>`;
+            }).join('');
+            html += choices.length ? (choosing ? picker('certification-review-add') : '<button type="button" class="btn btn-sm btn-outline-primary" data-review-action="add"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add coach</button>') : '';
+            html += '</div><p class="form-text mt-2 mb-0">New coaches are emailed when you save.</p>';
+        } else if (choosing) {
+            html += choices.length
+                ? `<div class="alert alert-warning small"><strong>No supervising coach is set for these candidates.</strong> Choose a coach from the agreements’ staff.</div>${picker('certification-review-add')}`
+                : none;
+        } else {
+            html += '<button type="button" class="btn btn-sm btn-outline-primary" data-review-action="tag">Tag supervising coaches</button>';
+        }
+        zone.innerHTML = html;
+        if (reviewFocus) {
+            zone.querySelector(reviewFocus)?.focus();
+            reviewFocus = null;
+        }
+    }
+    function reviewAction(action, id) {
+        if (action === 'tag') {
+            const suggested = [...new Map(activeRows().flatMap(row => personFor(row)?.supervising_coaches || []).map(coach => [Number(coach.id), { id: Number(coach.id), name: coach.name }])).values()];
+            for (const coach of suggested) if (!reviewers.some(chosen => chosen.id === coach.id)) reviewers.push(coach);
+            choosing = !suggested.length;
+            reviewFocus = suggested.length ? '[data-review-action="remove"]' : '[data-review-select]';
+            const flag = root.querySelector('#needs_certification_review');
+            if (flag && !flag.disabled) flag.checked = true;
+        }
+        if (action === 'add') { choosing = true; reviewFocus = '[data-review-select]'; }
+        if (action === 'remove') {
+            reviewers = reviewers.filter(coach => coach.id !== Number(id));
+            reviewFocus = reviewers.length ? '[data-review-action="remove"]' : '[data-review-action="tag"]';
+        }
+        render();
+        dirty();
+        announce(action === 'remove' ? 'Coach removed.' : 'Coach review requested. They are emailed when you save.');
+    }
     function capture() {
         for (const row of rows) {
             const prefix = `certification_candidates[${row.key}]`;
@@ -134,10 +192,9 @@ function initCertificationCapture() {
             }).join('; ') + '. Final credit depends on the requirement’s dates and conditions.';
             return `<div class="mt-1">${enrollment.url ? `<a href="${esc(progressUrl(enrollment, row))}">${esc(enrollment.name)}</a>` : esc(enrollment.name)} · ${esc(reasons)}</div>`;
         }).join('') || '<div>No certificates assigned. The activity tag is still recorded.</div>';
-        html += '</div><div class="d-flex flex-wrap justify-content-between gap-2 align-items-center mt-3"><h3 class="h6 mb-0">Tool submissions</h3>' + (coach(null, person) ? '<button type="button" class="btn btn-sm btn-outline-primary" data-candidate-action="add-submission">Add submission</button>' : '') + '</div>';
+        html += '</div><div class="d-flex flex-wrap justify-content-between gap-2 align-items-center mt-3"><h3 class="h6 mb-0">Tool submissions</h3>' + (coach(null, person) ? '<button type="button" class="btn btn-sm btn-outline-primary" data-candidate-action="add-submission">Add submission</button>' : `<button type="button" class="btn btn-sm btn-outline-primary" disabled aria-disabled="true" aria-describedby="certification-callout" title="${esc(coach() ? 'Your coach duty does not cover this candidate’s certificates.' : 'A coach records submissions.')}">Add submission</button>`) + '</div>';
         if (!row.submissions.length) html += `<p class="small text-muted mt-2">${savedCount ? `${savedCount} recorded submission(s). Detailed evidence is limited to admins, coaches, and managers in scope.` : 'No submissions. Trainings can be tagged without recording a tool.'}</p>`;
         html += row.submissions.map(sub => submission(row, sub)).join('');
-        if (!coach(null, person)) html += '<p class="small text-muted mt-2 mb-0">A certification coach records submissions. Turn on Needs certification review to flag this activity.</p>';
         return html + '</div></div>';
     }
     function render() {
@@ -151,12 +208,20 @@ function initCertificationCapture() {
         root.querySelector('[data-certification-bulk-role]').innerHTML = '<option value="">Choose role…</option>' + roleOptions.map(role => `<option value="${esc(role.id)}">${esc(role.name)}</option>`).join('');
         const flag = root.querySelector('#needs_certification_review');
         const wasFlagged = config.review_requested;
-        const locked = wasFlagged && !coach();
+        const locked = (wasFlagged && !coach()) || reviewers.length > 0;
         flag.disabled = locked;
         const off = root.querySelector('input[type="hidden"][name="needs_certification_review"]');
         off.disabled = locked;
-        root.querySelector('[data-certification-review-help]').hidden = !locked;
-        if (wasFlagged && locked) flag.checked = true;
+        root.querySelector('[data-certification-review-help]').hidden = !(wasFlagged && !coach());
+        if (locked) flag.checked = true;
+        const flagHelp = flag.closest('.mb-3')?.querySelector('.form-text');
+        flagHelp.dataset.defaultText ??= flagHelp.textContent;
+        flagHelp.textContent = reviewers.length ? 'On while coaches are tagged. Remove them to change this.' : flagHelp.dataset.defaultText;
+        const callout = root.querySelector('[data-certification-callout]');
+        callout.hidden = !activeRows().length || coach();
+        callout.id = 'certification-callout';
+        callout.innerHTML = `<strong>A coach records the submissions.</strong> You can tag candidates and set their role and units. Coaches add tool submissions after reviewing.${reviewers.length ? '' : ' Use “Tag supervising coaches” below to ask for a review.'}`;
+        renderReview();
         for (const input of rowsRoot.querySelectorAll('[required]')) {
             if (input.closest('[hidden]')) input.required = false;
         }
@@ -198,6 +263,7 @@ function initCertificationCapture() {
     root.addEventListener('click', async event => {
         const button = event.target.closest('button');
         if (!button) return;
+        if (button.dataset.reviewAction) return reviewAction(button.dataset.reviewAction, button.dataset.id);
         capture();
         if (button.matches('[data-certification-add]')) {
             root.querySelector('[data-certification-picker]').hidden = false;
@@ -264,6 +330,19 @@ function initCertificationCapture() {
         render(); restrictPicker(); dirty();
     });
     root.addEventListener('change', event => {
+        if (event.target.matches('[data-review-select]')) {
+            const coach = agreementCoaches().find(item => String(item.id) === event.target.value);
+            if (coach) {
+                reviewers.push({ id: Number(coach.id), name: coach.name });
+                choosing = false;
+                reviewFocus = '[data-review-action="remove"]';
+                const flag = root.querySelector('#needs_certification_review');
+                if (flag && !flag.disabled) flag.checked = true;
+                render();
+                dirty();
+            }
+            return;
+        }
         if (event.target.name?.endsWith('[certification_tool_id]')) { capture(); render(); }
     });
     function scopeChanged() { capture(); render(); restrictPicker(); }

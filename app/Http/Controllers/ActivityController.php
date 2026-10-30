@@ -373,7 +373,7 @@ class ActivityController extends Controller
                 $this->dynamicLoggingFieldValidationAttributes($agreements, $contactFamily, $activityType, $baseValidated['program_ids'])
             )
         );
-        $validated['certification'] = $request->only(['certification_candidates', 'needs_certification_review']);
+        $validated['certification'] = $request->only(['certification_candidates', 'needs_certification_review', 'review_coach_user_ids']);
         $activity = null;
 
         DB::transaction(function () use (&$activity, $validated, $agreements, $contactFamily, $activityType, $engagementDate, $activityTypeId, $completionCount) {
@@ -451,6 +451,7 @@ class ActivityController extends Controller
                 : [];
         }
 
+        $activity->loadMissing(['certificationReviewRequestedBy', 'reviewRequests.coach']);
         $certificationForm = $this->certificationEvidence->formData($this->actor(), $activity->agreements, $activity);
 
         return view('activities.show', compact('activity', 'scopedLoggingFields', 'certificationForm'));
@@ -606,7 +607,7 @@ class ActivityController extends Controller
             )
         );
 
-        $validated['certification'] = $request->only(['certification_candidates', 'needs_certification_review']);
+        $validated['certification'] = $request->only(['certification_candidates', 'needs_certification_review', 'review_coach_user_ids']);
 
         DB::transaction(function () use ($activity, $validated, $agreements, $contactFamily, $activityType, $engagementDate, $activityTypeId, $completionCount) {
             $activity->refreshForUpdate();

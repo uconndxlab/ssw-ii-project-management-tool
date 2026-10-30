@@ -222,8 +222,9 @@ user_certification_duties         user_id, duty (coach|manager), scope_type (sys
 - Routes: all in `routes/web.php` under `Route::middleware(['auth','active'])`. No admin prefix —
   authorization is policy-driven. `Route::resource(...)->except(['show'])` is the catalog convention.
 - `composer.json`: NO PDF library. Queue driver = database. ZERO Notification classes exist today.
-- `User.is_supervisor` / `supervisor_id` is the STAFF reporting hierarchy — UNRELATED to certification
-  coaches. Do not conflate.
+- `User.is_supervisor` / `supervisor_id` is the STAFF reporting hierarchy. It was originally unrelated to
+  certification coaches. One deliberate exception (client decision, 2026-10-30): a supervisor inherits
+  their direct reports' certification standing. See `docs/access-rules.md`.
 
 ## Known gotcha
 Stale/corrupted compiled Blade views in `storage/framework/views/` produce impossible "undefined variable"

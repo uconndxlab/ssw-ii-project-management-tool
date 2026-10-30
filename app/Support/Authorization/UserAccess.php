@@ -45,6 +45,9 @@ class UserAccess
     /** @var array<int, int>|null */
     private ?array $directReportIds = null;
 
+    /** @var array<int, bool> */
+    private array $certificationReviewerActivityIds = [];
+
     /** @var Collection<int, UserPrivilege>|null */
     private ?Collection $privileges = null;
 
@@ -602,6 +605,7 @@ class UserAccess
         // visible if referenced or agreement visible
         return $query->where(function (Builder $builder) {
             $this->orActivityReferencedBy($builder, $this->activityReferenceUserIds());
+            $this->orCertificationReviewer($builder);
 
             if ($this->hasView() && ! $this->isInput()) {
                 $builder->orWhereHas('agreements', function (Builder $agreementQuery) {
@@ -715,6 +719,10 @@ class UserAccess
     // Members/Input: logger or Delivered By (or a supervisee). Viewers: that, or the activity sits on an agreement they can view.
     public function canViewActivity(Activity $activity): bool
     {
+        if ($this->isCertificationReviewerOnActivity($activity)) {
+            return true;
+        }
+
         if ($this->isInput() || $this->isMember()) {
             return $this->isReferencedOnActivity($activity);
         }
@@ -724,6 +732,23 @@ class UserAccess
         }
 
         return $this->applyActivityVisibility(Activity::query()->whereKey($activity->id))->exists();
+    }
+
+    // Edit access, or standing as a certification reviewer. Reviewers may edit only the activity's
+    // certification evidence, never the rest of the activity.
+    public function canReviewActivityCertification(Activity $activity): bool
+    {
+        return $this->canUpdateActivity($activity) || $this->isCertificationReviewerOnActivity($activity);
+    }
+
+    // Supervising coach of a tagged candidate, or a coach asked to review the activity. A supervisor
+    // inherits the standing of their direct reports (documented in docs/access-rules.md).
+    public function isCertificationReviewerOnActivity(Activity $activity): bool
+    {
+        return $this->certificationReviewerActivityIds[$activity->id] ??= Activity::query()
+            ->whereKey($activity->id)
+            ->where(fn (Builder $builder) => $this->orCertificationReviewer($builder))
+            ->exists();
     }
 
     // Owner, supervisor of owner, or enhanced viewer/admin whose view scope covers the activity
@@ -1164,6 +1189,15 @@ class UserAccess
         if ($model instanceof Team) {
             $builder->orWhereHas('users', fn (Builder $relation) => $relation->whereIn('users.id', $memberIds));
         }
+    }
+
+    /** @param  Builder<covariant Model>  $builder */
+    private function orCertificationReviewer(Builder $builder): void
+    {
+        $userIds = $this->activityReferenceUserIds();
+
+        $builder->orWhereHas('reviewRequests', fn (Builder $relation) => $relation->whereIn('coach_user_id', $userIds))
+            ->orWhereHas('certificationCandidates.candidate.enrollments', fn (Builder $relation) => $relation->whereIn('supervising_coach_user_id', $userIds));
     }
 
     /**

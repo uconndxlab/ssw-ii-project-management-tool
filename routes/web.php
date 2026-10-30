@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ActivityCertificationController;
 use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\ActivityTypeController;
 use App\Http\Controllers\AdminUserController;
@@ -60,6 +61,8 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/activities/create', [ActivityController::class, 'create'])->name('activities.create');
     Route::post('/activities', [ActivityController::class, 'store'])->name('activities.store');
     Route::get('/activities/{activity}', [ActivityController::class, 'show'])->name('activities.show');
+    Route::get('/activities/{activity}/certification', [ActivityCertificationController::class, 'edit'])->name('activities.certification.edit');
+    Route::put('/activities/{activity}/certification', [ActivityCertificationController::class, 'update'])->name('activities.certification.update');
     Route::get('/activities/{activity}/edit', [ActivityController::class, 'edit'])->name('activities.edit');
     Route::put('/activities/{activity}', [ActivityController::class, 'update'])->name('activities.update');
     Route::post('/activities/{activity}/duplicate', [ActivityController::class, 'duplicate'])->name('activities.duplicate');

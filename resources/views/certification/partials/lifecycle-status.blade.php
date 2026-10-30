@@ -7,7 +7,7 @@
     $agreementId = request()->integer('agreement_id') ?: null;
     $details = $progress !== null;
     $actorId = auth()->id();
-    $coachSide = $pending && $canConfirm && in_array($actorId, [$pending->endorsed_by_user_id, $enrollment->supervising_coach_user_id], true);
+    $coachSide = $pending && $canConfirm && array_intersect(auth()->user()->access()->activityReferenceUserIds(), array_filter([$pending->endorsed_by_user_id, $enrollment->supervising_coach_user_id])) !== [];
     $prerequisiteNames = collect($prerequisites['items'])->pluck('certificate.name')->join(', ', $prerequisites['mode'] === 'any' ? ' or ' : ' and ');
     $steps = [
         ['Requirements', ...($pending

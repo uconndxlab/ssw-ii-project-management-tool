@@ -7,6 +7,7 @@ use App\Enums\CertificateTagOutcome;
 use App\Enums\ProgramScopeMode;
 use App\Models\Activity;
 use App\Models\ActivityCertificationCandidate;
+use App\Models\ActivityReviewRequest;
 use App\Models\Agreement;
 use App\Models\AgreementCertificationCandidate;
 use App\Models\Certificate;
@@ -16,6 +17,7 @@ use App\Models\CertificationCandidate;
 use App\Models\CertificationTool;
 use App\Models\CertificationToolSubmission;
 use App\Models\User;
+use App\Notifications\ActivityReviewRequested;
 use App\Support\Authorization\CertificateProgressAccess;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Validator;
@@ -27,7 +29,11 @@ class CertificationEvidenceService
     /** @param array<int> $programIds */
     public function canRecord(User $actor, array $programIds, ?CertificationTool $tool = null, ?CertificationCandidate $candidate = null): bool
     {
-        $ids = array_intersect($programIds, $actor->certification()->coachProgramIds());
+        $coachProgramIds = $actor->certification()->coachProgramIds();
+        if ($candidate !== null) {
+            $coachProgramIds = array_merge($coachProgramIds, $actor->certification()->coachProgramIdsViaSuperviseesFor($candidate));
+        }
+        $ids = array_intersect($programIds, $coachProgramIds);
         if ($tool !== null && $tool->program_scope_mode !== ProgramScopeMode::All) {
             $ids = $tool->program_scope_mode === ProgramScopeMode::None ? [] : array_intersect($ids, $tool->programs->modelKeys());
         }
@@ -39,6 +45,19 @@ class CertificationEvidenceService
         }
 
         return $ids !== [];
+    }
+
+    /**
+     * Coach standing on this activity: a coach duty in its programs, or being the supervisor of the coach
+     * assigned to any tagged candidate.
+     *
+     * @param  array<int>  $programIds
+     */
+    public function canRecordAny(User $actor, Activity $activity, array $programIds): bool
+    {
+        return $this->canRecord($actor, $programIds)
+            || $activity->certificationCandidates()->with('candidate.enrollments.supervisingCoach')->get()
+                ->contains(fn (ActivityCertificationCandidate $tag) => $this->canRecord($actor, $programIds, null, $tag->candidate));
     }
 
     /** @param array<int> $programIds */
@@ -76,6 +95,10 @@ class CertificationEvidenceService
      */
     public function save(Activity $activity, User $actor, array $input): void
     {
+        if (isset($input['review_coach_user_ids']) && is_array($input['review_coach_user_ids'])) {
+            // The form always posts an empty entry so removing every coach still reaches the server.
+            $input['review_coach_user_ids'] = array_values(array_filter($input['review_coach_user_ids'], fn ($id) => $id !== '' && $id !== null));
+        }
         $data = Validator::make($input, [
             'certification_candidates' => ['sometimes', 'array', 'max:250'],
             'certification_candidates.*' => ['array:id,certification_candidate_id,agreement_id,certification_role_id,completion_units,notes,_delete,submissions'],
@@ -98,6 +121,8 @@ class CertificationEvidenceService
             'certification_candidates.*.submissions.*.scores' => ['sometimes', 'array'],
             'certification_candidates.*.submissions.*.scores.*' => ['nullable', 'numeric', 'between:-99999999,99999999'],
             'needs_certification_review' => ['sometimes', 'boolean'],
+            'review_coach_user_ids' => ['sometimes', 'array', 'max:50'],
+            'review_coach_user_ids.*' => ['integer', 'distinct'],
         ])->validate();
         $activity->load(['programs', 'activityType']);
         $programIds = $activity->programs->pluck('id')->map(fn ($id) => (int) $id)->values()->all();
@@ -148,15 +173,63 @@ class CertificationEvidenceService
                 $this->saveSubmission($tag, $actor, $programIds, $submissionRow, $savedSubmissions, $key.'.submissions.'.$submissionIndex);
             }
         }
-        if (array_key_exists('needs_certification_review', $data)) {
-            $requested = (bool) $data['needs_certification_review'];
-            if (! $requested && $activity->certification_review_requested_at !== null && ! $this->canRecord($actor, $programIds)) {
+        $coachIds = array_key_exists('review_coach_user_ids', $data) ? array_map('intval', $data['review_coach_user_ids']) : null;
+        $flagged = $activity->certification_review_requested_at !== null;
+        if (array_key_exists('needs_certification_review', $data) || $coachIds !== null) {
+            $requested = (bool) ($data['needs_certification_review'] ?? $flagged) || ($coachIds ?? []) !== [];
+            if (! $requested && $flagged && ! $this->canRecordAny($actor, $activity, $programIds)) {
                 $this->invalid('needs_certification_review', 'A coach in an activity program must clear certification review.');
             }
-            if ($requested !== ($activity->certification_review_requested_at !== null)) {
+            if ($requested !== $flagged) {
                 $activity->update(['certification_review_requested_at' => $requested ? now() : null, 'certification_review_requested_by_user_id' => $requested ? $actor->id : null]);
             }
+            if (! $requested) {
+                $activity->reviewRequests()->delete();
+            } elseif ($coachIds !== null) {
+                $this->syncReviewRequests($activity, $actor, $programIds, $coachIds);
+            }
         }
+    }
+
+    /**
+     * Replaces the activity's asked reviewers. Only coaches newly asked are emailed, so re-saving
+     * the activity never re-notifies anyone.
+     *
+     * @param  array<int>  $programIds
+     * @param  array<int>  $coachIds
+     */
+    private function syncReviewRequests(Activity $activity, User $actor, array $programIds, array $coachIds): void
+    {
+        $existing = $activity->reviewRequests()->pluck('coach_user_id')->map(fn ($id) => (int) $id)->all();
+        $allowed = array_merge($existing, $this->reviewCoachOptions($activity, $programIds)->keys()->map(fn ($id) => (int) $id)->all());
+        if (array_diff($coachIds, $allowed) !== []) {
+            $this->invalid('review_coach_user_ids', 'Choose coaches who supervise a tagged candidate or coach on the selected agreements.');
+        }
+        $activity->reviewRequests()->whereNotIn('coach_user_id', $coachIds)->delete();
+        $added = array_values(array_diff($coachIds, $existing));
+        foreach ($added as $coachId) {
+            $activity->reviewRequests()->create(['coach_user_id' => $coachId, 'requested_by_user_id' => $actor->id]);
+        }
+        User::query()->whereKey(array_diff($added, [$actor->id]))->where('active', true)->get()
+            ->each(fn (User $coach) => $coach->notify(new ActivityReviewRequested($activity, $actor)));
+    }
+
+    /**
+     * Coaches an editor may ask: supervising coaches of the tagged candidates, then coaches on the
+     * agreements' staff (direct or through a team) in a program of the activity.
+     *
+     * @param  array<int>  $programIds
+     * @return Collection<int, User>
+     */
+    private function reviewCoachOptions(Activity $activity, array $programIds): Collection
+    {
+        $supervisingIds = $activity->certificationCandidates()->with('candidate.enrollments')->get()
+            ->flatMap(fn ($tag) => $tag->candidate->enrollments->pluck('supervising_coach_user_id'))->filter()->unique()->all();
+        $staff = $activity->agreements()->with(['users.certificationDuties', 'teams.users.certificationDuties'])->get()
+            ->flatMap(fn (Agreement $agreement) => $agreement->allUsers())
+            ->filter(fn (User $user) => array_intersect($user->certification()->coachProgramIds(), $programIds) !== []);
+
+        return $staff->merge(User::query()->whereKey($supervisingIds)->get())->where('active', true)->unique('id')->keyBy('id');
     }
 
     /** @param array<int> $programIds
@@ -227,17 +300,19 @@ class CertificationEvidenceService
      */
     public function formData(User $actor, Collection $agreements, ?Activity $activity = null): array
     {
-        $agreements->loadMissing(['certificationCandidates.candidate.enrollments.certificate.programs', 'certificationCandidates.candidate.enrollments.certificate.requirements.certificationRole']);
-        $tags = $activity?->certificationCandidates()->with(['candidate.enrollments.certificate.programs', 'candidate.enrollments.certificate.requirements.certificationRole', 'role', 'submissions.tool.programs', 'submissions.dimensionValues', 'submissions.scores'])->get() ?? new \Illuminate\Database\Eloquent\Collection;
+        $agreements->loadMissing(['certificationCandidates.candidate.enrollments.certificate.programs', 'certificationCandidates.candidate.enrollments.certificate.requirements.certificationRole', 'certificationCandidates.candidate.enrollments.supervisingCoach', 'users.certificationDuties', 'teams.users.certificationDuties']);
+        $tags = $activity?->certificationCandidates()->with(['candidate.enrollments.supervisingCoach', 'candidate.enrollments.certificate.programs', 'candidate.enrollments.certificate.requirements.certificationRole', 'role', 'submissions.tool.programs', 'submissions.dimensionValues', 'submissions.scores'])->get() ?? new \Illuminate\Database\Eloquent\Collection;
         $people = $agreements->flatMap(fn ($agreement) => $agreement->certificationCandidates->pluck('candidate'))->merge($tags->pluck('candidate'))->filter()->unique('id');
         if ($people->isEmpty()) {
-            return ['candidates' => [], 'saved' => [], 'tools' => [], 'coach_program_ids' => $actor->certification()->coachProgramIds()];
+            return ['candidates' => [], 'saved' => [], 'tools' => [], 'agreement_coaches' => [], 'reviewers' => [], 'coach_program_ids' => $actor->certification()->coachProgramIds()];
         }
         $visibleCertificateIds = Certificate::query()->visibleTo($actor)->pluck('id')->all();
         $access = app(CertificateProgressAccess::class);
         $candidates = $people->map(function (CertificationCandidate $candidate) use ($agreements, $actor, $access, $visibleCertificateIds): array {
             return [
                 'id' => $candidate->id, 'name' => $candidate->name, 'email' => $candidate->email, 'active' => $candidate->active,
+                'coach_program_ids' => array_values(array_unique(array_merge($actor->certification()->coachProgramIds(), $actor->certification()->coachProgramIdsViaSuperviseesFor($candidate)))),
+                'supervising_coaches' => $candidate->enrollments->pluck('supervisingCoach')->filter()->where('active', true)->unique('id')->map(fn (User $coach) => ['id' => $coach->id, 'name' => $coach->name])->values()->all(),
                 'agreements' => $agreements->filter(fn ($agreement) => $agreement->certificationCandidates->contains('certification_candidate_id', $candidate->id))->map(fn ($agreement) => ['id' => $agreement->id, 'name' => $agreement->name])->values()->all(),
                 'enrollments' => $candidate->enrollments->filter(fn ($enrollment) => in_array($enrollment->certificate_id, $visibleCertificateIds, true))->map(function (CertificateEnrollment $enrollment) use ($access, $actor): array {
                     $certificate = $enrollment->certificate;
@@ -265,6 +340,7 @@ class CertificationEvidenceService
         $programIds = $activity?->programs->pluck('id')->map(fn ($id) => (int) $id)->values()->all() ?? [];
         $detailedProgramIds = array_values(array_unique(array_merge($actor->access()->adminProgramIds(), $actor->certification()->coachProgramIds(), $actor->certification()->managerProgramIds())));
         $saved = $tags->map(function ($tag) use ($actor, $programIds, $detailedProgramIds): array {
+            $detailedProgramIds = array_merge($detailedProgramIds, $actor->certification()->coachProgramIdsViaSuperviseesFor($tag->candidate));
             $details = $actor->isSystemAdmin() || array_intersect($programIds, $detailedProgramIds) !== [];
 
             return [
@@ -288,6 +364,9 @@ class CertificationEvidenceService
         return [
             'candidates' => $candidates, 'saved' => $saved,
             'coach_program_ids' => $actor->certification()->coachProgramIds(),
+            'agreement_coaches' => $agreements->flatMap(fn (Agreement $agreement) => $agreement->allUsers()->where('active', true)->map(fn (User $user) => ['id' => $user->id, 'name' => $user->name, 'program_ids' => $user->certification()->coachProgramIds(), 'agreement_id' => $agreement->id]))
+                ->filter(fn (array $coach) => $coach['program_ids'] !== [])->unique(fn (array $coach) => $coach['id'].'-'.$coach['agreement_id'])->values()->all(),
+            'reviewers' => $activity?->reviewRequests()->with('coach:id,name')->get()->map(fn (ActivityReviewRequest $request) => ['id' => $request->coach_user_id, 'name' => $request->coach->name])->values()->all() ?? [],
             'tools' => $tools->map(fn ($tool) => [
                 'id' => $tool->id, 'name' => $tool->name, 'description' => $tool->description,
                 'active' => $tool->active && $tool->retired_at === null, 'mode' => $tool->program_scope_mode->value,

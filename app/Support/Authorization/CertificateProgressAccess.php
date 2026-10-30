@@ -41,13 +41,14 @@ class CertificateProgressAccess
         return $actor->isSystemAdmin()
             || array_intersect($ids, $actor->access()->adminProgramIds()) !== []
             || array_intersect($ids, $actor->certification()->coachProgramIds()) !== []
-            || array_intersect($ids, $actor->certification()->managerProgramIds()) !== [];
+            || array_intersect($ids, $actor->certification()->managerProgramIds()) !== []
+            || array_intersect($ids, $actor->certification()->coachProgramIdsViaSupervisee($enrollment)) !== [];
     }
 
     public function canConfirm(User $actor, CertificateEnrollment $enrollment): bool
     {
         return $enrollment->certificate !== null && $this->canView($actor, $enrollment)
-            && array_intersect($this->programIds($enrollment->certificate), $actor->certification()->coachProgramIds()) !== [];
+            && array_intersect($this->programIds($enrollment->certificate), array_merge($actor->certification()->coachProgramIds(), $actor->certification()->coachProgramIdsViaSupervisee($enrollment))) !== [];
     }
 
     /**
@@ -56,7 +57,9 @@ class CertificateProgressAccess
      */
     public function canEndorse(User $actor, CertificateEnrollment $enrollment): bool
     {
-        return $enrollment->supervising_coach_user_id === $actor->id && $this->canConfirm($actor, $enrollment);
+        // A supervisor endorses for their direct reports: documented client decision, see docs/access-rules.md.
+        return in_array($enrollment->supervising_coach_user_id, $actor->access()->activityReferenceUserIds(), true)
+            && $this->canConfirm($actor, $enrollment);
     }
 
     public function canManage(User $actor, CertificateEnrollment $enrollment): bool

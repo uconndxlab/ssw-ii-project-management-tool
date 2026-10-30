@@ -1976,6 +1976,120 @@ textarea.form-control {
     --app-note-rule: var(--bs-danger);
 }
 
+/* Certification review banner on the activity page: who asked, for what, and which candidates are yours. */
+.app-review-banner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+    background-color: var(--app-accent-subtle);
+    border: 1px solid var(--app-accent-line);
+    border-radius: var(--bs-border-radius);
+}
+
+.app-review-banner > div {
+    flex: 1 1 20rem;
+}
+
+.app-review-banner__title {
+    font-size: 0.9375rem;
+    line-height: 1.4;
+    color: var(--app-muted);
+}
+
+.app-review-banner__title strong {
+    font-weight: 600;
+    color: var(--app-ink);
+}
+
+.app-review-banner__meta {
+    margin-top: 0.125rem;
+    font-size: 0.8125rem;
+    color: var(--app-muted);
+}
+
+.app-review-banner__people {
+    display: grid;
+    flex: 1 1 100%;
+    grid-template-columns: max-content 1fr;
+    gap: 0.375rem 1.25rem;
+    margin: 0;
+}
+
+.app-review-banner__people dt {
+    padding-top: 0.125rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--app-muted);
+}
+
+.app-review-banner__people dd {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 0.5rem;
+    margin: 0;
+    color: var(--app-ink);
+}
+
+.app-review-banner__people dd span {
+    white-space: nowrap;
+}
+
+.app-review-banner__people dd span:not(:last-child)::after {
+    content: "·";
+    margin-left: 0.5rem;
+    color: var(--app-control-border);
+}
+
+@media (max-width: 575.98px) {
+    .app-review-banner > .btn {
+        order: 3;
+        width: 100%;
+    }
+
+    .app-review-banner__people {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+
+    .app-review-banner__people dd {
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* Tagged candidates: name and meta on the left, progress links on the right, hairline rows. */
+.app-cert-list__item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem 1.5rem;
+    padding: 0.75rem 0;
+    border-top: 1px solid var(--app-line);
+}
+
+.app-cert-list__item:first-child {
+    border-top: 0;
+    padding-top: 0;
+}
+
+.app-cert-list__name {
+    color: var(--app-ink);
+}
+
+.app-cert-list__links {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.125rem;
+}
+
 /* Toasts float top right (below the phone top bar). Timed toasts shrink an inset bar near the bottom; it pauses on
    hover, keyboard focus and while the tab is hidden. toasts.js owns the timing. */
 .app-toasts {
