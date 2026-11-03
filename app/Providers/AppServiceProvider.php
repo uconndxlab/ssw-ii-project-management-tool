@@ -7,6 +7,7 @@ use App\Support\NightwatchSqlMessage;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
@@ -27,13 +28,16 @@ class AppServiceProvider extends ServiceProvider
         $this->registerCaseInsensitiveLike();
         $this->registerAuthorization();
 
-        ResetPassword::createUrlUsing(function (object $user, string $token) {
+        ResetPassword::toMailUsing(function (object $user, string $token) {
             assert($user instanceof User);
 
-            return route('password.reset', [
-                'token' => $token,
-                'email' => $user->getEmailForPasswordReset(),
-            ]);
+            return (new MailMessage)
+                ->subject('Reset your '.config('app.name').' password')
+                ->markdown('mail.password-reset', [
+                    'firstName' => strtok($user->name, ' '),
+                    'url' => route('password.reset', ['token' => $token, 'email' => $user->getEmailForPasswordReset()]),
+                    'expires' => config('auth.passwords.'.config('auth.defaults.passwords').'.expire'),
+                ]);
         });
     }
 
