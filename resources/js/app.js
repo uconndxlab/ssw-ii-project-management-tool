@@ -10,3 +10,4 @@ import './relationship-scroll.js';
 import './table-scroll.js';
 import './confirmation-dialog.js';
 import './toasts.js';
+import './submit-busy.js';

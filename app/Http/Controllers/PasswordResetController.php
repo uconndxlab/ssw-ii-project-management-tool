@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
@@ -14,7 +15,9 @@ class PasswordResetController extends Controller
 {
     public function create(): View
     {
-        return view('auth.forgot-password');
+        return view('auth.forgot-password', [
+            'expireMinutes' => config('auth.passwords.'.config('auth.defaults.passwords').'.expire'),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -23,13 +26,14 @@ class PasswordResetController extends Controller
             'email' => ['required', 'email'],
         ]);
 
-        $status = Password::sendResetLink(
-            $request->only('email')
-        );
+        try {
+            Password::sendResetLink($request->only('email'));
+        } catch (UniqueConstraintViolationException) {
+            // A simultaneous request for this email already stored a token and sent the link.
+        }
 
-        return $status === Password::RESET_LINK_SENT
-            ? back()->with('status', __($status))
-            : back()->withErrors(['email' => __($status)]);
+        // One answer for sent, throttled and unknown emails, so the page never reveals who has an account.
+        return back()->with('reset_link_sent', true)->withInput($request->only('email'));
     }
 
     public function edit(Request $request, string $token): View

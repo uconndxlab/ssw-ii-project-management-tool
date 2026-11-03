@@ -3690,3 +3690,14 @@ a.app-row-link:focus-visible::after {
         transition: transform 0.15s;
     }
 }
+
+/* Forgot password: intro line under the title, and the envelope tile that replaces the mark once a link is sent. */
+.app-auth-lede {
+    margin: -0.75rem 0 1.5rem;
+    color: var(--app-muted);
+    text-align: center;
+}
+
+.app-auth-brand .app-record-icon {
+    margin-bottom: 0.75rem;
+}
