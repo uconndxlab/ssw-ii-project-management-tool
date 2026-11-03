@@ -7,9 +7,9 @@
 @endphp
 
 <div class="card shadow-sm app-index-table-card">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
+    <x-table-scroll>
+        <table class="table table-hover align-middle mb-0 app-cards">
+            <thead>
                 <tr>
                     <th><x-table-sort-link column="name" label="Name" :sort="$s" :direction="$d" :url="$url('name')" target="#certificates-table" /></th>
                     <th>Requirements</th>
@@ -17,21 +17,21 @@
                     <th>Projects</th>
                     <th>Programs</th>
                     <th><x-table-sort-link column="active" label="Status" :sort="$s" :direction="$d" :url="$url('active')" target="#certificates-table" /></th>
-                    <th class="text-end" style="width:140px;">Actions</th>
+                    <th class="app-col-actions"><span class="visually-hidden">Actions</span></th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($certificates as $certificate)
                 <tr>
-                    <td class="fw-semibold">
+                    <td class="app-card-lead fw-semibold">
                         {{ $certificate->name }}
                         @if($certificate->retired_at)
-                            <span class="badge bg-secondary ms-1">Retired</span>
+                            <span class="app-tag ms-1">Retired</span>
                         @endif
                     </td>
-                    <td>{{ $certificate->requirements_count }}</td>
-                    <td>{{ $certificate->validity_months ? $certificate->validity_months . ' mo' : 'Never' }}</td>
-                    <td>
+                    <td data-label="Requirements">{{ $certificate->requirements_count }}</td>
+                    <td data-label="Expires">{{ $certificate->validity_months ? $certificate->validity_months . ' mo' : 'Never' }}</td>
+                    <td data-label="Projects">
                         <x-table-badge-list
                             kind="project"
                             :items="$certificate->projects"
@@ -39,7 +39,7 @@
                             :empty-label="$scopeEmptyLabel($certificate->program_scope_mode, 'All projects', 'No projects')"
                         />
                     </td>
-                    <td>
+                    <td data-label="Programs">
                         <x-table-badge-list
                             kind="program"
                             :items="$certificate->programs"
@@ -47,27 +47,27 @@
                             :empty-label="$scopeEmptyLabel($certificate->program_scope_mode, 'All programs', 'No programs')"
                         />
                     </td>
-                    <td>
-                        @if($certificate->active)
-                            <span class="badge bg-success">Active</span>
-                        @else
-                            <span class="badge bg-secondary">Inactive</span>
-                        @endif
+                    <td class="app-card-status">
+                        <x-status-badge :active="$certificate->active" />
                     </td>
-                    <td class="text-end text-nowrap">
+                    <td class="app-col-actions">
                         @php $actionKey = 'certificate-actions-' . $certificate->id; @endphp
-                        <div class="btn-group btn-group-sm" role="group" aria-label="Certificate actions for {{ $certificate->name }}">
+                        <div class="dropdown app-row-actions d-inline-block">
+                            <button type="button" class="btn btn-sm btn-link app-row-actions-toggle" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" aria-label="Certificate actions for {{ $certificate->name }}"><i class="bi bi-three-dots" aria-hidden="true"></i></button>
+                            <div class="dropdown-menu dropdown-menu-end">
                             @can('update', $certificate)
-                            <a href="{{ route('certificates.edit', $certificate) }}" class="btn btn-outline-secondary" data-bs-toggle="tooltip" data-bs-title="Edit certificate" aria-label="Edit certificate">
-                                <i class="bi bi-pencil-square"></i>
-                            </a>
+                            <a href="{{ route('certificates.edit', $certificate) }}" class="dropdown-item"><i class="bi bi-pencil-square me-2" aria-hidden="true"></i>Edit certificate</a>
                             @endcan
                             @can('delete', $certificate)
-                            <button type="submit" form="{{ $actionKey }}-delete" class="btn btn-outline-danger" data-bs-toggle="tooltip" data-bs-title="Delete certificate" aria-label="Delete certificate"
-                                    onclick="return confirm('Delete {{ addslashes($certificate->name) }}?')">
-                                <i class="bi bi-trash"></i>
-                            </button>
+                            <hr class="dropdown-divider">
+                            <button type="submit" form="{{ $actionKey }}-delete"
+                                    data-confirm
+                                    data-confirm-title="Delete certificate?"
+                                    data-confirm-record="{{ $certificate->name }}"
+                                    data-confirm-message="This action cannot be undone."
+                                    data-confirm-action="Delete certificate" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete certificate</button>
                             @endcan
+                            </div>
                         </div>
                         @can('delete', $certificate)
                         <form id="{{ $actionKey }}-delete" method="POST" action="{{ route('certificates.destroy', $certificate) }}" class="d-none">
@@ -89,8 +89,8 @@
                 @endforelse
             </tbody>
         </table>
-    </div>
-    <div class="card-footer bg-white">
+    </x-table-scroll>
+    <div class="card-footer">
         <x-htmx-pagination :paginator="$certificates" target="#certificates-table" />
     </div>
 </div>

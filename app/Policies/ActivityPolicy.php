@@ -31,6 +31,13 @@ class ActivityPolicy
         return $user->access()->canUpdateActivity($activity);
     }
 
+    // Certification review: edit access, or a supervising coach (or asked reviewer) of a tagged
+    // candidate, or their supervisor. Reviewers edit only the certification evidence.
+    public function reviewCertification(User $user, Activity $activity): bool
+    {
+        return $user->access()->canReviewActivityCertification($activity);
+    }
+
     // Delete: you logged it, or the activity itself is on a program/project you admin.
     public function delete(User $user, Activity $activity): bool
     {

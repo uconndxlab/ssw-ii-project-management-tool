@@ -1,7 +1,7 @@
 # Doc 1 — Catalog Foundation
 
 **Status: SHIPPED.** See the spine's Handoffs section for what actually landed and any deviations.
-The catalog authoring follow-up below is **PLANNED**, not part of the shipped completion claim.
+The catalog authoring follow-up below is **COMPLETE IN THE WORKING TREE**; it has not been committed or released. The original Doc 1 shipped status is unchanged.
 
 Prereq: read `docs/certifications/spine.md` first.
 Goal: an admin can build scoring tools and author a full certificate (initial + renewal requirement sets).
@@ -165,22 +165,25 @@ is available in this environment — all test data was created and cleaned up in
 spine's Handoffs section for exact names, deviations, the `x-repeater-rows` component API, and notes for
 Doc 2.
 
-## Follow-up 1A — Catalog authoring usability (PLANNED)
+## Follow-up 1A — Catalog authoring usability (COMPLETE; UNCOMMITTED)
 
 Goal: an admin can express and review certificate rules without understanding the nested storage model.
 This is certificate work for the separate certificate release, using the existing visual system on
 `main`. The exploratory mock established a direction, not an approved specification for every rule.
-Keep the shipped foundation and Docs 2-5 numbering intact; append a spine handoff only when this follow-up
-actually ships. Doc 2 can proceed independently. Settle the authoring pattern before Doc 3's related UI.
+Keep the shipped foundation and Docs 2-5 numbering intact. The spine records this uncommitted completion
+separately from release status. Doc 2 was completed independently; Doc 3 can build on these authoring rules.
 
-### Clarify the rule before designing its controls
-- The user flagged the mock's Full-review/Phase interaction as inaccurate. Obtain concrete examples of
-  valid submissions and expected counts, including coverage, minimum counts and how Full relates to Phase.
-  Correct the spine's affected acceptance/evaluation details before implementing that interaction or the
-  Doc 3 evaluator. If the confirmed rule needs a model change, scope it explicitly; do not silently encode
-  different semantics through new labels or controls.
-- Distinguish certificate stages (Initial/Renewal) from tool dimensions such as Phase. Scores and threshold
-  notes remain recorded guidance; coaches judge passing outcomes. Never introduce automatic score math.
+### Confirmed submission rules
+- The guide resolved the exploratory mock's ambiguity. Supervisor Checklist needs six submissions,
+  coverage of phases 2–4, and at least four Full reviews (document and observation). COMET needs six
+  submissions, coverage of phases 1–4, and at least four field observations with face-to-face teams/families.
+  An existing tool option named Full must retain its ID; its COMET use must mean the guide's observations.
+- A submission can contribute to the total, phase coverage and the quota. All conditions inspect the same
+  eligible, passing pool. A four-observation quota does not exclude the other eligible submissions from
+  the six-submission total. Generic dimensions/options already express this; no schema change was needed.
+- Certificate stages (Initial/Renewal) remain distinct from tool dimensions such as Phase. Thresholds are
+  guidance (Supervisor 85% overall / 80% per element; COMET 85% / 75% per key element), with coach judgment
+  of passing. No automatic score math or prerequisite sequencing was added.
 
 ### Authoring direction
 - Organize by task: Basics, Initial requirements, Renewal, Review rules. Allow direct navigation between
@@ -228,3 +231,58 @@ actually ships. Doc 2 can proceed independently. Settle the authoring pattern be
 5. Record the proven authoring conventions in the existing form-conventions document and append the spine
    handoff. Later, evaluate the pattern against one difficult deliverable before extracting shared UI.
    After certificate work reaches `main`, integrate it into the design branch and reconcile styles there.
+
+### Implemented interaction and handoff
+
+- Four direct section buttons keep the existing single Save/Cancel transaction. Requirement titles open
+  one inline editor; Done editing collapses it without saving. The compact rows show type/target,
+  passing, family/type/role filters, effective window and submission-rule count. Review rules expands
+  every condition, threshold guidance, notes, prerequisite names, scope, groups and linked renewal.
+- Group members are rendered together beneath All / Any one / A set number. A requirement can join an
+  existing group, create a group in place, or become individually required. Ungrouping preserves its
+  requirements. Up/down buttons provide keyboard ordering; no drag dependency or nested Boolean tree.
+- Certificate-specific roles can be edited beside a role selector and assigned before the first save.
+  `role_index` resolves newly authored roles in the same transaction, alongside existing `group_index`.
+  Any-role and global roles remain available. The contextual panel does not administer global roles.
+- Renewal follows initial rules only when explicitly linked. Copy creates independent groups,
+  requirements and dimension rules, retaining current control values while removing persisted IDs.
+  Replacement, clearing, linking over an independent list, and incompatible type/tool changes confirm
+  before discarding configuration. Program changes preserve an incompatible selection with a warning;
+  server validation rejects it rather than silently clearing it.
+- Nested IDs are checked against their certificate/requirement, dimension options against the dimension,
+  and group links against the stage. Missing types, tools, quota counts, categories and invalid set-number
+  groups return field errors. Recovery retains sparse indexes and opens the affected section/editor.
+  Existing retired tools and inactive catalog references remain available when reopening configurations.
+- Implementation stays in the certificate partials and `resources/js/certificate-editor.js`; it uses the
+  existing Blade/Bootstrap components without extracting a shared rule builder or adding dependencies.
+  No catalog migration, progress evaluator, evidence capture or lifecycle behavior belongs to 1A.
+
+Save/reopen/update, corrected NWIC and Trainer examples, nested ownership, stage/group links,
+new-role assignment and validation recovery have HTTP regression coverage. Browser verification covers
+unsaved authoring, grouping, ordering, role creation, independent renewal copies, narrow layouts and a
+real rejected quota submission that restores notes and opens Renewal with an associated field error.
+No valid application form was saved and no demonstration certificates were seeded into live data.
+See the spine's 1A handoff for final checks and review status.
+
+Final verification: `vendor/bin/sail composer check` passed (266 tests, 1,062 assertions, audit,
+Pint and PHPStan); `vendor/bin/sail npm run build` passed. The focused certification/assignment batch
+passed 149 cases before the final three boundary regressions, and the final authoring/validation batch
+passed 21 cases. All three new regressions are included in the complete 266-test run.
+
+Impeccable critique used two independent agents (A: `cert_1a_design_critique`; B:
+`cert_1a_evidence_critique`). A scored the design 34/40 with no blocker; B's deterministic scan of the
+certificate partials returned `[]` (zero findings). The browser overlay found low navigation contrast
+and a semantic nested-fieldset false positive. The useful fieldset remains. Corrections explain empty
+tool selection with a route to Basics, disable coverage creation until the selected tool has dimensions,
+clarify incomplete summaries, darken section links, enlarge mobile row actions, and keep native
+validation focused on the first invalid field across sections. The focused recheck passed with zero
+browser console errors and zero horizontal overflow at 1440px and 390px. Screenshots are gitignored in
+`.artifacts/certificate-1a-before.png` and `certificate-1a-after.png`.
+
+Run notes: native preview returned Authentication required; the repository-required Playwright MCP
+provided runtime evidence. The bundled live overlay was injected successfully and its port-8400 server
+was stopped; no injected DOM or temporary scripts remain. The existing stale Impeccable DESIGN sidecar
+and shared breadcrumb contrast were outside this certificate-scoped change. Actual screen-reader use
+was not tested. Own-diff review removed obsolete inline repeater/mutation-observer orchestration,
+duplicate lookback controls, unused row/index preparation and dead clone work. No shared rules framework
+or additional dependency was introduced.

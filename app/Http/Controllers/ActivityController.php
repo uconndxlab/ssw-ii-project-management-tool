@@ -14,16 +14,19 @@ use App\Models\State;
 use App\Models\User;
 use App\Services\ActivityActionLogService;
 use App\Services\ActivityDuplicationService;
+use App\Services\CertificationEvidenceService;
 use App\Services\DeliverableContributionService;
 use App\Services\PrivateFileService;
 use App\Support\ActivityFundingSourceTokens;
 use App\Support\ActivityTypeDuration;
 use App\Support\ProgramParticipantDirectory;
 use App\Support\ProjectProgramScope;
+use App\Support\TablePagination;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -40,6 +43,7 @@ class ActivityController extends Controller
         private ActivityDuplicationService $activityDuplicationService,
         private ActivityActionLogService $activityActionLogService,
         private PrivateFileService $privateFiles,
+        private CertificationEvidenceService $certificationEvidence,
     ) {}
 
     public function index(Request $request): View
@@ -51,7 +55,7 @@ class ActivityController extends Controller
 
         $query = Activity::query()
             ->visibleTo($this->actor())
-            ->with(['agreements.organizations', 'agreements.states', 'user', 'activityType', 'organizations', 'states']);
+            ->with(['agreements.organizations', 'agreements.states', 'user', 'activityType', 'organizations', 'states', 'programs:id']);
 
         // Search
         $search = trim((string) $request->input('search', ''));
@@ -79,6 +83,10 @@ class ActivityController extends Controller
                         $userQuery->whereIlike('name', "%{$search}%");
                     });
             });
+        }
+
+        if ($request->boolean('needs_certification_review')) {
+            $query->whereNotNull('certification_review_requested_at');
         }
 
         // Filters
@@ -194,7 +202,8 @@ class ActivityController extends Controller
                 break;
         }
 
-        $activities = $query->paginate(50)->withQueryString();
+        $activities = $query->withCount('certificationCandidates')->paginate(TablePagination::perPage($request))->withQueryString();
+        $this->actor()->access()->primeCertificationReviewers($activities->getCollection()->pluck('id')->map(fn ($id) => (int) $id)->all());
 
         // HTMX: refresh cascading filters and table together
         if ($request->header('HX-Request') === 'true' && $request->input('partial') === 'filters') {
@@ -265,7 +274,10 @@ class ActivityController extends Controller
         $preselectedAgreementId = $request->query('agreement_id');
         $currentContactFamilyId = old('contact_family_id', null);
 
+        $certificationForm = $this->certificationEvidence->formData($this->actor(), $agreements);
+
         return view('activities.create', compact(
+            'certificationForm',
             'agreements',
             'states',
             'organizations',
@@ -362,6 +374,7 @@ class ActivityController extends Controller
                 $this->dynamicLoggingFieldValidationAttributes($agreements, $contactFamily, $activityType, $baseValidated['program_ids'])
             )
         );
+        $validated['certification'] = $request->only(['certification_candidates', 'needs_certification_review', 'review_coach_user_ids']);
         $activity = null;
 
         DB::transaction(function () use (&$activity, $validated, $agreements, $contactFamily, $activityType, $engagementDate, $activityTypeId, $completionCount) {
@@ -377,19 +390,25 @@ class ActivityController extends Controller
 
             $this->syncActivityDurationSnapshot($activity, $activityType, true);
 
-            $this->syncLoggingFieldAnswers($activity, $validated, $agreements, $contactFamily, $activityType);
-
             $activity->agreements()->sync($validated['agreement_ids'] ?? []);
             $activity->states()->sync($validated['state_ids'] ?? []);
             $activity->organizations()->sync($validated['organization_ids'] ?? []);
             $activity->programs()->sync($validated['program_ids'] ?? []);
             $activity->participants()->sync($validated['participant_user_ids'] ?? []);
 
+            $this->certificationEvidence->save($activity, $this->actor(), $validated['certification']);
+
+            $this->syncLoggingFieldAnswers($activity, $validated, $agreements, $contactFamily, $activityType);
+
             $this->syncAgreementFundingSources($activity, $validated, $agreements);
             $this->syncActivityTimeTracking($activity, $validated['time_tracking']);
             $this->deliverableContributionService->syncForActivity($activity);
             $this->activityActionLogService->record($activity, ActivityAction::Create);
         });
+
+        if ($request->boolean('save_and_duplicate')) {
+            return $this->redirectToPrefilledCopy($request, 'Activity logged. Review the copy below and save it to log another.');
+        }
 
         return redirect()
             ->route('activities.index')
@@ -433,7 +452,10 @@ class ActivityController extends Controller
                 : [];
         }
 
-        return view('activities.show', compact('activity', 'scopedLoggingFields'));
+        $activity->loadMissing(['certificationReviewRequestedBy', 'reviewRequests.coach']);
+        $certificationForm = $this->certificationEvidence->formData($this->actor(), $activity->agreements, $activity);
+
+        return view('activities.show', compact('activity', 'scopedLoggingFields', 'certificationForm'));
     }
 
     public function edit(Activity $activity): View
@@ -481,7 +503,10 @@ class ActivityController extends Controller
         $contactFamilyId = $activity->activityType?->contactFamily?->id;
         $currentContactFamilyId = old('contact_family_id', $contactFamilyId !== null ? (string) $contactFamilyId : '');
 
+        $certificationForm = $this->certificationEvidence->formData($this->actor(), $agreements, $activity);
+
         return view('activities.edit', compact(
+            'certificationForm',
             'activity',
             'agreements',
             'states',
@@ -583,7 +608,10 @@ class ActivityController extends Controller
             )
         );
 
+        $validated['certification'] = $request->only(['certification_candidates', 'needs_certification_review', 'review_coach_user_ids']);
+
         DB::transaction(function () use ($activity, $validated, $agreements, $contactFamily, $activityType, $engagementDate, $activityTypeId, $completionCount) {
+            $activity->refreshForUpdate();
             $activityTypeChanged = (int) $activity->activity_type_id !== (int) $activityTypeId;
 
             $activity->update([
@@ -597,13 +625,15 @@ class ActivityController extends Controller
 
             $this->syncActivityDurationSnapshot($activity, $activityType, $activityTypeChanged);
 
-            $this->syncLoggingFieldAnswers($activity, $validated, $agreements, $contactFamily, $activityType);
-
             $activity->agreements()->sync($validated['agreement_ids'] ?? []);
             $activity->states()->sync($validated['state_ids'] ?? []);
             $activity->organizations()->sync($validated['organization_ids'] ?? []);
             $activity->programs()->sync($validated['program_ids'] ?? []);
             $activity->participants()->sync($validated['participant_user_ids'] ?? []);
+
+            $this->certificationEvidence->save($activity, $this->actor(), $validated['certification']);
+
+            $this->syncLoggingFieldAnswers($activity, $validated, $agreements, $contactFamily, $activityType);
 
             $this->syncAgreementFundingSources($activity, $validated, $agreements);
             $this->syncActivityTimeTracking($activity, $validated['time_tracking']);
@@ -611,7 +641,37 @@ class ActivityController extends Controller
             $this->activityActionLogService->record($activity, ActivityAction::Update);
         });
 
+        if ($request->boolean('save_and_duplicate')) {
+            return $this->redirectToPrefilledCopy($request, 'Activity updated. Review the copy below and save it to log another.');
+        }
+
         return $this->redirectAfterSave($activity, 'Activity updated successfully.');
+    }
+
+    /**
+     * Opens an unsaved create form prefilled with the just-saved input. Certification tag and
+     * submission ids belong to the saved activity, so they are dropped and the rows saved as new.
+     * Uploaded documents cannot be flashed to the session and are not carried over.
+     */
+    private function redirectToPrefilledCopy(Request $request, string $message): RedirectResponse
+    {
+        $withoutSavedIds = fn (array $rows): array => collect($rows)
+            ->reject(fn ($row) => ! is_array($row) || ! empty($row['_delete']))
+            ->map(fn (array $row) => Arr::except($row, ['id', '_delete']))
+            ->values()
+            ->all();
+
+        $certificationRows = collect($withoutSavedIds((array) $request->input('certification_candidates', [])))
+            ->map(fn (array $row) => array_merge($row, ['submissions' => $withoutSavedIds((array) ($row['submissions'] ?? []))]))
+            ->all();
+
+        return redirect()
+            ->route('activities.create')
+            ->withInput(array_merge(
+                $request->except(['_token', '_method', 'save_and_duplicate']),
+                ['certification_candidates' => $certificationRows],
+            ))
+            ->with('success', $message);
     }
 
     public function duplicate(Activity $activity): RedirectResponse

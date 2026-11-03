@@ -37,7 +37,7 @@
                 :height="'220px'"
             />
         </div>
-        <button type="button" class="btn btn-outline-secondary btn-sm px-3 flex-shrink-0" style="min-width: 140px; height: 42px;" data-kfs-add-button>Add KFS</button>
+        <button type="button" class="btn btn-outline-primary flex-shrink-0" data-kfs-add-button>Add KFS</button>
     </div>
     <div class="form-text mt-2">1–7 character alphanumeric KFS numbers.</div>
     <div class="text-danger small mt-2 d-none" data-kfs-inline-error></div>

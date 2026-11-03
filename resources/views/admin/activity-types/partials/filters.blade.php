@@ -67,6 +67,7 @@
             :filter-keys="['search', 'contact_family_id', 'project_id', 'program_id', 'active']"
         />
     </div>
+    <input type="hidden" name="per_page" value="{{ \App\Support\TablePagination::perPage(request()) }}">
     <input type="hidden" name="sort"      value="{{ $sort ?? 'name' }}">
     <input type="hidden" name="direction" value="{{ $direction ?? 'asc' }}">
 </form>

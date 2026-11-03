@@ -19,7 +19,7 @@
     </div>
 </div>
 
-<div id="certificates-table">
+<div id="certificates-table" data-index-table>
     @include('admin.certificates.partials.table', [
         'certificates' => $certificates,
         'sort'         => $sort,

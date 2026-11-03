@@ -12,7 +12,7 @@
     </div>
 </div>
 
-<div id="programs-table">
+<div id="programs-table" data-index-table>
     @include('programs.partials.table', ['programs' => $programs, 'sort' => $sort, 'direction' => $direction])
 </div>
 

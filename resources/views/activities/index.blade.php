@@ -25,7 +25,7 @@
     </div>
 </div>
 
-<div id="activities-table">
+<div id="activities-table" data-index-table>
     @include('activities.partials.table', [
         'activities' => $activities,
         'sort' => $sort,

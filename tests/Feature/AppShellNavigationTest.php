@@ -45,6 +45,14 @@ test('the sidebar highlights the owning section from the route, not the entry po
         ->and(substr_count($html, 'app-rail-link is-section'))->toBe(1);
 });
 
+test('a certificate enrollment page highlights Agreements, its breadcrumb parent', function () {
+    $f = certificationActivityFixture();
+
+    $html = $this->actingAs($f['actor'])->get(route('certificate-enrollments.show', $f['enrollment']))->getContent();
+
+    expect($html)->toMatch('/class="app-rail-link is-section"\s+href="'.preg_quote(route('agreements.index'), '/').'"[^>]*aria-current="true"/s');
+});
+
 test('every page keeps search, Log Activity, the account menu, and the Recent control', function () {
     $this->actingAs(createSystemAdmin())->get(route('dashboard'))
         ->assertOk()

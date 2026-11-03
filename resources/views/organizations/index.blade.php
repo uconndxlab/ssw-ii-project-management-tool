@@ -18,7 +18,7 @@
     </div>
 </div>
 
-<div id="organizations-table">
+<div id="organizations-table" data-index-table>
     @include('organizations.partials.table', ['organizations' => $organizations])
 </div>
 

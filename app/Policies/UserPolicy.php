@@ -25,11 +25,11 @@ class UserPolicy
         return $user->access()->hasAdmin();
     }
 
-    // Edit: not yourself. Their admin privileges must sit inside yours. Non-sysadmin can only edit people in overlapping membership.
+    // Edit: yourself only as a system admin (permissions stay locked). Their admin privileges must sit inside yours. Non-sysadmin can only edit people in overlapping membership.
     public function update(User $user, User $model): bool
     {
         if ($user->is($model)) {
-            return false;
+            return $user->access()->isSystemAdmin();
         }
 
         $access = $user->access();
@@ -49,10 +49,10 @@ class UserPolicy
         return $access->userIsInViewMembership($model);
     }
 
-    // Delete: same as edit, and you cannot remove the last system admin.
+    // Delete: same as edit, never yourself, and you cannot remove the last system admin.
     public function delete(User $user, User $model): bool
     {
-        if (! $this->update($user, $model)) {
+        if ($user->is($model) || ! $this->update($user, $model)) {
             return false;
         }
 

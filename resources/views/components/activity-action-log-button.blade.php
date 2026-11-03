@@ -1,11 +1,12 @@
 @props([
     'activity',
     'labeled' => false,
+    'menu' => false,
     'linkActivity' => true,
 ])
 
 @php
-    $tooltipAttributes = $labeled
+    $tooltipAttributes = ($labeled || $menu)
         ? []
         : [
             'data-bs-toggle' => 'tooltip',
@@ -20,13 +21,13 @@
 @if(auth()->user()->can('viewActionLog', $activity))
     <button
         type="button"
-        {{ $attributes->merge($tooltipAttributes)->class(['btn', 'btn-outline-secondary']) }}
+        {{ $attributes->merge($tooltipAttributes)->class($menu ? ['dropdown-item'] : ['btn', 'btn-outline-secondary']) }}
         hx-get="{{ $actionLogsUrl }}"
         hx-target="#activity-action-log-modal-body"
         hx-swap="innerHTML"
         onclick="window.showActivityActionLogModal()"
         aria-label="View log"
     >
-        <i class="bi bi-journal-text{{ $labeled ? ' me-1' : '' }}"></i>{{ $labeled ? 'View log' : '' }}
+        <i class="bi bi-journal-text{{ ($labeled || $menu) ? ' me-2' : '' }}" aria-hidden="true"></i>{{ ($labeled || $menu) ? 'View log' : '' }}
     </button>
 @endif

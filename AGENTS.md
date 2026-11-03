@@ -172,3 +172,8 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - After the feature tests pass, ask the user to run the complete suite with `vendor/bin/sail artisan test --compact`.
 
 </laravel-boost-guidelines>
+
+## Tickets
+
+- Trello board: **SSW II PM Tool** (workspace: **Agent Boards**). Use the `tickets` skill.
+- Client preview branches: `preview/*`. Background docs: `docs/design-audit.md`, `docs/form-conventions.md`, `DESIGN.md`.

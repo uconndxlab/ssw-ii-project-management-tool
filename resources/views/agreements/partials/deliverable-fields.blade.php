@@ -343,7 +343,7 @@
                     <span class="ms-1" data-deliverable-allocation-status></span>
                 </div>
                 <div class="d-flex flex-wrap align-items-center gap-3">
-                    <button type="button" class="btn btn-sm btn-secondary" data-deliverable-split-evenly>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-deliverable-split-evenly>
                         Distribute total evenly
                     </button>
                     <div class="d-flex align-items-center gap-2 small">
@@ -356,12 +356,12 @@
                                step="0.1"
                                aria-label="Amount for empty target rows"
                                data-deliverable-default-target>
-                        <button type="button" class="btn btn-sm btn-secondary" data-deliverable-fill-empty>Update</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-deliverable-fill-empty>Update</button>
                     </div>
                 </div>
             </div>
 
-            <div class="border rounded overflow-auto" style="min-height: 140px; max-height: 280px; background-color: #e9ecef;">
+            <div class="border rounded overflow-auto" style="min-height: 140px; max-height: 280px; background-color: var(--app-surface-fill);">
                 <div class="small text-muted px-3 py-2 border-bottom bg-body sticky-top d-flex justify-content-between align-items-center">
                     <span>Agreement members</span>
                     <span class="me-2 d-none" data-deliverable-target-column-label>

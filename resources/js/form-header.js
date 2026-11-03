@@ -46,6 +46,7 @@ if (header) {
 
     let dirty = false;
     let submitted = false;
+    let leaving = false;
 
     const states = {
         idle: '',
@@ -94,11 +95,48 @@ if (header) {
             }
         });
 
-        form.addEventListener('submit', () => {
+        form.addEventListener('submit', (event) => {
+            if (submitted) {
+                event.preventDefault();
+                return;
+            }
+
             submitted = true;
             dirty = false;
             setState('saving');
         });
+
+        document.addEventListener('click', async (event) => {
+            const link = event.target.closest('a[href]');
+            if (!dirty || submitted || leaving || !link || event.defaultPrevented || event.button !== 0
+                || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey
+                || link.hasAttribute('download') || (link.target && link.target !== '_self')
+                || link.matches('[data-bs-toggle], [data-bs-dismiss], [hx-get], [hx-post]')) {
+                return;
+            }
+
+            const sameDocument = link.origin === location.origin && link.pathname === location.pathname && link.search === location.search;
+            if (!['http:', 'https:'].includes(link.protocol) || (sameDocument && link.getAttribute('href').includes('#'))) {
+                return;
+            }
+
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            const confirmed = await window.appConfirm({
+                title: 'Leave without saving?',
+                record: header.querySelector('h1')?.textContent.trim(),
+                message: 'Your changes have not been saved. Leaving will discard them.',
+                action: 'Discard changes',
+                cancelLabel: 'Keep editing',
+                icon: 'bi-box-arrow-right',
+                trigger: link,
+            });
+
+            if (confirmed && link.isConnected) {
+                leaving = true;
+                link.click();
+            }
+        }, true);
 
         // Ctrl/⌘ + S saves without the browser's own save dialog.
         document.addEventListener('keydown', (event) => {
@@ -109,7 +147,7 @@ if (header) {
         });
 
         window.addEventListener('beforeunload', (event) => {
-            if (dirty && !submitted) {
+            if (dirty && !submitted && !leaving) {
                 event.preventDefault();
                 event.returnValue = '';
             }
@@ -119,6 +157,7 @@ if (header) {
         window.addEventListener('pageshow', (event) => {
             if (event.persisted) {
                 submitted = false;
+                leaving = false;
                 setState(dirty ? 'dirty' : initial);
             }
         });

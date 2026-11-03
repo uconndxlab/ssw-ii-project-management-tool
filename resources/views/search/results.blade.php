@@ -40,10 +40,10 @@
         @if($agreements->isNotEmpty())
         <div class="col-md-4">
             <div class="card shadow-sm h-100">
-                <div class="card-header bg-success bg-opacity-10">
+                <div class="card-header">
                     <h6 class="mb-0 fw-semibold text-success">
                         Agreements
-                        <span class="badge bg-success rounded-pill ms-1">{{ $agreements->count() }}</span>
+                        <span class="app-count ms-1">{{ $agreements->count() }}</span>
                     </h6>
                 </div>
                 <div class="list-group list-group-flush">
@@ -70,10 +70,10 @@
         @if($organizations->isNotEmpty())
         <div class="col-md-4">
             <div class="card shadow-sm h-100">
-                <div class="card-header bg-primary bg-opacity-10">
+                <div class="card-header">
                     <h6 class="mb-0 fw-semibold text-primary">
                         Organizations
-                        <span class="badge bg-primary rounded-pill ms-1">{{ $organizations->count() }}</span>
+                        <span class="app-count ms-1">{{ $organizations->count() }}</span>
                     </h6>
                 </div>
                 <div class="list-group list-group-flush">
@@ -95,10 +95,10 @@
         @if($users->isNotEmpty())
         <div class="col-md-4">
             <div class="card shadow-sm h-100">
-                <div class="card-header bg-secondary bg-opacity-10">
+                <div class="card-header">
                     <h6 class="mb-0 fw-semibold text-secondary">
                         People
-                        <span class="badge bg-secondary rounded-pill ms-1">{{ $users->count() }}</span>
+                        <span class="app-count">{{ $users->count() }}</span>
                     </h6>
                 </div>
                 <div class="list-group list-group-flush">
@@ -114,9 +114,9 @@
                                 <div class="fw-semibold">{{ $person->name }}</div>
                                 <div class="d-flex flex-wrap gap-1 justify-content-end">
                                     @if(!$person->active)
-                                        <span class="badge bg-secondary" style="font-size:.7rem;">Inactive</span>
+                                        <x-status-badge :active="false" />
                                     @endif
-                                    <x-category-badge kind="role" style="font-size:.7rem;">{{ $person->accessLabel() }}</x-category-badge>
+                                    <x-category-badge kind="role">{{ $person->accessLabel() }}</x-category-badge>
                                 </div>
                             </div>
                             <div class="small text-muted">{{ $person->email }}</div>

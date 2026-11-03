@@ -32,6 +32,7 @@
 @endphp
 
 <x-activity-form
+    :certification-form="$certificationForm"
     form-mode="create"
     :agreements="$agreements"
     :organizations="$organizations"

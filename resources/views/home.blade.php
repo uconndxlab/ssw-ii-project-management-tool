@@ -4,7 +4,7 @@
 
 @section('content')
 
-<div class="container-fluid py-4">
+<div class="container-fluid py-4 app-home">
     <x-page-header
         context="dashboard"
         title="Home"

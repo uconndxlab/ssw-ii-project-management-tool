@@ -63,6 +63,7 @@
 @endphp
 
 <x-activity-form
+    :certification-form="$certificationForm"
     form-mode="edit"
     :agreements="$agreements"
     :organizations="$organizations"

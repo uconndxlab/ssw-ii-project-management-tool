@@ -120,14 +120,14 @@ test('certificate index supports search and filters', function () {
         ->assertDontSee('Hidden Cert');
 });
 
-test('certificate index paginates at twenty per page', function () {
+test('certificate index defaults to twenty-five records per page', function () {
     $admin = createSystemAdmin();
     [$project, $program] = createProjectWithProgram();
 
-    Certificate::factory()->count(21)->forProgram($program)->create();
+    Certificate::factory()->count(26)->forProgram($program)->create();
 
     $response = $this->actingAs($admin)->get(route('certificates.index'));
-    expect($response->viewData('certificates')->perPage())->toBe(20);
+    expect($response->viewData('certificates')->perPage())->toBe(25);
 });
 
 test('certificate store requires name and unique name', function () {
@@ -188,16 +188,18 @@ test('certificate nested rows assign sort_order from submitted order', function 
                 'phase' => 'initial',
                 'kind' => 'attestation',
                 'label' => 'First Req',
+                'group_index' => 0,
                 'target_count' => 1,
             ],
             1 => [
                 'phase' => 'initial',
                 'kind' => 'attestation',
                 'label' => 'Second Req',
+                'group_index' => 1,
                 'target_count' => 1,
             ],
         ],
-    ]));
+    ]))->assertSessionHasNoErrors()->assertRedirect();
 
     $certificate = Certificate::where('name', 'Sort Order Certificate')->firstOrFail();
 

@@ -81,26 +81,6 @@
 </x-section-card>
 
 @once
-    <style>
-        .attachment-dropzone {
-            cursor: pointer;
-            border-style: dashed !important;
-            border-color: var(--bs-primary) !important;
-            border-radius: 0;
-            transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
-        }
-
-        .attachment-dropzone:hover,
-        .attachment-dropzone:focus-visible,
-        .attachment-dropzone.is-dragover {
-            background-color: rgba(var(--bs-primary-rgb), 0.18) !important;
-            border-color: var(--bs-primary) !important;
-            box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.15);
-            color: var(--bs-primary-text-emphasis) !important;
-            outline: none;
-        }
-    </style>
-
     <script>
     (function () {
         document.addEventListener('DOMContentLoaded', function () {

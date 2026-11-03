@@ -20,12 +20,14 @@ use App\Models\Program;
 use App\Models\Project;
 use App\Support\Authorization\ScopeSync;
 use App\Support\ProjectProgramScope;
+use App\Support\TablePagination;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator as ValidatorInstance;
 
 class CertificateController extends Controller
@@ -71,7 +73,7 @@ class CertificateController extends Controller
             default => $query->orderBy('certificates.sort_order')->orderBy('certificates.name', $direction),
         };
 
-        $certificates = $query->paginate(20)->withQueryString();
+        $certificates = $query->paginate(TablePagination::perPage($request))->withQueryString();
 
         $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
         $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
@@ -129,10 +131,10 @@ class CertificateController extends Controller
 
             $certificate->prerequisites()->sync($validated['prerequisite_certificate_ids'] ?? []);
 
-            $this->syncRoles($certificate, $validated['roles'] ?? []);
+            $roleIndexToId = $this->syncRoles($certificate, $validated['roles'] ?? []);
             [$groupRows, $requirementRows] = $this->requirementPayloadForSync($validated);
             $groupIndexToId = $this->syncRequirementGroups($certificate, $groupRows);
-            $this->syncRequirements($certificate, $requirementRows, $groupIndexToId);
+            $this->syncRequirements($certificate, $requirementRows, $groupIndexToId, $roleIndexToId);
 
             return $certificate;
         });
@@ -188,10 +190,10 @@ class CertificateController extends Controller
 
             $certificate->prerequisites()->sync($validated['prerequisite_certificate_ids'] ?? []);
 
-            $this->syncRoles($certificate, $validated['roles'] ?? []);
+            $roleIndexToId = $this->syncRoles($certificate, $validated['roles'] ?? []);
             [$groupRows, $requirementRows] = $this->requirementPayloadForSync($validated);
             $groupIndexToId = $this->syncRequirementGroups($certificate, $groupRows);
-            $this->syncRequirements($certificate, $requirementRows, $groupIndexToId);
+            $this->syncRequirements($certificate, $requirementRows, $groupIndexToId, $roleIndexToId);
         });
 
         return $this->redirectAfterSave($certificate, 'Certificate updated successfully.');
@@ -201,12 +203,12 @@ class CertificateController extends Controller
     {
         $this->authorize('delete', $certificate);
 
-        if ($certificate->requirements()->exists() || $certificate->requirementGroups()->exists()) {
+        if ($certificate->requirements()->exists() || $certificate->requirementGroups()->exists() || $certificate->enrollments()->exists()) {
             $certificate->update(['retired_at' => now(), 'active' => false]);
 
             return redirect()
                 ->route('certificates.index')
-                ->with('success', 'Certificate has requirements defined, so it was retired instead of deleted.');
+                ->with('success', 'Certificate has requirements or assigned candidates, so it was retired instead of deleted.');
         }
 
         $certificate->delete();
@@ -223,16 +225,16 @@ class CertificateController extends Controller
      */
     private function sharedFormData(?Certificate $certificate = null): array
     {
-        $contactFamilies = ContactFamily::active()->orderBy('sort_order')->orderBy('name')->get();
-        $activityTypes = ActivityType::active()->orderBy('sort_order')->orderBy('name')->get();
+        $contactFamilies = ContactFamily::orderBy('sort_order')->orderBy('name')->get();
+        $activityTypes = ActivityType::orderBy('sort_order')->orderBy('name')->get();
         $certificationTools = CertificationTool::query()
-            ->notRetired()
+            ->where(fn ($query) => $query->notRetired()->orWhereIn('id', $certificate?->requirements()->pluck('certification_tool_id') ?? []))
             ->visibleTo($this->actor())
             ->with(['dimensions.options', 'programs:id'])
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
-        $globalRoles = CertificationRole::whereNull('certificate_id')->active()->orderBy('sort_order')->get();
+        $globalRoles = CertificationRole::whereNull('certificate_id')->orderBy('sort_order')->get();
         $otherCertificatesQuery = Certificate::query()->visibleTo($this->actor());
         if ($certificate !== null) {
             $otherCertificatesQuery->whereKeyNot($certificate->id);
@@ -265,13 +267,15 @@ class CertificateController extends Controller
             'renewal_matches_initial' => ['nullable', 'boolean'],
 
             'roles' => ['nullable', 'array'],
-            'roles.*.id' => ['nullable', 'integer'],
+            'roles.*' => ['array'],
+            'roles.*.id' => ['nullable', 'integer', 'distinct', Rule::exists('certification_roles', 'id')->where('certificate_id', $certificate->id ?? 0)],
             'roles.*._delete' => ['nullable', 'boolean'],
             'roles.*.name' => ['nullable', 'string', 'max:255'],
             'roles.*.active' => ['nullable', 'boolean'],
 
             'requirement_groups' => ['nullable', 'array'],
-            'requirement_groups.*.id' => ['nullable', 'integer'],
+            'requirement_groups.*' => ['array'],
+            'requirement_groups.*.id' => ['nullable', 'integer', 'distinct', Rule::exists('certificate_requirement_groups', 'id')->where('certificate_id', $certificate->id ?? 0)],
             'requirement_groups.*._delete' => ['nullable', 'boolean'],
             'requirement_groups.*.phase' => ['nullable', 'in:'.implode(',', CertificateRequirementPhase::values())],
             'requirement_groups.*.label' => ['nullable', 'string', 'max:255'],
@@ -279,15 +283,17 @@ class CertificateController extends Controller
             'requirement_groups.*.required_count' => ['nullable', 'integer', 'min:1'],
 
             'requirements' => ['nullable', 'array'],
-            'requirements.*.id' => ['nullable', 'integer'],
+            'requirements.*' => ['array'],
+            'requirements.*.id' => ['nullable', 'integer', 'distinct', Rule::exists('certificate_requirements', 'id')->where('certificate_id', $certificate->id ?? 0)],
             'requirements.*._delete' => ['nullable', 'boolean'],
-            'requirements.*.group_index' => ['nullable'],
+            'requirements.*.group_index' => ['nullable', 'integer'],
             'requirements.*.phase' => ['nullable', 'in:'.implode(',', CertificateRequirementPhase::values())],
             'requirements.*.kind' => ['nullable', 'in:'.implode(',', CertificateRequirementKind::values())],
-            'requirements.*.contact_family_id' => ['nullable', 'exists:contact_families,id'],
-            'requirements.*.activity_type_id' => ['nullable', 'exists:activity_types,id'],
-            'requirements.*.certification_tool_id' => ['nullable', 'exists:certification_tools,id'],
-            'requirements.*.certification_role_id' => ['nullable', 'exists:certification_roles,id'],
+            'requirements.*.contact_family_id' => ['nullable', 'integer', 'exists:contact_families,id'],
+            'requirements.*.activity_type_id' => ['nullable', 'integer', 'exists:activity_types,id'],
+            'requirements.*.certification_tool_id' => ['nullable', 'integer', 'exists:certification_tools,id'],
+            'requirements.*.certification_role_id' => ['nullable', 'integer', Rule::exists('certification_roles', 'id')->where(fn ($query) => $query->whereNull('certificate_id')->orWhere('certificate_id', $certificate->id ?? 0))],
+            'requirements.*.role_index' => ['nullable', 'integer'],
             'requirements.*.target_count' => ['nullable', 'integer', 'min:1'],
             'requirements.*.requires_passing' => ['nullable', 'boolean'],
             'requirements.*.threshold_note' => ['nullable', 'string', 'max:255'],
@@ -295,16 +301,20 @@ class CertificateController extends Controller
             'requirements.*.label' => ['nullable', 'string', 'max:255'],
             'requirements.*.notes' => ['nullable', 'string'],
             'requirements.*.dimension_rules' => ['nullable', 'array'],
-            'requirements.*.dimension_rules.*.id' => ['nullable', 'integer'],
+            'requirements.*.dimension_rules.*' => ['array'],
+            'requirements.*.dimension_rules.*.id' => ['nullable', 'integer', 'distinct'],
             'requirements.*.dimension_rules.*._delete' => ['nullable', 'boolean'],
-            'requirements.*.dimension_rules.*.certification_tool_dimension_id' => ['nullable', 'exists:certification_tool_dimensions,id'],
+            'requirements.*.dimension_rules.*.certification_tool_dimension_id' => ['nullable', 'integer', 'exists:certification_tool_dimensions,id'],
             'requirements.*.dimension_rules.*.mode' => ['nullable', 'in:'.implode(',', CertificateDimensionRuleMode::values())],
             'requirements.*.dimension_rules.*.option_ids' => ['nullable', 'array'],
-            'requirements.*.dimension_rules.*.option_ids.*' => ['exists:certification_tool_dimension_options,id'],
+            'requirements.*.dimension_rules.*.option_ids.*' => ['integer', 'exists:certification_tool_dimension_options,id'],
             'requirements.*.dimension_rules.*.min_count' => ['nullable', 'integer', 'min:1'],
         ]);
 
         $validator->after(function ($validator) use ($request, $certificate) {
+            if ($validator->errors()->isNotEmpty()) {
+                return;
+            }
             $mode = $request->input('program_scope_mode', ProgramScopeMode::All->value);
             $projectIds = ProjectProgramScope::normalizeIds($request->input('project_ids', []));
             $programIds = ProjectProgramScope::normalizeIds($request->input('program_ids', []));
@@ -420,7 +430,7 @@ class CertificateController extends Controller
     {
         $seenSlugs = [];
 
-        foreach ($request->input('roles', []) as $index => $row) {
+        foreach (($request->input('roles', []) ?? []) as $index => $row) {
             if (! is_array($row) || filter_var($row['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
                 continue;
             }
@@ -456,8 +466,8 @@ class CertificateController extends Controller
 
     private function validateRequirementGroupsAndRows(ValidatorInstance $validator, Request $request): void
     {
-        $groupRows = $request->input('requirement_groups', []);
-        $requirementRows = $request->input('requirements', []);
+        $groupRows = $request->input('requirement_groups', []) ?? [];
+        $requirementRows = $request->input('requirements', []) ?? [];
 
         $certificateMode = ProjectProgramScope::normalizeMode(
             $request->input('program_scope_mode', ProgramScopeMode::Specific->value),
@@ -473,15 +483,49 @@ class CertificateController extends Controller
         $groupRequirementCounts = [];
 
         foreach ($requirementRows as $index => $row) {
+            foreach ($row['dimension_rules'] ?? [] as $ruleIndex => $rule) {
+                if (! empty($rule['id']) && ! CertificateRequirementDimensionRule::whereKey($rule['id'])->where('certificate_requirement_id', $row['id'] ?? 0)->exists()) {
+                    $validator->errors()->add("requirements.{$index}.dimension_rules.{$ruleIndex}.id", 'This rule does not belong to this requirement.');
+                }
+            }
+
             if (! is_array($row) || filter_var($row['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
                 continue;
             }
 
             if (blank($row['kind'] ?? null)) {
+                $validator->errors()->add("requirements.{$index}.kind", 'Choose what this requirement counts.');
+
                 continue;
             }
 
             $kind = CertificateRequirementKind::tryFrom($row['kind']);
+
+            if (blank($row['target_count'] ?? null)) {
+                $validator->errors()->add("requirements.{$index}.target_count", 'Enter a target count.');
+            }
+
+            $roleIndex = $row['role_index'] ?? null;
+            $roleRows = $request->input('roles', []) ?? [];
+            if ($roleIndex !== null && $roleIndex !== '' && (blank($roleRows[$roleIndex]['name'] ?? null) || filter_var($roleRows[$roleIndex]['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN))) {
+                $validator->errors()->add("requirements.{$index}.role_index", 'Choose an available certificate role.');
+            }
+            if (! empty($row['certification_role_id'])) {
+                foreach ($roleRows as $role) {
+                    if ((int) ($role['id'] ?? 0) === (int) $row['certification_role_id'] && filter_var($role['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                        $validator->errors()->add("requirements.{$index}.certification_role_id", 'Choose another role before removing this one.');
+                    }
+                }
+            }
+
+            if ($kind !== CertificateRequirementKind::ToolSubmission) {
+                foreach ($row['dimension_rules'] ?? [] as $rule) {
+                    if (! filter_var($rule['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                        $validator->errors()->add("requirements.{$index}.kind", 'Remove the submission rules before changing the requirement kind.');
+                        break;
+                    }
+                }
+            }
 
             if ($kind === CertificateRequirementKind::ToolSubmission && blank($row['certification_tool_id'] ?? null)) {
                 $validator->errors()->add("requirements.{$index}.certification_tool_id", 'A tool submission requirement must select a tool.');
@@ -511,6 +555,8 @@ class CertificateController extends Controller
                 }
 
                 if (blank($rule['certification_tool_dimension_id'] ?? null)) {
+                    $validator->errors()->add("requirements.{$index}.dimension_rules.{$ruleIndex}.certification_tool_dimension_id", 'Choose a submission dimension.');
+
                     continue;
                 }
 
@@ -522,24 +568,43 @@ class CertificateController extends Controller
 
                 $ruleMode = CertificateDimensionRuleMode::tryFrom($rule['mode'] ?? '');
 
+                if ($ruleMode === null) {
+                    $validator->errors()->add("requirements.{$index}.dimension_rules.{$ruleIndex}.mode", 'Choose coverage or a minimum count.');
+                }
+
                 if ($ruleMode === CertificateDimensionRuleMode::Quota && blank($rule['min_count'] ?? null)) {
                     $validator->errors()->add("requirements.{$index}.dimension_rules.{$ruleIndex}.min_count", 'Quota rules require a minimum count.');
                 }
 
-                if ($ruleMode === CertificateDimensionRuleMode::Coverage && empty($rule['option_ids'] ?? [])) {
-                    $validator->errors()->add("requirements.{$index}.dimension_rules.{$ruleIndex}.option_ids", 'Coverage rules require at least one option.');
+                if (empty($rule['option_ids'] ?? [])) {
+                    $validator->errors()->add("requirements.{$index}.dimension_rules.{$ruleIndex}.option_ids", 'Select at least one category.');
+                } elseif ($dimension instanceof CertificationToolDimension && $dimension->options()->whereIn('id', $rule['option_ids'])->count() !== count(array_unique($rule['option_ids']))) {
+                    $validator->errors()->add("requirements.{$index}.dimension_rules.{$ruleIndex}.option_ids", 'Categories must belong to the selected dimension.');
                 }
             }
 
             $groupIndex = $row['group_index'] ?? null;
             if ($groupIndex !== null && $groupIndex !== '') {
-                $groupRequirementCounts[$groupIndex] = ($groupRequirementCounts[$groupIndex] ?? 0) + 1;
+                $group = $groupRows[$groupIndex] ?? [];
+                if (blank($group['label'] ?? null) || filter_var($group['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN) || ($group['phase'] ?? 'initial') !== ($row['phase'] ?? 'initial')) {
+                    $validator->errors()->add("requirements.{$index}.group_index", 'Choose a group in the same initial or renewal stage.');
+                } else {
+                    $groupRequirementCounts[$groupIndex] = ($groupRequirementCounts[$groupIndex] ?? 0) + 1;
+                }
             }
         }
 
         foreach ($groupRows as $index => $row) {
             if (! is_array($row) || filter_var($row['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
                 continue;
+            }
+
+            if (blank($row['label'] ?? null)) {
+                $validator->errors()->add("requirement_groups.{$index}.label", 'Name this requirement group.');
+            }
+
+            if (($groupRequirementCounts[$index] ?? 0) === 0) {
+                $validator->errors()->add("requirement_groups.{$index}.label", 'Add at least one requirement to this group, or remove it.');
             }
 
             if (($row['satisfy_mode'] ?? null) !== CertificateGroupSatisfyMode::NOf->value) {
@@ -557,14 +622,16 @@ class CertificateController extends Controller
 
     /**
      * @param  array<int|string, mixed>  $rows
+     * @return array<int|string, int>
      */
-    private function syncRoles(Certificate $certificate, array $rows): void
+    private function syncRoles(Certificate $certificate, array $rows): array
     {
         $existing = $certificate->roles()->get()->keyBy('id');
         $retainedIds = collect();
         $sortOrder = 0;
+        $indexToId = [];
 
-        foreach ($rows as $row) {
+        foreach ($rows as $index => $row) {
             if (! is_array($row)) {
                 continue;
             }
@@ -598,9 +665,12 @@ class CertificateController extends Controller
                 if ($role instanceof CertificationRole) {
                     $role->update($data);
                     $retainedIds->push($rowId);
+                    $indexToId[$index] = $rowId;
                 }
             } else {
-                $retainedIds->push($certificate->roles()->create($data)->id);
+                $role = $certificate->roles()->create($data);
+                $retainedIds->push($role->id);
+                $indexToId[$index] = $role->id;
             }
         }
 
@@ -610,6 +680,8 @@ class CertificateController extends Controller
                 $role->delete();
             }
         });
+
+        return $indexToId;
     }
 
     /**
@@ -683,8 +755,9 @@ class CertificateController extends Controller
     /**
      * @param  array<int|string, mixed>  $rows
      * @param  array<int|string, int>  $groupIndexToId
+     * @param  array<int|string, int>  $roleIndexToId
      */
-    private function syncRequirements(Certificate $certificate, array $rows, array $groupIndexToId): void
+    private function syncRequirements(Certificate $certificate, array $rows, array $groupIndexToId, array $roleIndexToId): void
     {
         $existing = $certificate->requirements()->with('dimensionRules')->get()->keyBy('id');
         $retainedIds = collect();
@@ -723,7 +796,7 @@ class CertificateController extends Controller
                 'contact_family_id' => $kind->usesClassification() ? (($row['contact_family_id'] ?? null) ?: null) : null,
                 'activity_type_id' => $kind->usesClassification() ? (($row['activity_type_id'] ?? null) ?: null) : null,
                 'certification_tool_id' => $kind->usesTool() ? (($row['certification_tool_id'] ?? null) ?: null) : null,
-                'certification_role_id' => ($row['certification_role_id'] ?? null) ?: null,
+                'certification_role_id' => filled($row['role_index'] ?? null) ? ($roleIndexToId[$row['role_index']] ?? null) : (($row['certification_role_id'] ?? null) ?: null),
                 'target_count' => $row['target_count'] ?? 1,
                 'requires_passing' => $kind === CertificateRequirementKind::ToolSubmission
                     ? filter_var($row['requires_passing'] ?? true, FILTER_VALIDATE_BOOLEAN)
@@ -792,8 +865,8 @@ class CertificateController extends Controller
             $data = [
                 'certification_tool_dimension_id' => $row['certification_tool_dimension_id'],
                 'mode' => $row['mode'] ?? CertificateDimensionRuleMode::Coverage->value,
-                'option_ids' => array_values(array_map('intval', $row['option_ids'] ?? [])),
-                'min_count' => ($row['min_count'] ?? null) ?: null,
+                'option_ids' => array_values(array_unique(array_map('intval', $row['option_ids'] ?? []))),
+                'min_count' => ($row['mode'] ?? null) === CertificateDimensionRuleMode::Quota->value ? (($row['min_count'] ?? null) ?: null) : null,
             ];
 
             if ($rowId && $existing->has($rowId)) {

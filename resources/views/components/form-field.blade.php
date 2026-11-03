@@ -19,6 +19,7 @@
 
 <{{ $group ? 'fieldset' : 'div' }} {{ $attributes->class(['mb-3']) }}
     data-form-field
+    @if(filled($name)) data-field-name="{{ $name }}" @endif
     @if(filled($for)) data-control-id="{{ $for }}" @endif
     @if($required) data-field-required @endif
     @if($group && $describedBy !== '') aria-describedby="{{ $describedBy }}" @endif>

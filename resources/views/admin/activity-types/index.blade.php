@@ -20,7 +20,7 @@
     </div>
 </div>
 
-<div id="activity-types-table">
+<div id="activity-types-table" data-index-table>
     @include('admin.activity-types.partials.table', [
         'activityTypes' => $activityTypes,
         'sort'          => $sort,

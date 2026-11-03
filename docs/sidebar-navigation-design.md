@@ -22,6 +22,7 @@ The floating rail uses the left gutter without permanently taking a full sidebar
 ## As built (differences from the original proposal)
 
 - **Pinned or peeking, not hover-only.** The sidebar is pinned open (docked, the page makes room) or unpinned (icons only, the page does not move). Unpinned, it peeks open over the page on hover (120ms in, 250ms out), keyboard focus, the `/` search shortcut, or while Recent or the account menu is showing; Escape dismisses a peek. Unpinning with the mouse collapses the sidebar immediately, and it peeks again only after the pointer leaves and re-enters. The pin choice is stored per user in `localStorage`; new users start pinned at 1200px and wider.
+- **Docked, not floating (2026-10-22).** The enterprise restyle made the sidebar a flush, full-height white column with a hairline on its right edge; the Recent panel stays a rounded floating card beside it. Only floating things (the peeking sidebar, Recent, menus) carry a shadow.
 - **No desktop top bar.** Search, Log Activity, and the account menu (Profile, Log out) live in the sidebar; phones keep a slim top bar with the menu button, brand, and Log Activity.
 - **Admin groups are always listed.** They do not collapse; the sidebar scrolls when the list is taller than the window.
 - **Collapsed tooltips were dropped.** Peeking reveals the labels, so icons need no separate tooltip.
@@ -120,7 +121,7 @@ If a later version needs connections, first define whether an edge represents a 
 
 ## Acceptance checks
 
-Status: the retention, access, clear, role-navigation, active-state and control checks are covered by feature tests (`RecentRecordsTest`, `AppShellNavigationTest`). Hover, pin, peek, Recent and the mobile menu were checked in a browser at 1440px and 390px. Not verified: screen readers, real touch hardware, Safari and Firefox, and reduced-motion behavior.
+Status: the retention, access, clear, role-navigation, active-state and control checks are covered by feature tests (`RecentRecordsTest`, `AppShellNavigationTest`). Hover, pin, peek, Recent and the mobile menu were checked in Chromium at 1440px and 390px. The October 27 follow-up keeps icons anchored, fades labels, preserves rounded button edges, centers the TA mark, combines Recent's fade and slide, and clears its active button state when closing starts. Overlay scroll locks preserve the page width. Width and reveal transitions are scoped to no-preference motion; drawers now also remove their slide for reduced motion. Still unverified: screen readers, real touch hardware, Safari and Firefox.
 
 - Hover reveals labels; leaving the combined navigation/panel area does not prematurely close the active interaction. Expanding navigation does not shift content.
 - Keyboard focus and touch can open and use the same destinations without hover. Escape and focus return work for navigation groups and Recent.

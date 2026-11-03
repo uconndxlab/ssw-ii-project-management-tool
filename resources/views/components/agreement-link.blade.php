@@ -4,7 +4,7 @@
 ])
 
 @if($agreement->isLinkable())
-    <a href="{{ route('agreements.show', $agreement) }}" {{ $attributes->merge(['class' => 'text-decoration-none '.$class]) }}>
+    <a href="{{ route('agreements.show', $agreement) }}" {{ $attributes->merge(['class' => $class]) }}>
         {{ $agreement->name }}
     </a>
 @else

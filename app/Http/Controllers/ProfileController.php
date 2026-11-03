@@ -19,9 +19,7 @@ class ProfileController extends Controller
 
     public function edit(): View
     {
-        return view('profile.edit', [
-            'user' => $this->actor(),
-        ]);
+        return view('profile.edit');
     }
 
     public function updatePassword(UpdateProfilePasswordRequest $request): RedirectResponse

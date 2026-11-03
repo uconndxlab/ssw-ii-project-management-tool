@@ -1,11 +1,14 @@
 <?php
 
+use App\Http\Controllers\ActivityCertificationController;
 use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\ActivityTypeController;
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\AgreementController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CertificateController;
+use App\Http\Controllers\CertificateLifecycleController;
+use App\Http\Controllers\CertificateProgressController;
 use App\Http\Controllers\CertificationToolController;
 use App\Http\Controllers\ContactFamilyController;
 use App\Http\Controllers\DashboardController;
@@ -58,6 +61,8 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/activities/create', [ActivityController::class, 'create'])->name('activities.create');
     Route::post('/activities', [ActivityController::class, 'store'])->name('activities.store');
     Route::get('/activities/{activity}', [ActivityController::class, 'show'])->name('activities.show');
+    Route::get('/activities/{activity}/certification', [ActivityCertificationController::class, 'edit'])->name('activities.certification.edit');
+    Route::put('/activities/{activity}/certification', [ActivityCertificationController::class, 'update'])->name('activities.certification.update');
     Route::get('/activities/{activity}/edit', [ActivityController::class, 'edit'])->name('activities.edit');
     Route::put('/activities/{activity}', [ActivityController::class, 'update'])->name('activities.update');
     Route::post('/activities/{activity}/duplicate', [ActivityController::class, 'duplicate'])->name('activities.duplicate');
@@ -81,6 +86,16 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::resource('activity-types', ActivityTypeController::class)->except(['show']);
     Route::resource('certification-tools', CertificationToolController::class)->except(['show']);
     Route::resource('certificates', CertificateController::class)->except(['show']);
+    Route::get('/certificate-enrollments/{certificateEnrollment}', [CertificateProgressController::class, 'show'])->name('certificate-enrollments.show');
+    Route::put('/certificate-enrollments/{certificateEnrollment}/confirmations/{requirement}', [CertificateProgressController::class, 'attest'])->name('certificate-enrollments.attest');
+    Route::post('/certificate-enrollments/{certificateEnrollment}/endorsement', [CertificateLifecycleController::class, 'endorse'])->name('certificate-enrollments.endorse');
+    Route::delete('/certificate-enrollments/{certificateEnrollment}/endorsement', [CertificateLifecycleController::class, 'withdraw'])->name('certificate-enrollments.withdraw');
+    Route::post('/certificate-enrollments/{certificateEnrollment}/awards', [CertificateLifecycleController::class, 'award'])->name('certificate-enrollments.award');
+    Route::put('/certificate-enrollments/{certificateEnrollment}/supervising-coach', [CertificateLifecycleController::class, 'changeCoach'])->name('certificate-enrollments.coach');
+    Route::scopeBindings()->group(function () {
+        Route::get('/certificate-enrollments/{certificateEnrollment}/awards/{award}', [CertificateLifecycleController::class, 'show'])->name('certificate-enrollments.awards.show');
+        Route::post('/certificate-enrollments/{certificateEnrollment}/awards/{award}/revocation', [CertificateLifecycleController::class, 'revoke'])->name('certificate-enrollments.revoke');
+    });
 
     Route::get('/supervisees', [AdminUserController::class, 'supervisees'])->name('supervisees.index');
     Route::get('/users/{user}', [AdminUserController::class, 'show'])->name('users.show');

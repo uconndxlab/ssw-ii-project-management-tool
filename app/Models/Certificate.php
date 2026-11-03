@@ -87,6 +87,12 @@ class Certificate extends Model implements HasPrograms
         return $this->hasMany(CertificationRole::class)->orderBy('sort_order');
     }
 
+    /** @return HasMany<CertificateEnrollment, $this> */
+    public function enrollments(): HasMany
+    {
+        return $this->hasMany(CertificateEnrollment::class);
+    }
+
     /**
      * @param  Builder<static>  $query
      * @return Builder<static>

@@ -1,5 +1,5 @@
 {{-- Phone-only top bar: menu button, brand, Log Activity. On desktop all of this lives in the sidebar. --}}
-<header class="navbar navbar-dark bg-dark app-topbar d-lg-none">
+<header class="navbar app-topbar d-lg-none">
     <div class="container-fluid app-topbar-inner">
         <button class="app-topbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#appRail" aria-controls="appRail" aria-label="Open menu">
             <span class="navbar-toggler-icon"></span>

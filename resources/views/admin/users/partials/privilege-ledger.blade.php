@@ -80,7 +80,7 @@
         </div>
 
         <div class="col-lg-7">
-            <div class="border rounded overflow-hidden d-flex flex-column" style="max-height: 420px; background-color: #e9ecef;">
+            <div class="border rounded overflow-hidden d-flex flex-column" style="max-height: 420px; background-color: var(--app-surface-fill);">
                 <div class="small text-muted px-3 py-2 border-bottom bg-body flex-shrink-0">
                     Access
                 </div>

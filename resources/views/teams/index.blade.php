@@ -17,7 +17,7 @@
     </div>
 </div>
 
-<div id="teams-table">
+<div id="teams-table" data-index-table>
     @include('teams.partials.table', ['teams' => $teams, 'sort' => $sort, 'direction' => $direction])
 </div>
 

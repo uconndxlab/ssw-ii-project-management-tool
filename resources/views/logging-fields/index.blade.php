@@ -18,7 +18,7 @@
     </div>
 </div>
 
-<div id="logging-fields-table">
+<div id="logging-fields-table" data-index-table>
     @include('logging-fields.partials.table', [
         'loggingFields' => $loggingFields,
         'sort' => $sort,

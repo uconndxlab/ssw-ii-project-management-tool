@@ -159,7 +159,17 @@ class Agreement extends Model implements HasPrograms
     /** @return HasMany<AgreementCertificationCandidate, $this> */
     public function certificationCandidates(): HasMany
     {
-        return $this->hasMany(AgreementCertificationCandidate::class)->orderBy('id');
+        return $this->hasMany(AgreementCertificationCandidate::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    /**
+     * Enrollments this agreement sponsors (provenance/display only — never a progress boundary).
+     *
+     * @return HasMany<CertificateEnrollment, $this>
+     */
+    public function sponsoredCertificateEnrollments(): HasMany
+    {
+        return $this->hasMany(CertificateEnrollment::class, 'sponsoring_agreement_id');
     }
 
     /**

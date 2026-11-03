@@ -6,12 +6,36 @@
 --}}
 @props(['paginator', 'target'])
 
-@if($paginator->hasPages())
-<div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+<div class="app-table-pagination">
+    <form method="GET" action="{{ request()->url() }}"
+          class="app-table-page-size"
+          hx-get="{{ request()->url() }}"
+          hx-trigger="change"
+          hx-target="{{ $target }}"
+          hx-swap="innerHTML"
+          hx-push-url="true">
+        @foreach(request()->except(['page', 'per_page', 'partial']) as $name => $value)
+            @if(is_scalar($value))
+                <input type="hidden" name="{{ $name }}" value="{{ $value }}">
+            @endif
+        @endforeach
+        <input type="hidden" name="page" value="1">
+        <label class="d-flex align-items-center gap-2">
+            Show
+            <select name="per_page" class="form-select form-select-sm" data-table-page-size aria-label="Rows per page">
+                @foreach(\App\Support\TablePagination::SIZES as $size)
+                    <option value="{{ $size }}" @selected($paginator->perPage() === $size)>{{ $size }}</option>
+                @endforeach
+            </select>
+            <span class="text-muted">per page</span>
+        </label>
+        <noscript><button type="submit" class="btn btn-sm btn-outline-secondary">Apply</button></noscript>
+    </form>
     <small class="text-muted" data-result-count>
-        Showing {{ $paginator->firstItem() }}–{{ $paginator->lastItem() }}
+        Showing {{ $paginator->firstItem() ?? 0 }}–{{ $paginator->lastItem() ?? 0 }}
         of {{ number_format($paginator->total()) }}
     </small>
+    @if($paginator->hasPages())
     <nav aria-label="Pagination">
         <ul class="pagination pagination-sm mb-0">
             {{-- Prev --}}
@@ -100,7 +124,5 @@
             @endif
         </ul>
     </nav>
+    @endif
 </div>
-@else
-<small class="text-muted" data-result-count>{{ number_format($paginator->total()) }} record{{ $paginator->total() === 1 ? '' : 's' }}</small>
-@endif

@@ -103,6 +103,12 @@ class User extends Authenticatable implements HasPrograms
         return $this->hasMany(UserCertificationDuty::class);
     }
 
+    /** @return HasMany<CertificateEnrollment, $this> */
+    public function supervisingCertificateEnrollments(): HasMany
+    {
+        return $this->hasMany(CertificateEnrollment::class, 'supervising_coach_user_id');
+    }
+
     public function isActive(): bool
     {
         return (bool) $this->active;

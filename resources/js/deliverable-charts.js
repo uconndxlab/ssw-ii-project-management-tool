@@ -25,6 +25,15 @@ Chart.register(
     Filler
 );
 
+const styles = getComputedStyle(document.documentElement);
+const accentRgb = styles.getPropertyValue('--bs-primary-rgb').trim();
+const successRgb = styles.getPropertyValue('--bs-success-rgb').trim();
+const muted = styles.getPropertyValue('--app-muted').trim();
+
+Chart.defaults.color = muted;
+Chart.defaults.borderColor = styles.getPropertyValue('--app-line').trim();
+Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+
 const initializedBurnUps = new WeakSet();
 
 function bucketInRange(bucket, fromValue, toValue) {
@@ -85,8 +94,8 @@ function initActivityHistogram() {
             && selectionEndIndex !== null
             && bucketIndex >= selectionStartIndex
             && bucketIndex <= selectionEndIndex
-                ? 'rgba(13, 110, 253, 0.85)'
-                : 'rgba(13, 110, 253, 0.25)'
+                ? `rgba(${accentRgb}, 0.85)`
+                : `rgba(${accentRgb}, 0.25)`
         ));
         chart.update('none');
     }
@@ -100,12 +109,12 @@ function initActivityHistogram() {
                 data: buckets.map((bucket) => bucket.count),
                 backgroundColor: buckets.map((_, index) => {
                     if (selectionStartIndex === null || selectionEndIndex === null) {
-                        return 'rgba(13, 110, 253, 0.55)';
+                        return `rgba(${accentRgb}, 0.55)`;
                     }
 
                     return index >= selectionStartIndex && index <= selectionEndIndex
-                        ? 'rgba(13, 110, 253, 0.85)'
-                        : 'rgba(13, 110, 253, 0.25)';
+                        ? `rgba(${accentRgb}, 0.85)`
+                        : `rgba(${accentRgb}, 0.25)`;
                 }),
                 borderRadius: 2,
             }],
@@ -191,8 +200,8 @@ function initBurnUpChart(canvas) {
                 {
                     label: 'Cumulative progress',
                     data: buckets.map((bucket) => bucket.cumulative),
-                    borderColor: 'rgba(25, 135, 84, 1)',
-                    backgroundColor: 'rgba(25, 135, 84, 0.12)',
+                    borderColor: `rgb(${successRgb})`,
+                    backgroundColor: `rgba(${successRgb}, 0.12)`,
                     fill: true,
                     tension: 0.15,
                     pointRadius: 2,
@@ -200,7 +209,7 @@ function initBurnUpChart(canvas) {
                 {
                     label: 'Expected pace',
                     data: buckets.map((bucket) => bucket.pace),
-                    borderColor: 'rgba(108, 117, 125, 0.9)',
+                    borderColor: muted,
                     borderDash: [6, 4],
                     fill: false,
                     tension: 0,

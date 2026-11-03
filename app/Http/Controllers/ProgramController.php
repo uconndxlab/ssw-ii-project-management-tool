@@ -10,6 +10,7 @@ use App\Models\Project;
 use App\Support\Authorization\ScopeSync;
 use App\Support\Authorization\UserAccess;
 use App\Support\ProjectProgramScope;
+use App\Support\TablePagination;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -53,7 +54,7 @@ class ProgramController extends Controller
                 break;
         }
 
-        $programs = $query->paginate(20)->withQueryString();
+        $programs = $query->paginate(TablePagination::perPage($request))->withQueryString();
 
         if ($request->header('HX-Request') === 'true') {
             return view('programs.partials.table', compact('programs', 'sort', 'direction'));

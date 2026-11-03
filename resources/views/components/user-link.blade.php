@@ -8,7 +8,6 @@
     $text = $label ?? $user->name;
     $classes = collect(preg_split('/\s+/', trim($attributes->get('class', ''))))
         ->filter(fn (string $class) => $class !== '' && ! str_starts_with($class, 'text-decoration-'))
-        ->push('text-decoration-none')
         ->values()
         ->all();
 @endphp

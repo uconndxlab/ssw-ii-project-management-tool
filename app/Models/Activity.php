@@ -14,11 +14,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 /**
  * View: logger or Delivered By (viewers also via a viewable agreement).
  * Edit: logger, participant, or admin on the activity's programs.
  * Delete: logger or that admin, if admin covers all programs.
+ */
+/**
+ * @property Carbon $engagement_date
  */
 class Activity extends Model implements HasPrograms
 {
@@ -35,6 +40,8 @@ class Activity extends Model implements HasPrograms
         'internal_only',
         'cancelled',
         'not_yet_complete',
+        'certification_review_requested_at',
+        'certification_review_requested_by_user_id',
     ];
 
     protected function casts(): array
@@ -47,6 +54,7 @@ class Activity extends Model implements HasPrograms
             'internal_only' => 'boolean',
             'cancelled' => 'boolean',
             'not_yet_complete' => 'boolean',
+            'certification_review_requested_at' => 'datetime',
         ];
     }
 
@@ -158,10 +166,38 @@ class Activity extends Model implements HasPrograms
         return $this->belongsToMany(User::class, 'activity_user')->withTimestamps();
     }
 
-    /** @return HasMany<AgreementCertificationCandidate, $this> */
+    /** @return HasMany<ActivityCertificationCandidate, $this> */
     public function certificationCandidates(): HasMany
     {
-        return $this->hasMany(AgreementCertificationCandidate::class);
+        return $this->hasMany(ActivityCertificationCandidate::class);
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function certificationReviewRequestedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'certification_review_requested_by_user_id');
+    }
+
+    /**
+     * Names of tagged candidates whose enrollment is supervised by any of the given users.
+     *
+     * @param  array<int>  $userIds
+     * @return Collection<int, string>
+     */
+    public function supervisedCandidateNames(array $userIds): Collection
+    {
+        $this->loadMissing('certificationCandidates.candidate.enrollments');
+
+        return $this->certificationCandidates
+            ->filter(fn (ActivityCertificationCandidate $tag) => $tag->candidate->enrollments->contains(fn ($enrollment) => in_array($enrollment->supervising_coach_user_id, $userIds, true)))
+            ->map(fn (ActivityCertificationCandidate $tag) => $tag->candidate->name)
+            ->values();
+    }
+
+    /** @return HasMany<ActivityReviewRequest, $this> */
+    public function reviewRequests(): HasMany
+    {
+        return $this->hasMany(ActivityReviewRequest::class);
     }
 
     /** @return HasMany<ActivityAgreementFundingSource, $this> */

@@ -80,7 +80,7 @@
                 @endif
             </div>
             <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-sm btn-outline-primary">Apply</button>
+                <button type="submit" class="btn btn-sm btn-outline-secondary">Apply</button>
                 <a href="{{ route('agreements.show', $agreement) }}" class="btn btn-sm btn-outline-secondary">Reset</a>
             </div>
         </div>

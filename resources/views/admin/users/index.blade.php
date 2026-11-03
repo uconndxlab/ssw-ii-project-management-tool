@@ -27,7 +27,7 @@
     </div>
 </div>
 
-<div id="users-table">
+<div id="users-table" data-index-table>
     @include('admin.users.partials.table', ['users' => $users, 'sort' => $sort, 'direction' => $direction, 'superviseesIndex' => $superviseesIndex])
 </div>
 

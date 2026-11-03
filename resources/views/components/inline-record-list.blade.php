@@ -145,24 +145,6 @@
 </div>
 
 @once
-<style>
-    .inline-record-drag-handle {
-        cursor: grab;
-    }
-
-    .inline-record-drag-handle:active {
-        cursor: grabbing;
-    }
-
-    .inline-record-list-ghost {
-        opacity: 0.65;
-        background-color: rgba(var(--bs-primary-rgb), 0.08);
-    }
-
-    .inline-record-primary-toggle:hover {
-        color: var(--bs-warning) !important;
-    }
-</style>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
 <script>
 (function () {

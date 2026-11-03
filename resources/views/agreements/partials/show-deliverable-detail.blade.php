@@ -30,7 +30,7 @@
             <div class="mb-2">
                 @if($group['team'])
                     <div class="d-flex justify-content-between align-items-center gap-2 mb-1">
-                        <a href="{{ route('teams.show', $group['team']) }}" class="badge bg-secondary-subtle text-secondary-emphasis border text-decoration-underline">{{ $group['team']->name }}</a>
+                        <a href="{{ route('teams.show', $group['team']) }}" class="badge app-chip">{{ $group['team']->name }}</a>
                         @if($teamRecommended)
                             <span class="text-muted small text-nowrap">
                                 {{ number_format($teamCompleted, 1) }} / {{ number_format($teamRecommended, 1) }} {{ strtolower($unitLabel) }}
@@ -73,7 +73,7 @@
             <div class="mb-2">
                 @if($group['team'])
                     <div class="d-flex justify-content-between align-items-center gap-2 mb-1">
-                        <a href="{{ route('teams.show', $group['team']) }}" class="badge bg-secondary-subtle text-secondary-emphasis border text-decoration-underline">{{ $group['team']->name }}</a>
+                        <a href="{{ route('teams.show', $group['team']) }}" class="badge app-chip">{{ $group['team']->name }}</a>
                         @if($teamRecommended)
                             <span class="text-muted small text-nowrap">
                                 {{ number_format($teamCompleted, 1) }} / {{ number_format($teamRecommended, 1) }} {{ strtolower($unitLabel) }}
