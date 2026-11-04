@@ -10,7 +10,8 @@
         "laravel/framework": "^13.0",
         "laravel/nightwatch": "^1.30",
         "laravel/tinker": "^3.0",
-        "league/flysystem-aws-s3-v3": "^3.35"
+        "league/flysystem-aws-s3-v3": "^3.35",
+        "resend/resend-php": "^1.18"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
