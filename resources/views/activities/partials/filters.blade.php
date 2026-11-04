@@ -74,9 +74,35 @@
                 <option value="1" @selected(request('needs_certification_review') === '1')>Needs certification review</option>
             </select>
         </div>
+        <div class="col-md-2">
+            <select aria-label="Filter by project" name="project_id" class="form-select form-select-sm"
+                    hx-get="{{ route('activities.index') }}" hx-trigger="change"
+                    hx-target="#activities-table" hx-swap="innerHTML"
+                    hx-push-url="true" hx-include="#activity-filters">
+                <option value="">All Projects</option>
+                @foreach($filterProjects as $project)
+                    <option value="{{ $project->id }}" @selected((string) request('project_id') === (string) $project->id)>
+                        {{ $project->name }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+        <div class="col-md-2">
+            <select aria-label="Filter by program" name="program_id" class="form-select form-select-sm"
+                    hx-get="{{ route('activities.index') }}" hx-trigger="change"
+                    hx-target="#activities-table" hx-swap="innerHTML"
+                    hx-push-url="true" hx-include="#activity-filters">
+                <option value="">All Programs</option>
+                @foreach($filterPrograms as $program)
+                    <option value="{{ $program->id }}" @selected((string) request('program_id') === (string) $program->id)>
+                        {{ $program->name }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
         <x-table-filter-clear
             :href="route('activities.index')"
-            :filter-keys="['search', 'state_id', 'organization_id', 'agreement_id', 'activity_type_id', 'needs_certification_review']"
+            :filter-keys="['project_id', 'program_id', 'search', 'state_id', 'organization_id', 'agreement_id', 'activity_type_id', 'needs_certification_review']"
         />
     </div>
     <input type="hidden" name="per_page" value="{{ \App\Support\TablePagination::perPage(request()) }}">

@@ -26,7 +26,7 @@
     :action-url="auth()->user()->can('update', $agreement) ? route('agreements.edit', $agreement) : null"
 >
     <x-slot:facts>
-        <div><dt>Start date</dt><dd>{{ $agreement->start_date?->format('M d, Y') ?? '—' }}</dd></div>
+        <div><dt>Start Date</dt><dd>{{ $agreement->start_date?->format('M d, Y') ?? '—' }}</dd></div>
         <div><dt>End date</dt><dd>{{ $agreement->end_date?->format('M d, Y') ?? '—' }}</dd></div>
         <div>
             <dt>Principal investigators</dt>
@@ -290,6 +290,7 @@
                                 <div class="min-w-0">
                                     <h3 class="h6 mb-0 text-break">{{ $person->name }}</h3>
                                     @if($person->email)<div class="small text-muted text-break">{{ $person->email }}</div>@endif
+                                    @if($person->start_date)<div class="small text-muted">Start Date: {{ $person->start_date->format('M j, Y') }}</div>@endif
                                 </div>
                                 @can('update', $agreement)
                                     <a class="app-link small ms-auto" href="{{ route('agreements.edit', $agreement) }}#certification-candidate-{{ $person->id }}">{{ $assignments->isEmpty() ? 'Assign a certificate' : 'Edit assignments' }}</a>

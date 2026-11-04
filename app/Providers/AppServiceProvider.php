@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Laravel\Nightwatch\Facades\Nightwatch;
@@ -27,6 +28,7 @@ class AppServiceProvider extends ServiceProvider
         $this->registerNightwatchRedactions();
         $this->registerCaseInsensitiveLike();
         $this->registerAuthorization();
+        $this->registerNumericRouteParameters();
 
         ResetPassword::toMailUsing(function (object $user, string $token) {
             assert($user instanceof User);
@@ -39,6 +41,19 @@ class AppServiceProvider extends ServiceProvider
                     'expires' => config('auth.passwords.'.config('auth.defaults.passwords').'.expire'),
                 ]);
         });
+    }
+
+    /**
+     * Non-numeric ids 404 at the router instead of reaching Postgres as a bigint cast error (500).
+     */
+    private function registerNumericRouteParameters(): void
+    {
+        Route::patterns(array_fill_keys([
+            'activity', 'activity_type', 'agreement', 'agreementId', 'attachment', 'award',
+            'certificate', 'certificateEnrollment', 'certification_tool', 'contact_family',
+            'fieldId', 'logging_field', 'organization', 'program', 'project', 'requirement',
+            'state', 'team', 'user',
+        ], '[0-9]+'));
     }
 
     private function registerAuthorization(): void

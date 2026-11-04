@@ -91,6 +91,7 @@ class AgreementRequest extends FormRequest
             'certification_candidates.*.certification_candidate_id' => ['nullable', 'integer'],
             'certification_candidates.*.name' => ['nullable', 'string', 'max:255'],
             'certification_candidates.*.email' => ['nullable', 'string', 'max:255'],
+            'certification_candidates.*.start_date' => ['nullable', 'date'],
             'certification_candidates.*.notes' => ['nullable', 'string', 'max:2000'],
             'certification_candidates.*.assignments' => ['nullable', 'array'],
             'certification_candidates.*.assignments.*' => ['array'],

@@ -204,11 +204,9 @@ class CertificateController extends Controller
         $this->authorize('delete', $certificate);
 
         if ($certificate->requirements()->exists() || $certificate->requirementGroups()->exists() || $certificate->enrollments()->exists()) {
-            $certificate->update(['retired_at' => now(), 'active' => false]);
-
             return redirect()
                 ->route('certificates.index')
-                ->with('success', 'Certificate has requirements or assigned candidates, so it was retired instead of deleted.');
+                ->with('error', 'Cannot delete this certificate. It has requirements or assigned candidates. Mark it inactive instead.');
         }
 
         $certificate->delete();

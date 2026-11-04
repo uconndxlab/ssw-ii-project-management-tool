@@ -3,14 +3,7 @@
 @section('content')
 <x-form-shell>
     @php $badge = $enrollment->lifecycleBadge(); @endphp
-    <x-page-header :title="$enrollment->candidate->name" :description="$enrollment->certificate->name" entity-type="Certificate enrollment">
-        <x-slot:badges><span class="{{ $badge['class'] }}">{{ $badge['label'] }}</span></x-slot:badges>
-        <x-slot:meta>
-            <span>{{ ucfirst($enrollment->phase->value) }} · Cycle {{ $enrollment->cycle }}</span>
-            <span>{{ $summary['met'] }} / {{ $summary['total'] }} requirements met</span>
-            <span>Supervising coach: {{ $enrollment->supervisingCoach?->name ?? 'none' }}</span>
-        </x-slot:meta>
-    </x-page-header>
+    <x-page-header context="show" :title="$enrollment->candidate->name" eyebrow="Certificate enrollment" entity-type="Certificate enrollment" />
     <x-form-errors />
     @include('certification.partials.lifecycle-status')
     @if($progress)

@@ -2479,7 +2479,7 @@ a.badge.app-chip:focus-visible {
     padding-bottom: 0.25rem;
     line-height: 1.4;
     white-space: normal;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
 }
 
 .app-more-btn {
