@@ -3,6 +3,8 @@
     'organizations',
     'agreements',
     'activityTypes',
+    'filterProjects',
+    'filterPrograms',
     'sort',
     'direction'
 ))

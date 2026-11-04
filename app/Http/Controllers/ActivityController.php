@@ -10,6 +10,8 @@ use App\Models\Agreement;
 use App\Models\ContactFamily;
 use App\Models\LoggingField;
 use App\Models\Organization;
+use App\Models\Program;
+use App\Models\Project;
 use App\Models\State;
 use App\Models\User;
 use App\Services\ActivityActionLogService;
@@ -55,7 +57,7 @@ class ActivityController extends Controller
 
         $query = Activity::query()
             ->visibleTo($this->actor())
-            ->with(['agreements.organizations', 'agreements.states', 'user', 'activityType', 'organizations', 'states', 'programs:id']);
+            ->with(['agreements.organizations', 'agreements.states', 'user', 'activityType', 'organizations', 'states', 'programs.projects']);
 
         // Search
         $search = trim((string) $request->input('search', ''));
@@ -116,6 +118,17 @@ class ActivityController extends Controller
         if ($activityTypeId) {
             $query->where('activity_type_id', $activityTypeId);
         }
+
+        if ($request->filled('project_id')) {
+            $query->whereHas('programs.projects', fn ($relation) => $relation->where('projects.id', $request->integer('project_id')));
+        }
+
+        if ($request->filled('program_id')) {
+            $query->whereHas('programs', fn ($relation) => $relation->where('programs.id', $request->integer('program_id')));
+        }
+
+        $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
+        $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
 
         // Filter option lists for cascading filters
         $visibleStateIds = $visibleAgreements
@@ -213,6 +226,8 @@ class ActivityController extends Controller
                 'organizations',
                 'agreements',
                 'activityTypes',
+                'filterProjects',
+                'filterPrograms',
                 'sort',
                 'direction'
             ));
@@ -233,6 +248,8 @@ class ActivityController extends Controller
             'organizations',
             'agreements',
             'activityTypes',
+            'filterProjects',
+            'filterPrograms',
             'sort',
             'direction'
         ));

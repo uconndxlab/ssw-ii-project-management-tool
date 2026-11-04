@@ -25,6 +25,8 @@
                     <th>
                         <x-table-sort-link column="activity_type" label="Activity Type" :sort="$s" :direction="$d" :url="$url('activity_type')" target="#activities-table" />
                     </th>
+                    <th>Project</th>
+                    <th>Program</th>
                     <th>
                         <x-table-sort-link column="logged_by" label="Logged By" :sort="$s" :direction="$d" :url="$url('logged_by')" target="#activities-table" />
                     </th>
@@ -57,6 +59,12 @@
                     </td>
                     <td data-label="Type">
                         <span class="app-tag">{{ $activity->activityType->name }}</span>
+                    </td>
+                    <td data-label="Project">
+                        <x-table-badge-list kind="project" :items="$activity->projects" route-name="projects.show" />
+                    </td>
+                    <td data-label="Program">
+                        <x-table-badge-list kind="program" :items="$activity->programs" route-name="programs.show" />
                     </td>
                     <td data-label="Logged by">
                         <x-user-link :user="$activity->user" />
@@ -117,7 +125,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="5" class="text-center py-5">
+                    <td colspan="7" class="text-center py-5">
                         <p class="text-muted mb-2">No activities found.</p>
                         <a href="{{ route('activities.create') }}" class="btn btn-sm btn-primary">Log Activity</a>
                     </td>

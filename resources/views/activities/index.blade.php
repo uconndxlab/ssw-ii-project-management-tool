@@ -18,6 +18,8 @@
                 'organizations' => $organizations,
                 'agreements' => $agreements,
                 'activityTypes' => $activityTypes,
+                'filterProjects' => $filterProjects,
+                'filterPrograms' => $filterPrograms,
                 'sort' => $sort,
                 'direction' => $direction,
             ])
