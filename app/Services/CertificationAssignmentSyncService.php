@@ -15,6 +15,7 @@ use App\Models\CertificationCandidate;
 use App\Models\Program;
 use App\Models\User;
 use App\Support\Authorization\CertificationAccess;
+use App\Support\CarbonDate;
 use App\Support\ProjectProgramScope;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -101,7 +102,7 @@ class CertificationAssignmentSyncService
         return $query->with([
             'rosterLinks.agreement.programs', 'enrollments.certificate.programs',
             'enrollments.supervisingCoach', 'enrollments.sponsoringAgreement.programs',
-        ])->get(['id', 'name', 'email', 'active']);
+        ])->get(['id', 'name', 'email', 'start_date', 'active']);
     }
 
     /**
@@ -218,6 +219,14 @@ class CertificationAssignmentSyncService
                 $name = array_key_exists('name', $row) ? $name : $candidate->name;
                 $email = array_key_exists('email', $row) ? (string) $row['email'] : (string) $candidate->email;
                 $this->validateIdentityEdit($validator, $actor, $candidate, $name, $email, $index);
+
+                $startDateField = "certification_candidates.{$index}.start_date";
+                if (array_key_exists('start_date', $row) && ! $validator->errors()->has($startDateField)) {
+                    $startDate = CarbonDate::parse($row['start_date'])?->toDateString();
+                    if ($startDate !== CarbonDate::parse($candidate->start_date)?->toDateString() && ! $this->canEditCandidate($actor, $candidate)) {
+                        $validator->errors()->add($startDateField, 'You do not have authority to edit this candidate\'s shared details.');
+                    }
+                }
             } else {
                 $email = strtolower(trim((string) ($row['email'] ?? '')));
 
@@ -382,12 +391,17 @@ class CertificationAssignmentSyncService
                             array_key_exists('email', $row) ? (string) $row['email'] : (string) $candidate->email,
                         );
 
+                        if (array_key_exists('start_date', $row)) {
+                            $candidate->update(['start_date' => $row['start_date']]);
+                        }
+
                         return $candidate;
                     }
 
                     return CertificationCandidate::create([
                         'name' => $name,
                         'email' => (string) ($row['email'] ?? ''),
+                        'start_date' => $row['start_date'] ?? null,
                         'active' => true,
                     ]);
                 });

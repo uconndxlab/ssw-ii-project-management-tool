@@ -7,7 +7,9 @@
     $person = $certificationCandidateOptions->firstWhere('id', (int) $candidateId);
     $originalName = $person?->name ?? $name;
     $originalEmail = $person?->email ?? '';
-    $identityEditing = filled($candidateId) && ($name !== $originalName || $email !== $originalEmail);
+    $originalStartDate = $person?->start_date?->format('Y-m-d') ?? '';
+    $startDate = array_key_exists('start_date', $row) ? ($row['start_date'] ?? '') : $originalStartDate;
+    $identityEditing = filled($candidateId) && ($name !== $originalName || $email !== $originalEmail || $startDate !== $originalStartDate);
     $prefix = "certification_candidates.$candidateIndex";
     $fieldId = 'cert-candidate-'.$candidateIndex;
     $deleted = filter_var($row['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN);
@@ -84,6 +86,13 @@
                               help="Required for new people and changes to shared person details.">
                     <input type="email" class="form-control" id="{{ $fieldId }}-email" data-candidate-email data-summary-source="email"
                            name="certification_candidates[{{ $candidateIndex }}][email]" value="{{ $email }}" @readonly(filled($candidateId) && ! $identityEditing)>
+                </x-form-field>
+            </div>
+            <div class="col-md-6">
+                <x-form-field label="Start Date" :for="$fieldId.'-start-date'" :name="$prefix.'.start_date'" class="mb-0">
+                    <input type="date" class="form-control @error($prefix.'.start_date') is-invalid @enderror"
+                           id="{{ $fieldId }}-start-date" data-candidate-start-date
+                           name="certification_candidates[{{ $candidateIndex }}][start_date]" value="{{ $startDate }}" @readonly(filled($candidateId) && ! $identityEditing)>
                 </x-form-field>
             </div>
             <div class="col-12" data-email-match hidden>

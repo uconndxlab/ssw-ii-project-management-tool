@@ -36,7 +36,7 @@
         $certificationCandidateRows = collect($rawCertificationCandidateRows)
             ->filter(fn ($row) => is_array($row))
             ->map(function ($row) {
-                foreach (['id', '_delete', 'certification_candidate_id', 'name', 'email', 'notes'] as $field) {
+                foreach (['id', '_delete', 'certification_candidate_id', 'name', 'email', 'start_date', 'notes'] as $field) {
                     if (isset($row[$field]) && ! is_scalar($row[$field])) {
                         $row[$field] = '';
                     }
@@ -75,6 +75,7 @@
                 'certification_candidate_id' => $candidate?->id ?? '',
                 'name' => $candidate?->name ?? '',
                 'email' => $candidate?->email ?? '',
+                'start_date' => $candidate?->start_date?->format('Y-m-d') ?? '',
                 'notes' => $roster->notes,
                 'assignments' => $assignments,
             ];
@@ -97,6 +98,7 @@
 
     $certificationPeople = $certificationCandidateOptions->map(fn ($person) => [
         'id' => (string) $person->id, 'name' => $person->name, 'email' => $person->email,
+        'start_date' => $person->start_date?->format('Y-m-d') ?? '',
         'active' => $person->active, 'can_edit_identity' => (bool) $person->getAttribute('can_edit_identity'),
         'assignments' => $person->getAttribute('assignment_options') ?? [],
     ])->values()->all();
@@ -702,6 +704,7 @@ function initializeCertificationAssignments() {
             certificateSummary.hidden = selected.length === 0;
             const name = row.querySelector('[data-candidate-name]');
             const email = row.querySelector('[data-candidate-email]');
+            const startDate = row.querySelector('[data-candidate-start-date]');
             row.querySelector('[data-candidate-picker] [data-token-picker]')?.dispatchEvent(new CustomEvent('token-picker:restrict', {
                 detail: people.filter(p => p.active && (p.id === person.value || !rosterIds.includes(p.id))).map(p => p.id),
             }));
@@ -714,7 +717,7 @@ function initializeCertificationAssignments() {
                 row.querySelector('[data-new-candidate]').hidden = Boolean(record) || creatingPerson;
                 row.querySelector('[data-back-to-search]').hidden = !creatingPerson;
             }
-            name.readOnly = email.readOnly = Boolean(record && !identityEditing);
+            name.readOnly = email.readOnly = startDate.readOnly = Boolean(record && !identityEditing);
             const identityButton = row.querySelector('[data-edit-identity]');
             identityButton.hidden = !record || !record.can_edit_identity || removed;
             identityButton.textContent = identityEditing ? 'Finish person edit' : 'Edit shared person details';
@@ -840,6 +843,7 @@ function initializeCertificationAssignments() {
         row.dataset.personMode = record ? 'existing' : 'search';
         row.querySelector('[data-candidate-name]').value = record?.name || '';
         row.querySelector('[data-candidate-email]').value = record?.email || '';
+        row.querySelector('[data-candidate-start-date]').value = record?.start_date || '';
         row.querySelector('[name$="[notes]"]').value = '';
         row.querySelectorAll('[data-assignment-row]').forEach(assignment => assignment.remove());
         row.querySelector('[data-candidate-name]').dispatchEvent(new Event('input', {bubbles:true}));
@@ -897,6 +901,7 @@ function initializeCertificationAssignments() {
             row.dataset.personMode = 'search';
             row.querySelector('[data-candidate-name]').value = '';
             row.querySelector('[data-candidate-email]').value = '';
+            row.querySelector('[data-candidate-start-date]').value = '';
             row.querySelector('[name$="[notes]"]').value = '';
             row.querySelectorAll('[data-assignment-row]').forEach(assignment => assignment.remove());
             refresh();
@@ -907,7 +912,7 @@ function initializeCertificationAssignments() {
     form.addEventListener('project-program-scope:change', refresh);
     form.addEventListener('invalid', event => {
         const candidate = event.target.closest('[data-candidate-row]');
-        if (event.target.matches('[data-candidate-name],[data-candidate-email]') && candidate.querySelector('[data-candidate-select]').value) {
+        if (event.target.matches('[data-candidate-name],[data-candidate-email],[data-candidate-start-date]') && candidate.querySelector('[data-candidate-select]').value) {
             candidate.dataset.identityEditing = '1';
         }
         event.target.closest('details')?.setAttribute('open', '');
