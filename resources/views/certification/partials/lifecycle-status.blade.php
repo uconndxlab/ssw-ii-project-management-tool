@@ -36,7 +36,8 @@
     };
 @endphp
 
-<x-section-card title="Certification status">
+<x-section-card :title="$enrollment->certificate->name" :subtitle="ucfirst($enrollment->phase->value).' · Cycle '.$enrollment->cycle.' · '.$summary['met'].' / '.$summary['total'].' requirements met · Supervising coach: '.($coach?->name ?? 'none')">
+    <x-slot:actions><span class="{{ $badge['class'] }}">{{ $badge['label'] }}</span></x-slot:actions>
     @if($current)
         @php
             $by = $current->awardedBy?->name ?? 'a former staff member';
