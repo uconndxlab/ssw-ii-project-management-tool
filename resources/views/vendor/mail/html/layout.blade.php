@@ -33,7 +33,7 @@ a { color: #5fc4d0 !important; }
 [data-ogsb] .panel-content { background-color: #1d2944 !important; }
 [data-ogsc] p, [data-ogsc] td { color: #e8ebef !important; }
 [data-ogsc] h1, [data-ogsc] .header a, [data-ogsc] .button { color: #ffffff !important; }
-[data-ogsc] .footer p, [data-ogsc] .muted { color: #a6b0bf !important; }
+[data-ogsc] .footer p, [data-ogsc] .mwuted { color: #a6b0bf !important; }
 
 @media only screen and (max-width: 600px) {
 .inner-body {

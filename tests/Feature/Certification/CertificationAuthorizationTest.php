@@ -69,7 +69,7 @@ test('program-scoped admin create form only lists assignable programs in their s
         ->assertDontSee($programB->name);
 });
 
-test('destroy retires tool referenced by a requirement instead of deleting', function () {
+test('destroy blocks deleting a tool referenced by a requirement', function () {
     $admin = createSystemAdmin();
     [$project, $program] = createProjectWithProgram();
     $tool = CertificationTool::factory()->forProgram($program)->create();
@@ -78,12 +78,12 @@ test('destroy retires tool referenced by a requirement instead of deleting', fun
 
     $this->actingAs($admin)
         ->delete(route('certification-tools.destroy', $tool))
-        ->assertRedirect(route('certification-tools.index'));
+        ->assertRedirect(route('certification-tools.index'))
+        ->assertSessionHas('error');
 
     $tool->refresh();
-    expect($tool->retired_at)->not->toBeNull();
-    expect($tool->active)->toBeFalse();
-    expect(CertificationTool::find($tool->id))->not->toBeNull();
+    expect($tool->retired_at)->toBeNull();
+    expect($tool->active)->toBeTrue();
 });
 
 test('destroy hard-deletes unreferenced tool', function () {
@@ -98,7 +98,7 @@ test('destroy hard-deletes unreferenced tool', function () {
     expect(CertificationTool::find($tool->id))->toBeNull();
 });
 
-test('destroy retires certificate with requirements instead of deleting', function () {
+test('destroy blocks deleting a certificate with requirements', function () {
     $admin = createSystemAdmin();
     [$project, $program] = createProjectWithProgram();
     $certificate = Certificate::factory()->forProgram($program)->create();
@@ -106,12 +106,12 @@ test('destroy retires certificate with requirements instead of deleting', functi
 
     $this->actingAs($admin)
         ->delete(route('certificates.destroy', $certificate))
-        ->assertRedirect(route('certificates.index'));
+        ->assertRedirect(route('certificates.index'))
+        ->assertSessionHas('error');
 
     $certificate->refresh();
-    expect($certificate->retired_at)->not->toBeNull();
-    expect($certificate->active)->toBeFalse();
-    expect(Certificate::find($certificate->id))->not->toBeNull();
+    expect($certificate->retired_at)->toBeNull();
+    expect($certificate->active)->toBeTrue();
 });
 
 test('destroy hard-deletes certificate without requirements', function () {

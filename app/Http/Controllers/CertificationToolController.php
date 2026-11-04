@@ -168,11 +168,9 @@ class CertificationToolController extends Controller
         $this->authorize('delete', $certificationTool);
 
         if ($certificationTool->requirements()->exists() || CertificationToolSubmission::query()->where('certification_tool_id', $certificationTool->id)->exists()) {
-            $certificationTool->update(['retired_at' => now(), 'active' => false]);
-
             return redirect()
                 ->route('certification-tools.index')
-                ->with('success', 'Tool is used by a certificate requirement, so it was retired instead of deleted.');
+                ->with('error', 'Cannot delete this tool. It is used by certificate requirements or recorded submissions. Mark it inactive instead.');
         }
 
         $certificationTool->delete();

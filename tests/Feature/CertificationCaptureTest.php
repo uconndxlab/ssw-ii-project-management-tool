@@ -163,8 +163,8 @@ test('saved submission identity cannot be moved and used definitions cannot be d
         'dimensions' => [], 'score_fields' => [],
     ];
     $this->put(route('certification-tools.update', $f['tool']), $toolPayload)->assertSessionHasErrors(['dimensions', 'score_fields']);
-    $this->delete(route('certification-tools.destroy', $f['tool']))->assertRedirect();
-    expect($f['tool']->fresh()->retired_at)->not->toBeNull();
+    $this->delete(route('certification-tools.destroy', $f['tool']))->assertSessionHas('error');
+    expect($f['tool']->fresh())->not->toBeNull();
     expect($sub->fresh())->not->toBeNull();
 });
 
