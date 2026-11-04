@@ -69,6 +69,7 @@
                                                 @endforelse
                                             </div>
                                         </div>
+                                        @include('home.partials.activity-organizations', ['activity' => $activity])
                                     </div>
                                     @if($canManage)
                                         <div class="dropdown app-row-actions flex-shrink-0">

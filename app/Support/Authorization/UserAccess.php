@@ -884,6 +884,22 @@ class UserAccess
         return array_intersect($projectIds, $this->adminProjectIds()) !== [];
     }
 
+    /** @param array<int, mixed> $organizationIds */
+    public function primeOrganizationVisibility(array $organizationIds): void
+    {
+        if ($organizationIds === []) {
+            return;
+        }
+
+        $visibleIds = $this->applyOrganizationVisibility(Organization::query()->whereKey($organizationIds))
+            ->pluck('id')->all();
+        $visibleIds = array_fill_keys($visibleIds, true);
+
+        foreach ($organizationIds as $id) {
+            $this->recordVisibilityCache[Organization::class.':'.$id] = isset($visibleIds[$id]);
+        }
+    }
+
     public function canViewRecord(Model $record): bool
     {
         // Views render the same record's visibility check repeatedly (badges, lists); avoid a query per occurrence.
