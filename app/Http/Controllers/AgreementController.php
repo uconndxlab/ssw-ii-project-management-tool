@@ -18,6 +18,7 @@ use App\Models\LoggingField;
 use App\Models\Organization;
 use App\Models\Program;
 use App\Models\Project;
+use App\Models\ReportRequest;
 use App\Models\State;
 use App\Models\Team;
 use App\Models\User;
@@ -276,9 +277,10 @@ class AgreementController extends Controller
         ]);
 
         $recentActivities = $agreement->activities()
+            ->visibleTo($this->actor())
             ->with(['activityType.contactFamily', 'user', 'participants', 'agreements'])
             ->orderByRecentDisplay()
-            ->limit(10)
+            ->limit(5)
             ->get();
 
         $programs = Program::query()
@@ -315,6 +317,14 @@ class AgreementController extends Controller
 
         $certificationRosterDisplay = $this->certificationRosterDisplay($agreement);
 
+        $reportData = [];
+        if ($this->actor()->can('create', [ReportRequest::class, $agreement])) {
+            $reportData = [
+                'reportRequests' => $agreement->reportRequests()->with('user')->latest()->orderByDesc('id')->get(),
+                'reportActivityCount' => $agreement->activities()->count(),
+            ];
+        }
+
         return view('agreements.show', compact(
             'agreement',
             'recentActivities',
@@ -327,7 +337,7 @@ class AgreementController extends Controller
             'deliverableTo',
             'usingExtendedEnd',
             'certificationRosterDisplay',
-        ) + [
+        ) + $reportData + [
             'missingAgreementDates' => ! $startDate || ! $effectiveEnd,
             'startDateAfterToday' => $startDate
                 && $startDate->toDateString() > now()->toDateString(),

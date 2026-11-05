@@ -89,7 +89,7 @@
                     </select>
                     <div class="form-text" data-cert-tool-empty hidden>
                         <span data-cert-tool-empty-message></span>
-                        <button type="button" class="btn btn-sm btn-link px-0" data-cert-goto="basics">Review program scope</button>
+                        <button type="button" class="btn btn-sm btn-link px-0" data-section-goto="basics">Review program scope</button>
                     </div>
                     <div class="text-danger small" data-cert-tool-warning hidden>Selected tool does not share this certificate’s program scope. Choose a compatible tool or correct the scope.</div>
                 </x-form-field>

@@ -125,8 +125,13 @@ class OrganizationController extends Controller
             ->orderByRecentDisplay()
             ->get();
 
-        // Recent activities (last 5)
-        $recentActivities = $allActivities->take(5);
+        $recentActivities = Activity::query()
+            ->visibleTo($this->actor())
+            ->whereHas('agreements', fn ($query) => $query->whereIn('agreements.id', $agreements->modelKeys()))
+            ->with(['activityType.contactFamily', 'user', 'agreements'])
+            ->orderByRecentDisplay()
+            ->limit(5)
+            ->get();
 
         // Deduplicate staff across all agreements, collecting agreement names per user
         $teamMembersMap = [];

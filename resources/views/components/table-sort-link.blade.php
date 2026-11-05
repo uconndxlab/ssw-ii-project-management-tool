@@ -5,6 +5,7 @@
     'direction',
     'url',
     'target' => '#users-table',
+    'pushUrl' => true,
 ])
 
 @php
@@ -17,7 +18,7 @@
    class="app-sort"
    hx-get="{{ $url }}"
    hx-target="{{ $target }}"
-   hx-push-url="true">
+   hx-push-url="{{ $pushUrl ? 'true' : 'false' }}">
     {{ $label }}
     @if($active)
         @if($direction === 'asc')

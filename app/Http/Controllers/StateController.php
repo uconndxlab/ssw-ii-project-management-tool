@@ -102,6 +102,7 @@ class StateController extends Controller
         $staffMembers = collect($staffMembersMap)->sortBy('name');
 
         $recentActivities = $state->activities()
+            ->visibleTo($this->actor())
             ->with(['activityType.contactFamily', 'user', 'agreements'])
             ->orderByRecentDisplay()
             ->limit(10)

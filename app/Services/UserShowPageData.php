@@ -19,7 +19,7 @@ class UserShowPageData
      *     agreementReports: Collection<int, array{agreement: Agreement, direct: bool, teams: Collection<int, Team>, deliverableGroups: Collection<int, array<string, mixed>>}>
      * }
      */
-    public static function for(User $user): array
+    public static function for(User $user, User $viewer): array
     {
         $user->load([
             'supervisor',
@@ -35,6 +35,7 @@ class UserShowPageData
         $agreementReports = UserDeliverableReporting::buildAgreementReports($user);
 
         $recentActivities = $user->activities()
+            ->visibleTo($viewer)
             ->with(['activityType.contactFamily', 'user', 'agreements'])
             ->orderByRecentDisplay()
             ->take(10)

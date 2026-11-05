@@ -5,6 +5,7 @@ use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\ActivityTypeController;
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\AgreementController;
+use App\Http\Controllers\AgreementReportController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\CertificateLifecycleController;
@@ -51,6 +52,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
 
     Route::post('/agreements/{agreement}/duplicate', [AgreementController::class, 'duplicate'])->name('agreements.duplicate');
+    Route::post('/agreements/{agreement}/reports', [AgreementReportController::class, 'store'])->name('agreements.reports.store');
     Route::resource('agreements', AgreementController::class);
 
     Route::get('/agreements/{agreement}/attachments/{attachment}/download', [AgreementController::class, 'downloadAttachment'])

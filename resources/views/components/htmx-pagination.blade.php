@@ -4,7 +4,7 @@
         paginator  - LengthAwarePaginator instance
         target     - CSS selector string for hx-target (e.g. "#states-table")
 --}}
-@props(['paginator', 'target'])
+@props(['paginator', 'target', 'pushUrl' => true])
 
 <div class="app-table-pagination">
     <form method="GET" action="{{ request()->url() }}"
@@ -13,7 +13,7 @@
           hx-trigger="change"
           hx-target="{{ $target }}"
           hx-swap="innerHTML"
-          hx-push-url="true">
+          hx-push-url="{{ $pushUrl ? 'true' : 'false' }}">
         @foreach(request()->except(['page', 'per_page', 'partial']) as $name => $value)
             @if(is_scalar($value))
                 <input type="hidden" name="{{ $name }}" value="{{ $value }}">
@@ -48,7 +48,7 @@
                        hx-get="{{ $paginator->previousPageUrl() }}"
                        hx-target="{{ $target }}"
                        hx-swap="innerHTML"
-                       hx-push-url="true"
+                       hx-push-url="{{ $pushUrl ? 'true' : 'false' }}"
                        aria-label="Previous page">‹</a>
                 </li>
             @endif
@@ -69,7 +69,7 @@
                        hx-get="{{ $paginator->url(1) }}"
                        hx-target="{{ $target }}"
                        hx-swap="innerHTML"
-                       hx-push-url="true"
+                       hx-push-url="{{ $pushUrl ? 'true' : 'false' }}"
                        aria-label="Page 1">1</a>
                 </li>
                 @if($from > 2)
@@ -87,7 +87,7 @@
                            hx-get="{{ $paginator->url($p) }}"
                            hx-target="{{ $target }}"
                            hx-swap="innerHTML"
-                           hx-push-url="true"
+                           hx-push-url="{{ $pushUrl ? 'true' : 'false' }}"
                            aria-label="Page {{ $p }}">{{ $p }}</a>
                     </li>
                 @endif
@@ -103,7 +103,7 @@
                        hx-get="{{ $paginator->url($last) }}"
                        hx-target="{{ $target }}"
                        hx-swap="innerHTML"
-                       hx-push-url="true"
+                       hx-push-url="{{ $pushUrl ? 'true' : 'false' }}"
                        aria-label="Page {{ $last }}">{{ $last }}</a>
                 </li>
             @endif
@@ -116,7 +116,7 @@
                        hx-get="{{ $paginator->nextPageUrl() }}"
                        hx-target="{{ $target }}"
                        hx-swap="innerHTML"
-                       hx-push-url="true"
+                       hx-push-url="{{ $pushUrl ? 'true' : 'false' }}"
                        aria-label="Next page">›</a>
                 </li>
             @else

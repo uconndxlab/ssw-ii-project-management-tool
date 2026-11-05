@@ -602,15 +602,16 @@ class UserAccess
             return $query;
         }
 
-        // visible if referenced or agreement visible
+        // Visible if referenced, or the activity (or one of its agreements) is in your view/admin programs.
+        // Being staff on an out-of-scope agreement grants no extra view: there you see only your own, like a member.
         return $query->where(function (Builder $builder) {
             $this->orActivityReferencedBy($builder, $this->activityReferenceUserIds());
             $this->orCertificationReviewer($builder);
 
-            if ($this->hasView() && ! $this->isInput()) {
-                $builder->orWhereHas('agreements', function (Builder $agreementQuery) {
-                    $this->applyAgreementVisibility($agreementQuery);
-                });
+            $programIds = $this->viewProgramIds();
+            if ($this->hasView() && $programIds !== []) {
+                $inScope = fn (Builder $relation) => $relation->whereIn('programs.id', $programIds);
+                $builder->orWhereHas('programs', $inScope)->orWhereHas('agreements.programs', $inScope);
             }
         });
     }
@@ -716,7 +717,7 @@ class UserAccess
         return array_values(array_unique($ids));
     }
 
-    // Members/Input: logger or Delivered By (or a supervisee). Viewers: that, or the activity sits on an agreement they can view.
+    // Members/Input: logger or Delivered By (or a supervisee). Viewers: that, or the activity or its agreement is in their program scope.
     public function canViewActivity(Activity $activity): bool
     {
         if ($this->isCertificationReviewerOnActivity($activity)) {

@@ -1,6 +1,7 @@
 @props([
     'activities',
     'viewAllUrl' => null,
+    'viewAllSection' => null,
     'viewAllLabel' => 'View Activities',
     'logActivityUrl' => null,
     'logActivityEnabled' => true,
@@ -30,7 +31,7 @@
         </div>
     @endif
 
-    <a href="{{ $viewAllUrl }}" class="btn btn-sm btn-outline-secondary {{ $logActivityUrl ? '' : 'ms-auto' }}">{{ $viewAllLabel }}</a>
+    <a href="{{ $viewAllUrl }}" @if($viewAllSection) data-section-goto="{{ $viewAllSection }}" @endif class="btn btn-sm btn-outline-secondary {{ $logActivityUrl ? '' : 'ms-auto' }}">{{ $viewAllLabel }}</a>
 </div>
 
 @if($activities->isNotEmpty())

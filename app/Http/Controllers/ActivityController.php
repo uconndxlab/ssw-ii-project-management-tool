@@ -52,6 +52,11 @@ class ActivityController extends Controller
     {
         $this->authorize('viewAny', Activity::class);
 
+        $embedded = $request->boolean('embedded');
+        if ($embedded) {
+            $this->authorize('view', Agreement::query()->findOrFail($request->integer('agreement_id')));
+        }
+
         $visibleAgreements = $this->getVisibleAgreements()->load(['organizations', 'states']);
         $visibleAgreementIds = $visibleAgreements->pluck('id');
 
@@ -217,6 +222,13 @@ class ActivityController extends Controller
 
         $activities = $query->withCount('certificationCandidates')->paginate(TablePagination::perPage($request))->withQueryString();
         $this->actor()->access()->primeCertificationReviewers($activities->getCollection()->pluck('id')->map(fn ($id) => (int) $id)->all());
+
+        if ($embedded) {
+            return view('agreements.partials.activity-tab', compact(
+                'activities', 'states', 'organizations', 'agreements', 'activityTypes',
+                'filterProjects', 'filterPrograms', 'sort', 'direction', 'embedded',
+            ));
+        }
 
         // HTMX: refresh cascading filters and table together
         if ($request->header('HX-Request') === 'true' && $request->input('partial') === 'filters') {
