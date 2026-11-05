@@ -115,6 +115,12 @@ class Agreement extends Model implements HasPrograms
         return $this->belongsToMany(Activity::class, 'activity_agreement')->withTimestamps();
     }
 
+    /** @return HasMany<ReportRequest, $this> */
+    public function reportRequests(): HasMany
+    {
+        return $this->hasMany(ReportRequest::class);
+    }
+
     /** @return BelongsToMany<LoggingField, $this, AgreementLoggingFieldPivot> */
     public function agreementLoggingFields(): BelongsToMany
     {

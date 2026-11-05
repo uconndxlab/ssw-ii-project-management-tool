@@ -289,7 +289,7 @@ class AdminUserController extends Controller
         $this->authorize('view', $user);
 
         return view('admin.users.show', [
-            ...UserShowPageData::for($user),
+            ...UserShowPageData::for($user, $this->actor()),
             'isProfile' => false,
             'canEditUser' => $this->actor()->can('update', $user),
         ]);

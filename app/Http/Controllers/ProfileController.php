@@ -11,7 +11,7 @@ class ProfileController extends Controller
 {
     public function show(): View
     {
-        $data = UserShowPageData::for($this->actor());
+        $data = UserShowPageData::for($this->actor(), $this->actor());
         $data['isProfile'] = true;
 
         return view('admin.users.show', $data);

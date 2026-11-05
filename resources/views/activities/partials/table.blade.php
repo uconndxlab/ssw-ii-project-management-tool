@@ -1,4 +1,6 @@
 @php
+    $embedded = $embedded ?? false;
+    $activityTarget = $embedded ? '#agreement-activities' : '#activities-table';
     $s = $sort ?? 'date';
     $d = $direction ?? 'desc';
     $flip = function ($col) use ($s, $d) {
@@ -17,18 +19,20 @@
             <thead>
                 <tr>
                     <th class="text-nowrap">
-                        <x-table-sort-link column="date" label="Date" :sort="$s" :direction="$d" :url="$url('date')" target="#activities-table" />
+                        <x-table-sort-link column="date" label="Date" :sort="$s" :direction="$d" :url="$url('date')" :target="$activityTarget" :push-url="!$embedded" />
                     </th>
+                    @unless($embedded)
+                        <th>
+                            <x-table-sort-link column="agreement" label="Agreement" :sort="$s" :direction="$d" :url="$url('agreement')" :target="$activityTarget" :push-url="!$embedded" />
+                        </th>
+                    @endunless
                     <th>
-                        <x-table-sort-link column="agreement" label="Agreement" :sort="$s" :direction="$d" :url="$url('agreement')" target="#activities-table" />
-                    </th>
-                    <th>
-                        <x-table-sort-link column="activity_type" label="Activity Type" :sort="$s" :direction="$d" :url="$url('activity_type')" target="#activities-table" />
+                        <x-table-sort-link column="activity_type" label="Activity Type" :sort="$s" :direction="$d" :url="$url('activity_type')" :target="$activityTarget" :push-url="!$embedded" />
                     </th>
                     <th>Project</th>
                     <th>Program</th>
                     <th>
-                        <x-table-sort-link column="logged_by" label="Logged By" :sort="$s" :direction="$d" :url="$url('logged_by')" target="#activities-table" />
+                        <x-table-sort-link column="logged_by" label="Logged By" :sort="$s" :direction="$d" :url="$url('logged_by')" :target="$activityTarget" :push-url="!$embedded" />
                     </th>
                     <th class="app-col-actions"><span class="visually-hidden">Actions</span></th>
                 </tr>
@@ -46,17 +50,19 @@
                             <x-status-badge :active="false" inactive-label="Cancelled" tone="danger" class="ms-1" />
                         @endif
                     </td>
-                    <td data-label="Agreement">
-                        <x-table-badge-list
-                            kind="agreement"
-                            :items="$activity->agreements->map(fn ($agreement) => [
-                                'name' => $agreement->name,
-                                'href' => $agreement->isLinkable() ? route('agreements.show', $agreement) : null,
-                            ])"
-                            href-key="href"
-                            container-class="app-chip-list app-chip-list--primary"
-                        />
-                    </td>
+                    @unless($embedded)
+                        <td data-label="Agreement">
+                            <x-table-badge-list
+                                kind="agreement"
+                                :items="$activity->agreements->map(fn ($agreement) => [
+                                    'name' => $agreement->name,
+                                    'href' => $agreement->isLinkable() ? route('agreements.show', $agreement) : null,
+                                ])"
+                                href-key="href"
+                                container-class="app-chip-list app-chip-list--primary"
+                            />
+                        </td>
+                    @endunless
                     <td data-label="Type">
                         <span class="app-tag">{{ $activity->activityType->name }}</span>
                     </td>
@@ -125,7 +131,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="7" class="text-center py-5">
+                    <td colspan="{{ $embedded ? 6 : 7 }}" class="text-center py-5">
                         <p class="text-muted mb-2">No activities found.</p>
                         <a href="{{ route('activities.create') }}" class="btn btn-sm btn-primary">Log Activity</a>
                     </td>
@@ -135,33 +141,36 @@
         </table>
     </x-table-scroll>
     <div class="card-footer">
-        <x-htmx-pagination :paginator="$activities" target="#activities-table" />
+        <x-htmx-pagination :paginator="$activities" :target="$activityTarget" :push-url="!$embedded" />
     </div>
 </div>
 
-@once
-    <script>
-    (function () {
-        document.body.addEventListener('htmx:afterSwap', function (event) {
-            if (event.target && event.target.id === 'activities-table') {
-                var params = new URLSearchParams(window.location.search);
-                var form = document.getElementById('activity-filters');
-                if (form) {
-                    if (params.has('sort')) {
-                        var sortInput = form.querySelector('[name=sort]');
-                        if (sortInput) {
-                            sortInput.value = params.get('sort');
+@unless($embedded)
+    @once
+        <script>
+        (function () {
+            document.body.addEventListener('htmx:afterSwap', function (event) {
+                if (event.target && event.target.id === 'activities-table') {
+                    var params = new URLSearchParams(window.location.search);
+                    var form = document.getElementById('activity-filters');
+                    if (form) {
+                        if (params.has('sort')) {
+                            var sortInput = form.querySelector('[name=sort]');
+                            if (sortInput) {
+                                sortInput.value = params.get('sort');
+                            }
                         }
-                    }
-                    if (params.has('direction')) {
-                        var directionInput = form.querySelector('[name=direction]');
-                        if (directionInput) {
-                            directionInput.value = params.get('direction');
+                        if (params.has('direction')) {
+                            var directionInput = form.querySelector('[name=direction]');
+                            if (directionInput) {
+                                directionInput.value = params.get('direction');
+                            }
                         }
                     }
                 }
-            }
-        });
-    })();
-    </script>
-@endonce
+            });
+        })();
+        </script>
+    @endonce
+
+@endunless

@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Activity;
-use App\Models\ActivityType;
 use App\Models\Agreement;
 use App\Models\Organization;
 use App\Models\Program;
@@ -90,36 +89,20 @@ class ProjectController extends Controller
     {
         $this->authorize('view', $project);
         $project->load([
-            'programs.activities.activityType.contactFamily',
-            'programs.activities.user',
-            'programs.activities.programs',
-            'programs.activities.agreements',
+            'programs.activities',
             'programs.organizations.states',
         ]);
 
         /** @var Collection<int, Program> $programs */
         $programs = $project->programs;
 
-        $recentActivities = $programs
-            ->flatMap(fn ($p) => $p->activities)
-            ->sort(function (Activity $a, Activity $b): int {
-                $dateCompare = $b->engagement_date <=> $a->engagement_date;
-                if ($dateCompare !== 0) {
-                    return $dateCompare;
-                }
-
-                $nameCompare = strcasecmp(
-                    $a->activityType instanceof ActivityType ? ($a->activityType->name ?? '') : '',
-                    $b->activityType instanceof ActivityType ? ($b->activityType->name ?? '') : ''
-                );
-                if ($nameCompare !== 0) {
-                    return $nameCompare;
-                }
-
-                return $b->id <=> $a->id;
-            })
-            ->take(10)
-            ->values();
+        $recentActivities = Activity::query()
+            ->visibleTo($this->actor())
+            ->whereHas('programs', fn ($query) => $query->whereIn('programs.id', $programs->pluck('id')))
+            ->with(['activityType.contactFamily', 'user', 'programs', 'agreements'])
+            ->orderByRecentDisplay()
+            ->limit(10)
+            ->get();
 
         /** @var Collection<int, Agreement> $agreements */
         $agreements = $programs

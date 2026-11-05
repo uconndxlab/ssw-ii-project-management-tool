@@ -72,13 +72,9 @@
 @endphp
 
 <div data-certificate-editor data-errors='@json($errors->keys())'>
-    <nav class="nav nav-pills gap-4 mb-3 cert-sections" aria-label="Certificate sections">
-        @foreach(['basics' => 'Basics', 'initial' => 'Initial requirements', 'renewal' => 'Renewal', 'review' => 'Review rules'] as $key => $label)
-            <button type="button" class="nav-link {{ $key === 'basics' ? 'active' : '' }}" data-cert-nav="{{ $key }}" aria-controls="cert-section-{{ $key }}" @if($key === 'basics') aria-current="page" @endif>{{ $label }}</button>
-        @endforeach
-    </nav>
+    <x-section-tabs :tabs="['basics' => 'Basics', 'initial' => 'Initial requirements', 'renewal' => 'Renewal', 'review' => 'Review rules']" label="Certificate sections" class="mb-3">
     <p class="text-muted small">Move between sections freely. All changes are saved together with the certificate.</p>
-    <div id="cert-section-basics" data-cert-section="basics">
+    <div id="section-basics" data-section="basics">
 <x-section-card title="Basics">
     <x-form-field label="Name" for="name" name="name" :required="true">
         <input type="text" class="form-control @error('name') is-invalid @enderror"
@@ -150,7 +146,7 @@
 
     </div>
     @foreach(['initial' => 'Initial requirements', 'renewal' => 'Renewal'] as $phase => $phaseLabel)
-        <div id="cert-section-{{ $phase }}" data-cert-section="{{ $phase }}" hidden>
+        <div id="section-{{ $phase }}" data-section="{{ $phase }}" hidden>
             <x-section-card :title="$phaseLabel" :subtitle="$phase === 'initial' ? 'Every standalone requirement and every group must be satisfied.' : 'Configure renewal rules here. Renewal processing comes in a later release.'">
                 @if($phase === 'renewal')
                     <x-form-switch name="renewal_matches_initial" label="Follow initial requirements" help="Linked: changes to initial requirements also change the renewal rules." :checked="$renewalMatchesInitial" />
@@ -184,7 +180,7 @@
             </x-section-card>
         </div>
     @endforeach
-    <div id="cert-section-review" data-cert-section="review" hidden>
+    <div id="section-review" data-section="review" hidden>
         <x-section-card title="Review rules" subtitle="Review the configuration before saving. These are rules, not candidate progress.">
             <div data-cert-review></div>
         </x-section-card>
@@ -206,4 +202,5 @@
     <template data-cert-template="requirement">@include('admin.certificates.partials.requirement-row', ['row' => [], 'reqIndex' => '__REQ__', 'phase' => '__PHASE__', 'groupOptions' => []])</template>
     <template data-cert-template="group">@include('admin.certificates.partials.requirement-group-row', ['row' => [], 'groupIndex' => '__GROUP__', 'phase' => '__PHASE__'])</template>
     <template data-cert-template="role">@include('admin.certificates.partials.role-row', ['row' => [], 'roleIndex' => '__ROLE__'])</template>
+    </x-section-tabs>
 </div>

@@ -1,7 +1,10 @@
+import { navigateSection } from './section-tabs.js';
+
 const root = document.querySelector('[data-certificate-editor]');
 
 if (root) {
     const form = root.closest('form');
+    const tabsRoot = root.querySelector('[data-section-tabs]');
     const $ = (selector, scope = root) => scope.querySelector(selector);
     const $$ = (selector, scope = root) => [...scope.querySelectorAll(selector)];
     const value = (selector, scope = root) => $(selector, scope)?.value ?? '';
@@ -21,17 +24,10 @@ if (root) {
     };
     let roleOpener;
 
-    function navigate(section, focus = false) {
-        $$('[data-cert-section]').forEach((pane) => { pane.hidden = pane.dataset.certSection !== section; });
-        $$('[data-cert-nav]').forEach((button) => {
-            const selected = button.dataset.certNav === section;
-            button.classList.toggle('active', selected);
-            if (selected) button.setAttribute('aria-current', 'page');
-            else button.removeAttribute('aria-current');
-        });
-        if (section === 'review') renderReview();
-        if (focus) $(`[data-cert-nav="${section}"]`).focus();
-    }
+    tabsRoot.addEventListener('section-tabs:change', (event) => {
+        if (event.target !== tabsRoot) return;
+        if (event.detail.section === 'review') renderReview();
+    });
 
     function openRequirement(row, focus = false) {
         requirementRows().forEach((item) => {
@@ -295,9 +291,7 @@ if (root) {
         if (!button) return;
         const row = button.closest('[data-cert-requirement]');
         const stage = stageOf(button);
-        if (button.dataset.certNav) navigate(button.dataset.certNav);
-        if (button.dataset.certGoto) {
-            navigate(button.dataset.certGoto);
+        if (button.dataset.sectionGoto) {
             $('[name=program_scope_mode]:checked')?.focus();
         }
         if (button.hasAttribute('data-cert-edit')) openRequirement($('[data-cert-editor]', row).hidden ? row : null);
@@ -461,8 +455,8 @@ if (root) {
     form.addEventListener('submit', () => sync());
     let handlingInvalid = false;
     root.addEventListener('form-error:focus', (event) => {
-        const section = event.target.closest('[data-cert-section]');
-        if (section) navigate(section.dataset.certSection);
+        const section = event.target.closest('[data-section]');
+        if (section) navigateSection(tabsRoot, section.dataset.section);
         const row = event.target.closest('[data-cert-requirement]');
         if (row) openRequirement(row);
         const roles = event.target.closest('[data-cert-roles]');
@@ -476,8 +470,8 @@ if (root) {
         }
         handlingInvalid = true;
         queueMicrotask(() => { handlingInvalid = false; });
-        const section = event.target.closest('[data-cert-section]');
-        if (section) navigate(section.dataset.certSection);
+        const section = event.target.closest('[data-section]');
+        if (section) navigateSection(tabsRoot, section.dataset.section);
         const row = event.target.closest('[data-cert-requirement]');
         if (row) openRequirement(row);
     }, true);
@@ -489,12 +483,12 @@ if (root) {
         const match = first.match(/^requirements\.(\d+)\./);
         if (match) {
             const row = $(`[data-cert-requirement="${match[1]}"]`);
-            if (row) { navigate(stageOf(row).dataset.certStage); openRequirement(row); }
+            if (row) { navigateSection(tabsRoot, stageOf(row).dataset.certStage); openRequirement(row); }
         } else if (first.startsWith('requirement_groups.')) {
             const group = $(`[data-cert-group="${first.split('.')[1]}"]`);
-            if (group) navigate(stageOf(group).dataset.certStage);
+            if (group) navigateSection(tabsRoot, stageOf(group).dataset.certStage);
         } else if (first.startsWith('roles.')) {
-            navigate('initial');
+            navigateSection(tabsRoot, 'initial');
             $('[data-cert-roles]').hidden = false;
         }
         const error = $$('[data-field-error]').find((node) => node.getClientRects().length);

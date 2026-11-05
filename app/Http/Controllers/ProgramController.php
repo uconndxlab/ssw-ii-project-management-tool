@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Activity;
-use App\Models\ActivityType;
 use App\Models\Organization;
 use App\Models\Program;
 use App\Models\Project;
@@ -111,31 +109,15 @@ class ProgramController extends Controller
         $this->authorize('view', $program);
         $program->load([
             'projects',
-            'activities.activityType.contactFamily',
-            'activities.user',
-            'activities.agreements',
             'organizations.states',
         ]);
 
-        $recentActivities = $program->activities
-            ->sort(function (Activity $a, Activity $b): int {
-                $dateCompare = $b->engagement_date <=> $a->engagement_date;
-                if ($dateCompare !== 0) {
-                    return $dateCompare;
-                }
-
-                $nameCompare = strcasecmp(
-                    $a->activityType instanceof ActivityType ? ($a->activityType->name ?? '') : '',
-                    $b->activityType instanceof ActivityType ? ($b->activityType->name ?? '') : ''
-                );
-                if ($nameCompare !== 0) {
-                    return $nameCompare;
-                }
-
-                return $b->id <=> $a->id;
-            })
-            ->take(10)
-            ->values();
+        $recentActivities = $program->activities()
+            ->visibleTo($this->actor())
+            ->with(['activityType.contactFamily', 'user', 'agreements'])
+            ->orderByRecentDisplay()
+            ->limit(10)
+            ->get();
 
         $agreements = $program->agreementsForDisplay();
 
