@@ -12,7 +12,7 @@
                     <li>Completions</li>
                     <li>Logged by</li>
                     <li>Internal only, cancelled, not yet complete</li>
-                    <li>One column per logging field</li>
+                    <li>One column per logging field, labeled with where it was asked: this agreement, activity family, activity type or another covered agreement</li>
                 </ul>
                 <form method="POST" action="{{ route('agreements.reports.store', $agreement) }}">
                     @csrf

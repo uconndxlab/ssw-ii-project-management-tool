@@ -109,7 +109,28 @@ it('exports the union of answered fields with display values and escapes formula
     $response = $this->actingAs($editor)->post(route('agreements.reports.store', $agreement))->assertOk();
     $rows = agreementReportRows($response->streamedContent());
 
-    expect(array_slice($rows[0], 10))->toBe(["'=Notes", 'Topics', 'Document', 'Approved'])
+    expect(array_slice($rows[0], 10))->toBe(["'=Notes (Activity type)", 'Topics (Activity type)', 'Document (Activity type)', 'Approved (Activity type)'])
         ->and(array_slice($rows[1], 10))->toBe(["'=SUM(1,2)", 'Alpha; Beta', '', ''])
         ->and(array_slice($rows[2], 10))->toBe(['', '', 'Original.pdf', 'No']);
+});
+
+it('labels each logging field column with where it was asked', function () {
+    $agreement = Agreement::factory()->create(['name' => 'Texas Agreement']);
+    $other = Agreement::factory()->create(['name' => 'Ohio Agreement']);
+    $family = ContactFamily::factory()->create();
+    $type = ActivityType::factory()->for($family)->create();
+    $activity = Activity::factory()->for($type)->hasAttached($agreement)->hasAttached($other)->create();
+    $hours = LoggingField::factory()->create(['name' => 'Hours', 'sort_order' => 1]);
+    $answer = fn (string $contextType, int $contextId, string $value) => ActivityLoggingFieldAnswer::factory()->for($activity)->text($value)
+        ->create(['logging_field_id' => $hours->id, 'context_type' => $contextType, 'context_id' => $contextId]);
+    $answer('agreement', $other->id, '4');
+    $answer('activity_type', $type->id, '3');
+    $answer('contact_family', $family->id, '2');
+    $answer('agreement', $agreement->id, '1');
+
+    $response = $this->actingAs(createSystemAdmin())->post(route('agreements.reports.store', $agreement))->assertOk();
+    $rows = agreementReportRows($response->streamedContent());
+
+    expect(array_slice($rows[0], 10))->toBe(['Hours (This agreement)', 'Hours (Activity family)', 'Hours (Activity type)', 'Hours (Other agreements)'])
+        ->and(array_slice($rows[1], 10))->toBe(['1', '2', '3', 'Ohio Agreement: 4']);
 });
