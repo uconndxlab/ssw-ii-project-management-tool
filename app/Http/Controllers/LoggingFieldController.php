@@ -409,6 +409,19 @@ class LoggingFieldController extends Controller
 
         unset($validated['program_scope_mode'], $validated['project_ids'], $validated['program_ids']);
         DB::transaction(function () use ($loggingField, $validated, $request) {
+            $relations = [
+                'available_in_agreements' => 'agreements',
+                'available_in_contact_families' => 'contactFamilies',
+                'available_in_activities' => 'activityTypes',
+            ];
+            // Only records the scope change itself excludes are removed; records that already didn't fit are left alone.
+            $loggingField->load(['programs', 'agreements.programs', 'contactFamilies.programs', 'activityTypes.programs']);
+            $fittedBefore = array_map(
+                fn (string $relation) => $loggingField->{$relation}
+                    ->filter(fn ($record) => ProjectProgramScope::loggingFieldFitsRecord($loggingField, $record)),
+                $relations,
+            );
+
             $loggingField->update($validated);
             ScopeSync::applyTo(
                 $this->actor(),
@@ -417,21 +430,22 @@ class LoggingFieldController extends Controller
                 $request->input('program_ids', []),
             );
 
-            if (! $loggingField->is_active || ! $loggingField->available_in_agreements) {
-                $loggingField->agreements()->detach();
-            }
-            if (! $loggingField->is_active || ! $loggingField->available_in_contact_families) {
-                $loggingField->contactFamilies()->detach();
-            }
-            if (! $loggingField->is_active || ! $loggingField->available_in_activities) {
-                $loggingField->activityTypes()->detach();
+            $loggingField->load('programs');
+            foreach ($relations as $availability => $relation) {
+                if (! $loggingField->is_active || ! $loggingField->{$availability}) {
+                    $loggingField->{$relation}()->detach();
+                } else {
+                    $loggingField->{$relation}()->detach($fittedBefore[$availability]
+                        ->reject(fn ($record) => ProjectProgramScope::loggingFieldFitsRecord($loggingField, $record))
+                        ->modelKeys());
+                }
             }
         });
 
         return $this->redirectAfterSave($loggingField, 'Logging field updated successfully.');
     }
 
-    /** @return array<string, array{label: string, count: int, hidden: int, records: list<array{name: string, url: string, required: bool}>}> */
+    /** @return array<string, array{label: string, count: int, hidden: int, scope_records: list<array{id: int, scope_mode: string, program_ids: list<int>}>, records: list<array{id: int, scope_mode: string, program_ids: list<int>, name: string, url: string, required: bool}>}> */
     private function attachmentGroups(LoggingField $loggingField): array
     {
         $loggingField->loadMissing(['agreements.programs.projects', 'contactFamilies.programs.projects', 'activityTypes.programs.projects']);
@@ -443,16 +457,24 @@ class LoggingFieldController extends Controller
             'available_in_activities' => [$loggingField->activityTypes, 'activity type', 'activity-types.index'],
         ] as $key => [$records, $label, $route]) {
             $visible = [];
+            $scopeRecords = [];
             foreach ($records->sortBy('name') as $record) {
+                $scope = [
+                    'id' => $record->id,
+                    'scope_mode' => ProjectProgramScope::normalizeMode($record->program_scope_mode, $record::class)->value,
+                    'program_ids' => ProjectProgramScope::normalizeIds($record->programs->modelKeys()),
+                ];
+                $scopeRecords[] = $scope;
                 if ($this->actor()->can('view', $record)) {
                     $visible[] = [
+                        ...$scope,
                         'name' => $record->name,
                         'required' => (bool) $record->getRelation('pivot')->getAttribute('is_required'),
                         'url' => route($route, $key === 'available_in_agreements' ? $record : ['search' => $record->name]),
                     ];
                 }
             }
-            $groups[$key] = ['label' => $label, 'count' => $records->count(), 'hidden' => $records->count() - count($visible), 'records' => $visible];
+            $groups[$key] = ['label' => $label, 'count' => $records->count(), 'hidden' => $records->count() - count($visible), 'scope_records' => $scopeRecords, 'records' => $visible];
         }
 
         return $groups;

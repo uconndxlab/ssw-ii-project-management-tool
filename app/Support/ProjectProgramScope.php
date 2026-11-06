@@ -41,6 +41,31 @@ class ProjectProgramScope
         return self::defaultModeForModel($modelClass);
     }
 
+    /** @param Model&HasPrograms $record */
+    public static function loggingFieldFitsRecord(LoggingField $field, Model $record): bool
+    {
+        $recordMode = self::normalizeMode($record->program_scope_mode, $record::class);
+        $fieldMode = self::normalizeMode($field->program_scope_mode, LoggingField::class);
+
+        if ($recordMode === ProgramScopeMode::All) {
+            return $fieldMode !== ProgramScopeMode::None;
+        }
+
+        if ($recordMode === ProgramScopeMode::None || $record->programs->isEmpty()) {
+            return false;
+        }
+
+        if ($fieldMode === ProgramScopeMode::All) {
+            return true;
+        }
+
+        if ($fieldMode === ProgramScopeMode::None || $field->programs->isEmpty()) {
+            return false;
+        }
+
+        return self::matchesSelectedPrograms($field->programs->pluck('id'), $record->programs->modelKeys(), false);
+    }
+
     /**
      * @return Collection<int, Project>
      */

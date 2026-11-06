@@ -14,7 +14,7 @@ use App\Models\UserPrivilege;
 
 test('saving unavailable fields detaches only the affected kinds and preserves answers', function (string $disabled) {
     $field = LoggingField::factory()->forAgreements()->forContactFamilies()->forActivities()->create();
-    $agreement = Agreement::factory()->create();
+    $agreement = Agreement::factory()->create(['program_scope_mode' => ProgramScopeMode::All]);
     $family = ContactFamily::factory()->create();
     $type = ActivityType::factory()->for($family)->create();
     $field->agreements()->attach($agreement);
@@ -38,6 +38,51 @@ test('saving unavailable fields detaches only the affected kinds and preserves a
     expect($field->activityTypes()->count())->toBe(in_array($disabled, ['is_active', 'available_in_activities']) ? 0 : 1);
     $this->assertDatabaseHas('activity_logging_field_answers', ['id' => $answer->id, 'value_text' => 'Virtual']);
 })->with(['available_in_agreements', 'available_in_contact_families', 'available_in_activities', 'is_active']);
+
+test('saving field scope removes only attachments the change excludes, leaves prior mismatches and keeps answers', function (string $relation, string $mode, array $kept) {
+    [$project, $program] = createProjectWithProgram();
+    [, $otherProgram] = createProjectWithProgram();
+    $field = LoggingField::factory()->forAgreements()->forContactFamilies()->forActivities()->create([
+        'program_scope_mode' => ProgramScopeMode::Specific,
+    ]);
+    $field->programs()->attach([$program->id, $otherProgram->id]);
+    $model = match ($relation) {
+        'agreements' => Agreement::class,
+        'contactFamilies' => ContactFamily::class,
+        'activityTypes' => ActivityType::class,
+    };
+    $overlapping = $model::factory()->create(['program_scope_mode' => ProgramScopeMode::Specific]);
+    $overlapping->programs()->attach([$program->id, $otherProgram->id]);
+    $disjoint = $model::factory()->create(['program_scope_mode' => ProgramScopeMode::Specific]);
+    $disjoint->programs()->attach($otherProgram);
+    $all = $model::factory()->create(['program_scope_mode' => ProgramScopeMode::All]);
+    $none = $model::factory()->create(['program_scope_mode' => ProgramScopeMode::None]);
+    $empty = $model::factory()->create(['program_scope_mode' => ProgramScopeMode::Specific]);
+    $records = [$overlapping, $disjoint, $all, $none, $empty];
+    $field->{$relation}()->attach(array_map(fn ($record) => $record->id, $records));
+    $answer = ActivityLoggingFieldAnswer::factory()->create([
+        'logging_field_id' => $field->id,
+        'context_type' => match ($relation) {
+            'agreements' => 'agreement', 'contactFamilies' => 'contact_family', 'activityTypes' => 'activity_type',
+        },
+        'context_id' => $disjoint->id, 'value_text' => 'Keep this answer',
+    ]);
+
+    $this->actingAs(createSystemAdmin())->put(route('logging-fields.update', $field), [
+        'name' => $field->name, 'field_type' => 'text', 'program_scope_mode' => $mode,
+        'project_ids' => [$project->id], 'program_ids' => [$program->id],
+        'is_active' => true, 'available_in_agreements' => true,
+        'available_in_contact_families' => true, 'available_in_activities' => true,
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    expect($field->{$relation}()->pluck($records[0]->getTable().'.id')->all())
+        ->toEqualCanonicalizing(array_map(fn ($index) => $records[$index]->id, $kept));
+    $this->assertDatabaseHas('activity_logging_field_answers', ['id' => $answer->id, 'value_text' => 'Keep this answer']);
+})->with(['agreements', 'contactFamilies', 'activityTypes'])->with([
+    'narrow to one program' => ['specific', [0, 2, 3, 4]],
+    'no programs' => ['none', [3, 4]],
+    'all programs' => ['all', [0, 1, 2, 3, 4]],
+]);
 
 test('attached records outside edit scope lock edit update and delete without leaking hidden names', function (string $kind) {
     [, $program] = createProjectWithProgram();
@@ -84,7 +129,14 @@ test('an admin who can edit every attachment can edit the field and sees warning
     $this->actingAs($admin)->get(route('logging-fields.edit', $field))->assertOk()
         ->assertSee('Used on 1 agreement')->assertSee('Will be removed from 1 agreement')
         ->assertSee('data-detach-records="available_in_agreements"', false)
-        ->assertSee('aria-live="polite"', false)->assertSee(route('agreements.show', $agreement));
+        ->assertSee('aria-live="polite"', false)->assertSee(route('agreements.show', $agreement))
+        ->assertViewHas('attachmentGroups', function (array $groups) use ($agreement, $program) {
+            $scope = ['id' => $agreement->id, 'scope_mode' => 'specific', 'program_ids' => [$program->id]];
+            expect($groups['available_in_agreements']['scope_records'])->toBe([$scope]);
+            expect($groups['available_in_agreements']['records'][0])->toMatchArray($scope);
+
+            return true;
+        });
     $this->put(route('logging-fields.update', $field), [
         'name' => 'Renamed field', 'field_type' => 'text', 'program_scope_mode' => 'specific',
         'project_ids' => [$project->id], 'program_ids' => [$program->id], 'is_active' => true, 'available_in_agreements' => true,
