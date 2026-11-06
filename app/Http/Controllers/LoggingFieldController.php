@@ -14,6 +14,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -36,6 +37,9 @@ class LoggingFieldController extends Controller
             ->visibleTo($this->actor())
             ->with([
                 'programs.projects:id,name',
+                'agreements.programs.projects',
+                'contactFamilies.programs.projects',
+                'activityTypes.programs.projects',
             ]);
 
         // Search filter
@@ -283,13 +287,9 @@ class LoggingFieldController extends Controller
     public function show(LoggingField $loggingField): View
     {
         $this->authorize('view', $loggingField);
-        $loggingField->load(['agreements' => function ($query) {
-            $query->active()->select('agreements.id', 'agreements.name', 'agreements.active')->orderBy('agreements.name');
-        }, 'contactFamilies' => function ($query) {
-            $query->select('contact_families.id', 'contact_families.name')->orderBy('contact_families.name');
-        }]);
+        $attachmentGroups = $this->attachmentGroups($loggingField);
 
-        return view('logging-fields.show', compact('loggingField'));
+        return view('logging-fields.show', compact('loggingField', 'attachmentGroups'));
     }
 
     /**
@@ -303,7 +303,9 @@ class LoggingFieldController extends Controller
         $projects = ProjectProgramScope::assignableProjectsWithProgramsFor($this->actor(), $loggingField);
         $loggingField->load(['programs.projects']);
 
-        return view('logging-fields.edit', compact('loggingField', 'fieldTypes', 'availabilityOptions', 'projects'));
+        $attachmentGroups = $this->attachmentGroups($loggingField);
+
+        return view('logging-fields.edit', compact('loggingField', 'fieldTypes', 'availabilityOptions', 'projects', 'attachmentGroups'));
     }
 
     /**
@@ -406,15 +408,54 @@ class LoggingFieldController extends Controller
         }
 
         unset($validated['program_scope_mode'], $validated['project_ids'], $validated['program_ids']);
-        $loggingField->update($validated);
-        ScopeSync::applyTo(
-            $this->actor(),
-            $loggingField,
-            ProgramScopeMode::from(ProjectProgramScope::normalizeMode($request->input('program_scope_mode'), LoggingField::class)->value),
-            $request->input('program_ids', []),
-        );
+        DB::transaction(function () use ($loggingField, $validated, $request) {
+            $loggingField->update($validated);
+            ScopeSync::applyTo(
+                $this->actor(),
+                $loggingField,
+                ProgramScopeMode::from(ProjectProgramScope::normalizeMode($request->input('program_scope_mode'), LoggingField::class)->value),
+                $request->input('program_ids', []),
+            );
+
+            if (! $loggingField->is_active || ! $loggingField->available_in_agreements) {
+                $loggingField->agreements()->detach();
+            }
+            if (! $loggingField->is_active || ! $loggingField->available_in_contact_families) {
+                $loggingField->contactFamilies()->detach();
+            }
+            if (! $loggingField->is_active || ! $loggingField->available_in_activities) {
+                $loggingField->activityTypes()->detach();
+            }
+        });
 
         return $this->redirectAfterSave($loggingField, 'Logging field updated successfully.');
+    }
+
+    /** @return array<string, array{label: string, count: int, hidden: int, records: list<array{name: string, url: string, required: bool}>}> */
+    private function attachmentGroups(LoggingField $loggingField): array
+    {
+        $loggingField->loadMissing(['agreements.programs.projects', 'contactFamilies.programs.projects', 'activityTypes.programs.projects']);
+        $groups = [];
+
+        foreach ([
+            'available_in_agreements' => [$loggingField->agreements, 'agreement', 'agreements.show'],
+            'available_in_contact_families' => [$loggingField->contactFamilies, 'activity family', 'contact-families.index'],
+            'available_in_activities' => [$loggingField->activityTypes, 'activity type', 'activity-types.index'],
+        ] as $key => [$records, $label, $route]) {
+            $visible = [];
+            foreach ($records->sortBy('name') as $record) {
+                if ($this->actor()->can('view', $record)) {
+                    $visible[] = [
+                        'name' => $record->name,
+                        'required' => (bool) $record->getRelation('pivot')->getAttribute('is_required'),
+                        'url' => route($route, $key === 'available_in_agreements' ? $record : ['search' => $record->name]),
+                    ];
+                }
+            }
+            $groups[$key] = ['label' => $label, 'count' => $records->count(), 'hidden' => $records->count() - count($visible), 'records' => $visible];
+        }
+
+        return $groups;
     }
 
     /**

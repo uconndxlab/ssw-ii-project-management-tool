@@ -26,6 +26,7 @@ use App\Support\ProjectProgramScope;
 use App\Support\TablePagination;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -471,6 +472,7 @@ class ActivityController extends Controller
             $scopedLoggingFields = [];
         } else {
             $contactFamily = $activityType->contactFamily;
+            $this->includeLegacyLoggingFields($activity, $activity->agreements, $contactFamily, $activityType);
             $scopedLoggingFields = $contactFamily instanceof ContactFamily
                 ? $this->scopedLoggingFields(
                     $activity->agreements,
@@ -528,7 +530,15 @@ class ActivityController extends Controller
             'teams.users',
             'programs.projects',
             'programs.users:id,name,email,access_profile,active',
+            'agreementLoggingFields.programs:id',
         ]);
+        $formContactFamily = $contactFamilies->firstWhere('id', $activity->activityType?->contact_family_id);
+        $this->includeLegacyLoggingFields(
+            $activity,
+            $agreements,
+            $formContactFamily,
+            $formContactFamily?->activityTypes->firstWhere('id', $activity->activity_type_id),
+        );
         $contactFamilyId = $activity->activityType?->contactFamily?->id;
         $currentContactFamilyId = old('contact_family_id', $contactFamilyId !== null ? (string) $contactFamilyId : '');
 
@@ -622,6 +632,7 @@ class ActivityController extends Controller
         $activityType = ActivityType::with('activityTypeLoggingFields.programs:id')->findOrFail($activityTypeId);
         assert($contactFamily instanceof ContactFamily);
         assert($activityType instanceof ActivityType);
+        $this->includeLegacyLoggingFields($activity, $agreements, $contactFamily, $activityType);
 
         $this->validateAgreementCoverageSelections($baseValidated, $agreements, $activity);
         $this->validateAgreementClassificationSelections($baseValidated, $agreements);
@@ -860,6 +871,31 @@ class ActivityController extends Controller
         }
 
         return $agreements;
+    }
+
+    /**
+     * Add fields this activity has answers for that are no longer attached to its agreement, family or type,
+     * so those answers stay visible and editable as optional "legacy" fields.
+     *
+     * @param  Collection<int, Agreement>  $agreements
+     */
+    private function includeLegacyLoggingFields(Activity $activity, Collection $agreements, ?ContactFamily $contactFamily, ?ActivityType $activityType): void
+    {
+        $activity->loadMissing('loggingFieldAnswers.loggingField.programs:id');
+
+        foreach ($activity->loggingFieldAnswers as $answer) {
+            $fields = match ($answer->context_type) {
+                'agreement' => $agreements->firstWhere('id', $answer->context_id)?->agreementLoggingFields,
+                'contact_family' => $contactFamily !== null && $answer->context_id === (int) $contactFamily->id ? $contactFamily->contactFamilyLoggingFields : null,
+                'activity_type' => $activityType !== null && $answer->context_id === (int) $activityType->id ? $activityType->activityTypeLoggingFields : null,
+                default => null,
+            };
+
+            if ($fields !== null && $answer->loggingField !== null && ! $fields->contains('id', $answer->logging_field_id)) {
+                // Clone: eager loading shares one field instance across answers, and each copy needs its own pivot.
+                $fields->push((clone $answer->loggingField)->setRelation('pivot', new Pivot(['is_required' => false, 'is_legacy' => true])));
+            }
+        }
     }
 
     /**

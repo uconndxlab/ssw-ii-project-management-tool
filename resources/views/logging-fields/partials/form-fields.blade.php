@@ -86,6 +86,7 @@
             name="is_active"
             id="is_active"
             label="Active"
+            :help="collect($attachmentGroups ?? [])->sum('count') > 0 ? 'Turning this off removes the field from every agreement, activity family and activity type it is on. Answers already logged are kept.' : null"
             :checked="old('is_active', $field?->is_active ?? true)"
             class="mb-0"
         />
@@ -116,10 +117,35 @@
                            value="1"
                            {{ old($key, $field?->{$key} ?? false) ? 'checked' : '' }}>
                     <label class="form-check-label" for="{{ $key }}">{{ $label }}</label>
+                    @if(($attachmentGroups[$key]['count'] ?? 0) > 0)
+                        @php($usage = $attachmentGroups[$key]['count'].' '.Str::plural($attachmentGroups[$key]['label'], $attachmentGroups[$key]['count']))
+                        <div class="small text-muted" data-attachment-used="{{ $key }}">Used on {{ $usage }}</div>
+                        <div class="small text-warning-emphasis" data-attachment-removing="{{ $key }}" data-usage="{{ $usage }}" hidden>
+                            <i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Will be removed from {{ $usage }}
+                        </div>
+                    @endif
                 </div>
             @endforeach
         </div>
     </x-form-field>
+
+    <div aria-live="polite">
+        <div class="alert alert-warning small mt-3 mb-0" id="logging-field-detach-warning" hidden>
+            <p class="mb-0"><span data-detach-summary></span> Answers already logged on activities are kept and stay editable.</p>
+            <details class="app-details mt-2">
+                <summary>Show affected records</summary>
+                <div class="mt-2">
+                    @foreach($attachmentGroups ?? [] as $key => $group)
+                        @if($group['count'])
+                            <div data-detach-records="{{ $key }}" hidden>
+                                @include('logging-fields.partials.attachment-records')
+                            </div>
+                        @endif
+                    @endforeach
+                </div>
+            </details>
+        </div>
+    </div>
 
     <x-form-options class="mt-4">
         <x-form-switch
@@ -144,6 +170,50 @@
         const usesOptions = type === 'select' || type === 'multiselect';
         wrapper.classList.toggle('d-none', !usesOptions);
     }
+
+    const active = document.getElementById('is_active');
+    const warning = document.getElementById('logging-field-detach-warning');
+    function syncAttachments() {
+        const removing = [];
+        document.querySelectorAll('[data-attachment-removing]').forEach(line => {
+            const key = line.dataset.attachmentRemoving;
+            const isRemoving = !(active.checked && document.getElementById(key).checked);
+            line.hidden = !isRemoving;
+            document.querySelector(`[data-attachment-used="${key}"]`).hidden = isRemoving;
+            document.querySelector(`[data-detach-records="${key}"]`).hidden = !isRemoving;
+            if (isRemoving) removing.push(line.dataset.usage);
+        });
+        warning.hidden = removing.length === 0;
+        const list = removing.length > 1 ? `${removing.slice(0, -1).join(', ')} and ${removing.at(-1)}` : (removing[0] ?? '');
+        warning.querySelector('[data-detach-summary]').textContent = `Saving removes this field from ${list}.`;
+    }
+    document.querySelectorAll('#is_active, [name^="available_in_"]').forEach(input => {
+        input.addEventListener('change', syncAttachments);
+    });
+    syncAttachments();
+
+    // The warning can sit off screen from the control that caused it, so confirm before a save that detaches.
+    const form = warning.closest('form');
+    let removalConfirmed = false;
+    document.addEventListener('submit', async (event) => {
+        if (event.target !== form || warning.hidden || removalConfirmed) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        removalConfirmed = await window.appConfirm({
+            title: 'Remove this field from records?',
+            record: @json($field?->name ?? ''),
+            message: `${warning.querySelector('[data-detach-summary]').textContent} Answers already logged on activities are kept and stay editable.`,
+            action: 'Save and remove',
+            icon: 'bi-exclamation-triangle',
+        });
+
+        if (removalConfirmed) {
+            form.requestSubmit();
+        }
+    }, true);
 
     fieldType.addEventListener('change', sync);
     sync();
