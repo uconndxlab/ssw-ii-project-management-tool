@@ -18,14 +18,18 @@
     </x-slot:badges>
 </x-page-header>
 
-@cannot('updateAttachments', $loggingField)
+@cannot('update', $loggingField)
     <div class="alert alert-warning">
-        <p class="mb-2">You can't edit this field because it is used on records you can't edit.</p>
-        @foreach($attachmentGroups as $group)
-            @if($group['count'])
-                @include('logging-fields.partials.attachment-records')
-            @endif
-        @endforeach
+        @cannot('updateAttachments', $loggingField)
+            <p class="mb-2">You can't edit this field because it is used on records you can't edit.</p>
+            @foreach($attachmentGroups as $group)
+                @if($group['count'])
+                    @include('logging-fields.partials.attachment-records')
+                @endif
+            @endforeach
+        @else
+            <p class="mb-0">You can't edit this field because it is also used by programs you don't manage.</p>
+        @endcannot
     </div>
 @endcannot
 

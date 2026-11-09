@@ -11,6 +11,7 @@ use App\Models\LoggingField;
 use App\Models\Program;
 use App\Models\Project;
 use App\Models\User;
+use App\Support\Authorization\ScopeSync;
 use App\Support\Authorization\UserAccess;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
@@ -377,45 +378,6 @@ class ProjectProgramScope
     }
 
     /**
-     * @param  array<int, int>  $selectedProgramIds
-     * @param  array<int, int>  $selectedEntityIds
-     */
-    public static function validateScopedAssignments(
-        Validator $validator,
-        array $selectedProgramIds,
-        array $selectedEntityIds,
-        string $modelClass,
-        string $errorKey,
-        string $message,
-        bool $allowGlobal = true
-    ): void {
-        if (empty($selectedEntityIds)) {
-            return;
-        }
-
-        /** @var Collection<int, Model> $entities */
-        $entities = $modelClass::query()
-            ->whereKey($selectedEntityIds)
-            ->with('programs:id')
-            ->get();
-
-        $invalidEntityIds = $entities
-            ->filter(function (Model $entity) use ($selectedProgramIds, $allowGlobal) {
-                /** @var HasPrograms&Model $entity */
-                return ! self::matchesSelectedPrograms(
-                    $entity->programs->pluck('id'),
-                    $selectedProgramIds,
-                    $allowGlobal
-                );
-            })
-            ->pluck('id');
-
-        if ($invalidEntityIds->isNotEmpty()) {
-            $validator->errors()->add($errorKey, $message);
-        }
-    }
-
-    /**
      * Programs that would have no projects if the given project were deleted.
      *
      * @return Collection<int, Program>
@@ -427,6 +389,81 @@ class ProjectProgramScope
             ->whereDoesntHave('projects', fn ($query) => $query->where('projects.id', '!=', $project->id))
             ->orderBy('name')
             ->get();
+    }
+
+    /**
+     * Every selected logging field must fit the scope the save will store, using the picker's rule.
+     * This blocks adding a field that doesn't match, and changing a record's programs out from under one.
+     *
+     * @param  Model&HasPrograms  $record  the saved record, or a new instance on create
+     * @param  list<int>  $submittedProgramIds
+     * @param  array<int, int>  $submittedFieldIds
+     */
+    public static function validateLoggingFieldsFitScope(
+        Validator $validator,
+        User $actor,
+        Model $record,
+        ProgramScopeMode|string $submittedMode,
+        array $submittedProgramIds,
+        array $submittedFieldIds,
+        string $errorKey,
+    ): void {
+        if ($submittedFieldIds === []) {
+            return;
+        }
+
+        // Same merge the save runs, so programs the actor can't manage are kept here too.
+        $merged = ScopeSync::mergePrograms(
+            $actor,
+            $record->exists ? self::normalizeMode($record->program_scope_mode, $record::class) : ProgramScopeMode::None,
+            $record->exists ? array_values($record->programs()->pluck('programs.id')->all()) : [],
+            self::normalizeMode($submittedMode, $record::class),
+            $submittedProgramIds,
+        );
+        $after = $record->newInstance(['program_scope_mode' => $merged['mode']])
+            ->setRelation('programs', Program::query()->findMany($merged['programIds']));
+
+        $misfits = LoggingField::query()->whereKey($submittedFieldIds)->with('programs')->get()
+            ->reject(fn (LoggingField $field) => self::loggingFieldFitsRecord($field, $after));
+
+        if ($misfits->isNotEmpty()) {
+            $validator->errors()->add($errorKey, "These logging fields don't match the selected programs: ".$misfits->pluck('name')->join(', ').'. Remove them or change the programs.');
+        }
+    }
+
+    /**
+     * Logging field attachments that would stop fitting if the program were deleted, as "Field on Record" labels.
+     *
+     * @return Collection<int, string>
+     */
+    public static function loggingFieldAttachmentsBrokenByDeletingProgram(Program $program): Collection
+    {
+        $withProgram = fn ($query) => $query->whereKey($program->id);
+        $broken = collect();
+
+        $fields = LoggingField::query()
+            ->where(fn ($query) => $query->whereHas('programs', $withProgram)
+                ->orWhereHas('agreements.programs', $withProgram)
+                ->orWhereHas('contactFamilies.programs', $withProgram)
+                ->orWhereHas('activityTypes.programs', $withProgram))
+            ->with(['programs', 'agreements.programs', 'contactFamilies.programs', 'activityTypes.programs'])
+            ->get();
+
+        foreach ($fields as $field) {
+            $fieldAfter = (clone $field)->setRelation('programs', $field->programs->except([$program->id]));
+
+            foreach ([$field->agreements, $field->contactFamilies, $field->activityTypes] as $records) {
+                foreach ($records as $record) {
+                    $recordAfter = (clone $record)->setRelation('programs', $record->programs->except([$program->id]));
+
+                    if (self::loggingFieldFitsRecord($field, $record) && ! self::loggingFieldFitsRecord($fieldAfter, $recordAfter)) {
+                        $broken->push($field->name.' on '.$record->name);
+                    }
+                }
+            }
+        }
+
+        return $broken->unique()->values();
     }
 
     /**

@@ -220,3 +220,66 @@ test('answers to a field removed from its agreement stay visible and editable as
     expect($legacyValue())->toBeNull();
     $this->get(route('activities.edit', $activity))->assertOk()->assertDontSee('Session Format');
 });
+
+test('a program admin who overlaps a field can view it but needs every program to edit it', function () {
+    [, $program] = createProjectWithProgram();
+    [, $otherProgram] = createProjectWithProgram();
+    $field = LoggingField::factory()->create(['program_scope_mode' => ProgramScopeMode::Specific]);
+    $field->programs()->attach([$program->id, $otherProgram->id]);
+
+    $this->actingAs(createProgramAdmin($program))->get(route('logging-fields.show', $field))->assertOk()
+        ->assertSeeText("You can't edit this field because it is also used by programs you don't manage.", false);
+    $this->get(route('logging-fields.edit', $field))->assertForbidden();
+});
+
+test('changing a record scope out from under an attached field is blocked with one named error', function (string $kind) {
+    [$project, $program] = createProjectWithProgram();
+    [$otherProject, $otherProgram] = createProjectWithProgram();
+    $field = LoggingField::factory()->forAgreements()->forContactFamilies()->forActivities()
+        ->create(['name' => 'Delivery mode', 'program_scope_mode' => ProgramScopeMode::Specific]);
+    $field->programs()->attach($program);
+    $family = ContactFamily::factory()->create(['program_scope_mode' => ProgramScopeMode::Specific]);
+    $record = match ($kind) {
+        'agreements' => Agreement::factory()->create(['program_scope_mode' => ProgramScopeMode::Specific]),
+        'contactFamilies' => $family,
+        'activityTypes' => ActivityType::factory()->for($family)->create(['program_scope_mode' => ProgramScopeMode::Specific]),
+    };
+    $record->programs()->attach($program);
+    $field->{$kind}()->attach($record);
+    [$route, $fieldKey, $payload] = match ($kind) {
+        'agreements' => ['agreements.update', 'agreement_logging_field_ids', agreementStorePayload($otherProject, $otherProgram)],
+        'contactFamilies' => ['contact-families.update', 'contact_family_logging_field_ids', [
+            'name' => $record->name, 'program_scope_mode' => 'specific', 'project_ids' => [$otherProject->id], 'program_ids' => [$otherProgram->id],
+        ]],
+        'activityTypes' => ['activity-types.update', 'activity_type_logging_field_ids', [
+            'name' => $record->name, 'program_scope_mode' => 'specific', 'project_ids' => [$otherProject->id], 'program_ids' => [$otherProgram->id],
+            'contact_family_id' => $family->id, 'duration_unit' => 'none',
+        ]],
+    };
+
+    $this->actingAs(createSystemAdmin())->put(route($route, $record), $payload + [$fieldKey => [$field->id]])
+        ->assertSessionHasErrors([$fieldKey => "These logging fields don't match the selected programs: Delivery mode. Remove them or change the programs."]);
+    expect(session('errors')->get($fieldKey))->toHaveCount(1);
+    expect($record->programs()->pluck('programs.id')->all())->toBe([$program->id]);
+
+    $this->put(route($route, $record), $payload + [$fieldKey => []])->assertSessionHasNoErrors();
+    expect($record->programs()->pluck('programs.id')->all())->toBe([$otherProgram->id]);
+    expect($field->{$kind}()->count())->toBe(0);
+})->with(['agreements', 'contactFamilies', 'activityTypes']);
+
+test('deleting a program is blocked when a logging field would stop matching where it is used', function () {
+    [, $program] = createProjectWithProgram();
+    [, $sharedProgram] = createProjectWithProgram();
+    $field = LoggingField::factory()->create(['name' => 'Delivery mode', 'program_scope_mode' => ProgramScopeMode::Specific]);
+    $field->programs()->attach([$program->id, $sharedProgram->id]);
+    $family = ContactFamily::factory()->create(['name' => 'Coaching', 'program_scope_mode' => ProgramScopeMode::Specific]);
+    $family->programs()->attach($program);
+    $field->contactFamilies()->attach($family);
+
+    $this->actingAs(createSystemAdmin())->delete(route('programs.destroy', $program))
+        ->assertSessionHas('error', fn (string $error) => str_contains($error, 'Delivery mode on Coaching'));
+    $this->assertModelExists($program);
+
+    $this->delete(route('programs.destroy', $sharedProgram))->assertSessionHas('success');
+    $this->assertModelMissing($sharedProgram);
+});

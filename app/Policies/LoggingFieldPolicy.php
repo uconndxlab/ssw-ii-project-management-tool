@@ -9,18 +9,15 @@ use App\Policies\Concerns\AuthorizesScopedEntity;
 class LoggingFieldPolicy
 {
     use AuthorizesScopedEntity {
-        update as private updateScope;
         delete as private deleteScope;
     }
 
     // Create: any admin.
-    // Edit: you admin a program assigned on it.
-    // Delete: every assigned program is in your admin scope. No programs: system admin only.
-
-    // Edit/delete: also require edit access to every attached record.
+    // View: overlap is enough. Edit/delete: every assigned program is in your admin scope
+    // (No programs or All: system admin only), plus edit access to every attached record.
     public function update(User $user, LoggingField $loggingField): bool
     {
-        return $this->updateScope($user, $loggingField) && $this->updateAttachments($user, $loggingField);
+        return $this->delete($user, $loggingField);
     }
 
     public function delete(User $user, LoggingField $loggingField): bool

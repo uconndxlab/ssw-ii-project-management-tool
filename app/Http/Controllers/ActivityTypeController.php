@@ -437,17 +437,14 @@ class ActivityTypeController extends Controller
                 $existing instanceof ActivityType ? $existing->programs()->pluck('programs.id')->all() : [],
             );
 
-            if (ProjectProgramScope::normalizeMode($mode, ActivityType::class) !== ProgramScopeMode::Specific) {
-                return;
-            }
-
-            ProjectProgramScope::validateScopedAssignments(
+            ProjectProgramScope::validateLoggingFieldsFitScope(
                 $validator,
+                $this->actor(),
+                $existing instanceof ActivityType ? $existing : new ActivityType,
+                $mode,
                 $programIds,
                 ProjectProgramScope::normalizeIds($request->input('activity_type_logging_field_ids', [])),
-                LoggingField::class,
                 'activity_type_logging_field_ids',
-                'Selected logging fields must be global or match one of the selected programs.'
             );
 
             if ($request->input('duration_unit') === 'none' && (float) $request->input('duration_value', 0) > 0) {
