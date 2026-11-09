@@ -211,7 +211,8 @@
             + '</div>';
     }
 
-    function selectedItemMarkup(field, required) {
+    // Mismatched fields stay listed (and submitted) so the user can see them and remove them; the server blocks the save.
+    function selectedItemMarkup(field, required, mismatched) {
         return ''
             + '<div class="list-group-item" data-selected-item data-field-id="' + escapeHtml(field.id) + '">'
             + '  <div class="d-flex justify-content-between align-items-start gap-3">'
@@ -225,6 +226,9 @@
             + fieldBadges(field)
             + '        </div>'
             + '        <div class="small text-muted">' + escapeHtml(field.description || 'No description provided.') + '</div>'
+            + (mismatched
+                ? '        <div class="small text-warning-emphasis mt-1"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Doesn\'t match the selected programs. Remove it to save.</div>'
+                : '')
             + '      </div>'
             + '    </div>'
             + '    <div class="d-flex align-items-center gap-3">'
@@ -246,23 +250,7 @@
         });
     }
 
-    function pruneHiddenSelections(root) {
-        const visibleIds = new Set(visibleFields(root).map(function (field) {
-            return String(field.id);
-        }));
-
-        root._pickerState.selectedIds = root._pickerState.selectedIds.filter(function (fieldId) {
-            return visibleIds.has(String(fieldId));
-        });
-
-        root._pickerState.requiredIds = new Set(Array.from(root._pickerState.requiredIds).filter(function (fieldId) {
-            return visibleIds.has(String(fieldId)) && root._pickerState.selectedIds.includes(String(fieldId));
-        }));
-    }
-
     function render(root) {
-        pruneHiddenSelections(root);
-
         const availableList = root.querySelector('[data-available-list]');
         const selectedList = root.querySelector('[data-selected-list]');
         const availableEmptyState = root.querySelector('[data-available-empty-state]');
@@ -277,13 +265,15 @@
         });
         const selected = root._pickerState.selectedIds.map(function (fieldId) {
             return fieldsById.get(String(fieldId)) || null;
-        }).filter(function (field) {
-            return !!field && fieldIsVisible(field, root._pickerState.effectiveProgramIds, root._pickerState.scopeMode);
-        });
+        }).filter(Boolean);
 
         availableList.innerHTML = available.map(availableItemMarkup).join('');
         selectedList.innerHTML = selected.map(function (field) {
-            return selectedItemMarkup(field, root._pickerState.requiredIds.has(String(field.id)));
+            return selectedItemMarkup(
+                field,
+                root._pickerState.requiredIds.has(String(field.id)),
+                !fieldIsVisible(field, root._pickerState.effectiveProgramIds, root._pickerState.scopeMode)
+            );
         }).join('');
 
         availableEmptyState.classList.toggle('d-none', available.length !== 0);

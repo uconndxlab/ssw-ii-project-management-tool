@@ -2,6 +2,7 @@
     $fieldId = $field->id;
     $inputId = $inputId ?? str_replace(['[', ']'], ['_', ''], $inputName) . '_' . $fieldId;
     $isRequired = $isRequired ?? false;
+    $isLegacy = (bool) ($field->pivot?->is_legacy ?? false);
     $value = $value ?? null;
     $options = $field->normalizedOptions();
     $downloadContext = $downloadContext ?? (str_starts_with($inputName, 'contact_family') ? 'contact_family' : 'agreement');
@@ -22,11 +23,11 @@
                    name="{{ $inputName }}"
                    value="1"
                    {{ $resolvedValue ? 'checked' : '' }}>
-            <label class="form-check-label{{ $isRequired ? ' required-label' : '' }}" for="{{ $inputId }}">{{ $field->name }}</label>
+            <label class="form-check-label{{ $isRequired ? ' required-label' : '' }}" for="{{ $inputId }}">{{ $field->name }}@if($isLegacy) <x-status-badge :active="false" inactive-label="Legacy" tone="neutral" />@endif</label>
         </div>
     @else
         <label for="{{ $inputId }}" class="form-label{{ $isRequired ? ' required-label' : '' }}">
-            {{ $field->name }}
+            {{ $field->name }}@if($isLegacy) <x-status-badge :active="false" inactive-label="Legacy" tone="neutral" />@endif
         </label>
 
         @if($field->field_type === 'textarea')
@@ -90,6 +91,9 @@
         <div class="text-danger small mt-1">{{ $message }}</div>
     @enderror
 
+    @if($isLegacy)
+        <div class="form-text"><i class="bi bi-clock-history" aria-hidden="true"></i> Removed from this record. Shown because this activity already has an answer. Clear it to remove it.</div>
+    @endif
     @if($field->help_text)
         <div class="form-text">{{ $field->help_text }}</div>
     @endif

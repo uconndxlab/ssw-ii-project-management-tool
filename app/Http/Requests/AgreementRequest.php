@@ -9,7 +9,6 @@ use App\Models\Agreement;
 use App\Models\AgreementActivityHistory;
 use App\Models\AgreementDeliverable;
 use App\Models\ContactFamily;
-use App\Models\LoggingField;
 use App\Models\Organization;
 use App\Models\Program;
 use App\Models\Team;
@@ -491,28 +490,15 @@ class AgreementRequest extends FormRequest
 
             /** @var list<mixed> $agreementLoggingFieldIdsInput */
             $agreementLoggingFieldIdsInput = $this->input('agreement_logging_field_ids', []);
-            $agreementLoggingFieldIds = collect($agreementLoggingFieldIdsInput)
-                ->filter(fn ($id) => $id !== null && $id !== '')
-                ->map(fn ($id) => (int) $id)
-                ->unique()
-                ->values();
-
-            if ($agreementLoggingFieldIds->isNotEmpty()) {
-                $invalidLoggingFieldIds = LoggingField::query()
-                    ->whereKey($agreementLoggingFieldIds)
-                    ->with('programs:id')
-                    ->get()
-                    ->filter(fn (LoggingField $field) => ! $matchesSelectedPrograms(
-                        $field->programs->pluck('id')->map(fn ($id) => (int) $id)->values(),
-                        $field->program_scope_mode,
-                        LoggingField::class
-                    ))
-                    ->pluck('id');
-
-                if ($invalidLoggingFieldIds->isNotEmpty()) {
-                    $validator->errors()->add('agreement_logging_field_ids', 'Selected logging fields must be global or match one of the selected programs.');
-                }
-            }
+            ProjectProgramScope::validateLoggingFieldsFitScope(
+                $validator,
+                $actor,
+                $agreement instanceof Agreement ? $agreement : new Agreement,
+                $programScopeMode,
+                array_values($programIds->all()),
+                ProjectProgramScope::normalizeIds($agreementLoggingFieldIdsInput),
+                'agreement_logging_field_ids',
+            );
 
             /** @var list<mixed> $deliverablesInput */
             $deliverablesInput = $this->input('deliverables', []);

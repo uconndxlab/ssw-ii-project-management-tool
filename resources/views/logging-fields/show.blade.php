@@ -18,6 +18,21 @@
     </x-slot:badges>
 </x-page-header>
 
+@cannot('update', $loggingField)
+    <div class="alert alert-warning">
+        @cannot('updateAttachments', $loggingField)
+            <p class="mb-2">You can't edit this field because it is used on records you can't edit.</p>
+            @foreach($attachmentGroups as $group)
+                @if($group['count'])
+                    @include('logging-fields.partials.attachment-records')
+                @endif
+            @endforeach
+        @else
+            <p class="mb-0">You can't edit this field because it is also used by programs you don't manage.</p>
+        @endcannot
+    </div>
+@endcannot
+
 <x-entity-show>
     <x-slot:summary>
         <dl class="app-record-metrics">
@@ -53,28 +68,18 @@
     </x-slot:summary>
 
     <x-slot:relationships>
-        <div class="row g-4">
-            <div class="col-md-6">
-                <x-relationship-scroll-panel title="Agreements" kind="agreement" :count="$loggingField->agreements->count()" collapsible>
-                    @foreach($loggingField->agreements as $agreement)
-                        <x-relationship-ledger-row
-                            :title="$agreement->name"
-                            :href="$agreement->isLinkable() ? route('agreements.show', $agreement) : null"
-                            :context-badges="$agreement->pivot->is_required ? ['Required'] : []"
-                        />
-                    @endforeach
-                </x-relationship-scroll-panel>
-            </div>
-            <div class="col-md-6">
-                <x-relationship-scroll-panel title="Activity Families" :count="$loggingField->contactFamilies->count()" collapsible>
-                    @foreach($loggingField->contactFamilies as $family)
-                        <x-relationship-ledger-row :title="$family->name" :context-badges="$family->pivot->is_required ? ['Required'] : []" />
-                    @endforeach
-                </x-relationship-scroll-panel>
-            </div>
-        </div>
+        @foreach($attachmentGroups as $group)
+            <x-relationship-scroll-panel :title="ucwords(Str::plural($group['label']))" :count="$group['count']" collapsible class="mb-3">
+                @foreach($group['records'] as $record)
+                    <x-relationship-ledger-row :title="$record['name']" :href="$record['url']" :context-badges="$record['required'] ? ['Required'] : []" />
+                @endforeach
+                @if($group['hidden'])
+                    <p class="small text-muted">+{{ $group['hidden'] }} {{ Str::plural($group['label'], $group['hidden']) }} you don't have access to</p>
+                @endif
+            </x-relationship-scroll-panel>
+        @endforeach
         @can('delete', $loggingField)
-            @if($loggingField->agreements->isEmpty() && $loggingField->contactFamilies->isEmpty())
+            @if($loggingField->agreements->isEmpty() && $loggingField->contactFamilies->isEmpty() && $loggingField->activityTypes->isEmpty())
                 <hr>
                 <h3 class="h6 text-danger mb-2">Delete This Field?</h3>
                 <p class="small text-muted mb-3">This field is not currently in use and can be safely deleted.</p>

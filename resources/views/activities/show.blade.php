@@ -309,7 +309,7 @@
                                                     $optionLabelMap = $field->optionLabelMap();
                                                 @endphp
                                                 <div class="col-md-6">
-                                                    <div class="small text-muted">{{ $field->name }}</div>
+                                                    <div class="small text-muted">{{ $field->name }}@if($field->pivot?->is_legacy) <x-status-badge :active="false" inactive-label="Legacy" tone="neutral" />@endif</div>
                                                     <div>
                                                         @if($field->field_type === 'document' && $hasRenderableValue($value))
                                                                 <a href="{{ route('activities.logging-field-document.download', ['activity' => $activity, 'context' => 'agreement', 'fieldId' => $field->id, 'agreementId' => $agreement->id]) }}" class="text-decoration-none" target="_blank">
@@ -354,7 +354,7 @@
                                     $optionLabelMap = $field->optionLabelMap();
                                 @endphp
                                 <div class="col-md-6">
-                                    <div class="small text-muted">{{ $field->name }}</div>
+                                    <div class="small text-muted">{{ $field->name }}@if($field->pivot?->is_legacy) <x-status-badge :active="false" inactive-label="Legacy" tone="neutral" />@endif</div>
                                     <div>
                                         @if($field->field_type === 'document' && $hasRenderableValue($value))
                                                 <a href="{{ route('activities.logging-field-document.download', ['activity' => $activity, 'context' => 'contact_family', 'fieldId' => $field->id]) }}" class="text-decoration-none" target="_blank">
@@ -391,7 +391,7 @@
                                 @endphp
                                 @if($field)
                                     <div class="col-md-6">
-                                        <div class="small text-muted">{{ $field->name }}</div>
+                                        <div class="small text-muted">{{ $field->name }}@if($field->pivot?->is_legacy) <x-status-badge :active="false" inactive-label="Legacy" tone="neutral" />@endif</div>
                                         <div>
                                             @if($field->field_type === 'document' && $hasRenderableValue($value))
                                                 <a href="{{ route('activities.logging-field-document.download', ['activity' => $activity, 'context' => 'activity_type', 'fieldId' => $field->id]) }}" class="text-decoration-none" target="_blank">

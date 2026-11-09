@@ -192,6 +192,15 @@ class ProgramController extends Controller
     public function destroy(Program $program): RedirectResponse
     {
         $this->authorize('delete', $program);
+
+        $brokenAttachments = ProjectProgramScope::loggingFieldAttachmentsBrokenByDeletingProgram($program);
+
+        if ($brokenAttachments->isNotEmpty()) {
+            return redirect()
+                ->route('programs.index')
+                ->with('error', 'Cannot delete this program because these logging fields would no longer match where they are used: '.$brokenAttachments->join(', ').'. Remove those fields or change their programs first.');
+        }
+
         $program->delete();
 
         return redirect()

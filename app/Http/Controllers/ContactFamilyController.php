@@ -151,17 +151,14 @@ class ContactFamilyController extends Controller
 
             ProjectProgramScope::validateModeSelection($validator, $mode, ContactFamily::class, $projectIds, $programIds);
 
-            if (ProjectProgramScope::normalizeMode($mode, ContactFamily::class) !== ProgramScopeMode::Specific) {
-                return;
-            }
-
-            ProjectProgramScope::validateScopedAssignments(
+            ProjectProgramScope::validateLoggingFieldsFitScope(
                 $validator,
+                $this->actor(),
+                new ContactFamily,
+                $mode,
                 $programIds,
                 ProjectProgramScope::normalizeIds($request->input('contact_family_logging_field_ids', [])),
-                LoggingField::class,
                 'contact_family_logging_field_ids',
-                'Selected logging fields must be global or match one of the selected programs.'
             );
         });
 
@@ -236,24 +233,21 @@ class ContactFamilyController extends Controller
             'program_ids.*' => ['distinct', 'exists:programs,id'],
         ]);
 
-        $validator->after(function ($validator) use ($request) {
+        $validator->after(function ($validator) use ($request, $contactFamily) {
             $mode = $request->input('program_scope_mode', ProgramScopeMode::All->value);
             $projectIds = ProjectProgramScope::normalizeIds($request->input('project_ids', []));
             $programIds = ProjectProgramScope::normalizeIds($request->input('program_ids', []));
 
             ProjectProgramScope::validateModeSelection($validator, $mode, ContactFamily::class, $projectIds, $programIds);
 
-            if (ProjectProgramScope::normalizeMode($mode, ContactFamily::class) !== ProgramScopeMode::Specific) {
-                return;
-            }
-
-            ProjectProgramScope::validateScopedAssignments(
+            ProjectProgramScope::validateLoggingFieldsFitScope(
                 $validator,
+                $this->actor(),
+                $contactFamily,
+                $mode,
                 $programIds,
                 ProjectProgramScope::normalizeIds($request->input('contact_family_logging_field_ids', [])),
-                LoggingField::class,
                 'contact_family_logging_field_ids',
-                'Selected logging fields must be global or match one of the selected programs.'
             );
         });
 

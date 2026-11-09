@@ -124,6 +124,14 @@ class LoggingField extends Model implements HasPrograms
             ->withTimestamps();
     }
 
+    /** @return BelongsToMany<ActivityType, $this> */
+    public function activityTypes(): BelongsToMany
+    {
+        return $this->belongsToMany(ActivityType::class, 'activity_type_logging_field_assignments', 'logging_field_id', 'activity_type_id')
+            ->withPivot('is_required')
+            ->withTimestamps();
+    }
+
     /** @return BelongsToMany<Program, $this> */
     public function programs(): BelongsToMany
     {
