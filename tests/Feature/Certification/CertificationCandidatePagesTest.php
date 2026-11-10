@@ -152,7 +152,9 @@ test('candidate activity list includes only visible tagged activities', function
         ActivityCertificationCandidate::factory()->create(['activity_id' => $activity->id, 'certification_candidate_id' => $f['candidate']->id]);
     }
     $this->actingAs($actor)->get(route('certification-candidates.show', $f['candidate']))->assertOk()
-        ->assertViewHas('recentActivities', fn ($activities) => $activities->modelKeys() === [$visible->id]);
+        ->assertViewHas('recentActivities', fn ($activities) => $activities->modelKeys() === [$visible->id])
+        ->assertViewHas('hiddenActivityCount', 1)
+        ->assertSee('1 other activities you can', false);
 });
 
 test('candidate award history shows the revoked date but not the private reason', function () {

@@ -79,11 +79,12 @@ class CertificationCandidateController extends Controller
         $this->authorize('view', $certificationCandidate);
         $candidate = $certificationCandidate->load($this->relationships());
         $row = $this->rowData(collect([$candidate]), $this->actor())[$candidate->id];
-        $recentActivities = Activity::query()->visibleTo($this->actor())
-            ->whereHas('certificationCandidates', fn (Builder $tags) => $tags->where('certification_candidate_id', $candidate->id))
+        $tagged = fn () => Activity::query()->whereHas('certificationCandidates', fn (Builder $tags) => $tags->where('certification_candidate_id', $candidate->id));
+        $recentActivities = $tagged()->visibleTo($this->actor())
             ->with(['activityType.contactFamily', 'user', 'agreements'])->orderByRecentDisplay()->limit(10)->get();
+        $hiddenActivityCount = $tagged()->count() - $tagged()->visibleTo($this->actor())->count();
 
-        return view('certification-candidates.show', compact('candidate', 'row', 'recentActivities'));
+        return view('certification-candidates.show', compact('candidate', 'row', 'recentActivities', 'hiddenActivityCount'));
     }
 
     public function edit(CertificationCandidate $certificationCandidate): View

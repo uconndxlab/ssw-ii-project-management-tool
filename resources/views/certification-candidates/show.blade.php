@@ -38,6 +38,9 @@
             </tbody></table>
         </div>
     </x-slot:relationships>
-    <x-slot:activity><x-recent-activity-table :activities="$recentActivities" hide-agreements /></x-slot:activity>
+    <x-slot:activity>
+        <x-recent-activity-table :activities="$recentActivities" hide-agreements :empty-message="$hiddenActivityCount > 0 ? 'No activities you can see.' : null" />
+        @include('certification-candidates.partials.hidden-count', ['count' => $hiddenActivityCount, 'kind' => 'activities'])
+    </x-slot:activity>
 </x-entity-show>
 @endsection
