@@ -23,8 +23,8 @@
             <tbody>
                 @forelse($certificates as $certificate)
                 <tr>
-                    <td class="app-card-lead fw-semibold">
-                        {{ $certificate->name }}
+                    <td class="app-card-lead">
+                        <a href="{{ route('certificates.show', $certificate) }}" class="app-link app-link--strong app-row-link">{{ $certificate->name }}</a>
                         @if($certificate->retired_at)
                             <span class="app-tag ms-1">Retired</span>
                         @endif
@@ -55,6 +55,7 @@
                         <div class="dropdown app-row-actions d-inline-block">
                             <button type="button" class="btn btn-sm btn-link app-row-actions-toggle" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" aria-label="Certificate actions for {{ $certificate->name }}"><i class="bi bi-three-dots" aria-hidden="true"></i></button>
                             <div class="dropdown-menu dropdown-menu-end">
+                            <a href="{{ route('certificates.show', $certificate) }}" class="dropdown-item"><i class="bi bi-eye me-2" aria-hidden="true"></i>View certificate</a>
                             @can('update', $certificate)
                             <a href="{{ route('certificates.edit', $certificate) }}" class="dropdown-item"><i class="bi bi-pencil-square me-2" aria-hidden="true"></i>Edit certificate</a>
                             @endcan

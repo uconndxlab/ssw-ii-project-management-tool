@@ -3,6 +3,7 @@
 use App\Enums\AccessProfile;
 use App\Models\Agreement;
 use App\Models\User;
+use App\Models\UserCertificationDuty;
 
 test('system admins see work links and every admin setup group in the sidebar', function () {
     $response = $this->actingAs(createSystemAdmin())->get(route('dashboard'));
@@ -16,6 +17,27 @@ test('members see the directory group instead of admin setup', function () {
     $this->actingAs(User::factory()->create())->get(route('dashboard'))
         ->assertOk()
         ->assertSeeInOrder(['>Work<', '>Agreements<', '>Directory<', '>Organizations<', '>Teams<'], false)
+        ->assertDontSee('>Reference Data<', false)
+        ->assertDontSee('>Candidates<', false);
+});
+
+test('coaches without privileges get candidates and certificates in the work group', function () {
+    [, $program] = createProjectWithProgram();
+    $coach = User::factory()->create();
+    UserCertificationDuty::factory()->coach()->atProgram($program)->create(['user_id' => $coach->id]);
+
+    $this->actingAs($coach)->get(route('dashboard'))
+        ->assertOk()
+        ->assertSeeInOrder(['>Work<', '>Candidates<', '>Certificates<', '>Directory<'], false)
+        ->assertDontSee('>Certification Setup<', false);
+});
+
+test('enhanced viewers get a read-only certification setup group', function () {
+    [, $program] = createProjectWithProgram();
+
+    $this->actingAs(createProgramViewer($program))->get(route('dashboard'))
+        ->assertOk()
+        ->assertSeeInOrder(['>Certification Setup<', '>Candidates<', '>Certification Tools<', '>Certificates<'], false)
         ->assertDontSee('>Reference Data<', false);
 });
 

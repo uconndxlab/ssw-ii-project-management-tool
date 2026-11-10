@@ -18,6 +18,7 @@ use App\Models\CertificationToolDimension;
 use App\Models\ContactFamily;
 use App\Models\Program;
 use App\Models\Project;
+use App\Support\Authorization\CertificateProgressAccess;
 use App\Support\Authorization\ScopeSync;
 use App\Support\ProjectProgramScope;
 use App\Support\TablePagination;
@@ -37,7 +38,12 @@ class CertificateController extends Controller
         $this->authorize('viewAny', Certificate::class);
 
         $query = Certificate::query()
-            ->visibleTo($this->actor())
+            ->where(function ($query) {
+                $query->whereIn('certificates.id', Certificate::query()->visibleTo($this->actor())
+                    ->when(! $this->actor()->access()->hasView(), fn ($query) => $query->whereRaw('1 = 0'))
+                    ->select('certificates.id'))
+                    ->orWhereIn('certificates.id', $this->actor()->certification()->applyCertificateVisibility(Certificate::query())->select('certificates.id'));
+            })
             ->withCount('requirements')
             ->with(['programs.projects']);
 
@@ -88,6 +94,50 @@ class CertificateController extends Controller
             'direction',
             'filterProjects',
             'filterPrograms',
+        ));
+    }
+
+    public function show(Certificate $certificate): View
+    {
+        $this->authorize('view', $certificate);
+
+        $actor = $this->actor();
+        $certificate->load([
+            'programs.projects', 'prerequisites', 'roles', 'requirementGroups',
+            'requirements.contactFamily', 'requirements.activityType',
+            'requirements.certificationTool', 'requirements.certificationRole',
+            'requirements.dimensionRules.dimension.options',
+        ]);
+        $globalRoles = CertificationRole::query()->whereNull('certificate_id')->orderBy('sort_order')->get();
+        $unstartedIds = $certificate->enrollments()->unstarted()->pluck('certificate_enrollments.id')->all();
+        $enrollments = $certificate->enrollments()->with('awards')->get();
+        $lifecycleTotals = $enrollments->countBy(function ($enrollment) use ($certificate, $unstartedIds) {
+            $enrollment->primeUnstarted(in_array($enrollment->id, $unstartedIds, true));
+            $enrollment->setRelation('certificate', $certificate);
+            $label = $enrollment->lifecycleBadge()['label'];
+
+            return match (true) {
+                str_starts_with($label, 'Certified') => 'Certified',
+                str_starts_with($label, 'Expired') => 'Expired',
+                default => $label,
+            };
+        });
+        $visibleQuery = $certificate->enrollments()
+            ->whereHas('candidate', fn ($query) => $query->visibleTo($actor));
+        $hiddenEnrollmentCount = $enrollments->count() - (clone $visibleQuery)->count();
+        $visibleEnrollments = $visibleQuery->with(['candidate', 'supervisingCoach', 'awards'])
+            ->orderBy('id')->paginate(25)->withQueryString();
+        foreach ($visibleEnrollments as $enrollment) {
+            $enrollment->setRelation('certificate', $certificate);
+            $enrollment->primeUnstarted(in_array($enrollment->id, $unstartedIds, true));
+        }
+        $progressAccess = app(CertificateProgressAccess::class);
+        $progressEnrollmentIds = $visibleEnrollments->getCollection()
+            ->filter(fn ($enrollment) => $progressAccess->canView($actor, $enrollment))->modelKeys();
+
+        return view('admin.certificates.show', compact(
+            'certificate', 'globalRoles', 'lifecycleTotals', 'visibleEnrollments',
+            'hiddenEnrollmentCount', 'progressEnrollmentIds',
         ));
     }
 

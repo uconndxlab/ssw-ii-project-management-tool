@@ -381,7 +381,6 @@ main {
         min-height: 0;
         overflow: auto;
         overscroll-behavior: none;
-        scrollbar-gutter: stable;
     }
 
     /* WebKit/Blink can start the vertical track below the sticky header; Firefox keeps a full-height standard scrollbar. */

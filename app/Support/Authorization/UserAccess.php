@@ -10,6 +10,7 @@ use App\Models\Activity;
 use App\Models\ActivityType;
 use App\Models\Agreement;
 use App\Models\Certificate;
+use App\Models\CertificationCandidate;
 use App\Models\CertificationTool;
 use App\Models\ContactFamily;
 use App\Models\Contracts\HasPrograms;
@@ -617,6 +618,29 @@ class UserAccess
     }
 
     /**
+     * Candidates on an agreement you can see, or with an enrollment supervised by you or a direct report.
+     * Best guess pending the client: duties grant nothing extra here (see docs/access-rules.md).
+     *
+     * @param  Builder<covariant Model>  $query
+     * @return Builder<covariant Model>
+     */
+    public function applyCertificationCandidateVisibility(Builder $query): Builder
+    {
+        if ($this->isInput()) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        if ($this->isSystemAdmin()) {
+            return $query;
+        }
+
+        return $query->where(function (Builder $builder) {
+            $builder->whereHas('rosterLinks.agreement', fn (Builder $agreement) => $this->applyAgreementVisibility($agreement))
+                ->orWhereHas('enrollments', fn (Builder $enrollment) => $enrollment->whereIn('supervising_coach_user_id', $this->activityReferenceUserIds()));
+        });
+    }
+
+    /**
      * @param  Builder<covariant Model>  $query
      * @return Builder<covariant Model>
      */
@@ -919,8 +943,9 @@ class UserAccess
             $record instanceof ContactFamily => $this->hasAdmin() && $this->applyScopedEntityVisibility(ContactFamily::query()->whereKey($record->id))->exists(),
             $record instanceof LoggingField => $this->hasAdmin() && $this->applyScopedEntityVisibility(LoggingField::query()->whereKey($record->id))->exists(),
             $record instanceof ActivityType => $this->hasAdmin() && $this->applyScopedEntityVisibility(ActivityType::query()->whereKey($record->id))->exists(),
-            $record instanceof CertificationTool => $this->hasAdmin() && $this->applyScopedEntityVisibility(CertificationTool::query()->whereKey($record->id))->exists(),
-            $record instanceof Certificate => $this->hasAdmin() && $this->applyScopedEntityVisibility(Certificate::query()->whereKey($record->id))->exists(),
+            $record instanceof CertificationTool => $this->hasView() && $this->applyScopedEntityVisibility(CertificationTool::query()->whereKey($record->id))->exists(),
+            $record instanceof Certificate => $this->hasView() && $this->applyScopedEntityVisibility(Certificate::query()->whereKey($record->id))->exists(),
+            $record instanceof CertificationCandidate => $this->applyCertificationCandidateVisibility(CertificationCandidate::query()->whereKey($record->id))->exists(),
             $record instanceof Activity => $this->canViewActivity($record),
             $record instanceof User => $this->canViewUser($record),
             default => false,
