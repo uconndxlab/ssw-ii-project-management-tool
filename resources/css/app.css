@@ -2550,6 +2550,51 @@ a.badge.app-chip:focus-visible {
     list-style: none;
 }
 
+/* Records the viewer cannot open: counted in totals, never named. */
+.app-hidden-note {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3125rem;
+    font-size: 0.78125rem;
+    font-weight: 500;
+    color: var(--app-muted);
+    white-space: nowrap;
+}
+
+.app-hidden-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-height: 1.5rem;
+    padding: 0 0.4375rem;
+    font-size: 0.78125rem;
+    font-weight: 600;
+    color: var(--app-muted);
+    white-space: nowrap;
+    background-color: var(--app-surface-fill);
+    border-radius: var(--bs-border-radius-sm);
+}
+
+.app-more-hidden,
+.app-ledger-hidden-row {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    color: var(--app-muted);
+    border-top: 1px solid var(--app-line);
+}
+
+.app-more-hidden {
+    margin: 0 0.25rem 0.25rem;
+    padding: 0.375rem 0.5rem;
+    font-size: 0.78125rem;
+}
+
+.app-ledger-hidden-row {
+    padding: 0.625rem 0.75rem;
+    font-size: 0.8125rem;
+}
+
 /* Row actions: one overflow menu instead of a strip of icon buttons. */
 .app-row-actions-toggle {
     display: inline-grid;

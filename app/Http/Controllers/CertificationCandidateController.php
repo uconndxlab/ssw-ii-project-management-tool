@@ -82,9 +82,10 @@ class CertificationCandidateController extends Controller
         $tagged = fn () => Activity::query()->whereHas('certificationCandidates', fn (Builder $tags) => $tags->where('certification_candidate_id', $candidate->id));
         $recentActivities = $tagged()->visibleTo($this->actor())
             ->with(['activityType.contactFamily', 'user', 'agreements'])->orderByRecentDisplay()->limit(10)->get();
-        $hiddenActivityCount = $tagged()->count() - $tagged()->visibleTo($this->actor())->count();
+        $activityTotal = $tagged()->count();
+        $hiddenActivityCount = $activityTotal - $tagged()->visibleTo($this->actor())->count();
 
-        return view('certification-candidates.show', compact('candidate', 'row', 'recentActivities', 'hiddenActivityCount'));
+        return view('certification-candidates.show', compact('candidate', 'row', 'recentActivities', 'activityTotal', 'hiddenActivityCount'));
     }
 
     public function edit(CertificationCandidate $certificationCandidate): View

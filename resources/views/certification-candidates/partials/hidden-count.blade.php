@@ -1,3 +1,3 @@
 @if($count > 0)
-    <div class="text-muted small" title="{{ $count }} other {{ $kind }} you can't see">+{{ $count }} {{ \Illuminate\Support\Str::plural('other', $count) }}<span class="visually-hidden"> {{ $kind }} you can't see</span></div>
+    <div class="app-hidden-note mt-1" title="You don't have access to {{ $count }} {{ \Illuminate\Support\Str::plural(\Illuminate\Support\Str::singular($kind), $count) }}"><i class="bi bi-eye-slash" aria-hidden="true"></i>{{ $count }} hidden</div>
 @endif

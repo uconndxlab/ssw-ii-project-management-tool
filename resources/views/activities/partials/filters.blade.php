@@ -1,6 +1,8 @@
 @php
     $embedded = $embedded ?? false;
-    $activityTarget = $embedded ? '#agreement-activities' : '#activities-table';
+    $embedKey = request()->filled('certification_candidate_id') ? 'certification_candidate_id' : 'agreement_id';
+    $hideAgreement = $embedded && $embedKey === 'agreement_id';
+    $activityTarget = $embedded ? ($hideAgreement ? '#agreement-activities' : '#candidate-activities') : '#activities-table';
     $pushUrl = $embedded ? 'false' : 'true';
 @endphp
 <form id="activity-filters"
@@ -110,8 +112,8 @@
         @if($embedded)
             <div class="col-auto {{ request()->hasAny(['search', 'state_id', 'organization_id', 'activity_type_id', 'needs_certification_review', 'project_id', 'program_id']) ? '' : 'd-none' }}" data-table-filter-clear-wrap>
                 <a class="btn btn-outline-secondary btn-sm" aria-label="Clear filters"
-                   href="{{ route('activities.index', request()->only('agreement_id', 'embedded', 'per_page')) }}"
-                   hx-get="{{ route('activities.index', request()->only('agreement_id', 'embedded', 'per_page')) }}"
+                   href="{{ route('activities.index', request()->only($embedKey, 'embedded', 'per_page')) }}"
+                   hx-get="{{ route('activities.index', request()->only($embedKey, 'embedded', 'per_page')) }}"
                    hx-target="{{ $activityTarget }}" hx-push-url="false">Clear filters</a>
             </div>
         @else
@@ -124,7 +126,7 @@
     </div>
     @if($embedded)
         <input type="hidden" name="embedded" value="1">
-        <input type="hidden" name="agreement_id" value="{{ request('agreement_id') }}">
+        <input type="hidden" name="{{ $embedKey }}" value="{{ request($embedKey) }}">
     @endif
     <input type="hidden" name="per_page" value="{{ \App\Support\TablePagination::perPage(request()) }}">
     <input type="hidden" name="sort" value="{{ $sort ?? 'date' }}">

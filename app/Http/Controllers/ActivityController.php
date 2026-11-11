@@ -7,6 +7,7 @@ use App\Models\Activity;
 use App\Models\ActivityAgreementFundingSource;
 use App\Models\ActivityType;
 use App\Models\Agreement;
+use App\Models\CertificationCandidate;
 use App\Models\ContactFamily;
 use App\Models\LoggingField;
 use App\Models\Organization;
@@ -54,7 +55,11 @@ class ActivityController extends Controller
         $this->authorize('viewAny', Activity::class);
 
         $embedded = $request->boolean('embedded');
-        if ($embedded) {
+        // Embedded lists live on an agreement's or a candidate's show page.
+        $embeddedCandidateId = $embedded && $request->filled('certification_candidate_id') ? $request->integer('certification_candidate_id') : null;
+        if ($embeddedCandidateId) {
+            $this->authorize('view', CertificationCandidate::query()->findOrFail($embeddedCandidateId));
+        } elseif ($embedded) {
             $this->authorize('view', Agreement::query()->findOrFail($request->integer('agreement_id')));
         }
 
@@ -131,6 +136,10 @@ class ActivityController extends Controller
 
         if ($request->filled('program_id')) {
             $query->whereHas('programs', fn ($relation) => $relation->where('programs.id', $request->integer('program_id')));
+        }
+
+        if ($embeddedCandidateId) {
+            $query->whereHas('certificationCandidates', fn ($relation) => $relation->where('certification_candidate_id', $embeddedCandidateId));
         }
 
         $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);

@@ -63,11 +63,16 @@ test('candidate pages reveal hidden counts without hidden names', function () {
     AgreementCertificationCandidate::factory()->create(['agreement_id' => $hiddenAgreement->id, 'certification_candidate_id' => $f['candidate']->id]);
     $hiddenCertificate = Certificate::factory()->create(['name' => 'Secret Certificate Name', 'program_scope_mode' => 'none']);
     CertificateEnrollment::factory()->create(['certificate_id' => $hiddenCertificate->id, 'certification_candidate_id' => $f['candidate']->id]);
-    foreach (['index', 'show'] as $page) {
-        $this->actingAs($f['actor'])->get(route('certification-candidates.'.$page, $page === 'show' ? $f['candidate'] : []))->assertOk()
-            ->assertSee('1 other certificates you can', false)->assertSee('1 other agreements you can', false)->assertSee('+1 other')
-            ->assertDontSee($hiddenCertificate->name)->assertDontSee($hiddenAgreement->name);
-    }
+    // Index: "+N" counts the hidden agreement, and the menu ends with a hidden row; certificates get a hidden note.
+    $this->actingAs($f['actor'])->get(route('certification-candidates.index'))->assertOk()
+        ->assertSee('Show all 2 agreements, 1 hidden', false)->assertSee('access to 1 agreement', false)
+        ->assertSee('access to 1 certificate', false)
+        ->assertDontSee($hiddenCertificate->name)->assertDontSee($hiddenAgreement->name);
+
+    // Show: panel headers count everything and end with a hidden row.
+    $this->get(route('certification-candidates.show', $f['candidate']))->assertOk()
+        ->assertSee('1 agreement hidden')->assertSee('1 enrollment hidden')
+        ->assertDontSee($hiddenCertificate->name)->assertDontSee($hiddenAgreement->name);
 });
 
 test('candidate filters select the matching visible person', function (string $filter) {
@@ -153,8 +158,30 @@ test('candidate activity list includes only visible tagged activities', function
     }
     $this->actingAs($actor)->get(route('certification-candidates.show', $f['candidate']))->assertOk()
         ->assertViewHas('recentActivities', fn ($activities) => $activities->modelKeys() === [$visible->id])
+        ->assertViewHas('activityTotal', 2)
         ->assertViewHas('hiddenActivityCount', 1)
-        ->assertSee('1 other activities you can', false);
+        ->assertSee(route('activities.index', ['certification_candidate_id' => $f['candidate']->id, 'embedded' => 1]));
+
+    // The All activity tab lists this candidate's tagged activities, among the ones the viewer can see.
+    $untagged = Activity::factory()->create();
+    $untagged->programs()->attach($f['program']);
+    $this->get(route('activities.index', ['certification_candidate_id' => $f['candidate']->id, 'embedded' => 1]), ['HX-Request' => 'true'])->assertOk()
+        ->assertViewHas('activities', fn ($activities) => $activities->getCollection()->modelKeys() === [$visible->id])
+        ->assertSee('hx-target="#candidate-activities"', false)
+        ->assertSee('data-label="Agreement"', false);
+
+    // The global index has no candidate filter: the parameter is ignored outside the embed.
+    $this->get(route('activities.index', ['certification_candidate_id' => $f['candidate']->id]))->assertOk()
+        ->assertViewHas('activities', fn ($activities) => $activities->total() === 2);
+});
+
+test('embedded candidate activity is denied for candidates the actor cannot view', function () {
+    $f = candidatePageFixture();
+    $hidden = CertificationCandidate::factory()->create();
+
+    $this->actingAs($f['actor'])
+        ->get(route('activities.index', ['certification_candidate_id' => $hidden->id, 'embedded' => 1]), ['HX-Request' => 'true'])
+        ->assertForbidden();
 });
 
 test('candidate award history shows the revoked date but not the private reason', function () {

@@ -41,8 +41,7 @@
                     </td>
                     <td data-label="Supervising coach">{{ $row['enrollments']->pluck('supervisingCoach.name')->filter()->unique()->implode(', ') ?: '—' }}</td>
                     <td data-label="Agreements">
-                        <x-table-badge-list kind="agreement" :items="$row['agreements']" route-name="agreements.show" />
-                        @include('certification-candidates.partials.hidden-count', ['count' => $row['hiddenAgreements'], 'kind' => 'agreements'])
+                        <x-table-badge-list kind="agreement" :items="$row['agreements']" route-name="agreements.show" :hidden-count="$row['hiddenAgreements']" />
                     </td>
                     <td data-label="Start date" class="text-muted small">{{ $candidate->start_date?->format('M d, Y') ?? '—' }}</td>
                     <td class="app-card-status"><x-status-badge :active="$candidate->active" /></td>
