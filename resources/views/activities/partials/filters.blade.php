@@ -7,6 +7,7 @@
 @endphp
 <form id="activity-filters"
       data-table-filter-form
+      @if($embedded) data-table-filter-ignore="embedded,{{ $embedKey }}" @endif
       hx-get="{{ route('activities.index') }}"
       hx-target="{{ $activityTarget }}"
       hx-swap="innerHTML"

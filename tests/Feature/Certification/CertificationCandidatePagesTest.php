@@ -168,6 +168,7 @@ test('candidate activity list includes only visible tagged activities', function
     $this->get(route('activities.index', ['certification_candidate_id' => $f['candidate']->id, 'embedded' => 1]), ['HX-Request' => 'true'])->assertOk()
         ->assertViewHas('activities', fn ($activities) => $activities->getCollection()->modelKeys() === [$visible->id])
         ->assertSee('hx-target="#candidate-activities"', false)
+        ->assertSee('data-table-filter-ignore="embedded,certification_candidate_id"', false)
         ->assertSee('data-label="Agreement"', false);
 
     // The global index has no candidate filter: the parameter is ignored outside the embed.
