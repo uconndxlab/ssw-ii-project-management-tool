@@ -10,15 +10,13 @@ class CertificationToolPolicy
 {
     use AuthorizesScopedEntity;
 
-    // Index: admins only (not enhanced viewers).
     public function viewAny(User $user): bool
     {
-        return $user->access()->hasAdmin();
+        return $user->access()->hasView();
     }
 
-    // View: admin, and a program on the tool is in your view/admin privilege.
     public function view(User $user, CertificationTool $certificationTool): bool
     {
-        return $user->access()->hasAdmin() && $user->access()->canViewRecord($certificationTool);
+        return $user->access()->hasView() && $user->access()->canViewRecord($certificationTool);
     }
 }

@@ -4,6 +4,8 @@ namespace App\Enums;
 
 use App\Models\Activity;
 use App\Models\Agreement;
+use App\Models\Certificate;
+use App\Models\CertificationCandidate;
 use App\Models\LoggingField;
 use App\Models\Organization;
 use App\Models\Program;
@@ -17,7 +19,9 @@ use Illuminate\Database\Eloquent\Model;
 enum RecentRecordType: string
 {
     case Activity = 'activity';
+    case CertificationCandidate = 'certification-candidate';
     case Agreement = 'agreement';
+    case Certificate = 'certificate';
     case LoggingField = 'logging-field';
     case Organization = 'organization';
     case Program = 'program';
@@ -41,7 +45,9 @@ enum RecentRecordType: string
     {
         return match ($this) {
             self::Activity => 'activities.show',
+            self::CertificationCandidate => 'certification-candidates.show',
             self::Agreement => 'agreements.show',
+            self::Certificate => 'certificates.show',
             self::LoggingField => 'logging-fields.show',
             self::Organization => 'organizations.show',
             self::Program => 'programs.show',
@@ -57,7 +63,9 @@ enum RecentRecordType: string
     {
         return match ($this) {
             self::Activity => Activity::class,
+            self::CertificationCandidate => CertificationCandidate::class,
             self::Agreement => Agreement::class,
+            self::Certificate => Certificate::class,
             self::LoggingField => LoggingField::class,
             self::Organization => Organization::class,
             self::Program => Program::class,
@@ -72,6 +80,7 @@ enum RecentRecordType: string
     {
         return match ($this) {
             self::LoggingField => 'Logging field',
+            self::CertificationCandidate => 'Candidate',
             default => $this->name,
         };
     }
@@ -80,7 +89,9 @@ enum RecentRecordType: string
     {
         return match ($this) {
             self::Activity => 'bi-journal-check',
+            self::CertificationCandidate => 'bi-person',
             self::Agreement => 'bi-file-earmark-text',
+            self::Certificate => 'bi-award',
             self::LoggingField => 'bi-input-cursor-text',
             self::Organization => 'bi-building',
             self::Program => 'bi-diagram-3',

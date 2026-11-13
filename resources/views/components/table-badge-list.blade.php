@@ -11,6 +11,7 @@
     'emptyClass' => 'text-muted',
     'containerClass' => 'app-chip-list',
     'listLabel' => null,
+    'hiddenCount' => 0,
 ])
 
 @php
@@ -52,16 +53,21 @@
         ->values();
 
     $visibleItems = $normalizedItems->take($max);
-    $hiddenCount = max($normalizedItems->count() - $visibleItems->count(), 0);
+    // Records the viewer cannot open still count toward "+N" and the total, but are never named.
+    $moreCount = max($normalizedItems->count() - $visibleItems->count(), 0) + $hiddenCount;
+    $totalCount = $normalizedItems->count() + $hiddenCount;
 @endphp
 
 @php
     $resolvedListLabel = $listLabel ?? \Illuminate\Support\Str::plural(\Illuminate\Support\Str::headline($kind));
+    $hiddenTitle = "You don't have access to {$hiddenCount} ".\Illuminate\Support\Str::lower(\Illuminate\Support\Str::plural(\Illuminate\Support\Str::headline($kind), $hiddenCount));
 @endphp
 
 {{-- First item as a chip, the rest behind a visible "+N" button that lists every item as a deep link (or plain text when the user cannot open it). --}}
 <div class="{{ $containerClass }}">
-    @if($visibleItems->isEmpty())
+    @if($visibleItems->isEmpty() && $hiddenCount > 0)
+        <span class="app-hidden-pill" title="{{ $hiddenTitle }}"><i class="bi bi-eye-slash" aria-hidden="true"></i>{{ $hiddenCount }} hidden</span>
+    @elseif($visibleItems->isEmpty())
         <span class="{{ $emptyClass }}">{{ $emptyLabel }}</span>
     @else
         @foreach($visibleItems as $item)
@@ -70,16 +76,16 @@
             </x-entity-relation-badge>
         @endforeach
 
-        @if($hiddenCount > 0)
+        @if($moreCount > 0)
             <div class="dropdown app-more">
                 <button type="button"
                         class="app-more-btn"
                         data-bs-toggle="dropdown"
                         data-bs-popper-config='{"strategy":"fixed"}'
                         aria-expanded="false"
-                        aria-label="Show all {{ $normalizedItems->count() }} {{ \Illuminate\Support\Str::lower($resolvedListLabel) }}">+{{ $hiddenCount }}</button>
+                        aria-label="Show all {{ $totalCount }} {{ \Illuminate\Support\Str::lower($resolvedListLabel) }}{{ $hiddenCount > 0 ? ', '.$hiddenCount.' hidden' : '' }}">+{{ $moreCount }}</button>
                 <div class="dropdown-menu app-more-menu">
-                    <div class="app-more-head"><span>{{ $resolvedListLabel }}</span><span>{{ $normalizedItems->count() }}</span></div>
+                    <div class="app-more-head"><span>{{ $resolvedListLabel }}</span><span>{{ $totalCount }}</span></div>
                     <ul class="app-more-list">
                         @foreach($normalizedItems as $item)
                             <li>
@@ -91,6 +97,9 @@
                             </li>
                         @endforeach
                     </ul>
+                    @if($hiddenCount > 0)
+                        <div class="app-more-hidden" title="{{ $hiddenTitle }}"><i class="bi bi-eye-slash" aria-hidden="true"></i>{{ $hiddenCount }} hidden</div>
+                    @endif
                 </div>
             </div>
         @endif

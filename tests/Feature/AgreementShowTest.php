@@ -56,6 +56,7 @@ it('filters sorts and pages the embedded list within its agreement', function ()
         ->assertOk()
         ->assertViewHas('activities', fn ($activities) => $activities->total() === 12 && $activities->first()->id === $latest->id)
         ->assertSee('hx-target="#agreement-activities"', false)
+        ->assertSee('data-table-filter-ignore="embedded,agreement_id"', false)
         ->assertDontSee('hx-push-url="true"', false)
         ->assertDontSee('Filter by agreement')
         ->assertDontSee('data-label="Agreement"', false);

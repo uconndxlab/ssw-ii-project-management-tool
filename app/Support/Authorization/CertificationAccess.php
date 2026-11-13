@@ -4,6 +4,8 @@ namespace App\Support\Authorization;
 
 use App\Enums\CertificationDuty;
 use App\Enums\PrivilegeScopeType;
+use App\Enums\ProgramScopeMode;
+use App\Models\Certificate;
 use App\Models\CertificateEnrollment;
 use App\Models\CertificationCandidate;
 use App\Models\Program;
@@ -15,8 +17,8 @@ use Illuminate\Support\Collection;
 
 /**
  * Coach/manager duties, kept deliberately separate from UserAccess/PrivilegeCapability - see the
- * certification spine's "duties live outside the privilege hierarchy" rule. A duty never grants
- * implicit visibility; visibility still comes from UserAccess.
+ * certification spine's "duties live outside the privilege hierarchy" rule. Certificate catalog
+ * visibility is the explicit duty exception; candidate and progress visibility remain separate.
  */
 class CertificationAccess
 {
@@ -66,6 +68,33 @@ class CertificationAccess
     public function isManager(): bool
     {
         return $this->hasDuty(CertificationDuty::Manager);
+    }
+
+    /**
+     * Catalog visibility from duties only; other scoped-entity visibility stays unchanged.
+     *
+     * @param  Builder<Certificate>  $query
+     * @return Builder<Certificate>
+     */
+    public function applyCertificateVisibility(Builder $query): Builder
+    {
+        if ($this->user->access()->isInput() || (! $this->isCoach() && ! $this->isManager())) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        $programIds = array_values(array_unique(array_merge($this->coachProgramIds(), $this->managerProgramIds())));
+
+        return $query->where(function (Builder $query) use ($programIds) {
+            $query->where('program_scope_mode', ProgramScopeMode::All)
+                ->orWhere(fn (Builder $query) => $query
+                    ->where('program_scope_mode', ProgramScopeMode::Specific)
+                    ->whereHas('programs', fn (Builder $programs) => $programs->whereIn('programs.id', $programIds)));
+        });
+    }
+
+    public function canViewCertificate(Certificate $certificate): bool
+    {
+        return $this->applyCertificateVisibility(Certificate::query()->whereKey($certificate->id))->exists();
     }
 
     /** @return array<int> */

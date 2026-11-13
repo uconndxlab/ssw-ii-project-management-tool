@@ -33,6 +33,12 @@ class AppNav
             $links[] = self::link('Supervisees', 'supervisees.index', ['supervisees.*'], 'bi-person-check', 'work');
         }
 
+        // Duty holders without admin/view privileges get certification in Work; everyone else with privileges finds it in setup.
+        if (! $access->isInput() && ! $access->hasView() && ($user->certification()->isCoach() || $user->certification()->isManager())) {
+            $links[] = self::link('Candidates', 'certification-candidates.index', ['certification-candidates.*'], 'bi-person-badge', 'work');
+            $links[] = self::link('Certificates', 'certificates.index', ['certificates.*'], 'bi-award', 'work');
+        }
+
         if (! $access->isInput() && ! $access->hasAdmin()) {
             $links = array_merge($links, [
                 self::link('Organizations', 'organizations.index', ['organizations.*'], 'bi-building', 'directory'),
@@ -56,8 +62,22 @@ class AppNav
     public static function adminSections(?User $user = null): array
     {
         $user = $user ?? auth()->user();
-        if ($user === null || ! UserAccess::for($user)->hasAdmin()) {
+        if ($user === null || ! UserAccess::for($user)->hasView()) {
             return [];
+        }
+
+        $certification = [
+            'header' => 'Certification Setup',
+            'items' => [
+                self::item('Candidates', 'certification-candidates.index', ['certification-candidates.*'], 'bi-person-badge'),
+                self::item('Certification Tools', 'certification-tools.index', ['certification-tools.*'], 'bi-tools'),
+                self::item('Certificates', 'certificates.index', ['certificates.*'], 'bi-award'),
+            ],
+        ];
+
+        // Enhanced viewers: read-only certification setup only.
+        if (! UserAccess::for($user)->hasAdmin()) {
+            return [$certification];
         }
 
         return [
@@ -83,13 +103,7 @@ class AppNav
                     self::item('Logging Fields', 'logging-fields.index', ['logging-fields.*'], 'bi-input-cursor-text'),
                 ],
             ],
-            [
-                'header' => 'Certification Setup',
-                'items' => [
-                    self::item('Certification Tools', 'certification-tools.index', ['certification-tools.*'], 'bi-tools'),
-                    self::item('Certificates', 'certificates.index', ['certificates.*'], 'bi-award'),
-                ],
-            ],
+            $certification,
             [
                 'header' => 'People',
                 'items' => [

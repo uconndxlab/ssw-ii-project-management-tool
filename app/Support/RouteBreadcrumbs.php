@@ -47,9 +47,11 @@ class RouteBreadcrumbs
         } elseif ($routeName === 'profile.edit') {
             $items[] = ['label' => 'Profile', 'url' => route('profile'), 'current' => false];
         } elseif (Route::has($indexRoute) && $routeName !== $indexRoute) {
-            $label = $resource === 'contact-families'
-                ? 'Activity Families'
-                : Str::headline(Str::afterLast($resource, '.'));
+            $label = match ($resource) {
+                'contact-families' => 'Activity Families',
+                'certification-candidates' => 'Candidates',
+                default => Str::headline(Str::afterLast($resource, '.')),
+            };
             $items[] = ['label' => $label, 'url' => route($indexRoute), 'current' => false];
         }
 

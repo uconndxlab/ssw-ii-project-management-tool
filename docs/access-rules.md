@@ -46,3 +46,34 @@ coach gets no coaching standing in that coach's programs, and no manager duty.
 - Not inherited: manager duty (`canManage`), and any candidate the report does not supervise. A user's own
   `coachProgramIds()` and `managerProgramIds()` are unchanged, so a supervisor is never assignable as a coach
   through this rule.
+
+## Candidates, certificates and tools (best guess, pending client)
+
+Added with the candidates index and the certificate show page. These are our best guesses while the
+client answers. Trello card "Update candidate and certificate access rules based on client answers" tracks the
+open questions. Change the rules there and here together.
+
+- **Seeing a candidate** (`UserAccess::applyCertificationCandidateVisibility`, `CertificationCandidate::visibleTo`):
+  you can see an agreement they are on, or you or a direct report supervise one of their enrollments.
+  System admins see everyone, including people on no agreement. Input users see none.
+- **Managers:** the duty adds nothing. A manager sees candidates through view privileges or membership, the
+  same as today. Open question for the client: should manager duty show enrollees of certificates in the
+  manager's programs even without agreement access?
+- **Editing a candidate** (name, email, phone, start date, notes, active): a system admin, or someone who can
+  edit every agreement the person is on (`CertificationAssignmentSyncService::canEditCandidate`). Same rule as
+  the agreement form.
+- **Seeing a certificate** (index and show page):
+  - admins in scope can see and edit it, as before;
+  - enhanced viewers (view privileges only) see it in the same scope, read-only;
+  - coaches and managers see certificates in their duty programs, read-only. An "All programs" certificate
+    counts for any duty; a "No programs" certificate counts for none.
+- **Enrollees on a certificate page** still follow the candidate rule. A coach can see a certificate with
+  nobody listed.
+- **Certification tools:** admins as before. Enhanced viewers see the index only, read-only. Coaches and
+  managers do not.
+- **Hidden records:** where a list hides records you cannot see, it shows "+N others" (a count, never
+  names). This applies to certificate enrollees, a candidate's enrollments and agreements, and the
+  candidates index rows.
+- **Navigation:** coaches and managers without admin or view privileges get Candidates and Certificates in
+  the Work group. Admins and enhanced viewers get Candidates, Certification Tools and Certificates under
+  Certification Setup, whether or not they hold a duty.

@@ -52,6 +52,7 @@
                     </td>
                     <td class="app-col-actions">
                         @php $actionKey = 'certification-tool-actions-' . $tool->id; @endphp
+                        @if(auth()->user()->can('update', $tool) || auth()->user()->can('delete', $tool))
                         <div class="dropdown app-row-actions d-inline-block">
                             <button type="button" class="btn btn-sm btn-link app-row-actions-toggle" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" aria-label="Certification tool actions for {{ $tool->name }}"><i class="bi bi-three-dots" aria-hidden="true"></i></button>
                             <div class="dropdown-menu dropdown-menu-end">
@@ -69,6 +70,7 @@
                             @endcan
                             </div>
                         </div>
+                        @endif
                         @can('delete', $tool)
                         <form id="{{ $actionKey }}-delete" method="POST" action="{{ route('certification-tools.destroy', $tool) }}" class="d-none">
                             @csrf

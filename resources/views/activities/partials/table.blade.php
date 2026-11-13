@@ -1,6 +1,8 @@
 @php
     $embedded = $embedded ?? false;
-    $activityTarget = $embedded ? '#agreement-activities' : '#activities-table';
+    $embedKey = request()->filled('certification_candidate_id') ? 'certification_candidate_id' : 'agreement_id';
+    $hideAgreement = $embedded && $embedKey === 'agreement_id';
+    $activityTarget = $embedded ? ($hideAgreement ? '#agreement-activities' : '#candidate-activities') : '#activities-table';
     $s = $sort ?? 'date';
     $d = $direction ?? 'desc';
     $flip = function ($col) use ($s, $d) {
@@ -21,7 +23,7 @@
                     <th class="text-nowrap">
                         <x-table-sort-link column="date" label="Date" :sort="$s" :direction="$d" :url="$url('date')" :target="$activityTarget" :push-url="!$embedded" />
                     </th>
-                    @unless($embedded)
+                    @unless($hideAgreement)
                         <th>
                             <x-table-sort-link column="agreement" label="Agreement" :sort="$s" :direction="$d" :url="$url('agreement')" :target="$activityTarget" :push-url="!$embedded" />
                         </th>
@@ -50,7 +52,7 @@
                             <x-status-badge :active="false" inactive-label="Cancelled" tone="danger" class="ms-1" />
                         @endif
                     </td>
-                    @unless($embedded)
+                    @unless($hideAgreement)
                         <td data-label="Agreement">
                             <x-table-badge-list
                                 kind="agreement"
@@ -131,7 +133,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="{{ $embedded ? 6 : 7 }}" class="text-center py-5">
+                    <td colspan="{{ $hideAgreement ? 6 : 7 }}" class="text-center py-5">
                         <p class="text-muted mb-2">No activities found.</p>
                         <a href="{{ route('activities.create') }}" class="btn btn-sm btn-primary">Log Activity</a>
                     </td>

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\VisibleToUser;
 use Database\Factories\CertificationCandidateFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,7 +17,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class CertificationCandidate extends Model
 {
     /** @use HasFactory<CertificationCandidateFactory> */
-    use HasFactory;
+    use HasFactory, VisibleToUser;
 
     protected $fillable = [
         'name',

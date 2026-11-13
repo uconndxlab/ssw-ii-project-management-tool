@@ -10,6 +10,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\CertificateLifecycleController;
 use App\Http\Controllers\CertificateProgressController;
+use App\Http\Controllers\CertificationCandidateController;
 use App\Http\Controllers\CertificationToolController;
 use App\Http\Controllers\ContactFamilyController;
 use App\Http\Controllers\DashboardController;
@@ -87,7 +88,10 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::resource('contact-families', ContactFamilyController::class)->except(['show']);
     Route::resource('activity-types', ActivityTypeController::class)->except(['show']);
     Route::resource('certification-tools', CertificationToolController::class)->except(['show']);
-    Route::resource('certificates', CertificateController::class)->except(['show']);
+    Route::resource('certificates', CertificateController::class);
+    Route::resource('certification-candidates', CertificationCandidateController::class)
+        ->only(['index', 'show', 'edit', 'update'])
+        ->parameters(['certification-candidates' => 'certificationCandidate']);
     Route::get('/certificate-enrollments/{certificateEnrollment}', [CertificateProgressController::class, 'show'])->name('certificate-enrollments.show');
     Route::put('/certificate-enrollments/{certificateEnrollment}/confirmations/{requirement}', [CertificateProgressController::class, 'attest'])->name('certificate-enrollments.attest');
     Route::post('/certificate-enrollments/{certificateEnrollment}/endorsement', [CertificateLifecycleController::class, 'endorse'])->name('certificate-enrollments.endorse');

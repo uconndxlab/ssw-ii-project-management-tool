@@ -50,7 +50,7 @@ class AppServiceProvider extends ServiceProvider
     {
         Route::patterns(array_fill_keys([
             'activity', 'activity_type', 'agreement', 'agreementId', 'attachment', 'award',
-            'certificate', 'certificateEnrollment', 'certification_tool', 'contact_family',
+            'certificate', 'certificateEnrollment', 'certificationCandidate', 'certification_tool', 'contact_family',
             'fieldId', 'logging_field', 'organization', 'program', 'project', 'requirement',
             'state', 'team', 'user',
         ], '[0-9]+'));
