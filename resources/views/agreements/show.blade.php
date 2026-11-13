@@ -5,17 +5,34 @@
 @section('content')
 
 @php
-    $usersBySource = $agreement->getUsersBySource();
-    $directUsers = $usersBySource['direct'];
-    $directUserIds = $directUsers->pluck('id');
-    $hasAnyUsers = $directUsers->isNotEmpty() || $agreement->teams->isNotEmpty();
     $agreementProgramIds = $agreement->programs->pluck('id')->map(fn ($id) => (int) $id);
     $activityOnlyPrograms = $programs->filter(fn ($program) => !$agreementProgramIds->contains((int) $program->id));
     $organizationKfsNumbers = $agreement->organizationKfsAccounts
         ->groupBy(fn ($account) => (int) $account->pivot->organization_id)
         ->map(fn ($accounts) => $accounts->pluck('number')->sort()->values()->all())
         ->all();
-    $userProfileRoute = fn ($user) => \App\Support\UserProfileLink::route($user);
+    $periodStart = $agreement->start_date;
+    $periodEnd = $agreement->extension_end_date ?? $agreement->end_date;
+    $periodSuffix = null;
+    if ($periodStart && $periodEnd) {
+        $today = today(config('app.timezone'));
+        if ($periodStart->greaterThan($today)) {
+            $days = (int) $today->diffInDays($periodStart);
+            $periodSuffix = 'Starts in '.$days.' '.\Illuminate\Support\Str::plural('day', $days);
+        } elseif ($periodEnd->lessThan($today)) {
+            $days = (int) $periodEnd->diffInDays($today);
+            $periodSuffix = 'Ended '.$days.' '.\Illuminate\Support\Str::plural('day', $days).' ago';
+        } else {
+            $days = (int) $today->diffInDays($periodEnd);
+            $periodSuffix = $days === 0 ? 'Ends today' : $days.' '.\Illuminate\Support\Str::plural('day', $days).' left';
+        }
+        // Track positions as a share of the whole period (0–100).
+        $periodDays = max(1, $periodStart->diffInDays($periodEnd));
+        $elapsedPercent = round(min(100, max(0, $periodStart->diffInDays($today, false) / $periodDays * 100)), 2);
+        $extensionPercent = $agreement->extension_end_date && $agreement->end_date
+            ? round(min(100, max(0, $periodStart->diffInDays($agreement->end_date) / $periodDays * 100)), 2)
+            : null;
+    }
 @endphp
 
 <x-page-header
@@ -23,25 +40,29 @@
     :title="$agreement->name"
     entity-type="Agreement"
     :active="$agreement->active"
-    :action-url="auth()->user()->can('update', $agreement) ? route('agreements.edit', $agreement) : null"
 >
-    <x-slot:more>
-        @can('duplicate', $agreement)
-            <li>
-                <button type="submit"
-                        form="agreement-duplicate-form"
-                        class="dropdown-item"
-                        data-confirm
-                        data-confirm-title="Duplicate agreement?"
-                        data-confirm-record="{{ $agreement->name }}"
-                        data-confirm-message="Activities and logged progress will not be copied. Review the new copy before saving."
-                        data-confirm-action="Duplicate agreement"
-                        data-confirm-tone="primary">
-                    <i class="bi bi-files me-2" aria-hidden="true"></i>Duplicate
-                </button>
-            </li>
-        @endcan
-    </x-slot:more>
+    <x-slot:facts>
+        <div><dt>Period</dt><dd>
+            @if($periodStart && $periodEnd)
+                {{ $periodStart->format('M j, Y') }} – {{ $periodEnd->format('M j, Y') }} · {{ $periodSuffix }}
+                @if($agreement->extension_end_date && $agreement->end_date)<span class="text-muted">· extended from {{ $agreement->end_date->format('M j, Y') }}</span>@endif
+                <div @class(['app-period-track', 'app-period-track--ended' => $elapsedPercent >= 100]) aria-hidden="true">
+                    @if($extensionPercent !== null)<span class="app-period-extension" style="left: {{ $extensionPercent }}%"></span>@endif
+                    <span class="app-period-elapsed" style="width: {{ $elapsedPercent }}%"></span>
+                    @if($elapsedPercent > 0 && $elapsedPercent < 100)<span class="app-period-today" style="left: {{ $elapsedPercent }}%"></span>@endif
+                </div>
+            @else
+                Not set
+            @endif
+        </dd></div>
+        <div><dt>{{ $agreement->principalInvestigators->count() > 1 ? 'Principal investigators' : 'Principal investigator' }}</dt><dd>
+            @forelse($agreement->principalInvestigators as $investigator)
+                <x-user-link :user="$investigator" />@if(!$loop->last), @endif
+            @empty
+                Not assigned
+            @endforelse
+        </dd></div>
+    </x-slot:facts>
 </x-page-header>
 
 @can('duplicate', $agreement)
@@ -57,260 +78,48 @@
     }
 @endphp
 
-<x-section-tabs :tabs="$tabs" label="Agreement sections" :hash="true" class="mb-4">
-    <div id="section-overview" data-section="overview">
-        <div class="row g-4">
-            <div class="col-lg-4 d-flex flex-column gap-4">
-                <div class="card shadow-sm entity-show-card">
-                    <div class="card-header py-2 px-3 d-flex flex-wrap align-items-center gap-2">
-                        <h2 class="h5 mb-0">Summary</h2>
-                    </div>
-                    <div class="card-body">
-                        <p class="app-record-period">Year to date · {{ now()->year }}</p>
-                        <dl class="app-record-metrics">
-                            <div><dt>Activities</dt><dd>{{ $ytdTotals['activities'] }}</dd></div>
-                        </dl>
-
-                        <dl class="app-summary-facts mt-3 mb-0">
-                            <div><dt>Start date</dt><dd>{{ $agreement->start_date?->format('M d, Y') ?? '—' }}</dd></div>
-                            <div><dt>End date</dt><dd>{{ $agreement->end_date?->format('M d, Y') ?? '—' }}</dd></div>
-                            @if($agreement->extension_start_date)
-                                <div><dt>Extension start</dt><dd>{{ $agreement->extension_start_date->format('M d, Y') }}</dd></div>
-                            @endif
-                            @if($agreement->extension_end_date)
-                                <div><dt>Extension end</dt><dd>{{ $agreement->extension_end_date->format('M d, Y') }}</dd></div>
-                            @endif
-                            <div class="app-summary-facts-wide">
-                                <dt>Principal investigators</dt>
-                                <dd class="app-fact-links">
-                                    @forelse($agreement->principalInvestigators as $investigator)
-                                        <x-user-link :user="$investigator" />
-                                    @empty
-                                        Not assigned
-                                    @endforelse
-                                </dd>
-                            </div>
-                        </dl>
-
-                        @if($agreement->abstract)
-                            <hr>
-                            <h6 class="app-subhead mb-2">Abstract</h6>
-                            <p class="small mb-0">{{ $agreement->abstract }}</p>
-                        @endif
-
-                        @if($agreement->attachments->isNotEmpty())
-                            <x-relationship-scroll-panel title="Attachments" :count="$agreement->attachments->count()" collapsible collapsed class="mt-3">
-                                @foreach($agreement->attachments as $attachment)
-                                    <x-relationship-ledger-row :title="$attachment->filename">
-                                        <x-slot:actions>
-                                            <a href="{{ $attachment->download_url }}" class="btn btn-sm btn-outline-secondary text-nowrap" target="_blank">View / Download</a>
-                                        </x-slot:actions>
-                                    </x-relationship-ledger-row>
-                                @endforeach
-                            </x-relationship-scroll-panel>
-                        @endif
-                    </div>
-                </div>
-                <div class="card shadow-sm entity-show-card">
-                    <div class="card-header py-2 px-3 d-flex flex-wrap align-items-center gap-2">
-                        <h2 class="h5 mb-0">Coverage</h2>
-                    </div>
-                    <div class="card-body">
-                        <div class="d-grid gap-3">
-                            <x-relationship-scroll-panel
-                                title="Projects"
-                                kind="project"
-                                :count="$agreement->projects->count()"
-                                collapsible
-                                :collapsed="true">
-                                @forelse($agreement->projects->sortBy('name') as $project)
-                                    <x-relationship-ledger-row
-                                        :title="$project->name"
-                                        :href="route('projects.show', $project)"
-                                        kind="project"
-                                        title-as-badge
-                                        wrap-title
-                                    />
-                                @empty
-                                    <p class="text-muted small mb-0 py-1">No projects linked.</p>
-                                @endforelse
-                            </x-relationship-scroll-panel>
-
-                            <x-relationship-scroll-panel
-                                title="Programs"
-                                kind="program"
-                                :count="$agreement->programs->count()"
-                                collapsible
-                                :collapsed="true">
-                                @forelse($agreement->programs->sortBy('name') as $program)
-                                    <x-relationship-ledger-row
-                                        :title="$program->name"
-                                        :href="route('programs.show', $program)"
-                                        kind="program"
-                                        title-as-badge
-                                        wrap-title
-                                    />
-                                @empty
-                                    <p class="text-muted small mb-0 py-1">No programs linked.</p>
-                                @endforelse
-                            </x-relationship-scroll-panel>
-
-                            <x-relationship-scroll-panel
-                                title="Organizations"
-                                kind="organization"
-                                :count="$agreement->organizations->count()"
-                                collapsible
-                                :collapsed="true">
-                                @forelse($agreement->organizations->sortBy('name') as $org)
-                                    <x-organization-relation-row
-                                        :organization="$org"
-                                        :kfs-numbers="$organizationKfsNumbers[(int) $org->id] ?? []"
-                                    />
-                                @empty
-                                    <p class="text-muted small mb-0 py-1">No organizations linked.</p>
-                                @endforelse
-                            </x-relationship-scroll-panel>
-
-                            <x-relationship-scroll-panel
-                                title="States"
-                                kind="state"
-                                :count="$agreement->states->count()"
-                                collapsible
-                                :collapsed="true">
-                                @forelse($agreement->states->sortBy('name') as $state)
-                                    <x-relationship-ledger-row
-                                        :title="$state->name"
-                                        :href="route('states.show', $state)"
-                                        kind="state"
-                                        title-as-badge
-                                        wrap-title
-                                    />
-                                @empty
-                                    <p class="text-muted small mb-0 py-1">No states linked.</p>
-                                @endforelse
-                            </x-relationship-scroll-panel>
-
-                            @if($activityOnlyPrograms->isNotEmpty())
-                                <x-relationship-scroll-panel
-                                    title="Programs in Activity"
-                                    kind="program"
-                                    :count="$activityOnlyPrograms->count()"
-                                    collapsible
-                                    :collapsed="true">
-                                    @foreach($activityOnlyPrograms->sortBy('name') as $program)
-                                        <x-relationship-ledger-row
-                                            :title="$program->name"
-                                            :href="route('programs.show', $program)"
-                                            kind="program"
-                                            title-as-badge
-                                            wrap-title
-                                        />
-                                    @endforeach
-                                </x-relationship-scroll-panel>
-                            @endif
-                        </div>
-                    </div>
-                </div>
+<x-section-tabs :tabs="$tabs" label="Agreement sections" :hash="true" :sticky-title="$agreement->name" class="mb-4">
+    <x-slot:actions>
+        @if($agreement->active)
+            <a class="btn btn-primary btn-sm text-nowrap" href="{{ route('activities.create', ['agreement_id' => $agreement->id]) }}">Log activity</a>
+        @else
+            <button type="button" class="btn btn-primary btn-sm text-nowrap" disabled aria-describedby="agreement-inactive-reason">Log activity</button>
+            <span class="text-muted small" id="agreement-inactive-reason">This agreement is inactive.</span>
+        @endif
+        @can('update', $agreement)<a class="btn btn-outline-primary btn-sm" href="{{ route('agreements.edit', $agreement) }}">Edit</a>@endcan
+        @can('duplicate', $agreement)
+            <div class="dropdown">
+                <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="dropdown" aria-expanded="false" aria-label="More actions"><i class="bi bi-three-dots" aria-hidden="true"></i></button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                        <button type="submit"
+                                form="agreement-duplicate-form"
+                                class="dropdown-item"
+                                data-confirm
+                                data-confirm-title="Duplicate agreement?"
+                                data-confirm-record="{{ $agreement->name }}"
+                                data-confirm-message="Activities and logged progress will not be copied. Review the new copy before saving."
+                                data-confirm-action="Duplicate agreement"
+                                data-confirm-tone="primary">
+                            <i class="bi bi-files me-2" aria-hidden="true"></i>Duplicate
+                        </button>
+                    </li>
+                </ul>
             </div>
-            <div class="col-lg-8 d-flex flex-column gap-4">
-                <div class="card shadow-sm entity-show-card">
-                    <div class="card-header py-2 px-3 d-flex flex-wrap align-items-center gap-2">
-                        <h2 class="h5 mb-0">Recent activity</h2>
-                        <x-entity-count-badge kind="activity" :count="$lifetimeTotals['activities']" />
-                        <span class="text-muted small">Lifetime</span>
-                    </div>
-                    <div class="card-body">
-                        @if(!$agreement->active)
-                            <div class="alert alert-secondary py-2 small mb-3 mb-0">
-                                Activity logging is disabled for inactive agreements. Historical activities are shown below.
-                            </div>
-                        @endif
-                        <x-recent-activity-table
-                            :activities="$recentActivities"
-                            view-all-url="#activity"
-                            view-all-section="activity"
-                            view-all-label="All activity"
-                            :log-activity-url="route('activities.create') . '?agreement_id=' . $agreement->id"
-                            :log-activity-enabled="$agreement->active"
-                            log-activity-disabled-reason="This agreement is inactive."
-                            hide-agreements
-                            empty-message="No activities logged for this agreement yet."
-                        />
-                    </div>
-                </div>
-                <div class="card shadow-sm entity-show-card">
-                    <div class="card-header py-2 px-3 d-flex flex-wrap align-items-center gap-2">
-                        <h2 class="h5 mb-0">Assigned staff</h2>
-                    </div>
-                    <div class="card-body">
-                        @if($hasAnyUsers)
-                            <div class="d-grid gap-2">
-                                @foreach($agreement->teams as $team)
-                                    @php
-                                        $teamOnlyUsers = $team->users->whereNotIn('id', $directUserIds);
-                                    @endphp
-                                    @if($teamOnlyUsers->isNotEmpty())
-                                        <x-relationship-scroll-panel
-                                            :title="$team->name"
-                                            :title-href="route('teams.show', $team)"
-                                            kind="team"
-                                            :count="$teamOnlyUsers->count()"
-                                            collapsible
-                                            :collapsed="true"
-                                            height="220px">
-                                            @foreach($teamOnlyUsers as $user)
-                                                <x-relationship-ledger-row
-                                                    :title="$user->name"
-                                                    :href="$userProfileRoute($user)"
-                                                    kind="user"
-                                                    :context-badges="array_values(array_filter([
-                                                        filled($user->access_profile) ? ['label' => $user->accessLabel(), 'kind' => 'role'] : null,
-                                                        $agreement->principalInvestigators->contains('id', $user->id) ? ['label' => 'PI', 'kind' => 'pi'] : null,
-                                                    ]))"
-                                                />
-                                            @endforeach
-                                        </x-relationship-scroll-panel>
-                                    @endif
-                                @endforeach
-
-                                @if($directUsers->isNotEmpty())
-                                    <x-relationship-scroll-panel
-                                        title="Additional Users"
-                                        kind="user"
-                                        :count="$directUsers->count()"
-                                        collapsible
-                                        :collapsed="true"
-                                        height="220px">
-                                        @foreach($directUsers as $user)
-                                            <x-relationship-ledger-row
-                                                :title="$user->name"
-                                                :href="$userProfileRoute($user)"
-                                                kind="user"
-                                                :context-badges="array_values(array_filter([
-                                                    filled($user->access_profile) ? ['label' => $user->accessLabel(), 'kind' => 'role'] : null,
-                                                    !empty($user->is_principal_investigator) ? ['label' => 'PI', 'kind' => 'pi'] : null,
-                                                ]))">
-                                                <x-slot:footer>
-                                                    @if(!empty($user->also_in_teams))
-                                                        <div class="d-flex flex-wrap gap-1">
-                                                            @foreach($agreement->teams->filter(fn ($team) => $team->users->contains('id', $user->id)) as $team)
-                                                                <x-entity-relation-badge kind="team" :href="route('teams.show', $team)">
-                                                                    {{ $team->name }}
-                                                                </x-entity-relation-badge>
-                                                            @endforeach
-                                                        </div>
-                                                    @endif
-                                                </x-slot:footer>
-                                            </x-relationship-ledger-row>
-                                        @endforeach
-                                    </x-relationship-scroll-panel>
-                                @endif
-                            </div>
-                        @else
-                            <p class="text-muted small mb-0">No staff assigned.</p>
-                        @endif
-                    </div>
-                </div>
+        @endcan
+    </x-slot:actions>
+    <div id="section-overview" data-section="overview">
+        <div class="app-overview-grid" data-overview-grid>
+            <div class="app-overview-column" data-overview-column="work">
+                @include('agreements.partials.overview.deliverables')
+                @include('agreements.partials.overview.candidates')
+                @include('agreements.partials.overview.activity')
+            </div>
+            <div class="app-overview-column" data-overview-column="connections">
+                @include('agreements.partials.overview.about')
+                @include('agreements.partials.overview.organizations')
+                @include('agreements.partials.overview.staff')
+                @include('agreements.partials.overview.coverage')
             </div>
         </div>
     </div>
@@ -351,9 +160,9 @@
                         <div class="py-3 {{ $loop->first ? 'pt-0' : 'border-top' }} {{ $loop->last ? 'pb-0' : '' }}">
                             <div class="d-flex flex-wrap align-items-start gap-2 mb-2">
                                 <div class="min-w-0">
-                                    <h3 class="h6 mb-0 text-break">{{ $person->name }}</h3>
+                                    <h3 class="h6 mb-0 text-break">@can('view', $person)<a class="app-link" href="{{ route('certification-candidates.show', $person) }}">{{ $person->name }}</a>@else{{ $person->name }}@endcan</h3>
                                     @if($person->email)<div class="small text-muted text-break">{{ $person->email }}</div>@endif
-                                    @if($person->start_date)<div class="small text-muted">Start Date: {{ $person->start_date->format('M j, Y') }}</div>@endif
+                                    @if($person->start_date)<div class="small text-muted">Start date: {{ $person->start_date->format('M j, Y') }}</div>@endif
                                 </div>
                                 @can('update', $agreement)
                                     <a class="app-link small ms-auto" href="{{ route('agreements.edit', $agreement) }}#certification-candidate-{{ $person->id }}">{{ $assignments->isEmpty() ? 'Assign a certificate' : 'Edit assignments' }}</a>

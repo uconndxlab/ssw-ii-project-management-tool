@@ -1,6 +1,7 @@
 @props([
     'title',
     'href' => null,
+    'multiLink' => false,
     'kind' => null,
     'titleAsBadge' => false,
     'wrapTitle' => false,
@@ -75,7 +76,7 @@
     $hasMeta = filled($subtitle) || $metaLines->isNotEmpty() || $footerFilled;
 @endphp
 
-<article data-ledger-item data-ledger-title="{{ $title }}" {{ $attributes->class(['app-ledger-row', 'app-ledger-row--simple' => ! $hasMeta && ! filled($description) && $badges->isEmpty() && ! $actionsFilled]) }}>
+<article data-ledger-item data-ledger-title="{{ $title }}" {{ $attributes->class(['app-ledger-row', 'app-ledger-row--link' => $href && ! $multiLink, 'app-ledger-row--simple' => ! $hasMeta && ! filled($description) && $badges->isEmpty() && ! $actionsFilled]) }}>
     <div class="app-ledger-row-head">
         <div class="app-ledger-row-identity">
             @if($href)
@@ -122,5 +123,8 @@
     @endif
     @if(filled($description))
         <p class="app-ledger-description">{{ $description }}</p>
+    @endif
+    @if($href && ! $multiLink)
+        <i class="bi bi-chevron-right app-ledger-chevron" aria-hidden="true"></i>
     @endif
 </article>

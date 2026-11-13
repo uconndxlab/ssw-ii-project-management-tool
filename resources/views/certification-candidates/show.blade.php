@@ -39,7 +39,7 @@
         </div>
     </x-slot:relationships>
     <x-slot:activityHeaderMeta>
-        @include('certification-candidates.partials.heading-count', ['total' => $activityTotal, 'hidden' => $hiddenActivityCount])
+        @include('certification-candidates.partials.heading-count', ['total' => $activityTotal, 'hidden' => $hiddenActivityCount, 'kind' => 'activities'])
     </x-slot:activityHeaderMeta>
     <x-slot:activity>
         <x-recent-activity-table :activities="$recentActivities" hide-agreements

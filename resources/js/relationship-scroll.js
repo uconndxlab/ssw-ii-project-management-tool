@@ -10,8 +10,13 @@ function syncScroll(body) {
     const frame = body.parentElement;
     const status = frame.nextElementSibling;
     const items = [...body.querySelectorAll('[data-ledger-item]')]
-        .filter((item) => item.closest('[data-ledger-scroll]') === body);
-    const preview = body.closest('.app-ledger').querySelector(':scope > .app-ledger-head [data-ledger-preview]');
+        .filter((item) => item.closest('[data-ledger-scroll]') === body && !item.hidden);
+    const filtering = body.closest('[data-relationship-list]')?.dataset.filterActive === 'true';
+    if (body.dataset.scrollRows && !filtering && body.offsetWidth) {
+        const last = items[Number(body.dataset.scrollRows) - 1];
+        if (last) body.style.maxHeight = `${last.getBoundingClientRect().bottom - body.getBoundingClientRect().top + body.scrollTop}px`;
+    }
+    const preview = body.closest('.app-ledger')?.querySelector(':scope > .app-ledger-head [data-ledger-preview]');
 
     if (preview) {
         const names = items.map((item) => item.dataset.ledgerTitle).filter(Boolean);
@@ -24,7 +29,7 @@ function syncScroll(body) {
 
     frame.classList.toggle('has-more-below', moreBelow);
     body.classList.toggle('is-scrollable', overflowing);
-    status.hidden = !overflowing;
+    if (!filtering) status.hidden = !overflowing;
 
     if (!overflowing) {
         body.removeAttribute('tabindex');
@@ -41,10 +46,10 @@ function syncScroll(body) {
     const visible = items.map((item, index) => ({ index, rect: item.getBoundingClientRect() }))
         .filter(({ rect }) => rect.bottom > bounds.top + 1 && rect.top < bounds.bottom - 1);
     const range = visible.length
-        ? `Showing ${visible[0].index + 1}–${visible.at(-1).index + 1} of ${items.length}`
+        ? `${visible[0].index + 1}–${visible.at(-1).index + 1} of ${items.length}`
         : 'Scroll within this list';
 
-    status.textContent = `${range} · ${moreBelow ? 'more below' : 'end of list'}`;
+    if (!filtering) status.textContent = `${range} · ${moreBelow ? 'more below' : 'end of list'}`;
 }
 
 const resizeObserver = new ResizeObserver((entries) => {
@@ -54,6 +59,11 @@ const resizeObserver = new ResizeObserver((entries) => {
 function initScrollPanels() {
     bodies.forEach(syncScroll);
     document.querySelectorAll('[data-ledger-scroll]').forEach((body) => {
+        if (body.dataset.scrollRows && !body.style.maxHeight) {
+            const rows = [...body.querySelectorAll('[data-ledger-item]')].filter((row) => !row.hidden);
+            const last = rows[Number(body.dataset.scrollRows) - 1];
+            if (last && body.offsetWidth) body.style.maxHeight = `${last.getBoundingClientRect().bottom - body.getBoundingClientRect().top}px`;
+        }
         if (!bodies.has(body)) {
             bodies.add(body);
             body.addEventListener('scroll', () => syncScroll(body), { passive: true });
@@ -66,3 +76,5 @@ function initScrollPanels() {
 
 document.addEventListener('DOMContentLoaded', initScrollPanels);
 document.addEventListener('htmx:afterSettle', initScrollPanels);
+document.addEventListener('relationship-filter:change', initScrollPanels);
+document.addEventListener('section-tabs:change', initScrollPanels);

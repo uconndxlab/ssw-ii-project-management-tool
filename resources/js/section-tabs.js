@@ -31,6 +31,15 @@ document.querySelectorAll('[data-section-tabs]').forEach((root) => {
         event.preventDefault();
         const section = navigateSection(root, trigger.dataset.sectionNav ?? trigger.dataset.sectionGoto);
         if (hash && section) history.replaceState(history.state, '', `#${encodeURIComponent(section)}`);
+        if (trigger.dataset.deliverableTarget) {
+            const target = document.getElementById(`deliverable-${trigger.dataset.deliverableTarget}`);
+            const collapse = target?.querySelector('.collapse');
+            if (collapse) window.bootstrap.Collapse.getOrCreateInstance(collapse, { toggle: false }).show();
+            requestAnimationFrame(() => {
+                target?.querySelector('button')?.focus({ preventScroll: true });
+                target?.scrollIntoView({ block: 'start', behavior: 'instant' });
+            });
+        }
     });
     if (hash) {
         const followHash = () => navigateSection(root, location.hash.slice(1));

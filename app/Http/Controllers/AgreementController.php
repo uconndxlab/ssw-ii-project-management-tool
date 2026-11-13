@@ -28,6 +28,7 @@ use App\Services\DeliverableContributionService;
 use App\Services\PrivateFileService;
 use App\Support\ActivityTypeDuration;
 use App\Support\AgreementDeliverableDisplay;
+use App\Support\AgreementOverview;
 use App\Support\Authorization\ScopeSync;
 use App\Support\CarbonDate;
 use App\Support\DeliverableActivityHistogram;
@@ -295,12 +296,6 @@ class AgreementController extends Controller
             'activities' => $agreement->activities()->count(),
         ];
 
-        $ytdTotals = [
-            'activities' => $agreement->activities()
-                ->whereYear('engagement_date', now()->year)
-                ->count(),
-        ];
-
         [$deliverableFrom, $deliverableTo] = $this->deliverableWindow($request, $agreement);
         $deliverableGroups = AgreementDeliverableDisplay::buildGroupedProgress(
             $agreement,
@@ -316,6 +311,12 @@ class AgreementController extends Controller
             && $deliverableTo->toDateString() === $extensionEnd->toDateString();
 
         $certificationRosterDisplay = $this->certificationRosterDisplay($agreement);
+        $overview = new AgreementOverview($agreement, $this->actor());
+        $overviewGroups = $deliverableGroups;
+        if ($request->query->has('from') || $request->query->has('to')) {
+            [$overviewFrom, $overviewTo] = $this->deliverableWindow(new Request, $agreement);
+            $overviewGroups = AgreementDeliverableDisplay::buildGroupedProgress($agreement, $overviewFrom, $overviewTo);
+        }
 
         $reportData = [];
         if ($this->actor()->can('create', [ReportRequest::class, $agreement])) {
@@ -330,7 +331,6 @@ class AgreementController extends Controller
             'recentActivities',
             'programs',
             'lifetimeTotals',
-            'ytdTotals',
             'deliverableGroups',
             'deliverableActivityBuckets',
             'deliverableFrom',
@@ -338,6 +338,11 @@ class AgreementController extends Controller
             'usingExtendedEnd',
             'certificationRosterDisplay',
         ) + $reportData + [
+            'overviewDeliverables' => $overview->deliverableSummary($overviewGroups),
+            'overviewTimeline' => $overview->activityTimeline(),
+            'overviewStaff' => $overview->staff(),
+            'overviewOrganizations' => $overview->organizations(),
+            'restrictedActivityCount' => $overview->restrictedActivityCount(),
             'missingAgreementDates' => ! $startDate || ! $effectiveEnd,
             'startDateAfterToday' => $startDate
                 && $startDate->toDateString() > now()->toDateString(),
@@ -349,7 +354,7 @@ class AgreementController extends Controller
      * enrollments whose certificate applies to this agreement's own effective program scope and
      * is visible to the viewer. Not a progress view — no percentages or completion counts.
      *
-     * @return Collection<int, array{roster: AgreementCertificationCandidate, enrollments: Collection<int, CertificateEnrollment>}>
+     * @return Collection<int, array{roster: AgreementCertificationCandidate, enrollments: Collection<int, CertificateEnrollment>, restricted_count: int}>
      */
     private function certificationRosterDisplay(Agreement $agreement): Collection
     {
@@ -364,10 +369,10 @@ class AgreementController extends Controller
             $candidate = $roster->candidate;
             $enrollmentModels = $candidate !== null ? $candidate->enrollments->all() : [];
 
-            $enrollments = collect($enrollmentModels)->filter(function (CertificateEnrollment $enrollment) use ($agreementMode, $agreementProgramIds, $visibleCertificateIds) {
+            $applicable = collect($enrollmentModels)->filter(function (CertificateEnrollment $enrollment) use ($agreementMode, $agreementProgramIds) {
                 $certificate = $enrollment->certificate;
 
-                if ($certificate === null || ! in_array($certificate->id, $visibleCertificateIds, true)) {
+                if ($certificate === null) {
                     return false;
                 }
 
@@ -379,7 +384,9 @@ class AgreementController extends Controller
                 );
             })->values();
 
-            return ['roster' => $roster, 'enrollments' => $enrollments];
+            $enrollments = $applicable->filter(fn (CertificateEnrollment $enrollment) => in_array($enrollment->certificate_id, $visibleCertificateIds, true))->values();
+
+            return ['roster' => $roster, 'enrollments' => $enrollments, 'restricted_count' => $applicable->count() - $enrollments->count()];
         })->values();
     }
 

@@ -37,7 +37,7 @@ it('shows historical agreement sections when inactive and limits recent activity
 
     $this->actingAs(createSystemAdmin())->get(route('agreements.show', $agreement))
         ->assertOk()
-        ->assertSee('Activity logging is disabled for inactive agreements.')
+        ->assertSee('This agreement is inactive.')
         ->assertViewHas('recentActivities', fn ($activities) => $activities->count() === 5);
 });
 

@@ -21,7 +21,6 @@
     $headerMetaFilled = isset($headerMeta) && filled(trim((string) $headerMeta));
     $headerActionsFilled = isset($headerActions) && filled(trim((string) $headerActions));
     // $count is the true total; $hiddenCount of those are records the viewer cannot open and are never named.
-    $hiddenLabel = $hiddenCount.' '.\Illuminate\Support\Str::lower(\Illuminate\Support\Str::plural(\Illuminate\Support\Str::singular($title), $hiddenCount)).' hidden';
 @endphp
 
 <section {{ $attributes->class(['app-ledger', 'app-ledger--empty' => $isEmpty]) }}>
@@ -35,12 +34,12 @@
                             data-bs-target="#{{ $bodyId }}"
                             aria-expanded="{{ $isCollapsed ? 'false' : 'true' }}"
                             aria-controls="{{ $bodyId }}">
-                        <span class="app-ledger-label">{{ $title }} @if(! is_null($count))<span class="app-count">{{ $count }}</span>@endif @if($hiddenCount > 0)<span class="app-hidden-note" title="{{ $hiddenLabel }}"><i class="bi bi-eye-slash" aria-hidden="true"></i>{{ $hiddenCount }}<span class="visually-hidden"> hidden</span></span>@endif</span>
+                        <span class="app-ledger-label">{{ $title }} @if(! is_null($count))<span class="app-count">{{ $count }}</span>@endif <x-restricted-count :count="$hiddenCount" :kind="$title" /></span>
                         <span class="app-ledger-preview" data-ledger-preview aria-hidden="true" hidden></span>
                         <i class="bi bi-chevron-right" aria-hidden="true"></i>
                     </button>
                 @else
-                    <span class="app-ledger-label">{{ $title }} @if(! is_null($count))<span class="app-count">{{ $count }}</span>@endif @if($hiddenCount > 0)<span class="app-hidden-note" title="{{ $hiddenLabel }}"><i class="bi bi-eye-slash" aria-hidden="true"></i>{{ $hiddenCount }}<span class="visually-hidden"> hidden</span></span>@endif</span>
+                    <span class="app-ledger-label">{{ $title }} @if(! is_null($count))<span class="app-count">{{ $count }}</span>@endif <x-restricted-count :count="$hiddenCount" :kind="$title" /></span>
                 @endif
             </h3>
             @if($headerMetaFilled)
@@ -72,9 +71,6 @@
                  aria-describedby="{{ $bodyId }}-scroll-status"
                  style="--app-ledger-height: {{ $height }};">
                 {{ $slot }}
-                @if($hiddenCount > 0)
-                    <div class="app-ledger-hidden-row"><i class="bi bi-eye-slash" aria-hidden="true"></i>{{ $hiddenLabel }}</div>
-                @endif
             </div>
         </div>
         <p class="app-ledger-scroll-status" id="{{ $bodyId }}-scroll-status" data-ledger-scroll-status hidden></p>

@@ -48,7 +48,7 @@
 @else
     @if(!empty($deliverableActivityBuckets['buckets']))
         <div class="mb-3">
-            <div class="text-muted small fw-semibold mb-2">Activity over agreement period</div>
+            <div class="text-muted small fw-semibold mb-2">Deliverable progress logged over the agreement period</div>
             <div class="deliverable-activity-histogram" style="height: 140px;">
                 <canvas id="deliverable-activity-histogram"
                         data-activity-buckets='@json($deliverableActivityBuckets)'
@@ -177,7 +177,7 @@
                                     }
                                 @endphp
 
-                                <div class="border rounded mb-2 bg-body">
+                                <div class="border rounded mb-2 bg-body app-deliverable-target" id="deliverable-{{ $deliverable->id }}">
                                     <button type="button"
                                             class="w-100 btn btn-link text-decoration-none text-body text-start p-3"
                                             data-bs-toggle="collapse"

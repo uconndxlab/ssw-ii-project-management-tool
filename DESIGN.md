@@ -25,6 +25,7 @@ colors:
   success: "#157347"
   success-subtle: "#e6f4ec"
   success-ink: "#0f5a36"
+  progress: "#7fbf99"
   warning: "#b7791f"
   warning-subtle: "#fdf1d6"
   warning-ink: "#7a4a06"
@@ -192,6 +193,7 @@ The client-supplied Innovations palette over a cool, low-chroma neutral ramp, wi
 
 ### Secondary
 - **Status Green** (`success`, `success-subtle`, `success-ink`): Active and completed. A darker green so white text on it clears 4.5:1.
+- **Progress Green** (`progress`, #7FBF99): the "Progress made" step between neutral and on track. Only a dot and a status-bar block; the chip reuses success-subtle and success ink, so it never carries text on its own.
 - **Attention Amber** (`warning`, `warning-subtle`, `warning-ink`): warnings, needs-review and unsaved changes.
 - **Error Red** (`danger`, `danger-hover`, `danger-subtle`, `danger-ink`): validation errors, required markers, cancelled and destructive actions.
 
@@ -205,6 +207,8 @@ The client-supplied Innovations palette over a cool, low-chroma neutral ramp, wi
 - **Control Outline** (`control-outline`): field, select, checkbox and radio outlines, 3:1 on white.
 - **Ink / Body / Muted** (`ink`, `body`, `muted`): headings and links, running text, and secondary text (5.8:1 on white, 5.2:1 on the canvas).
 - **Neutral Chip** (`neutral-subtle`, `neutral-ink`): inactive status and non-clickable tags.
+
+**The Status Bar Order.** Stacked status bars (an agreement's deliverable health) draw tone blocks in one fixed order: danger, warning, progress, success, neutral. Neutral is the line-strong grey. Empty blocks draw nothing, and the status chips below the bar are its legend and text equivalent, in the same order. No hatching or texture. The palette passes the dataviz validator for colour-vision separation; the grey block's low contrast is covered by the chip labels.
 
 **The One Accent Rule.** Steel means "act here" or "you are here". Never use it to decorate, and never use a second hue for record kinds; kind is shown by label and icon.
 
@@ -273,17 +277,19 @@ Two sizes: 36px (default) and 32px (small, for row and section actions), growing
 | Destructive commit | `btn-danger` | Only the button that commits a destructive confirmation or form (dialog Delete, Revoke award). | Red fill → darker red |
 | Ghost | `btn-link`, `.app-row-actions-toggle` | Inline text actions and the row "⋯" toggle. | Text or icon → `hover` fill for icon toggles |
 
-Every outline variant behaves the same: white at rest, its own tint on hover, a deeper tint when pressed, never a solid fill. Separate buttons in a row sit 4px apart; only a real `btn-group` joins them. Icons come from Bootstrap Icons, never Unicode arrows. Icon-only buttons take the variant of their job and keep an accessible name. Custom controls (ledger header actions, repeater icon buttons, "+N") use the same `hover`, `press` and focus tokens. `btn-secondary`, `btn-success` and other stock variants are not used. Log Activity is always the primary button, in the sidebar, the phone top bar and an agreement's activity table. A disabled button says why next to it ("This agreement is inactive.").
+Every outline variant behaves the same: white at rest, its own tint on hover, a deeper tint when pressed, never a solid fill. Separate buttons in a row sit 4px apart; only a real `btn-group` joins them. Icons come from Bootstrap Icons, never Unicode arrows. Icon-only buttons take the variant of their job and keep an accessible name. Custom controls (ledger header actions, repeater icon buttons, "+N") use the same `hover`, `press` and focus tokens. `btn-secondary`, `btn-success` and other stock variants are not used. Log Activity is always the primary button, in the sidebar, the phone top bar and an agreement's record bar. A disabled button says why next to it ("This agreement is inactive.").
 
 ### Page Headers and Breadcrumbs
 
 Reuse `x-page-header` with its `badges`, `meta`, `controls` and `more` slots. Page headings use `.app-page-title`; the record's Active/Inactive status chip belongs in the header metadata and is not repeated in Summary. Record and form headers omit entity-type badges: the breadcrumb and record icon already establish the entity. Metadata is optional and its row disappears when empty.
 
-Show-page headers add a 40px steel-mist record-kind icon beside the title. User/profile headers use the people icon while retaining the meaningful access-profile label. Create/edit headers retain their title and action composition without a type badge. The optional `facts` slot carries useful working information: agreement dates and principal investigators, user contact/supervisor details, and activity date, logger and family. Activity facts appear once in the labeled strip, without a duplicate subtitle; Internal only, Cancelled and Not yet complete remain in metadata. Person links retain their policy checks. A populated organization PO number and logging-field type use compact metadata labels; missing identifiers are omitted.
+Show-page headers add a 40px steel-mist record-kind icon beside the title. User/profile headers use the people icon while retaining the meaningful access-profile label. Create/edit headers retain their title and action composition without a type badge. The optional `facts` slot carries useful working information: an agreement's Period (start – effective end, then "N days left", "Starts in N days" or "Ended N days ago", plus a muted "extended from" date, over a thin 4px track: elapsed time in accent-line, a 2px ink Today mark, the extension in steel mist, and the whole track grey once the period has ended) and principal investigators, user contact/supervisor details, and activity date, logger and family. Activity facts appear once in the labeled strip, without a duplicate subtitle; Internal only, Cancelled and Not yet complete remain in metadata. Person links retain their policy checks. A populated organization PO number and logging-field type use compact metadata labels; missing identifiers are omitted.
 
 **The Useful Facts Rule.** Do not fill a header strip for symmetry. Created, updated, added and joined dates are bookkeeping metadata and stay out of the record display. Relationship counts already visible in the wider panel headings do not need repeating above the page. Projects, programs, states and teams can have no facts strip at all; keep useful business dates on agreements and activities.
 
-Summary is a quick-facts column. Existing YTD figures lead on agreements and organizations; other entities lead with their existing totals or completion/duration figures. Use 26px semibold tabular numerals and 13px labels; only actual year-to-date figures carry a steel-ink period label. Related-record disclosures in Summary start closed at every item count. Wider relationship and reporting sections can start open. This extends selected Hierarchy C across record pages without new metrics or entity hues.
+**The Record Bar.** A show page with tabs puts its tabs and actions in one record bar under the header, not in the title row: a full-width white card (card shadow, 8px radius, 44px high) with the house underline tabs on the left (muted at rest, ink semibold with a 2px steel rule on the card's bottom edge when current) and small action buttons on the right after a hairline (the primary action, Edit, ⋯). Tabs carry no counts. When the header scrolls away the bar sticks 0.5rem below the top with a hairline border and a heavy shadow (`0 12px 32px rgba(21,26,35,.2), 0 2px 8px rgba(21,26,35,.12)`, heavier than menus because it sits over moving content), and the record icon and truncated title (at most 40% of the bar) grow in on the left over 150ms, pushing the tabs right once; the title is hidden from assistive technology because the h1 already names the record. No transition under reduced motion. The bar sits above page content and below open menus, the sidebar, drawers and the confirm dialog. The agreement page uses it today; pages without tabs will probably get an actions-only bar when they are redesigned.
+
+Summary is a quick-facts column. Agreements use their own period instead of year-to-date figures and have no Summary card; organizations keep their YTD figures; other entities lead with their existing totals or completion/duration figures. Use 26px semibold tabular numerals and 13px labels; only actual year-to-date figures carry a steel-ink period label. Related-record disclosures in Summary start closed at every item count. Wider relationship and reporting sections can start open. This extends selected Hierarchy C across record pages without new metrics or entity hues.
 
 Header actions are captured once and repeated in the compact bar. In the full header the form status sits under the buttons; in the compact bar it sits beside them. Icon-only buttons and Save (with its shortcut) get tooltips. A `more` slot adds an overflow menu. In the compact bar only Save keeps its label; on phones Save is an icon too.
 
@@ -294,6 +300,8 @@ Breadcrumbs show route hierarchy, independent of navigation history: resource in
 ### Cards / Containers
 
 White, 8px, with the shared soft shadow and a transparent outer border. Use `x-section-card` for form sections: a 1rem title (600), optional muted subtitle and 1rem body padding. Form section titles remain unbanded. Entity detail and Home card titles use the same white surface as the body, with a hairline below the title. Search result card titles follow this treatment too. Recent activity and the main card render in the requested `activityFirst` order. Index table cards clip overflow around their table and footer.
+
+Record overviews (the agreement Overview first) put section headings on the page canvas, above a white card: the heading, its count badge, an optional restricted badge, and a right-aligned section link ("View deliverables →"). The card has no title bar, and overview sections are not collapsible. Two columns from 992px: the wide column holds what the record exists for (on agreements, the work: Deliverables, Candidates, Activity); the narrow column holds connections (About, Organizations, Staff, Coverage). Below 992px they stack. Columns keep their natural heights; nothing stretches to match the other column. Cards stay compact instead: one-line empty states, a fixed number of recent rows (5), and lists capped by the scroll threshold. Coverage chips are always shown in full. Content revealed in place ("Read more") grows over 200ms rather than snapping.
 
 ### Inputs / Fields
 
@@ -307,9 +315,9 @@ Four distinct things, each with one treatment:
 - **Linked chip** (`a.app-chip`): a related record the user can open. White, 1px control outline, steel ink, at least 24px high, 4px radius, no link icon. Hover goes to steel mist with an underline. Selected picker tokens retain their neutral fill and remove button.
 - **Plain text** (`.app-plain`): a related record the user cannot open. Never a chip, so a chip always means clickable. Access follows `isLinkable()` (the `view` policy), exactly as before.
 - **Tag** (`.app-tag`): a non-clickable label (role, flag, record kind). Tinted, no border.
-- **Status chip** (`.app-status`): tinted fill, dark ink, a dot and text. Tones: success, neutral, warning, danger. `x-status-badge` takes `active` and an optional `tone`. Meaning never rests on color alone.
+- **Status chip** (`.app-status`): tinted fill, dark ink, a dot and text. Tones: success, progress, neutral, warning, danger. `x-status-badge` takes `active` and an optional `tone`. Deliverable statuses use these chips everywhere, through `AgreementOverview::statusChip()`. Meaning never rests on color alone.
 
-Counts are plain numbers (`.app-count`). In tables a related-record cell shows the first record as a linked chip and a visible "+N" button (`x-table-badge-list`); the button opens a menu listing every record, each a deep link or plain text. Primary agreement chips in activity tables wrap their full name so similarly named agreements remain distinguishable. `EntityBadge` returns these class strings, so there are no per-kind hues.
+Counts use one style: the neutral count badge (`.app-count`, `x-entity-count-badge`), a small grey pill with tabular figures, beside a section or panel heading. Tabs, links and "Show all" carry no numbers. A count is the total, including records the viewer cannot open; when some are restricted, a lock badge follows it (`x-restricted-count`: lock icon and "N restricted", with a "You don't have access to N …" tooltip). Restricted always means the viewer cannot open them. Use the lock, never an eye-slash, and never name restricted records. In tables a related-record cell shows the first record as a linked chip and a visible "+N" button (`x-table-badge-list`); the button opens a menu listing every record, each a deep link or plain text. Primary agreement chips in activity tables wrap their full name so similarly named agreements remain distinguishable. `EntityBadge` returns these class strings, so there are no per-kind hues.
 
 ### Navigation
 
@@ -325,7 +333,7 @@ A "Skip to content" link is the first keyboard stop. The sidebar navigation has 
 
 ### Tables and Relationship Ledgers
 
-Index tables use the darker Table Header fill in sentence case (0.78125rem, 600, neutral emphasis ink), 1px row dividers, a hover tint, and one-line cells with names clamped to two lines. Rows are 48–56px. Record names, people and other links share one style: ink, 500 weight, a grey underline at rest, steel on hover (`.app-link`). Sort links retain visible carets at rest. Row actions are a single three-dots menu (View, Edit, Duplicate, then Delete in red after a divider), not a strip of icon buttons. Destructive actions still confirm. Deliverable charts read accent, success, muted text and grid colors from the same CSS tokens; expected pace retains its dashed line so meaning does not rely on color alone.
+Index tables use the darker Table Header fill in sentence case (0.78125rem, 600, neutral emphasis ink), 1px row dividers, a hover tint, and one-line cells with names clamped to two lines. Rows are 48–56px. Record names, people and other links share one style: ink, 500 weight, a grey underline at rest, steel on hover (`.app-link`). Sort links retain visible carets at rest. Row actions are a single three-dots menu (View, Edit, Duplicate, then Delete in red after a divider), not a strip of icon buttons. Destructive actions still confirm. Deliverable charts read accent, success, muted text and grid colors from the same CSS tokens; expected pace retains its dashed line so meaning does not rely on color alone. The overview activity chart is compact (56px plot): one accent hue, bars at most 16px wide, every period labelled (thinned past 12), a muted caption above, a 2px ink Today line with the rest of the period as one flat fill tint, a white popover tooltip on hover or focus, and a visually hidden table as its text equivalent.
 
 When a row has a permitted record-view link, stretch that native anchor across the row with `.app-row-link`; this also applies to embedded recent activities. Related links, chips and menu controls sit above the target and retain their own actions. Keyboard focus outlines the row without adding a second tab stop. Native modified-click and open-in-new-tab behavior remain available. Keep any two-line text clamp inside `.app-row-link-label` so it does not clip the stretched target. Records without a view link, and administrative lists without a record-view page, do not gain a row target.
 
@@ -339,11 +347,19 @@ The shared table scroll frame adds a subtle dark shadow at each edge where rows 
 
 Relationship ledgers use one flat record row across name-only, description, person, organization, contact and staff-group variants. Wrapping title links lead; role tags and actions sit alongside; email, PO, KFS and source agreements follow as compact metadata. Narrow ledgers stack metadata; wide ledgers can use two columns. No nested row cards or bulleted metadata. Permission-restricted titles remain plain text; contact email and phone remain actionable.
 
+**The Row Signifier Rule.** A row that opens one record has an underlined name stretched across the row, a light trailing chevron (`bi-chevron-right`) and a full-row hover fill; tags and inner links sit above the stretched link. A row that opens nothing is plain body text with no chevron and no hover. A row with several destinations (a candidate and their certificates) keeps separate underlined links and has no row chevron (`multi-link`). The arrow (`bi-arrow-right`) is only for section links such as "View all activity →".
+
+Relationship panels are contained white boxes: a 1px hairline border, an inner header separated from the rows by a hairline (no grey band), the heading with its count badge and restricted badge, and the disclosure chevron on the right. Only the chevron rotates.
+
 The full disclosure header is a button with a hover fill, visible focus and a rotating chevron. All Summary disclosures start closed, including single-record lists; wider Relationships disclosures start open unless explicitly closed. A collapsed preview is one comma-separated line of record names, clipped with a CSS ellipsis at the available width. Do not append a "+N" suffix: the heading already carries the total count. Preview text is hidden from assistive technology so long lists do not inflate button names; expanded rows expose the full records. Empty groups show a muted count and explanation without a disclosure button. Group navigation and add/edit controls sit outside the button.
 
 Ledger header actions use the approved icon-button pattern: a 44×44px bordered eye or plus action immediately left of the disclosure chevron. View and Add remain native links outside the disclosure button, with explicit accessible names, hover/focus tooltips and an accent focus outline. Reserve preview space so text cannot run underneath actions. Empty groups can retain a permitted Add action without a chevron; groups without an action gain no placeholder. The shared header supports the existing View and Add slots without nesting controls.
 
 Long lists use the selected Scrolling B: a styled 8px native scrollbar, a visible range caption (for example, "1–3 of 9 · more below"), and a dark bottom-edge cue while records remain below. The scroll region gets a keyboard stop, a name and an associated caption only when it overflows. The caption is not a live region, so it does not announce every scroll event. Short lists have no extra keyboard stop or visible caption. Nested panels count only their own rendered items; record counts are measured from the displayed rows, not inferred from server totals.
+
+Long relation lists on a record overview never send the user off the page (no drawer, modal, "Related" tab or link to a filtered list). Up to 6 rows show in full. Past 6 the list scrolls inside its card with Scrolling B. Past 10 a labelled filter field ("Filter organizations") appears above the list: it hides non-matching rows, highlights the match in the name, swaps the caption to "N of M match", says "No organizations match "x"." when nothing does, clears on Escape, and announces the match count politely. The thresholds live in one place so they can be tuned.
+
+Staff on a record overview is grouped by team: a small muted team heading (linked) with its count, then compact member rows (name, PI tag, chevron) indented 1rem under a 2px `--app-line` guide rule with no dividers between them, a hairline between groups, and "Added directly" last. A person in two teams appears under each; the section count is unique people. The filter hides groups with no matches.
 
 ### Form Actions and Drawers
 
@@ -373,6 +389,7 @@ Dropdowns follow the semantic subtle colors and the 8px menu radius. Bootstrap 5
 - **Do** put row actions in the three-dots menu and keep Delete last, in red, behind a confirm.
 - **Do** keep controls on white surfaces so the 3:1 outline holds.
 - **Do** preserve visible focus rings and the shared save-status announcement.
+- **Do** show counts as the neutral count badge beside a heading, with the lock badge for restricted records.
 
 ### Don't:
 - **Don't** add a second accent hue, per-record-kind colors, gradients or gloss.
@@ -382,3 +399,4 @@ Dropdowns follow the semantic subtle colors and the 8px menu radius. Bootstrap 5
 - **Don't** add in-card submit/cancel controls to forms; the header owns them.
 - **Don't** introduce a per-page form shell, inline `<style>` blocks or off-palette hex values; add to `app.css` using the tokens.
 - **Don't** replace ordinary sentence-case labels with tracked uppercase styling.
+- **Don't** put counts on tabs, links or "Show all"; don't show a status as anything but a status chip.

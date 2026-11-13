@@ -2319,7 +2319,7 @@ textarea.form-control {
    - .app-plain: a related record the user cannot open
    - .app-tag: a non-clickable label (role, flag, record kind)
    - .app-status: a tinted status chip with a dot and text
-   - .app-count: a plain count next to a title */
+   - .app-count: a neutral count pill next to a title (lock and text for restricted records) */
 .app-chip,
 .badge.app-chip {
     --bs-badge-font-weight: 500;
@@ -2389,10 +2389,28 @@ a.badge.app-chip:focus-visible {
 }
 
 .app-count {
-    font-size: 0.8125rem;
-    font-weight: 500;
-    color: var(--bs-secondary-color);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.25rem;
+    height: 1.125rem;
+    padding: 0 0.375rem;
+    border-radius: 50rem;
+    background-color: var(--bs-secondary-bg-subtle);
+    color: var(--bs-secondary-text-emphasis);
+    font-size: 0.6875rem;
+    font-weight: 600;
     font-variant-numeric: tabular-nums;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.app-count--restricted {
+    gap: 0.25rem;
+}
+
+.app-count--restricted .bi {
+    font-size: 0.625rem;
 }
 
 .app-status {
@@ -2550,51 +2568,6 @@ a.badge.app-chip:focus-visible {
     list-style: none;
 }
 
-/* Records the viewer cannot open: counted in totals, never named. */
-.app-hidden-note {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3125rem;
-    font-size: 0.78125rem;
-    font-weight: 500;
-    color: var(--app-muted);
-    white-space: nowrap;
-}
-
-.app-hidden-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    min-height: 1.5rem;
-    padding: 0 0.4375rem;
-    font-size: 0.78125rem;
-    font-weight: 600;
-    color: var(--app-muted);
-    white-space: nowrap;
-    background-color: var(--app-surface-fill);
-    border-radius: var(--bs-border-radius-sm);
-}
-
-.app-more-hidden,
-.app-ledger-hidden-row {
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
-    color: var(--app-muted);
-    border-top: 1px solid var(--app-line);
-}
-
-.app-more-hidden {
-    margin: 0 0.25rem 0.25rem;
-    padding: 0.375rem 0.5rem;
-    font-size: 0.78125rem;
-}
-
-.app-ledger-hidden-row {
-    padding: 0.625rem 0.75rem;
-    font-size: 0.8125rem;
-}
-
 /* Row actions: one overflow menu instead of a strip of icon buttons. */
 .app-row-actions-toggle {
     display: inline-grid;
@@ -2628,6 +2601,9 @@ a.badge.app-chip:focus-visible {
     min-width: 0;
     container-type: inline-size;
     container-name: ledger;
+    background-color: var(--bs-body-bg);
+    border: 1px solid var(--app-line);
+    border-radius: var(--bs-border-radius);
 }
 
 .app-ledger-head {
@@ -2636,8 +2612,12 @@ a.badge.app-chip:focus-visible {
     align-items: stretch;
     gap: 0.5rem;
     min-height: 2.75rem;
-    background-color: var(--app-surface-fill);
-    border-radius: var(--bs-border-radius-sm);
+    border-bottom: 1px solid var(--app-line);
+    border-radius: var(--bs-border-radius) var(--bs-border-radius) 0 0;
+}
+
+.app-ledger-head:has(.app-ledger-toggle.collapsed) {
+    border-bottom-color: transparent;
 }
 
 .app-ledger-heading {
@@ -2686,14 +2666,14 @@ a.badge.app-chip:focus-visible {
     box-shadow: var(--app-ring);
 }
 
-.app-ledger-toggle .bi {
+.app-ledger-toggle > .bi-chevron-right {
     grid-column: 2;
     grid-row: 1 / span 2;
     font-size: 1rem;
     transform: rotate(90deg);
 }
 
-.app-ledger-toggle.collapsed .bi {
+.app-ledger-toggle.collapsed > .bi-chevron-right {
     transform: rotate(0);
 }
 
@@ -2770,8 +2750,7 @@ a.badge.app-chip:focus-visible {
 .app-ledger--empty .app-ledger-head {
     align-items: center;
     background-color: transparent;
-    border-top: 1px solid var(--app-line);
-    border-radius: 0;
+    border-bottom: 0;
 }
 
 .app-ledger--empty .app-ledger-label {
@@ -2788,7 +2767,7 @@ a.badge.app-chip:focus-visible {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-    .app-ledger-toggle .bi {
+    .app-ledger-toggle > .bi-chevron-right {
         transition: transform 0.15s ease;
     }
 }
@@ -2846,7 +2825,7 @@ a.badge.app-chip:focus-visible {
 
 .app-ledger-scroll-status {
     margin: 0;
-    padding: 0.5rem 0;
+    padding: 0.5rem 0.75rem;
     border-top: 1px solid var(--app-line);
     color: var(--app-muted);
     font-size: 0.8125rem;
@@ -2854,9 +2833,59 @@ a.badge.app-chip:focus-visible {
 }
 
 .app-ledger-row {
+    position: relative;
     min-width: 0;
     padding: 0.75rem;
     border-bottom: 1px solid var(--app-line);
+}
+
+.app-ledger-row--link {
+    padding-right: 2rem;
+}
+
+.app-ledger-row--link:hover,
+.app-ledger-row--link:focus-within {
+    background-color: var(--app-surface-inset);
+}
+
+.app-ledger-row--link .app-ledger-name::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    cursor: pointer;
+}
+
+.app-ledger-row--link .app-ledger-name:focus-visible {
+    outline: none;
+}
+
+.app-ledger-row--link .app-ledger-name:focus-visible::after {
+    outline: 2px solid var(--app-accent);
+    outline-offset: -2px;
+}
+
+.app-ledger-row--link :is(a, button, .badge, .app-tag, .app-status, .app-count, .dropdown):not(.app-ledger-name) {
+    position: relative;
+    z-index: 2;
+}
+
+.app-ledger-row .dropdown:has(.dropdown-menu.show) {
+    z-index: 5;
+}
+
+.app-ledger-chevron {
+    position: absolute;
+    top: 50%;
+    right: 0.75rem;
+    transform: translateY(-50%);
+    color: var(--bs-secondary-color);
+    font-size: 0.75rem;
+}
+
+.app-ledger-row--link:hover > .app-ledger-chevron,
+.app-ledger-row--link:focus-within > .app-ledger-chevron {
+    color: var(--bs-body-color);
 }
 
 .app-ledger-row:last-child {
@@ -2889,7 +2918,7 @@ a.badge.app-chip:focus-visible {
 .app-ledger-name {
     font-size: 0.875rem;
     font-weight: 500;
-    color: var(--app-ink);
+    color: var(--bs-body-color);
     overflow-wrap: anywhere;
 }
 
@@ -3768,4 +3797,489 @@ a.app-row-link:focus-visible::after {
 
 .app-auth-brand .app-record-icon {
     margin-bottom: 0.75rem;
+}
+
+/* Agreement record bar and canvas sections.
+   A white card under the header: underline tabs on the left, actions on the right. Stuck, it floats 0.5rem below
+   the top with a heavy shadow so it reads clearly above the content scrolling under it. */
+.app-record-bar-sentinel {
+    height: 1px;
+}
+
+.app-record-bar-wrap {
+    position: sticky;
+    top: var(--app-topbar-height, 0px);
+    z-index: 1010;
+    display: flex;
+    padding-block: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.app-record-bar {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: stretch;
+    min-width: 0;
+    min-height: 2.75rem;
+    padding: 0 0.375rem 0 0.75rem;
+    background-color: var(--bs-body-bg);
+    border: 1px solid transparent;
+    border-radius: var(--bs-border-radius-lg);
+    box-shadow: var(--app-card-shadow);
+}
+
+.app-record-bar-wrap.is-stuck .app-record-bar {
+    border-color: var(--app-line);
+    box-shadow: 0 0.75rem 2rem rgba(21, 26, 35, 0.2), 0 0.125rem 0.5rem rgba(21, 26, 35, 0.12);
+}
+
+.app-record-bar-title {
+    display: flex;
+    flex: 0 1 auto;
+    align-self: center;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    max-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    visibility: hidden;
+    opacity: 0;
+}
+
+.app-record-bar-wrap.is-stuck .app-record-bar-title {
+    max-width: 40%;
+    padding-right: 0.75rem;
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Underline tabs whose steel rule sits on the card's bottom edge. */
+.app-record-bar-nav.nav-pills {
+    min-width: 0;
+    box-shadow: none;
+}
+
+.app-record-bar-nav .nav-link {
+    display: flex;
+    align-items: center;
+}
+
+.app-record-bar-divider {
+    align-self: center;
+    margin: 0 0.75rem 0 auto;
+    width: 1px;
+    height: 22px;
+    flex: 0 0 auto;
+    background: var(--app-line);
+}
+
+.app-record-bar-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: .375rem;
+    flex: 0 0 auto;
+}
+
+.app-record-bar-actions .dropdown-menu {
+    z-index: 1011;
+}
+
+.app-overview-grid .table tbody .dropdown:has(.dropdown-menu.show) {
+    z-index: 1011;
+}
+
+.app-overview-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+}
+
+.app-overview-column {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+}
+
+.app-record-section {
+    min-width: 0;
+}
+
+.app-record-section-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .375rem;
+    margin-bottom: .5rem;
+}
+
+.app-record-section-heading > a {
+    white-space: nowrap;
+}
+
+.app-record-section-card > .card-body {
+    padding: 14px;
+}
+
+.app-record-list {
+    border: 0;
+    box-shadow: none;
+    background: transparent;
+}
+
+.app-record-list .app-ledger-body:has(> .app-ledger-row),
+.app-record-list .app-ledger-body {
+    grid-template-columns: minmax(0, 1fr);
+    max-height: none;
+}
+
+.app-record-list .app-ledger-body[data-ledger-scroll] {
+    max-height: 24rem;
+}
+
+.app-ledger-body [hidden] {
+    display: none !important;
+}
+
+.app-record-list mark {
+    padding: 0;
+    background: var(--bs-warning-bg-subtle);
+    color: inherit;
+}
+
+.app-attention-row {
+    display: flex;
+    align-items: center;
+    gap: .625rem;
+    margin-inline: -.75rem;
+    padding: .625rem .75rem;
+    color: inherit;
+    text-decoration: none;
+}
+
+.app-record-list .app-ledger-scroll-frame,
+.app-record-list .app-ledger-scroll-status {
+    margin-inline: -.75rem;
+}
+
+.app-record-list .app-ledger-body > p {
+    padding-inline: .75rem;
+}
+
+.app-record-list .app-ledger-body > .app-ledger-row:first-child,
+.app-record-list .app-ledger-body > .app-ledger-group:first-child > .app-ledger-group-head {
+    padding-top: 0;
+}
+
+.app-record-list .app-ledger-body > .app-ledger-row:last-child,
+.app-record-list .app-ledger-body > .app-ledger-group:last-child > .app-ledger-row:last-child {
+    padding-bottom: 0;
+}
+
+/* Staff groups: a small team heading, its members indented under a guide rule, a hairline between teams. */
+.app-ledger-group-head {
+    display: flex;
+    align-items: center;
+    gap: .375rem;
+    padding: .75rem .75rem .375rem;
+    font-size: .8125rem;
+    font-weight: 600;
+    color: var(--app-muted);
+}
+
+.app-ledger-group-head .app-link {
+    font-weight: 600;
+}
+
+.app-ledger .app-ledger-group-head a.app-link:not(:hover) {
+    color: inherit;
+}
+
+.app-ledger-group + .app-ledger-group > .app-ledger-group-head {
+    margin-top: .5rem;
+    border-top: 1px solid var(--app-line);
+}
+
+.app-ledger-group > .app-ledger-row {
+    margin-left: 1rem;
+    border-bottom: 0;
+    border-left: 2px solid var(--app-line);
+    min-height: 2.25rem;
+    padding-block: .375rem;
+}
+
+/* Agreement period: a thin elapsed track under the dates. */
+.app-period-track {
+    position: relative;
+    max-width: 22rem;
+    height: 4px;
+    margin-top: .5rem;
+    background: var(--app-line);
+    border-radius: 2px;
+}
+
+.app-period-track > span {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    border-radius: 2px;
+}
+
+.app-period-extension {
+    right: 0;
+    background: var(--app-accent-subtle);
+}
+
+.app-period-elapsed {
+    background: var(--app-accent-line);
+}
+
+.app-period-track--ended .app-period-elapsed {
+    background: var(--app-line-strong);
+}
+
+.app-period-today {
+    top: -3px !important;
+    bottom: -3px !important;
+    width: 2px;
+    margin-left: -1px;
+    background: var(--app-ink);
+}
+
+.app-attention-row + .app-attention-row {
+    border-top: 1px solid var(--app-line);
+}
+
+.app-attention-row > :first-child {
+    flex: 1;
+}
+
+.app-attention-row:hover,
+.app-attention-row:focus-visible {
+    background: var(--app-surface-inset);
+}
+
+.app-deliverable-target {
+    scroll-margin-top: calc(var(--app-topbar-height, 0px) + 56px);
+}
+
+.app-deliverable-status-bar {
+    display: flex;
+    gap: 2px;
+    height: 8px;
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: .75rem;
+}
+
+.app-status-block--danger {
+    background: var(--bs-danger);
+}
+
+.app-status-block--warning {
+    background: var(--bs-warning);
+}
+
+.app-status-block--progress {
+    background: #7fbf99;
+}
+
+.app-status-block--success {
+    background: var(--bs-success);
+}
+
+.app-status-block--neutral {
+    background: var(--app-line-strong);
+}
+
+.app-status--progress {
+    background: var(--bs-success-bg-subtle);
+    color: var(--bs-success-text-emphasis);
+}
+
+.app-status--progress::before {
+    background: #7fbf99;
+}
+
+.app-abstract {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    overflow: hidden;
+    white-space: pre-line;
+}
+
+.app-abstract.is-expanded {
+    display: block;
+}
+
+.app-activity-chart {
+    margin: 0 0 1rem;
+}
+
+.app-activity-chart-caption {
+    margin-bottom: 1.25rem;
+    font-size: .8125rem;
+    color: var(--app-muted);
+}
+
+.app-activity-plot {
+    position: relative;
+}
+
+.app-activity-bars {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    height: 56px;
+    border-bottom: 1px solid var(--app-line-strong);
+}
+
+.app-activity-bucket {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+/* The whole column is the hover and focus target; the visible bar is drawn inside it. */
+.app-activity-bar {
+    position: absolute;
+    inset: 0;
+    padding: 0;
+    background: none;
+    border: 0;
+    border-radius: 3px 3px 0 0;
+}
+
+.app-activity-bar::before {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: min(16px, 70%);
+    height: var(--bar-height);
+    content: '';
+    background: var(--app-accent);
+    border-radius: 3px 3px 0 0;
+    transform: translateX(-50%);
+}
+
+.app-activity-bar:hover::before,
+.app-activity-bar:focus-visible::before {
+    background: var(--app-accent-ink);
+}
+
+.app-activity-bar:focus-visible {
+    outline: none;
+    box-shadow: var(--app-ring-inset);
+}
+
+.app-chart-tooltip {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    z-index: 3;
+    display: none;
+    padding: .3125rem .5rem;
+    font-size: .75rem;
+    color: var(--bs-body-color);
+    white-space: nowrap;
+    pointer-events: none;
+    background: var(--bs-body-bg);
+    border-radius: var(--bs-border-radius);
+    box-shadow: var(--app-shadow-pop);
+    transform: translateX(-50%);
+}
+
+.app-chart-tooltip b {
+    font-weight: 600;
+    color: var(--app-ink);
+}
+
+.app-activity-bucket:first-child .app-chart-tooltip {
+    left: 0;
+    transform: none;
+}
+
+.app-activity-bucket:last-child .app-chart-tooltip {
+    right: 0;
+    left: auto;
+    transform: none;
+}
+
+.app-activity-bar:hover + .app-chart-tooltip,
+.app-activity-bar:focus-visible + .app-chart-tooltip {
+    display: block;
+}
+
+.app-chart-future {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--app-surface-fill);
+    border-radius: 3px 3px 0 0;
+}
+
+.app-chart-today {
+    position: absolute;
+    top: -6px;
+    bottom: 0;
+    z-index: 2;
+    width: 2px;
+    margin-left: -1px;
+    pointer-events: none;
+    background: var(--app-ink);
+}
+
+.app-chart-today > span {
+    position: absolute;
+    bottom: calc(100% + 2px);
+    left: 50%;
+    font-size: .6875rem;
+    font-weight: 600;
+    color: var(--app-ink);
+    white-space: nowrap;
+    transform: translateX(-50%);
+}
+
+.app-activity-axis {
+    display: flex;
+    margin-top: .25rem;
+    font-size: .6875rem;
+    color: var(--app-muted);
+    text-align: center;
+}
+
+.app-activity-axis > span {
+    flex: 1 1 0;
+    min-width: 0;
+    white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .app-record-bar-title {
+        transition: max-width 150ms ease-out, opacity 150ms ease-out;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .app-overview-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .app-overview-column {
+        height: auto;
+    }
+
+    .app-record-bar-wrap.is-stuck .app-record-bar-title {
+        display: none;
+    }
+
+    .app-record-bar-actions #agreement-inactive-reason {
+        max-width: 9rem;
+        font-size: .6875rem;
+    }
 }

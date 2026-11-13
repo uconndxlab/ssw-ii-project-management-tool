@@ -2,13 +2,7 @@
     'status' => null,
 ])
 
-@if($status === \App\Enums\DeliverableStatus::NotApplicable)
-    <div {{ $attributes->class(['small text-muted']) }}>Status: N/A</div>
-@elseif($status)
-    <div {{ $attributes->class(['small d-flex align-items-center justify-content-end gap-1 text-'.$status->tone()]) }}>
-        @if($status->icon())
-            <i class="bi bi-{{ $status->icon() }}" aria-hidden="true"></i>
-        @endif
-        <span>{{ $status->label() }}</span>
-    </div>
+@if($status)
+    @php $chip = \App\Support\AgreementOverview::statusChip($status); @endphp
+    <span {{ $attributes->class(['app-status', 'app-status--'.$chip['tone']]) }}>{{ $chip['label'] }}</span>
 @endif

@@ -41,7 +41,7 @@ test('a candidate start date can be edited cleared or omitted', function (array 
     expect($candidate->fresh()->start_date?->format('Y-m-d'))->toBe($expected);
 
     $show = $this->get(route('agreements.show', $agreement))->assertOk();
-    $display === null ? $show->assertDontSee('Start Date: ') : $show->assertSee('Start Date: '.$display);
+    $display === null ? $show->assertDontSee('Start date: ') : $show->assertSee('Start date: '.$display);
 })->with([
     'edit' => [['start_date' => '2026-11-01'], '2026-11-01', 'Nov 1, 2026'],
     'clear' => [['start_date' => ''], null, null],

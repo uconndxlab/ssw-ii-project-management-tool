@@ -43,12 +43,16 @@ test('hidden records count toward "+N" and the total but are never named', funct
         '<x-table-badge-list kind="agreement" :items="$items" :hidden-count="2" />',
         ['items' => [['name' => 'Kansas MRSS']]]
     )->assertSee('+2', false)
-        ->assertSee('aria-label="Show all 3 agreements, 2 hidden"', false)
+        ->assertSee('aria-label="Show all 3 agreements, 2 restricted"', false)
         ->assertSee('<span>Agreements</span><span>3</span>', false)
-        ->assertSee('2 hidden');
+        ->assertSee('2 restricted')
+        ->assertSee('bi-lock-fill', false)
+        ->assertDontSee('eye-slash', false);
 
     $this->blade('<x-table-badge-list kind="agreement" :items="[]" :hidden-count="2" />')
-        ->assertSee('app-hidden-pill', false)
-        ->assertSee('2 hidden')
+        ->assertSee('app-count--restricted', false)
+        ->assertSee('2 restricted')
+        ->assertSee('bi-lock-fill', false)
+        ->assertDontSee('eye-slash', false)
         ->assertDontSee('—');
 });

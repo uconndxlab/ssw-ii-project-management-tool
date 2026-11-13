@@ -90,7 +90,7 @@ test('certificate candidates include only visible people and a count of hidden e
 
     $this->actingAs($coach)->get(route('certificates.show', $certificate))->assertOk()
         ->assertSee('Visible Candidate')->assertSee(route('certification-candidates.show', $visible), false)
-        ->assertDontSee('Hidden Candidate')->assertSee('<span class="app-count">2</span>', false)->assertSee('1 hidden')
+        ->assertDontSee('Hidden Candidate')->assertSee('<span class="app-count">2</span>', false)->assertSee('1 restricted')
         ->assertSee('Enrollment totals')->assertSee('Assigned');
 });
 
@@ -102,7 +102,7 @@ test('a duty holder with no visible candidates gets an empty state and hidden co
     CertificateEnrollment::factory()->for($certificate)->create();
 
     $this->actingAs($coach)->get(route('certificates.show', $certificate))->assertOk()
-        ->assertSee('No candidates you can see are enrolled.')->assertSee('1 hidden');
+        ->assertSee('No candidates you can see are enrolled.')->assertSee('1 restricted');
 });
 
 test('certificate details render grouped requirements roles and safe prerequisite links', function () {
