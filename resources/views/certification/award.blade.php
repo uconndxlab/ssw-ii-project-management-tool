@@ -37,6 +37,7 @@
                     <span class="small text-muted">{{ $row['count'] }} / {{ $row['target'] }}</span>
                     <span class="ms-auto app-status {{ $row['satisfied'] ? 'app-status--success' : 'app-status--neutral' }}">{{ $row['satisfied'] ? 'Met' : 'Not met' }}</span>
                 </div>
+                @if(!empty($row['filters']['activity_type']))<div class="small text-muted">{{ $row['filters']['activity_type'] }}{{ !empty($row['filters']['sub_activity']) ? ' › '.$row['filters']['sub_activity'] : '' }}</div>@endif
                 @foreach($row['rules'] as $rule)
                     <div class="small text-muted">{{ $rule['dimension'] }} {{ $rule['mode'] }} · {{ implode(', ', $rule['options']) }} · {{ $rule['count'] }} / {{ $rule['target'] }}</div>
                 @endforeach
@@ -56,7 +57,7 @@
                                         @php $activity = $activities[$item['activity_id']] ?? null; @endphp
                                         <tr>
                                             <td class="text-nowrap">{{ \Illuminate\Support\Carbon::parse($item['date'])->format('M j, Y') }}</td>
-                                            <td>@if($activity && auth()->user()->can('view', $activity))<a href="{{ route('activities.show', $activity) }}">{{ $item['activity_type'] ?? 'Activity' }}</a>@else{{ $item['activity_type'] ?? 'Activity' }}@endif</td>
+                                            <td>@if($activity && auth()->user()->can('view', $activity))<a href="{{ route('activities.show', $activity) }}">{{ ($item['activity_type'] ?? 'Activity').(!empty($item['sub_activity']) ? ' › '.$item['sub_activity'] : '') }}</a>@else{{ ($item['activity_type'] ?? 'Activity').(!empty($item['sub_activity']) ? ' › '.$item['sub_activity'] : '') }}@endif</td>
                                             <td>
                                                 @if($item['submission'])
                                                     <div>{{ ucfirst(str_replace('_', ' ', $item['submission']['outcome'])) }}@if($item['submission']['recorded_by']) · {{ $item['submission']['recorded_by'] }}@endif</div>

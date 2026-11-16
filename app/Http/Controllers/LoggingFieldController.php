@@ -40,6 +40,7 @@ class LoggingFieldController extends Controller
                 'agreements.programs.projects',
                 'contactFamilies.programs.projects',
                 'activityTypes.programs.projects',
+                'subActivities.programs.projects',
             ]);
 
         // Search filter
@@ -128,6 +129,7 @@ class LoggingFieldController extends Controller
             'availability' => $query->orderBy('logging_fields.available_in_agreements', $direction)
                 ->orderBy('logging_fields.available_in_contact_families', $direction)
                 ->orderBy('logging_fields.available_in_activities', $direction)
+                ->orderBy('logging_fields.available_in_sub_activities', $direction)
                 ->orderBy('logging_fields.name'),
             'is_active' => $query->orderBy('logging_fields.is_active', $direction)->orderBy('logging_fields.name'),
             'sort_order' => $query->orderBy('logging_fields.sort_order', $direction)->orderBy('logging_fields.name'),
@@ -196,6 +198,7 @@ class LoggingFieldController extends Controller
             'available_in_agreements' => 'boolean',
             'available_in_contact_families' => 'boolean',
             'available_in_activities' => 'boolean',
+            'available_in_sub_activities' => 'boolean',
             'program_scope_mode' => ['required', 'in:all,specific,none'],
             'project_ids' => ['nullable', 'array'],
             'project_ids.*' => ['distinct', 'exists:projects,id'],
@@ -267,6 +270,7 @@ class LoggingFieldController extends Controller
         $validated['available_in_agreements'] = $request->boolean('available_in_agreements');
         $validated['available_in_contact_families'] = $request->boolean('available_in_contact_families');
         $validated['available_in_activities'] = $request->boolean('available_in_activities');
+        $validated['available_in_sub_activities'] = $request->boolean('available_in_sub_activities');
         $validated['program_scope_mode'] = ProjectProgramScope::normalizeMode($validated['program_scope_mode'] ?? null, LoggingField::class)->value;
 
         $loggingField = LoggingField::create($validated);
@@ -329,6 +333,7 @@ class LoggingFieldController extends Controller
             'available_in_agreements' => 'boolean',
             'available_in_contact_families' => 'boolean',
             'available_in_activities' => 'boolean',
+            'available_in_sub_activities' => 'boolean',
             'program_scope_mode' => ['required', 'in:all,specific,none'],
             'project_ids' => ['nullable', 'array'],
             'project_ids.*' => ['distinct', 'exists:projects,id'],
@@ -400,6 +405,7 @@ class LoggingFieldController extends Controller
         $validated['available_in_agreements'] = $request->boolean('available_in_agreements');
         $validated['available_in_contact_families'] = $request->boolean('available_in_contact_families');
         $validated['available_in_activities'] = $request->boolean('available_in_activities');
+        $validated['available_in_sub_activities'] = $request->boolean('available_in_sub_activities');
         $validated['program_scope_mode'] = ProjectProgramScope::normalizeMode($validated['program_scope_mode'] ?? null, LoggingField::class)->value;
 
         // Regenerate slug if name changed
@@ -413,9 +419,10 @@ class LoggingFieldController extends Controller
                 'available_in_agreements' => 'agreements',
                 'available_in_contact_families' => 'contactFamilies',
                 'available_in_activities' => 'activityTypes',
+                'available_in_sub_activities' => 'subActivities',
             ];
             // Only records the scope change itself excludes are removed; records that already didn't fit are left alone.
-            $loggingField->load(['programs', 'agreements.programs', 'contactFamilies.programs', 'activityTypes.programs']);
+            $loggingField->load(['programs', 'agreements.programs', 'contactFamilies.programs', 'activityTypes.programs', 'subActivities.programs']);
             $fittedBefore = array_map(
                 fn (string $relation) => $loggingField->{$relation}
                     ->filter(fn ($record) => ProjectProgramScope::loggingFieldFitsRecord($loggingField, $record)),
@@ -448,13 +455,14 @@ class LoggingFieldController extends Controller
     /** @return array<string, array{label: string, count: int, hidden: int, scope_records: list<array{id: int, scope_mode: string, program_ids: list<int>}>, records: list<array{id: int, scope_mode: string, program_ids: list<int>, name: string, url: string, required: bool}>}> */
     private function attachmentGroups(LoggingField $loggingField): array
     {
-        $loggingField->loadMissing(['agreements.programs.projects', 'contactFamilies.programs.projects', 'activityTypes.programs.projects']);
+        $loggingField->loadMissing(['agreements.programs.projects', 'contactFamilies.programs.projects', 'activityTypes.programs.projects', 'subActivities.programs.projects']);
         $groups = [];
 
         foreach ([
             'available_in_agreements' => [$loggingField->agreements, 'agreement', 'agreements.show'],
             'available_in_contact_families' => [$loggingField->contactFamilies, 'activity family', 'contact-families.index'],
             'available_in_activities' => [$loggingField->activityTypes, 'activity type', 'activity-types.index'],
+            'available_in_sub_activities' => [$loggingField->subActivities, 'sub-activity', 'sub-activities.index'],
         ] as $key => [$records, $label, $route]) {
             $visible = [];
             $scopeRecords = [];
@@ -574,9 +582,11 @@ class LoggingFieldController extends Controller
         // Check if field is in use
         $agreementCount = $loggingField->agreements()->count();
         $contactFamilyCount = $loggingField->contactFamilies()->count();
+        $activityTypeCount = $loggingField->activityTypes()->count();
+        $subActivityCount = $loggingField->subActivities()->count();
 
-        if ($agreementCount > 0 || $contactFamilyCount > 0) {
-            return back()->with('error', "Cannot delete this field. It is currently used by {$agreementCount} ".($agreementCount === 1 ? 'agreement' : 'agreements')." and {$contactFamilyCount} activity ".($contactFamilyCount === 1 ? 'family' : 'families').'.');
+        if ($agreementCount > 0 || $contactFamilyCount > 0 || $activityTypeCount > 0 || $subActivityCount > 0) {
+            return back()->with('error', "Cannot delete this field. It is currently used by {$agreementCount} ".($agreementCount === 1 ? 'agreement' : 'agreements')." and {$contactFamilyCount} activity ".($contactFamilyCount === 1 ? 'family' : 'families').", {$activityTypeCount} activity types and {$subActivityCount} sub-activities.");
         }
 
         LoggingField::destroy($loggingField->id);

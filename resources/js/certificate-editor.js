@@ -92,7 +92,7 @@ if (root) {
         const count = value('[data-cert-target]', row) || '?';
         const pieces = [kind === 'tool_submission' ? `${count} ${value('[data-cert-tool]', row) ? text('[data-cert-tool]', row) : 'tool'} submissions${value('[data-cert-tool]', row) ? '' : ' (choose a tool)'}` : `${count} activity completion units`];
         if (kind === 'tool_submission') pieces.push($('[data-cert-passing]', row).checked ? 'Coach-marked passing only' : 'Passing not required');
-        pieces.push(text('[data-cert-family]', row), text('[data-cert-type]', row), text('[data-cert-role]', row), windowSentence(row));
+        pieces.push(text('[data-cert-family]', row), text('[data-cert-type]', row) + (value('[data-cert-sub]', row) ? ` › ${text('[data-cert-sub]', row)}` : ''), text('[data-cert-role]', row), windowSentence(row));
         if (compact) {
             const count = rows('[data-cert-rule]', row).length;
             if (count) pieces.push(`${count} coverage/quota ${count === 1 ? 'rule' : 'rules'}`);
@@ -158,6 +158,16 @@ if (root) {
             block.hidden = !shown;
             $$('input, select, textarea, button', block).forEach((input) => { input.disabled = !shown; });
         });
+        const type = value('[data-cert-type]', row);
+        const subSelect = $('[data-cert-sub]', row);
+        [...subSelect.options].forEach((option) => {
+            if (!option.value) return;
+            option.hidden = !type || option.dataset.type !== type;
+            option.disabled = option.hidden;
+        });
+        if (!type || subSelect.selectedOptions[0]?.disabled) subSelect.value = '';
+        subSelect.disabled = !['activity_count', 'tool_submission'].includes(kind) || !type || ![...subSelect.options].some((option) => option.value && !option.disabled);
+        if (subSelect.disabled) subSelect.value = '';
         if (kind === 'attestation') $('[data-cert-target]', row).value = '1';
         // The target is still submitted for confirmations, whose single check is the target.
         $('[data-cert-target]', row).disabled = false;
@@ -423,7 +433,7 @@ if (root) {
                 if (destructive && !await confirmChange(input, 'Change requirement type?', 'Incompatible submission rules and filters will be cleared. The requirement name and notes are kept.', 'Change type')) { input.value = previous; return; }
                 if (previous === 'tool_submission') { resetRules(row); $('[data-cert-tool]', row).value = ''; }
                 if (input.value === 'attestation') {
-                    ['family', 'type', 'role', 'window'].forEach((field) => { $(`[data-cert-${field}]`, row).value = ''; });
+                    ['family', 'type', 'sub', 'role', 'window'].forEach((field) => { $(`[data-cert-${field}]`, row).value = ''; });
                     $('[data-cert-target]', row).value = '1';
                 }
             }

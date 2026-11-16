@@ -496,6 +496,7 @@ class AgreementDeliverableDisplay
 
         return [
             'deliverable' => $deliverable,
+            'activity_type_label' => $deliverable->classificationLabel() ?? 'Any activity type',
             'target' => $target,
             'has_target' => $target > 0,
             'completed_value' => $completedValue,

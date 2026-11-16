@@ -28,7 +28,7 @@ function initCertificationCapture() {
     const coach = (tool, person) => person ? coachFor(tool, person) : coachFor(tool) || rows.some(row => !Number(row._delete) && coachFor(tool, personFor(row)));
     const assigned = person => person.active && person.enrollments.length > 0 && person.agreements.some(a => agreementIds().includes(Number(a.id)));
     const personFor = row => people.find(p => Number(p.id) === Number(row.certification_candidate_id));
-    const matching = person => (person?.enrollments || []).filter(overlap).flatMap(enrollment => enrollment.requirements.filter(req => (!req.type_id || Number(req.type_id) === Number(form.querySelector('#activity_type_id')?.value)) && (!req.family_id || Number(req.family_id) === Number(form.querySelector('#contact_family_id')?.value))));
+    const matching = person => (person?.enrollments || []).filter(overlap).flatMap(enrollment => enrollment.requirements.filter(req => (!req.type_id || Number(req.type_id) === Number(form.querySelector('#activity_type_id')?.value)) && (!req.family_id || Number(req.family_id) === Number(form.querySelector('#contact_family_id')?.value)) && (!req.sub_id || Number(req.sub_id) === Number(form.querySelector('#sub_activity_id')?.value))));
     const roles = row => [...new Map(matching(personFor(row)).filter(req => req.role_id).map(req => [String(req.role_id), { id: req.role_id, name: req.role_name }])).values()];
     const field = (label, name, control, required = false, help = '') => {
         const messages = config.errors[name.replaceAll('[', '.').replaceAll(']', '')] || [];
@@ -180,7 +180,7 @@ function initCertificationCapture() {
             let reasons;
             const applicable = enrollment.requirements.filter(req => req.kind !== 'attestation'
                 && (!req.type_id || Number(req.type_id) === Number(form.querySelector('#activity_type_id')?.value))
-                && (!req.family_id || Number(req.family_id) === Number(form.querySelector('#contact_family_id')?.value)));
+                && (!req.family_id || Number(req.family_id) === Number(form.querySelector('#contact_family_id')?.value)) && (!req.sub_id || Number(req.sub_id) === Number(form.querySelector('#sub_activity_id')?.value)));
             if (form.querySelector('[name="cancelled"][type="checkbox"]')?.checked) reasons = 'Not counted: activity is cancelled.';
             else if (form.querySelector('[name="not_yet_complete"][type="checkbox"]')?.checked) reasons = 'Work can count after the activity is complete.';
             else if (!overlap(enrollment)) reasons = 'Not counted: activity programs do not overlap.';
@@ -348,7 +348,8 @@ function initCertificationCapture() {
     function scopeChanged() { capture(); render(); restrictPicker(); }
     form.addEventListener('project-program-scope:change', scopeChanged);
     form.querySelector('#activity-agreements-picker')?.addEventListener('token-picker:change', scopeChanged);
-    form.addEventListener('change', event => { if (['activity_type_id', 'contact_family_id', 'cancelled', 'not_yet_complete'].includes(event.target.id)) scopeChanged(); });
+    form.addEventListener('change', event => { if (['activity_type_id', 'sub_activity_id', 'contact_family_id', 'cancelled', 'not_yet_complete'].includes(event.target.id)) scopeChanged(); });
+    form.addEventListener('htmx:afterSwap', event => { if (event.detail.target?.id === 'sub_activity_id') scopeChanged(); });
     render();
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initCertificationCapture);

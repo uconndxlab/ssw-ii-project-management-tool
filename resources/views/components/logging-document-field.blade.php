@@ -13,6 +13,7 @@
     $contextId = match ($context) {
         'agreement' => $agreementId,
         'activity_type' => $activity?->activity_type_id,
+        'sub_activity' => $activity?->sub_activity_id,
         default => $activity?->activityType?->contact_family_id,
     };
     $contextId = $contextId !== null ? (int) $contextId : null;

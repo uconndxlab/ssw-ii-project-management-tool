@@ -50,6 +50,7 @@ class RouteBreadcrumbs
             $label = match ($resource) {
                 'contact-families' => 'Activity Families',
                 'certification-candidates' => 'Candidates',
+                'sub-activities' => 'Sub-activities',
                 default => Str::headline(Str::afterLast($resource, '.')),
             };
             $items[] = ['label' => $label, 'url' => route($indexRoute), 'current' => false];

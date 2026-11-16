@@ -1,4 +1,4 @@
-<dialog {{ $attributes->class(['app-confirm-dialog']) }} data-confirm-dialog aria-labelledby="app-confirm-title" aria-describedby="app-confirm-record app-confirm-message">
+<dialog {{ $attributes->class(['app-confirm-dialog']) }} data-confirm-dialog aria-labelledby="app-confirm-title" aria-describedby="app-confirm-record app-confirm-message app-confirm-details">
     <button type="button" class="btn-close app-confirm-close" data-confirm-close aria-label="Close confirmation"></button>
     <div class="app-confirm-body">
         <div class="app-confirm-heading">
@@ -7,6 +7,7 @@
         </div>
         <p id="app-confirm-record" class="app-confirm-record"></p>
         <p id="app-confirm-message" class="app-confirm-message"></p>
+        <ul id="app-confirm-details" class="app-confirm-details" hidden></ul>
     </div>
     <form method="dialog" class="app-confirm-actions">
         <button type="submit" class="btn btn-outline-secondary" value="cancel" autofocus>Cancel</button>

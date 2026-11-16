@@ -74,6 +74,16 @@
                         </x-form-field>
                     </div>
                 </div>
+                <x-form-field label="Sub-activity" :for="'req-'.$reqIndex.'-sub'" :name="$prefix.'.sub_activity_id'">
+                    <select class="form-select" id="req-{{ $reqIndex }}-sub" name="{{ $field }}[sub_activity_id]" data-cert-sub @disabled(empty($row['activity_type_id']) || !$subActivities->contains('activity_type_id', $row['activity_type_id'] ?? null))>
+                        <option value="">Any sub-activity</option>
+                        @foreach($subActivities as $subActivity)
+                            @if($subActivity->active || (string)($row['sub_activity_id'] ?? '') === (string)$subActivity->id)
+                                <option value="{{ $subActivity->id }}" data-type="{{ $subActivity->activity_type_id }}" @selected((string)($row['sub_activity_id'] ?? '') === (string)$subActivity->id) @disabled((string)($row['activity_type_id'] ?? '') !== (string)$subActivity->activity_type_id) @if((string)($row['activity_type_id'] ?? '') !== (string)$subActivity->activity_type_id) hidden @endif>{{ $subActivity->name }}{{ !$subActivity->active ? ' (inactive)' : '' }}</option>
+                            @endif
+                        @endforeach
+                    </select>
+                </x-form-field>
                 <x-form-field label="Work lookback override (months)" :for="'req-'.$reqIndex.'-window'" :name="$prefix.'.window_months'" help="Blank inherits the certificate default. This controls eligible work, not award validity.">
                     <input type="number" class="form-control" id="req-{{ $reqIndex }}-window" name="{{ $field }}[window_months]" value="{{ $row['window_months'] ?? '' }}" min="1" data-cert-window>
                     <div class="form-text" data-cert-effective-window></div>

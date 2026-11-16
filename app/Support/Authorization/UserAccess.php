@@ -19,6 +19,7 @@ use App\Models\Organization;
 use App\Models\Program;
 use App\Models\Project;
 use App\Models\State;
+use App\Models\SubActivity;
 use App\Models\Team;
 use App\Models\User;
 use App\Models\UserPrivilege;
@@ -943,6 +944,7 @@ class UserAccess
             $record instanceof ContactFamily => $this->hasAdmin() && $this->applyScopedEntityVisibility(ContactFamily::query()->whereKey($record->id))->exists(),
             $record instanceof LoggingField => $this->hasAdmin() && $this->applyScopedEntityVisibility(LoggingField::query()->whereKey($record->id))->exists(),
             $record instanceof ActivityType => $this->hasAdmin() && $this->applyScopedEntityVisibility(ActivityType::query()->whereKey($record->id))->exists(),
+            $record instanceof SubActivity => $this->hasAdmin() && $this->applyScopedEntityVisibility(SubActivity::query()->whereKey($record->id))->exists(),
             $record instanceof CertificationTool => $this->hasView() && $this->applyScopedEntityVisibility(CertificationTool::query()->whereKey($record->id))->exists(),
             $record instanceof Certificate => $this->hasView() && $this->applyScopedEntityVisibility(Certificate::query()->whereKey($record->id))->exists(),
             $record instanceof CertificationCandidate => $this->applyCertificationCandidateVisibility(CertificationCandidate::query()->whereKey($record->id))->exists(),

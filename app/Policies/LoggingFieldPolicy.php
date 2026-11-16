@@ -28,9 +28,9 @@ class LoggingFieldPolicy
     // Includes inactive agreements: they still use this field.
     public function updateAttachments(User $user, LoggingField $loggingField): bool
     {
-        $loggingField->loadMissing(['agreements.programs.projects', 'contactFamilies.programs.projects', 'activityTypes.programs.projects']);
+        $loggingField->loadMissing(['agreements.programs.projects', 'contactFamilies.programs.projects', 'activityTypes.programs.projects', 'subActivities.programs.projects']);
 
-        foreach ([$loggingField->agreements, $loggingField->contactFamilies, $loggingField->activityTypes] as $records) {
+        foreach ([$loggingField->agreements, $loggingField->contactFamilies, $loggingField->activityTypes, $loggingField->subActivities] as $records) {
             foreach ($records as $record) {
                 if (! $user->can('update', $record)) {
                     return false;

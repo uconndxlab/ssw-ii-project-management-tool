@@ -6,6 +6,7 @@ use App\Enums\ProgramScopeMode;
 use App\Models\Activity;
 use App\Models\ActivityType;
 use App\Models\AgreementDeliverable;
+use App\Models\CertificateRequirement;
 use App\Models\ContactFamily;
 use App\Models\LoggingField;
 use App\Models\Program;
@@ -308,10 +309,10 @@ class ActivityTypeController extends Controller
             ->where('activity_type_id', $activityType->getKey())
             ->exists();
 
-        if ($isUsedInActivities) {
+        if ($isUsedInActivities || AgreementDeliverable::query()->where('activity_type_id', $activityType->id)->exists() || CertificateRequirement::query()->where('activity_type_id', $activityType->id)->exists() || $activityType->subActivities()->exists()) {
             return redirect()
                 ->route('activity-types.index')
-                ->with('error', 'Cannot delete activity type that is used in activities.');
+                ->with('error', 'Cannot delete activity type that is used in activities, agreement deliverables or certificate requirements, or has sub-activities.');
         }
 
         ActivityType::query()->whereKey($activityType->getKey())->delete();

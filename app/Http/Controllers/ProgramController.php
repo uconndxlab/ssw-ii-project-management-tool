@@ -114,7 +114,7 @@ class ProgramController extends Controller
 
         $recentActivities = $program->activities()
             ->visibleTo($this->actor())
-            ->with(['activityType.contactFamily', 'user', 'agreements'])
+            ->with(['subActivity', 'activityType.contactFamily', 'user', 'agreements'])
             ->orderByRecentDisplay()
             ->limit(10)
             ->get();

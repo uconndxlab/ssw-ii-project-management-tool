@@ -11,13 +11,14 @@
 @endphp
 <x-page-header
     context="show"
-    :title="$activity->activityType->name"
+    :title="$activity->classificationLabel()"
     entity-type="Activity"
     :action-url="$canManageActivity ? route('activities.edit', $activity) : null"
 >
     <x-slot:facts>
         <div><dt>Date</dt><dd>{{ $activity->engagement_date->format('F d, Y') }}</dd></div>
         <div><dt>Logged by</dt><dd class="app-fact-links"><x-user-link :user="$activity->user" /></dd></div>
+        @if($activity->subActivity)<div><dt>Sub-activity</dt><dd>{{ $activity->subActivity->name }}</dd></div>@endif
         <div><dt>Activity family</dt><dd>{{ $activity->activityType->contactFamily->name }}</dd></div>
     </x-slot:facts>
     <x-slot:badges>
@@ -50,7 +51,7 @@
                         class="dropdown-item"
                         data-confirm
                         data-confirm-title="Duplicate activity?"
-                        data-confirm-record="{{ $activity->activityType?->name ?? 'Activity' }} · {{ $activity->engagement_date->format('M d, Y') }}"
+                        data-confirm-record="{{ $activity->classificationLabel() }} · {{ $activity->engagement_date->format('M d, Y') }}"
                         data-confirm-message="A new activity will be created with the same details."
                         data-confirm-action="Duplicate activity"
                         data-confirm-tone="primary">
@@ -266,6 +267,8 @@
             $fundingSourcesByAgreement = $activity->agreementFundingSources->groupBy('agreement_id');
             $agreementScopedFields = $scopedLoggingFields['agreements'] ?? collect();
             $contactFamilyScopedFields = $scopedLoggingFields['contact_family'] ?? collect();
+            $subActivityLoggingValues = $activity->sub_activity_logging_values;
+            $subActivityScopedFields = $scopedLoggingFields['sub_activity'] ?? collect();
             $activityTypeScopedFields = $scopedLoggingFields['activity_type'] ?? collect();
             $hasRenderableValue = function ($value) {
                 if (is_array($value)) {
@@ -279,7 +282,7 @@
                     || $fundingSourcesByAgreement->get($agreement->id, collect())->isNotEmpty();
             });
         @endphp
-        @if($hasAgreementFieldContent || $contactFamilyScopedFields->isNotEmpty() || $activityTypeScopedFields->isNotEmpty())
+        @if($hasAgreementFieldContent || $contactFamilyScopedFields->isNotEmpty() || ($activityTypeScopedFields->isNotEmpty() || $subActivityScopedFields->isNotEmpty()))
         <div class="card mt-3">
             <div class="card-header">
                 <h2 class="h5 mb-0">Dynamic Logging Fields</h2>
@@ -396,6 +399,43 @@
                                             @if($field->field_type === 'document' && $hasRenderableValue($value))
                                                 <a href="{{ route('activities.logging-field-document.download', ['activity' => $activity, 'context' => 'activity_type', 'fieldId' => $field->id]) }}" class="text-decoration-none" target="_blank">
                                                     <i class="bi bi-file-earmark-arrow-down me-1"></i>{{ $activity->loggingFieldFileName('activity_type', (int) $field->id) ?: basename($value) }}
+                                                </a>
+                                            @elseif($field->isMultiselect() && is_array($value) && !empty($value))
+                                                <div class="d-flex flex-wrap gap-1">
+                                                    @foreach($value as $selectedId)
+                                                        <span class="badge text-bg-light border">{{ $optionLabelMap[(string) $selectedId] ?? $selectedId }}</span>
+                                                    @endforeach
+                                                </div>
+                                            @elseif(is_bool($value))
+                                                {{ $value ? 'Yes' : 'No' }}
+                                            @elseif($hasRenderableValue($value))
+                                                {{ $value }}
+                                            @else
+                                                <span class="text-muted">-</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                @endif
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+                @if($subActivityScopedFields->isNotEmpty())
+                    <div class="mt-4">
+                        <h6 class="mb-3">Sub-activity Fields</h6>
+                        <div class="row g-2">
+                            @foreach($subActivityScopedFields as $field)
+                                @php
+                                    $value = $subActivityLoggingValues[$field->id] ?? null;
+                                    $optionLabelMap = $field->optionLabelMap();
+                                @endphp
+                                @if($field)
+                                    <div class="col-md-6">
+                                        <div class="small text-muted">{{ $field->name }}@if($field->pivot?->is_legacy) <x-status-badge :active="false" inactive-label="Legacy" tone="neutral" />@endif</div>
+                                        <div>
+                                            @if($field->field_type === 'document' && $hasRenderableValue($value))
+                                                <a href="{{ route('activities.logging-field-document.download', ['activity' => $activity, 'context' => 'sub_activity', 'fieldId' => $field->id]) }}" class="text-decoration-none" target="_blank">
+                                                    <i class="bi bi-file-earmark-arrow-down me-1"></i>{{ $activity->loggingFieldFileName('sub_activity', (int) $field->id) ?: basename($value) }}
                                                 </a>
                                             @elseif($field->isMultiselect() && is_array($value) && !empty($value))
                                                 <div class="d-flex flex-wrap gap-1">

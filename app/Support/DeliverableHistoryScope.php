@@ -22,6 +22,10 @@ class DeliverableHistoryScope
                 return false;
             }
 
+            if ($deliverable->sub_activity_id && (int) $history->sub_activity_id !== (int) $deliverable->sub_activity_id) {
+                return false;
+            }
+
             if ($deliverable->program_id) {
                 /** @var array<int, mixed>|string $programIdsSnapshot */
                 $programIdsSnapshot = $history->program_ids_snapshot ?? [];

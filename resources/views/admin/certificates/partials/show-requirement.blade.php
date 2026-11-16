@@ -9,7 +9,7 @@
         @if($requirement->requires_passing) · Passing required @endif
     </p>
     @if($requirement->certificationTool)<p class="small mb-1">Tool: {{ $requirement->certificationTool->name }}</p>@endif
-    @if($requirement->contactFamily || $requirement->activityType)<p class="small mb-1">Activity: {{ $requirement->contactFamily?->name }}{{ $requirement->activityType ? ' · ' . $requirement->activityType->name : '' }}</p>@endif
+    @if($requirement->contactFamily || $requirement->activityType)<p class="small mb-1">Activity: {{ $requirement->contactFamily?->name }}{{ $requirement->activityType ? ' · ' . $requirement->activityType->name . ($requirement->subActivity ? ' › ' . $requirement->subActivity->name : '') : '' }}</p>@endif
     @if($requirement->certificationRole)<p class="small mb-1">Role: {{ $requirement->certificationRole->name }}</p>@endif
     @foreach($requirement->dimensionRules as $rule)
         <p class="small mb-1">{{ $rule->dimension?->name }} · {{ $rule->mode->label() }}{{ $rule->mode->requiresMinCount() ? ': ' . $rule->min_count : '' }} · {{ $rule->dimension?->options->whereIn('id', $rule->option_ids)->pluck('label')->implode(', ') }}</p>

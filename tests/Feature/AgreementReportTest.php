@@ -10,6 +10,7 @@ use App\Models\ContactFamily;
 use App\Models\LoggingField;
 use App\Models\Organization;
 use App\Models\ReportRequest;
+use App\Models\SubActivity;
 use App\Models\User;
 
 function agreementReportRows(string $csv): array
@@ -44,11 +45,12 @@ it('streams every agreement activity in date order for a system admin', function
     $otherAgreement = Agreement::factory()->create(['name' => 'Another Agreement']);
     $family = ContactFamily::factory()->create(['name' => 'Training']);
     $type = ActivityType::factory()->for($family)->create(['name' => 'Workshop']);
+    $subActivity = SubActivity::factory()->for($type)->create(['name' => 'Intro workshop']);
     $logger = User::factory()->create(['name' => 'Sarah Johnson']);
     $organization = Organization::factory()->create(['name' => 'Community Center']);
     Activity::factory()->for($type)->for($logger)->hasAttached($agreement)
         ->hasAttached($otherAgreement)->hasAttached($organization)->create([
-            'engagement_date' => '2026-11-04', 'completion_count' => 3,
+            'engagement_date' => '2026-11-04', 'completion_count' => 3, 'sub_activity_id' => $subActivity->id,
             'internal_only' => true, 'cancelled' => true, 'not_yet_complete' => true,
         ]);
     Activity::factory()->hasAttached($agreement)->create(['engagement_date' => '2026-11-01']);
@@ -61,12 +63,12 @@ it('streams every agreement activity in date order for a system admin', function
 
     expect($rows)->toHaveCount(3)
         ->and($rows[0])->toBe([
-            'Date', 'Activity family', 'Activity type', 'Agreements covered', 'Organizations',
+            'Date', 'Activity family', 'Activity type', 'Sub-activity', 'Agreements covered', 'Organizations',
             'Completions', 'Logged by', 'Internal only', 'Cancelled', 'Not yet complete',
         ])
         ->and($rows[1][0])->toBe('2026-11-01')
         ->and($rows[2])->toBe([
-            '2026-11-04', 'Training', 'Workshop', 'Another Agreement; Texas Agreement',
+            '2026-11-04', 'Training', 'Workshop', 'Intro workshop', 'Another Agreement; Texas Agreement',
             'Community Center', '3', 'Sarah Johnson', 'Yes', 'Yes', 'Yes',
         ]);
 });
@@ -109,9 +111,9 @@ it('exports the union of answered fields with display values and escapes formula
     $response = $this->actingAs($editor)->post(route('agreements.reports.store', $agreement))->assertOk();
     $rows = agreementReportRows($response->streamedContent());
 
-    expect(array_slice($rows[0], 10))->toBe(["'=Notes (Activity type)", 'Topics (Activity type)', 'Document (Activity type)', 'Approved (Activity type)'])
-        ->and(array_slice($rows[1], 10))->toBe(["'=SUM(1,2)", 'Alpha; Beta', '', ''])
-        ->and(array_slice($rows[2], 10))->toBe(['', '', 'Original.pdf', 'No']);
+    expect(array_slice($rows[0], 11))->toBe(["'=Notes (Activity type)", 'Topics (Activity type)', 'Document (Activity type)', 'Approved (Activity type)'])
+        ->and(array_slice($rows[1], 11))->toBe(["'=SUM(1,2)", 'Alpha; Beta', '', ''])
+        ->and(array_slice($rows[2], 11))->toBe(['', '', 'Original.pdf', 'No']);
 });
 
 it('labels each logging field column with where it was asked', function () {
@@ -131,6 +133,6 @@ it('labels each logging field column with where it was asked', function () {
     $response = $this->actingAs(createSystemAdmin())->post(route('agreements.reports.store', $agreement))->assertOk();
     $rows = agreementReportRows($response->streamedContent());
 
-    expect(array_slice($rows[0], 10))->toBe(['Hours (This agreement)', 'Hours (Activity family)', 'Hours (Activity type)', 'Hours (Other agreements)'])
-        ->and(array_slice($rows[1], 10))->toBe(['1', '2', '3', 'Ohio Agreement: 4']);
+    expect(array_slice($rows[0], 11))->toBe(['Hours (This agreement)', 'Hours (Activity family)', 'Hours (Activity type)', 'Hours (Other agreements)'])
+        ->and(array_slice($rows[1], 11))->toBe(['1', '2', '3', 'Ohio Agreement: 4']);
 });

@@ -70,9 +70,9 @@ class CertificationEvidenceService
     /** @param array<int> $programIds
      * @return Collection<int, CertificateRequirement>
      */
-    public function matchingRequirements(CertificationCandidate $candidate, int $typeId, int $familyId, array $programIds): Collection
+    public function matchingRequirements(CertificationCandidate $candidate, int $typeId, int $familyId, array $programIds, ?int $subActivityId = null): Collection
     {
-        return $candidate->enrollments->flatMap(function (CertificateEnrollment $enrollment) use ($typeId, $familyId, $programIds) {
+        return $candidate->enrollments->flatMap(function (CertificateEnrollment $enrollment) use ($typeId, $familyId, $programIds, $subActivityId) {
             $certificate = $enrollment->certificate;
             if ($certificate === null) {
                 throw new \LogicException('Enrollment certificate is missing.');
@@ -82,7 +82,8 @@ class CertificationEvidenceService
             return $this->overlaps($certificate, $programIds)
                 ? $certificate->requirements->filter(fn (CertificateRequirement $requirement) => $requirement->phase === $phase
                     && ($requirement->activity_type_id === null || $requirement->activity_type_id === $typeId)
-                    && ($requirement->contact_family_id === null || $requirement->contact_family_id === $familyId))
+                    && ($requirement->contact_family_id === null || $requirement->contact_family_id === $familyId)
+                    && ($requirement->sub_activity_id === null || $requirement->sub_activity_id === $subActivityId))
                 : collect();
         });
     }
@@ -161,7 +162,7 @@ class CertificationEvidenceService
                 $this->invalid($key.'.certification_candidate_id', 'Select an active candidate from a selected agreement roster.');
             }
             $roleId = ! empty($row['certification_role_id']) ? (int) $row['certification_role_id'] : null;
-            $roleIds = $this->matchingRequirements($candidate, $activity->activity_type_id, (int) $activity->activityType?->contact_family_id, $programIds)
+            $roleIds = $this->matchingRequirements($candidate, $activity->activity_type_id, (int) $activity->activityType?->contact_family_id, $programIds, $activity->sub_activity_id)
                 ->pluck('certification_role_id')->filter()->unique()->all();
             if ($roleId !== null && $roleId !== $tag?->certification_role_id && ! in_array($roleId, $roleIds, true)) {
                 $this->invalid($key.'.certification_role_id', 'Choose a role used by this candidate’s certificate requirements for this activity.');
@@ -334,7 +335,7 @@ class CertificationEvidenceService
                         'program_ids' => $certificate->programs->modelKeys(),
                         'url' => $access->canView($actor, $enrollment) ? route('certificate-enrollments.show', $enrollment) : null,
                         'requirements' => $certificate->requirements->where('phase', $phase)->map(fn ($requirement) => [
-                            'type_id' => $requirement->activity_type_id, 'family_id' => $requirement->contact_family_id,
+                            'type_id' => $requirement->activity_type_id, 'family_id' => $requirement->contact_family_id, 'sub_id' => $requirement->sub_activity_id,
                             'role_id' => $requirement->certification_role_id, 'role_name' => $requirement->certificationRole?->name,
                             'tool_id' => $requirement->certification_tool_id, 'kind' => $requirement->kind->value,
                             'label' => $details ? $requirement->label : null,

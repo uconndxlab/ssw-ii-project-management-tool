@@ -12,7 +12,7 @@
                         <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
                             <x-user-link :user="$activity->user" class="text-decoration-none fw-semibold" />
                             <span class="text-muted">logged</span>
-                            <a href="{{ route('activities.show', $activity) }}" class="app-link app-link--strong app-row-link">{{ $activity->activityType?->name ?? 'Activity' }}</a>
+                            <a href="{{ route('activities.show', $activity) }}" class="app-link app-link--strong app-row-link">{{ $activity->classificationLabel() }}</a>
                             @if($activity->cancelled)
                                 <x-status-badge :active="false" inactive-label="Cancelled" />
                             @endif
@@ -34,7 +34,7 @@
                     </div>
                     @if($canManage)
                         <div class="dropdown app-row-actions flex-shrink-0">
-                            <button type="button" class="btn btn-sm btn-link app-row-actions-toggle" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" aria-label="Activity actions for {{ $activity->activityType?->name ?? 'activity' }}"><i class="bi bi-three-dots" aria-hidden="true"></i></button>
+                            <button type="button" class="btn btn-sm btn-link app-row-actions-toggle" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" aria-label="Activity actions for {{ $activity->classificationLabel() }}"><i class="bi bi-three-dots" aria-hidden="true"></i></button>
                             <div class="dropdown-menu dropdown-menu-end">
                                 <a href="{{ route('activities.show', $activity) }}" class="dropdown-item"><i class="bi bi-eye me-2" aria-hidden="true"></i>View activity</a>
                                 <a href="{{ route('activities.edit', $activity) }}" class="dropdown-item"><i class="bi bi-pencil-square me-2" aria-hidden="true"></i>Edit activity</a>

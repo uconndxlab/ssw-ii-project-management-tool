@@ -23,7 +23,8 @@
                     @endphp
                     <section class="border-bottom pb-3 mb-3" aria-labelledby="requirement-{{ $requirement->id }}">
                         <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-                            <h3 class="h6 mb-0" id="requirement-{{ $requirement->id }}">{{ $requirement->label ?: ($requirement->certificationTool?->name ?? $requirement->activityType?->name ?? $requirement->kind->label()) }}</h3>
+                            <h3 class="h6 mb-0" id="requirement-{{ $requirement->id }}">{{ $requirement->label ?: ($requirement->certificationTool?->name ?? ($requirement->activityType ? $requirement->activityType->name.($requirement->subActivity ? ' › '.$requirement->subActivity->name : '') : $requirement->kind->label())) }}</h3>
+                            @if($requirement->activityType && ($requirement->label || $requirement->certificationTool))<span class="small text-muted">{{ $requirement->activityType->name }}{{ $requirement->subActivity ? ' › '.$requirement->subActivity->name : '' }}</span>@endif
                             <span class="small text-muted">{{ $requirement->kind === \App\Enums\CertificateRequirementKind::Attestation ? 'Coach confirmation' : ($requirement->kind === \App\Enums\CertificateRequirementKind::ToolSubmission ? 'Tool submissions' : 'Activity work') }}</span>
                             <span class="ms-auto app-status {{ $row['satisfied'] ? 'app-status--success' : 'app-status--neutral' }}">{{ $row['satisfied'] ? 'Met' : 'Not met' }}</span>
                         </div>
@@ -73,7 +74,7 @@
                                                 <tr>
                                                     @if(auth()->user()->can('view', $activity))
                                                         <td class="text-nowrap">{{ $activity->engagement_date->format('M j, Y') }}</td>
-                                                        <td><a href="{{ route('activities.show', $activity) }}">{{ $activity->activityType?->name ?? 'Activity' }}</a>@can('update', $activity)<div><a href="{{ route('activities.edit', $activity) }}#activity-certification">Edit evidence</a></div>@endcan</td>
+                                                        <td><a href="{{ route('activities.show', $activity) }}">{{ $activity->classificationLabel() }}</a>@can('update', $activity)<div><a href="{{ route('activities.edit', $activity) }}#activity-certification">Edit evidence</a></div>@endcan</td>
                                                         <td>
                                                             @if($submission)
                                                                 @foreach($submission->dimensionValues as $value)<div>{{ $value->dimension->name }}: {{ $value->option->label }}</div>@endforeach

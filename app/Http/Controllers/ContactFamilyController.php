@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ProgramScopeMode;
+use App\Models\AgreementDeliverable;
+use App\Models\CertificateRequirement;
 use App\Models\ContactFamily;
 use App\Models\LoggingField;
 use App\Models\Program;
@@ -287,10 +289,10 @@ class ContactFamilyController extends Controller
     public function destroy(ContactFamily $contactFamily): RedirectResponse
     {
         $this->authorize('delete', $contactFamily);
-        if ($contactFamily->activityTypes()->count() > 0) {
+        if ($contactFamily->activityTypes()->exists() || AgreementDeliverable::query()->where('contact_family_id', $contactFamily->id)->exists() || CertificateRequirement::query()->where('contact_family_id', $contactFamily->id)->exists()) {
             return redirect()
                 ->route('contact-families.index')
-                ->with('error', 'Cannot delete activity family with existing activity types.');
+                ->with('error', 'Cannot delete activity family with existing activity types, agreement deliverables or certificate requirements.');
         }
 
         ContactFamily::destroy($contactFamily->id);

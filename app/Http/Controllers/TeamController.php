@@ -192,6 +192,7 @@ class TeamController extends Controller
         $team->load([
             'users',
             'agreements.deliverables.activityType',
+            'agreements.deliverables.subActivity',
             'agreements.deliverables.contactFamily',
             'agreements.deliverables.users',
             'agreements.deliverables.teams',

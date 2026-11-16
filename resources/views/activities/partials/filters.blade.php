@@ -78,6 +78,21 @@
             </select>
         </div>
         <div class="col-md-2">
+            <select aria-label="Filter by sub-activity" name="sub_activity_id" class="form-select form-select-sm"
+                    hx-get="{{ route('activities.index') }}" hx-trigger="change"
+                    hx-target="{{ $activityTarget }}" hx-swap="innerHTML"
+                    hx-push-url="{{ $pushUrl }}" hx-include="#activity-filters">
+                <option value="">All Sub-activities</option>
+                @foreach($subActivities as $group)
+                    <optgroup label="{{ $group->first()->activityType->name }}">
+                        @foreach($group as $subActivity)
+                            <option value="{{ $subActivity->id }}" @selected((string) request('sub_activity_id') === (string) $subActivity->id)>{{ $subActivity->name }}{{ $subActivity->active ? '' : ' (inactive)' }}</option>
+                        @endforeach
+                    </optgroup>
+                @endforeach
+            </select>
+        </div>
+        <div class="col-md-2">
             <select aria-label="Filter by certification review" name="needs_certification_review" class="form-select form-select-sm"
                 hx-get="{{ route('activities.index') }}" hx-trigger="change" hx-target="{{ $activityTarget }}" hx-swap="innerHTML" hx-push-url="{{ $pushUrl }}" hx-include="#activity-filters">
                 <option value="">All certification reviews</option>
@@ -111,7 +126,7 @@
             </select>
         </div>
         @if($embedded)
-            <div class="col-auto {{ request()->hasAny(['search', 'state_id', 'organization_id', 'activity_type_id', 'needs_certification_review', 'project_id', 'program_id']) ? '' : 'd-none' }}" data-table-filter-clear-wrap>
+            <div class="col-auto {{ request()->hasAny(['search', 'state_id', 'organization_id', 'activity_type_id', 'sub_activity_id', 'needs_certification_review', 'project_id', 'program_id']) ? '' : 'd-none' }}" data-table-filter-clear-wrap>
                 <a class="btn btn-outline-secondary btn-sm" aria-label="Clear filters"
                    href="{{ route('activities.index', request()->only($embedKey, 'embedded', 'per_page')) }}"
                    hx-get="{{ route('activities.index', request()->only($embedKey, 'embedded', 'per_page')) }}"
@@ -120,7 +135,7 @@
         @else
             <x-table-filter-clear
                 :href="route('activities.index')"
-                :filter-keys="['project_id', 'program_id', 'search', 'state_id', 'organization_id', 'agreement_id', 'activity_type_id', 'needs_certification_review']"
+                :filter-keys="['project_id', 'program_id', 'search', 'state_id', 'organization_id', 'agreement_id', 'activity_type_id', 'sub_activity_id', 'needs_certification_review']"
             />
         @endif
 

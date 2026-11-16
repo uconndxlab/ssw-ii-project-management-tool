@@ -14,6 +14,7 @@ use App\Models\Organization;
 use App\Models\Program;
 use App\Models\Project;
 use App\Models\State;
+use App\Models\SubActivity;
 use App\Models\User;
 use App\Services\ActivityActionLogService;
 use App\Services\ActivityDuplicationService;
@@ -24,6 +25,7 @@ use App\Support\ActivityFundingSourceTokens;
 use App\Support\ActivityTypeDuration;
 use App\Support\ProgramParticipantDirectory;
 use App\Support\ProjectProgramScope;
+use App\Support\SubActivityOptions;
 use App\Support\TablePagination;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
@@ -68,7 +70,7 @@ class ActivityController extends Controller
 
         $query = Activity::query()
             ->visibleTo($this->actor())
-            ->with(['agreements.organizations', 'agreements.states', 'user', 'activityType', 'organizations', 'states', 'programs.projects']);
+            ->with(['agreements.organizations', 'agreements.states', 'user', 'subActivity', 'activityType', 'organizations', 'states', 'programs.projects']);
 
         // Search
         $search = trim((string) $request->input('search', ''));
@@ -92,6 +94,7 @@ class ActivityController extends Controller
                     ->orWhereHas('activityType', function ($typeQuery) use ($search) {
                         $typeQuery->whereIlike('name', "%{$search}%");
                     })
+                    ->orWhereHas('subActivity', fn ($subQuery) => $subQuery->whereIlike('name', "%{$search}%"))
                     ->orWhereHas('user', function ($userQuery) use ($search) {
                         $userQuery->whereIlike('name', "%{$search}%");
                     });
@@ -128,6 +131,10 @@ class ActivityController extends Controller
 
         if ($activityTypeId) {
             $query->where('activity_type_id', $activityTypeId);
+        }
+
+        if ($request->filled('sub_activity_id')) {
+            $query->where('sub_activity_id', $request->integer('sub_activity_id'));
         }
 
         if ($request->filled('project_id')) {
@@ -203,6 +210,8 @@ class ActivityController extends Controller
             ->orderBy('name')
             ->get();
 
+        $subActivities = SubActivity::with('activityType')->orderBy('name')->get()->groupBy('activity_type_id');
+
         // Sorting
         $sort = $request->input('sort', 'date');
         $direction = $request->input('direction', 'desc') === 'asc' ? 'asc' : 'desc';
@@ -235,7 +244,7 @@ class ActivityController extends Controller
 
         if ($embedded) {
             return view('agreements.partials.activity-tab', compact(
-                'activities', 'states', 'organizations', 'agreements', 'activityTypes',
+                'activities', 'states', 'organizations', 'agreements', 'activityTypes', 'subActivities',
                 'filterProjects', 'filterPrograms', 'sort', 'direction', 'embedded',
             ));
         }
@@ -247,7 +256,7 @@ class ActivityController extends Controller
                 'states',
                 'organizations',
                 'agreements',
-                'activityTypes',
+                'activityTypes', 'subActivities',
                 'filterProjects',
                 'filterPrograms',
                 'sort',
@@ -269,7 +278,7 @@ class ActivityController extends Controller
             'states',
             'organizations',
             'agreements',
-            'activityTypes',
+            'activityTypes', 'subActivities',
             'filterProjects',
             'filterPrograms',
             'sort',
@@ -281,6 +290,13 @@ class ActivityController extends Controller
     {
         $this->authorize('create', Activity::class);
 
+        if ($request->filled('duplicate_of')) {
+            $source = Activity::findOrFail($request->integer('duplicate_of'));
+            $this->authorize('duplicate', $source);
+
+            return $this->activityFormView($source, asCopy: true);
+        }
+
         $agreements = $this->getPickerAgreements()->load('agreementLoggingFields.programs:id');
         $states = State::orderBy('name')->get();
         $organizations = Organization::active()->orderBy('name')->get();
@@ -288,7 +304,7 @@ class ActivityController extends Controller
         $contactFamilies = ContactFamily::where('active', true)
             ->with(['contactFamilyLoggingFields.programs:id', 'activityTypes' => function ($query) {
                 $query->where('active', true)
-                    ->with('activityTypeLoggingFields.programs:id')
+                    ->with(['activityTypeLoggingFields.programs:id', 'subActivities.subActivityLoggingFields.programs:id'])
                     ->orderBy('sort_order')
                     ->orderBy('name');
             }])
@@ -302,7 +318,7 @@ class ActivityController extends Controller
             'organizationKfsAccounts',
             'kfsAccounts',
             'states',
-            'deliverables.activityType',
+            'deliverables.activityType', 'deliverables.subActivity',
             'users',
             'teams.users',
             'programs.projects',
@@ -345,6 +361,8 @@ class ActivityController extends Controller
             'engagement_date' => ['required', 'date'],
             'contact_family_id' => ['required', 'exists:contact_families,id'],
             'activity_type_id' => ['required', 'exists:activity_types,id'],
+            'sub_activity_id' => ['nullable', 'integer'],
+            'sub_activity_logging_values' => ['nullable', 'array'],
             'internal_only' => ['nullable', 'boolean'],
             'cancelled' => ['nullable', 'boolean'],
             'not_yet_complete' => ['nullable', 'boolean'],
@@ -397,6 +415,7 @@ class ActivityController extends Controller
         $activityType = ActivityType::with('activityTypeLoggingFields.programs:id')->findOrFail($activityTypeId);
         assert($contactFamily instanceof ContactFamily);
         assert($activityType instanceof ActivityType);
+        $subActivity = $this->validateSubActivitySelection($baseValidated, $activityType);
 
         $this->validateAgreementCoverageSelections($baseValidated, $agreements);
         $this->validateAgreementClassificationSelections($baseValidated, $agreements);
@@ -408,26 +427,27 @@ class ActivityController extends Controller
         $validated = array_merge(
             $baseValidated,
             $request->validate(
-                $this->dynamicLoggingFieldValidationRules($agreements, $contactFamily, $activityType, $baseValidated['program_ids']),
+                $this->dynamicLoggingFieldValidationRules($agreements, $contactFamily, $activityType, $baseValidated['program_ids'], null, $subActivity),
                 [],
-                $this->dynamicLoggingFieldValidationAttributes($agreements, $contactFamily, $activityType, $baseValidated['program_ids'])
+                $this->dynamicLoggingFieldValidationAttributes($agreements, $contactFamily, $activityType, $baseValidated['program_ids'], $subActivity)
             )
         );
         $validated['certification'] = $request->only(['certification_candidates', 'needs_certification_review', 'review_coach_user_ids']);
         $activity = null;
 
-        DB::transaction(function () use (&$activity, $validated, $agreements, $contactFamily, $activityType, $engagementDate, $activityTypeId, $completionCount) {
+        DB::transaction(function () use (&$activity, $validated, $agreements, $contactFamily, $activityType, $subActivity, $engagementDate, $activityTypeId, $completionCount) {
             $activity = Activity::create([
                 'user_id' => Auth::id(),
                 'engagement_date' => $engagementDate,
                 'activity_type_id' => $activityTypeId,
+                'sub_activity_id' => $validated['sub_activity_id'] ?? null,
                 'completion_count' => $completionCount,
                 'internal_only' => $validated['internal_only'] ?? false,
                 'cancelled' => $validated['cancelled'] ?? false,
                 'not_yet_complete' => $validated['not_yet_complete'] ?? false,
             ]);
 
-            $this->syncActivityDurationSnapshot($activity, $activityType, true);
+            $this->syncActivityDurationSnapshot($activity, $activityType, true, $subActivity);
 
             $activity->agreements()->sync($validated['agreement_ids'] ?? []);
             $activity->states()->sync($validated['state_ids'] ?? []);
@@ -437,7 +457,7 @@ class ActivityController extends Controller
 
             $this->certificationEvidence->save($activity, $this->actor(), $validated['certification']);
 
-            $this->syncLoggingFieldAnswers($activity, $validated, $agreements, $contactFamily, $activityType);
+            $this->syncLoggingFieldAnswers($activity, $validated, $agreements, $contactFamily, $activityType, $subActivity);
 
             $this->syncAgreementFundingSources($activity, $validated, $agreements);
             $this->syncActivityTimeTracking($activity, $validated['time_tracking']);
@@ -471,7 +491,7 @@ class ActivityController extends Controller
             'contactTime',
             'activityType.contactFamily',
             'activityType.contactFamily.contactFamilyLoggingFields.programs:id',
-            'activityType.activityTypeLoggingFields.programs:id',
+            'activityType.activityTypeLoggingFields.programs:id', 'subActivity.subActivityLoggingFields.programs:id',
             'loggingFieldAnswers.loggingField',
             'agreementFundingSources',
         ]);
@@ -481,13 +501,14 @@ class ActivityController extends Controller
             $scopedLoggingFields = [];
         } else {
             $contactFamily = $activityType->contactFamily;
-            $this->includeLegacyLoggingFields($activity, $activity->agreements, $contactFamily, $activityType);
+            $this->includeLegacyLoggingFields($activity, $activity->agreements, $contactFamily, $activityType, $activity->subActivity);
             $scopedLoggingFields = $contactFamily instanceof ContactFamily
                 ? $this->scopedLoggingFields(
                     $activity->agreements,
                     $contactFamily,
                     $activityType,
-                    $activity->programs->pluck('id')->all()
+                    $activity->programs->pluck('id')->all(),
+                    $activity->subActivity
                 )
                 : [];
         }
@@ -502,6 +523,15 @@ class ActivityController extends Controller
     {
         $this->authorize('update', $activity);
 
+        return $this->activityFormView($activity, asCopy: false);
+    }
+
+    /**
+     * The edit form, or with $asCopy an unsaved create form prefilled from $activity. A copy keeps the
+     * certification rows the user can edit, as new rows; uploaded documents are not carried over.
+     */
+    private function activityFormView(Activity $activity, bool $asCopy): View
+    {
         $agreements = $this->getPickerAgreements()->load('agreementLoggingFields.programs:id');
         $states = State::orderBy('name')->get();
         $activity->loadMissing('organizations');
@@ -516,14 +546,14 @@ class ActivityController extends Controller
         $contactFamilies = ContactFamily::where('active', true)
             ->with(['contactFamilyLoggingFields.programs:id', 'activityTypes' => function ($query) {
                 $query->where('active', true)
-                    ->with('activityTypeLoggingFields.programs:id')
+                    ->with(['activityTypeLoggingFields.programs:id', 'subActivities.subActivityLoggingFields.programs:id'])
                     ->orderBy('sort_order')
                     ->orderBy('name');
             }])
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
-        $activity->load(['activityType.contactFamily', 'activityType.activityTypeLoggingFields', 'agreements', 'states', 'organizations', 'programs.projects', 'participants', 'participantTimes.user', 'contactTime', 'loggingFieldAnswers', 'agreementFundingSources']);
+        $activity->load(['subActivity', 'activityType.contactFamily', 'activityType.activityTypeLoggingFields', 'subActivity.subActivityLoggingFields.programs:id', 'agreements', 'states', 'organizations', 'programs.projects', 'participants', 'participantTimes.user', 'contactTime', 'loggingFieldAnswers', 'agreementFundingSources']);
         $agreements = $agreements
             ->merge($activity->agreements)
             ->unique('id')
@@ -534,7 +564,7 @@ class ActivityController extends Controller
             'organizationKfsAccounts',
             'kfsAccounts',
             'states',
-            'deliverables.activityType',
+            'deliverables.activityType', 'deliverables.subActivity',
             'users',
             'teams.users',
             'programs.projects',
@@ -547,11 +577,15 @@ class ActivityController extends Controller
             $agreements,
             $formContactFamily,
             $formContactFamily?->activityTypes->firstWhere('id', $activity->activity_type_id),
+            $formContactFamily?->activityTypes->firstWhere('id', $activity->activity_type_id)?->subActivities->firstWhere('id', $activity->sub_activity_id),
         );
         $contactFamilyId = $activity->activityType?->contactFamily?->id;
         $currentContactFamilyId = old('contact_family_id', $contactFamilyId !== null ? (string) $contactFamilyId : '');
 
         $certificationForm = $this->certificationEvidence->formData($this->actor(), $agreements, $activity);
+        if ($asCopy) {
+            $certificationForm['saved'] = $this->certificationRowsForCopy($certificationForm['saved']);
+        }
 
         return view('activities.edit', compact(
             'certificationForm',
@@ -560,8 +594,25 @@ class ActivityController extends Controller
             'states',
             'organizations',
             'contactFamilies',
-            'currentContactFamilyId'
+            'currentContactFamilyId',
+            'asCopy'
         ));
+    }
+
+    /**
+     * @param  array<int, array{submissions: array<int, array<string, mixed>>}>  $rows
+     * @return array<int, array<string, mixed>>
+     */
+    private function certificationRowsForCopy(array $rows): array
+    {
+        return collect($rows)->map(fn (array $row) => array_merge(Arr::except($row, ['id']), [
+            'submission_count' => 0,
+            'submissions' => collect($row['submissions'])
+                ->filter(fn (array $submission) => $submission['editable'])
+                ->map(fn (array $submission) => Arr::except($submission, ['id']))
+                ->values()
+                ->all(),
+        ]))->all();
     }
 
     public function update(Request $request, Activity $activity): RedirectResponse
@@ -584,6 +635,8 @@ class ActivityController extends Controller
             'engagement_date' => ['required', 'date'],
             'contact_family_id' => ['required', 'exists:contact_families,id'],
             'activity_type_id' => ['required', 'exists:activity_types,id'],
+            'sub_activity_id' => ['nullable', 'integer'],
+            'sub_activity_logging_values' => ['nullable', 'array'],
             'internal_only' => ['nullable', 'boolean'],
             'cancelled' => ['nullable', 'boolean'],
             'not_yet_complete' => ['nullable', 'boolean'],
@@ -641,7 +694,8 @@ class ActivityController extends Controller
         $activityType = ActivityType::with('activityTypeLoggingFields.programs:id')->findOrFail($activityTypeId);
         assert($contactFamily instanceof ContactFamily);
         assert($activityType instanceof ActivityType);
-        $this->includeLegacyLoggingFields($activity, $agreements, $contactFamily, $activityType);
+        $subActivity = $this->validateSubActivitySelection($baseValidated, $activityType, $activity);
+        $this->includeLegacyLoggingFields($activity, $agreements, $contactFamily, $activityType, $subActivity);
 
         $this->validateAgreementCoverageSelections($baseValidated, $agreements, $activity);
         $this->validateAgreementClassificationSelections($baseValidated, $agreements);
@@ -651,28 +705,30 @@ class ActivityController extends Controller
         $validated = array_merge(
             $baseValidated,
             $request->validate(
-                $this->dynamicLoggingFieldValidationRules($agreements, $contactFamily, $activityType, $baseValidated['program_ids'], $activity),
+                $this->dynamicLoggingFieldValidationRules($agreements, $contactFamily, $activityType, $baseValidated['program_ids'], $activity, $subActivity),
                 [],
-                $this->dynamicLoggingFieldValidationAttributes($agreements, $contactFamily, $activityType, $baseValidated['program_ids'])
+                $this->dynamicLoggingFieldValidationAttributes($agreements, $contactFamily, $activityType, $baseValidated['program_ids'], $subActivity)
             )
         );
 
         $validated['certification'] = $request->only(['certification_candidates', 'needs_certification_review', 'review_coach_user_ids']);
 
-        DB::transaction(function () use ($activity, $validated, $agreements, $contactFamily, $activityType, $engagementDate, $activityTypeId, $completionCount) {
+        DB::transaction(function () use ($activity, $validated, $agreements, $contactFamily, $activityType, $subActivity, $engagementDate, $activityTypeId, $completionCount) {
             $activity->refreshForUpdate();
-            $activityTypeChanged = (int) $activity->activity_type_id !== (int) $activityTypeId;
+            $activityTypeChanged = (int) $activity->activity_type_id !== (int) $activityTypeId
+                || $activity->sub_activity_id != ($validated['sub_activity_id'] ?? null);
 
             $activity->update([
                 'engagement_date' => $engagementDate,
                 'activity_type_id' => $activityTypeId,
+                'sub_activity_id' => $validated['sub_activity_id'] ?? null,
                 'completion_count' => $completionCount,
                 'internal_only' => $validated['internal_only'] ?? false,
                 'cancelled' => $validated['cancelled'] ?? false,
                 'not_yet_complete' => $validated['not_yet_complete'] ?? false,
             ]);
 
-            $this->syncActivityDurationSnapshot($activity, $activityType, $activityTypeChanged);
+            $this->syncActivityDurationSnapshot($activity, $activityType, $activityTypeChanged, $subActivity);
 
             $activity->agreements()->sync($validated['agreement_ids'] ?? []);
             $activity->states()->sync($validated['state_ids'] ?? []);
@@ -682,7 +738,7 @@ class ActivityController extends Controller
 
             $this->certificationEvidence->save($activity, $this->actor(), $validated['certification']);
 
-            $this->syncLoggingFieldAnswers($activity, $validated, $agreements, $contactFamily, $activityType);
+            $this->syncLoggingFieldAnswers($activity, $validated, $agreements, $contactFamily, $activityType, $subActivity);
 
             $this->syncAgreementFundingSources($activity, $validated, $agreements);
             $this->syncActivityTimeTracking($activity, $validated['time_tracking']);
@@ -727,6 +783,16 @@ class ActivityController extends Controller
     {
         $this->authorize('duplicate', $activity);
 
+        if ($activity->sub_activity_id === null
+            && SubActivityOptions::availableFor((int) $activity->activity_type_id, $activity->agreements()->pluck('agreements.id')->all())->isNotEmpty()) {
+            $hasDocuments = $activity->loggingFieldAnswers()->whereNotNull('file_path')->exists();
+
+            return redirect()
+                ->route('activities.create', ['duplicate_of' => $activity->id])
+                ->with('warning', ($activity->activityType->name ?? 'This activity type').' now has sub-activities, so choose one before the copy is saved. Nothing is saved until you click Log Activity.'
+                    .($hasDocuments ? ' Uploaded documents are not copied.' : ''));
+        }
+
         $copy = $this->activityDuplicationService->duplicate($activity, (int) Auth::id());
 
         DB::transaction(function () use ($activity, $copy) {
@@ -758,13 +824,13 @@ class ActivityController extends Controller
         $this->authorize('viewActionLog', $activity);
 
         $actionLogs = $activity->actionLogs()
-            ->with(['user', 'relatedActivity.activityType.contactFamily', 'relatedActivity.user'])
+            ->with(['user', 'relatedActivity.activityType.contactFamily', 'relatedActivity.subActivity', 'relatedActivity.user'])
             ->where('action', '!=', ActivityAction::Delete->value)
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->get();
 
-        $activity->loadMissing(['activityType.contactFamily', 'user']);
+        $activity->loadMissing(['subActivity', 'activityType.contactFamily', 'user']);
 
         return view('activities.partials.action-log-list', [
             'activity' => $activity,
@@ -888,7 +954,7 @@ class ActivityController extends Controller
      *
      * @param  Collection<int, Agreement>  $agreements
      */
-    private function includeLegacyLoggingFields(Activity $activity, Collection $agreements, ?ContactFamily $contactFamily, ?ActivityType $activityType): void
+    private function includeLegacyLoggingFields(Activity $activity, Collection $agreements, ?ContactFamily $contactFamily, ?ActivityType $activityType, ?SubActivity $subActivity = null): void
     {
         $activity->loadMissing('loggingFieldAnswers.loggingField.programs:id');
 
@@ -897,6 +963,7 @@ class ActivityController extends Controller
                 'agreement' => $agreements->firstWhere('id', $answer->context_id)?->agreementLoggingFields,
                 'contact_family' => $contactFamily !== null && $answer->context_id === (int) $contactFamily->id ? $contactFamily->contactFamilyLoggingFields : null,
                 'activity_type' => $activityType !== null && $answer->context_id === (int) $activityType->id ? $activityType->activityTypeLoggingFields : null,
+                'sub_activity' => $subActivity !== null && $answer->context_id === (int) $subActivity->id ? $subActivity->subActivityLoggingFields : null,
                 default => null,
             };
 
@@ -912,7 +979,7 @@ class ActivityController extends Controller
      * @param  array<int, int>  $selectedProgramIds
      * @return array<string, mixed>
      */
-    private function scopedLoggingFields(Collection $agreements, ContactFamily $contactFamily, ActivityType $activityType, array $selectedProgramIds): array
+    private function scopedLoggingFields(Collection $agreements, ContactFamily $contactFamily, ActivityType $activityType, array $selectedProgramIds, ?SubActivity $subActivity = null): array
     {
         $selectedProgramIds = collect($selectedProgramIds)
             ->map(fn ($id) => (int) $id)
@@ -936,6 +1003,7 @@ class ActivityController extends Controller
             }),
             'contact_family' => $filterFields($contactFamily->contactFamilyLoggingFields),
             'activity_type' => $filterFields($activityType->activityTypeLoggingFields),
+            'sub_activity' => $filterFields($subActivity === null ? collect() : $subActivity->subActivityLoggingFields),
         ];
     }
 
@@ -944,18 +1012,20 @@ class ActivityController extends Controller
      * @param  array<int, int>  $selectedProgramIds
      * @return array<string, mixed>
      */
-    private function dynamicLoggingFieldValidationRules(Collection $agreements, ContactFamily $contactFamily, ActivityType $activityType, array $selectedProgramIds, ?Activity $activity = null): array
+    private function dynamicLoggingFieldValidationRules(Collection $agreements, ContactFamily $contactFamily, ActivityType $activityType, array $selectedProgramIds, ?Activity $activity = null, ?SubActivity $subActivity = null): array
     {
         $rules = [];
-        $scopedFields = $this->scopedLoggingFields($agreements, $contactFamily, $activityType, $selectedProgramIds);
+        $scopedFields = $this->scopedLoggingFields($agreements, $contactFamily, $activityType, $selectedProgramIds, $subActivity);
         $existingAgreementValues = [];
         $existingContactFamilyValues = [];
         $existingActivityValues = [];
+        $existingSubActivityValues = [];
         if ($activity !== null) {
             $activity->loadMissing('loggingFieldAnswers');
             $existingAgreementValues = $activity->agreement_logging_values;
             $existingContactFamilyValues = $activity->contact_family_logging_values;
             $existingActivityValues = $activity->activity_type_logging_values;
+            $existingSubActivityValues = $activity->sub_activity_id == $subActivity?->id ? $activity->sub_activity_logging_values : [];
         }
 
         foreach ($agreements as $agreement) {
@@ -996,6 +1066,18 @@ class ActivityController extends Controller
             );
         }
 
+        foreach ($subActivity === null ? [] : $scopedFields['sub_activity'] as $field) {
+            $rules = array_merge(
+                $rules,
+                $this->rulesForField(
+                    $field,
+                    (bool) $field->pivot->is_required,
+                    "sub_activity_logging_values.{$field->id}",
+                    data_get($existingSubActivityValues, (string) $field->id)
+                )
+            );
+        }
+
         return $rules;
     }
 
@@ -1004,10 +1086,10 @@ class ActivityController extends Controller
      * @param  array<int, int>  $selectedProgramIds
      * @return array<string, string>
      */
-    private function dynamicLoggingFieldValidationAttributes(Collection $agreements, ContactFamily $contactFamily, ActivityType $activityType, array $selectedProgramIds): array
+    private function dynamicLoggingFieldValidationAttributes(Collection $agreements, ContactFamily $contactFamily, ActivityType $activityType, array $selectedProgramIds, ?SubActivity $subActivity = null): array
     {
         $attributes = [];
-        $scopedFields = $this->scopedLoggingFields($agreements, $contactFamily, $activityType, $selectedProgramIds);
+        $scopedFields = $this->scopedLoggingFields($agreements, $contactFamily, $activityType, $selectedProgramIds, $subActivity);
 
         foreach ($agreements as $agreement) {
             foreach ($scopedFields['agreements'][(string) $agreement->id] ?? collect() as $field) {
@@ -1024,6 +1106,13 @@ class ActivityController extends Controller
         foreach ($scopedFields['activity_type'] as $field) {
             $attributes["activity_logging_values.{$field->id}"] = $activityType->name.': '.$field->name;
             $attributes["activity_logging_values.{$field->id}.*"] = $activityType->name.': '.$field->name;
+        }
+
+        if ($subActivity !== null) {
+            foreach ($scopedFields['sub_activity'] as $field) {
+                $attributes["sub_activity_logging_values.{$field->id}"] = $subActivity->name.': '.$field->name;
+                $attributes["sub_activity_logging_values.{$field->id}.*"] = $subActivity->name.': '.$field->name;
+            }
         }
 
         return $attributes;
@@ -1118,7 +1207,7 @@ class ActivityController extends Controller
             return;
         }
 
-        $agreements->each(fn (Agreement $agreement) => $agreement->loadMissing(['deliverables.activityType']));
+        $agreements->each(fn (Agreement $agreement) => $agreement->loadMissing(['deliverables.activityType', 'deliverables.subActivity']));
 
         $allowedContactFamilyIds = $agreements
             ->flatMap(function ($agreement) {
@@ -1485,15 +1574,38 @@ class ActivityController extends Controller
         }
     }
 
-    private function syncActivityDurationSnapshot(Activity $activity, ActivityType $activityType, bool $activityTypeChanged): void
+    /** @param array<string, mixed> $validated */
+    private function validateSubActivitySelection(array $validated, ActivityType $activityType, ?Activity $activity = null): ?SubActivity
     {
-        // only updates if activty changed
+        $selectedId = isset($validated['sub_activity_id']) ? (int) $validated['sub_activity_id'] : null;
+        $agreementIds = array_map('intval', $validated['agreement_ids'] ?? []);
+        $keep = $activity !== null && (int) $activity->activity_type_id === (int) $activityType->id
+            ? $activity->sub_activity_id : null;
+        if ($selectedId !== null) {
+            $selected = SubActivityOptions::availableFor((int) $activityType->id, $agreementIds, $keep === null ? null : (int) $keep)->firstWhere('id', $selectedId);
+            if ($selected === null) {
+                throw ValidationException::withMessages(['sub_activity_id' => 'Selected sub-activity is not available for this activity type.']);
+            }
+            $selected->load('subActivityLoggingFields.programs:id');
+
+            return $selected;
+        }
+
+        if (! ($activity?->canKeepNoSubActivity($activityType) ?? false)
+            && SubActivityOptions::availableFor((int) $activityType->id, $agreementIds)->isNotEmpty()) {
+            throw ValidationException::withMessages(['sub_activity_id' => 'Select a sub-activity for '.$activityType->name.'.']);
+        }
+
+        return null;
+    }
+
+    private function syncActivityDurationSnapshot(Activity $activity, ActivityType $activityType, bool $activityTypeChanged, ?SubActivity $subActivity = null): void
+    {
         if (! $activityTypeChanged) {
             return;
         }
 
-        // updates the allotted times -> overcomplicated ActivityTypeDuration support class...
-        $activity->update(ActivityTypeDuration::snapshotFromActivityType($activityType));
+        $activity->update(ActivityTypeDuration::snapshotForSelection($activityType, $subActivity));
     }
 
     /**
@@ -1646,10 +1758,10 @@ class ActivityController extends Controller
      * @param  array<string, mixed>  $validated
      * @param  Collection<int, Agreement>  $agreements
      */
-    private function syncLoggingFieldAnswers(Activity $activity, array $validated, Collection $agreements, ContactFamily $contactFamily, ActivityType $activityType): void
+    private function syncLoggingFieldAnswers(Activity $activity, array $validated, Collection $agreements, ContactFamily $contactFamily, ActivityType $activityType, ?SubActivity $subActivity = null): void
     {
         $activity->loadMissing('loggingFieldAnswers');
-        $scopedFields = $this->scopedLoggingFields($agreements, $contactFamily, $activityType, $validated['program_ids'] ?? []);
+        $scopedFields = $this->scopedLoggingFields($agreements, $contactFamily, $activityType, $validated['program_ids'] ?? [], $subActivity);
 
         $existingAgreementValues = $activity->agreement_logging_values;
         $existingContactFamilyValues = $activity->contact_family_logging_values;
@@ -1709,6 +1821,26 @@ class ActivityController extends Controller
 
             if ($answer !== null) {
                 $payload[] = $answer;
+            }
+        }
+
+        if ($subActivity !== null) {
+            foreach ($scopedFields['sub_activity'] as $field) {
+                $existingAnswer = $activity->loggingFieldAnswer('sub_activity', (int) $field->id, (int) $subActivity->id);
+                $answer = $this->buildLoggingFieldAnswerPayload(
+                    $field,
+                    'sub_activity',
+                    (int) $subActivity->id,
+                    data_get($validated, "sub_activity_logging_values.{$field->id}"),
+                    request()->file("sub_activity_logging_values.{$field->id}"),
+                    $existingAnswer?->file_path,
+                    $existingAnswer?->originalFileName(),
+                    $this->loggingDocumentWasCleared("sub_activity_logging_values.{$field->id}")
+                );
+
+                if ($answer !== null) {
+                    $payload[] = $answer;
+                }
             }
         }
 
@@ -1813,11 +1945,12 @@ class ActivityController extends Controller
     {
         $this->authorize('view', $activity);
 
-        abort_unless(in_array($context, ['agreement', 'activity_type', 'contact_family'], true), 404);
+        abort_unless(in_array($context, ['agreement', 'activity_type', 'contact_family', 'sub_activity'], true), 404);
 
         $contextId = match ($context) {
             'agreement' => $agreementId,
             'activity_type' => $activity->activity_type_id,
+            'sub_activity' => $activity->sub_activity_id,
             default => $activity->activityType()->value('contact_family_id'),
         };
 

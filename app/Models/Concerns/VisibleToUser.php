@@ -14,6 +14,7 @@ use App\Models\Organization;
 use App\Models\Program;
 use App\Models\Project;
 use App\Models\State;
+use App\Models\SubActivity;
 use App\Models\Team;
 use App\Models\User;
 use App\Support\Authorization\UserAccess;
@@ -43,6 +44,7 @@ trait VisibleToUser
             ContactFamily::class,
             LoggingField::class,
             ActivityType::class,
+            SubActivity::class,
             CertificationTool::class,
             Certificate::class => $access->applyScopedEntityVisibility($query),
             default => $query,

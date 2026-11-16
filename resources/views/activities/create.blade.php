@@ -11,6 +11,8 @@
     $selectedProjectIds = old('project_ids', []);
     $selectedProgramIds = old('program_ids', []);
     $selectedParticipantUserIds = old('participant_user_ids', []);
+    $selectedSubActivityId = old('sub_activity_id', null);
+    $subActivityLoggingData = \App\Models\Activity::mergePreservedLoggingValues(old('sub_activity_logging_values', []), []);
     $selectedActivityTypeId = old('activity_type_id', null);
     $agreementLoggingData = old('agreement_logging_values', []);
     $contactFamilyLoggingData = old('contact_family_logging_values', []);
@@ -45,6 +47,8 @@
     :selected-project-ids="$selectedProjectIds"
     :selected-program-ids="$selectedProgramIds"
     :selected-participant-user-ids="$selectedParticipantUserIds"
+    :selected-sub-activity-id="$selectedSubActivityId"
+    :sub-activity-logging-data="$subActivityLoggingData"
     :selected-activity-type-id="$selectedActivityTypeId"
     :agreement-logging-data="$agreementLoggingData"
     :contact-family-logging-data="$contactFamilyLoggingData"
