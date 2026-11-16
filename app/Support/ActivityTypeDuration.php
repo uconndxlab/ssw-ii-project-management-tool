@@ -260,19 +260,6 @@ class ActivityTypeDuration
         return new self(self::UNIT_NONE, null);
     }
 
-    /**
-     * @return array{allotted_duration_hours: float|null, allotted_duration_days: float|null}
-     */
-    public static function snapshotFromActivityType(ActivityType $activityType): array
-    {
-        $duration = self::fromActivityType($activityType);
-
-        return [
-            'allotted_duration_hours' => $duration->unit() === self::UNIT_HOURS ? $duration->value() : null,
-            'allotted_duration_days' => $duration->unit() === self::UNIT_DAYS ? $duration->value() : null,
-        ];
-    }
-
     public function __construct(
         private readonly string $unit,
         private readonly ?float $value

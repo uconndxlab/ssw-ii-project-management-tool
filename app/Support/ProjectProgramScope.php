@@ -69,22 +69,6 @@ class ProjectProgramScope
     }
 
     /**
-     * @return Collection<int, Project>
-     */
-    public static function activeProjectsWithPrograms(): Collection
-    {
-        return Project::query()
-            ->where('active', true)
-            ->with([
-                'programs' => fn ($query) => $query
-                    ->where('active', true)
-                    ->orderBy('name'),
-            ])
-            ->orderBy('name')
-            ->get();
-    }
-
-    /**
      * Projects and programs the actor may assign, plus any already on the entity.
      *
      * @param  array<int, int>  $existingProjectIds

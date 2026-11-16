@@ -129,22 +129,6 @@ class ScopeSync
         return ['mode' => ProgramScopeMode::Specific, 'programIds' => $clipped];
     }
 
-    /**
-     * @param  list<int>  $sourceProjectIds
-     * @return list<int>
-     */
-    public static function clipProjectIdsForDuplicate(User $actor, array $sourceProjectIds): array
-    {
-        $access = UserAccess::for($actor);
-        $sourceProjectIds = self::normalizeIds($sourceProjectIds);
-
-        if ($access->isSystemAdmin()) {
-            return $sourceProjectIds;
-        }
-
-        return array_values(array_intersect($sourceProjectIds, $access->adminProjectIds()));
-    }
-
     // protect all behavior for sys admin
     public static function validateSubmittedMode(
         Validator $validator,
@@ -190,33 +174,6 @@ class ScopeSync
 
         if ($outside !== []) {
             $validator->errors()->add($programKey, 'You can only assign programs you administer.');
-        }
-    }
-
-    /**
-     * @param  array<int>  $submittedProjectIds
-     * @param  array<int>  $existingProjectIds
-     */
-    public static function validateSubmittedProjectsAreInAdminScope(
-        Validator $validator,
-        User $actor,
-        array $submittedProjectIds,
-        array $existingProjectIds = [],
-        string $projectKey = 'project_ids',
-    ): void {
-        $access = UserAccess::for($actor);
-        if ($access->isSystemAdmin()) {
-            return;
-        }
-
-        $submittedProjectIds = self::normalizeIds($submittedProjectIds);
-        $existingProjectIds = self::normalizeIds($existingProjectIds);
-        $adminProjectIds = $access->adminProjectIds();
-        $allowed = array_values(array_unique(array_merge($adminProjectIds, $existingProjectIds)));
-        $outside = array_values(array_diff($submittedProjectIds, $allowed));
-
-        if ($outside !== []) {
-            $validator->errors()->add($projectKey, 'You can only assign projects you administer.');
         }
     }
 
