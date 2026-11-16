@@ -35,6 +35,7 @@ class ActivityDuplicationService
                 'user_id' => $userId,
                 'engagement_date' => $source->engagement_date,
                 'activity_type_id' => $source->activity_type_id,
+                'sub_activity_id' => $source->sub_activity_id,
                 'completion_count' => $source->completion_count,
                 'allotted_duration_hours' => $source->allotted_duration_hours,
                 'allotted_duration_days' => $source->allotted_duration_days,
@@ -100,7 +101,7 @@ class ActivityDuplicationService
                 'agreementFundingSources',
                 'loggingFieldAnswers',
                 'user',
-                'activityType',
+                'activityType', 'subActivity',
             ]);
             assert($fresh instanceof Activity);
 

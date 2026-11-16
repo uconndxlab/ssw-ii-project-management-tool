@@ -23,7 +23,7 @@
             @if($isReviewer)
                 <div class="app-review-banner" role="status">
                     <div class="min-w-0">
-                        <div class="app-review-banner__title"><strong>{{ $activity->certificationReviewRequestedBy?->name ?? 'Someone' }}</strong> asked you to review certification for <strong>{{ $activity->activityType->name }}</strong></div>
+                        <div class="app-review-banner__title"><strong>{{ $activity->certificationReviewRequestedBy?->name ?? 'Someone' }}</strong> asked you to review certification for <strong>{{ $activity->classificationLabel() }}</strong></div>
                         <div class="app-review-banner__meta">Requested {{ $flagged->format('M j, Y') }}</div>
                     </div>
                     <a href="{{ route('activities.certification.edit', $activity) }}#activity-certification" class="btn btn-primary flex-shrink-0">Review &amp; record submissions</a>

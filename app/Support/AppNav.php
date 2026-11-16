@@ -100,6 +100,7 @@ class AppNav
                 'items' => [
                     self::item('Activity Families', 'contact-families.index', ['contact-families.*'], 'bi-collection'),
                     self::item('Activity Types', 'activity-types.index', ['activity-types.*'], 'bi-tags'),
+                    self::item('Sub-activities', 'sub-activities.index', ['sub-activities.*'], 'bi-tag'),
                     self::item('Logging Fields', 'logging-fields.index', ['logging-fields.*'], 'bi-input-cursor-text'),
                 ],
             ],

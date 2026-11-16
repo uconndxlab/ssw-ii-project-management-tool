@@ -26,6 +26,7 @@ class CertificateRequirement extends Model
         'kind',
         'contact_family_id',
         'activity_type_id',
+        'sub_activity_id',
         'certification_tool_id',
         'certification_role_id',
         'target_count',
@@ -65,6 +66,12 @@ class CertificateRequirement extends Model
     public function contactFamily(): BelongsTo
     {
         return $this->belongsTo(ContactFamily::class);
+    }
+
+    /** @return BelongsTo<SubActivity, $this> */
+    public function subActivity(): BelongsTo
+    {
+        return $this->belongsTo(SubActivity::class);
     }
 
     /** @return BelongsTo<ActivityType, $this> */

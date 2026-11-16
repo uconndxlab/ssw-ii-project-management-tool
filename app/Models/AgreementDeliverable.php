@@ -19,9 +19,17 @@ class AgreementDeliverable extends Model
     /** @use HasFactory<AgreementDeliverableFactory> */
     use HasFactory;
 
+    public function classificationLabel(): ?string
+    {
+        return $this->activityType?->name
+            ? $this->activityType->name.($this->subActivity ? ' › '.$this->subActivity->name : '')
+            : null;
+    }
+
     protected $fillable = [
         'agreement_id',
         'activity_type_id',
+        'sub_activity_id',
         'contact_family_id',
         'program_id',
         'metric_type',
@@ -52,6 +60,12 @@ class AgreementDeliverable extends Model
     public function agreement(): BelongsTo
     {
         return $this->belongsTo(Agreement::class);
+    }
+
+    /** @return BelongsTo<SubActivity, $this> */
+    public function subActivity(): BelongsTo
+    {
+        return $this->belongsTo(SubActivity::class);
     }
 
     /** @return BelongsTo<ActivityType, $this> */

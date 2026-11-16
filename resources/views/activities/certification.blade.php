@@ -5,7 +5,7 @@
 @section('content')
 @php
     $formId = 'activity-certification-form';
-    $recordName = $activity->activityType->name.' · '.$activity->engagement_date->format('M j, Y');
+    $recordName = $activity->classificationLabel().' · '.$activity->engagement_date->format('M j, Y');
 @endphp
 
 <x-form-shell>

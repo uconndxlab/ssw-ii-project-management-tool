@@ -31,7 +31,7 @@ class DashboardController extends Controller
 
         // YTD activities
         $ytdActivities = Activity::whereYear('engagement_date', now()->year)
-            ->with(['activityType.contactFamily', 'user', 'agreements'])
+            ->with(['subActivity', 'activityType.contactFamily', 'user', 'agreements'])
             ->get();
 
         // YTD totals
@@ -55,7 +55,7 @@ class DashboardController extends Controller
         ];
 
         // Recent 10 activities (system-wide)
-        $recentActivities = Activity::with(['activityType.contactFamily', 'user', 'agreements', 'organizations'])
+        $recentActivities = Activity::with(['subActivity', 'activityType.contactFamily', 'user', 'agreements', 'organizations'])
             ->orderByRecentDisplay()
             ->limit(10)
             ->get();
@@ -142,7 +142,7 @@ class DashboardController extends Controller
         $myActivities = Activity::whereHas('agreements', function ($query) use ($agreementIds) {
             $query->whereIn('agreements.id', $agreementIds);
         })
-            ->with(['activityType.contactFamily', 'user', 'agreements', 'participants', 'organizations'])
+            ->with(['subActivity', 'activityType.contactFamily', 'user', 'agreements', 'participants', 'organizations'])
             ->orderByRecentDisplay()
             ->limit(10)
             ->get();
@@ -151,7 +151,7 @@ class DashboardController extends Controller
             ->wherePivotNull('unassigned_at')
             ->whereNull('agreement_deliverables.retired_at')
             ->whereHas('agreement', fn ($query) => $query->where('active', true))
-            ->with(['agreement.organizations', 'activityType', 'contactFamily'])
+            ->with(['agreement.organizations', 'activityType', 'subActivity', 'contactFamily'])
             ->get();
 
         return [

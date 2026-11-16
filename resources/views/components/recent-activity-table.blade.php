@@ -65,9 +65,9 @@
                         </td>
                         <td>
                             @if($canView)
-                                <a href="{{ route('activities.show', $activity) }}" class="app-link--strong app-row-link">{{ $activity->activityType?->name ?? 'Activity' }}</a>
+                                <a href="{{ route('activities.show', $activity) }}" class="app-link--strong app-row-link">{{ $activity->classificationLabel() }}</a>
                             @else
-                                <span class="fw-semibold">{{ $activity->activityType?->name ?? 'Activity' }}</span>
+                                <span class="fw-semibold">{{ $activity->classificationLabel() }}</span>
                             @endif
                             <div class="text-muted small">{{ $activity->activityType?->contactFamily?->name ?? '—' }}</div>
                         </td>
@@ -94,7 +94,7 @@
                         <td class="app-col-actions">
                             @if($canManage)
                                 <div class="dropdown app-row-actions d-inline-block">
-                                    <button type="button" class="btn btn-sm btn-link app-row-actions-toggle" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" aria-label="Activity actions for {{ $activity->activityType?->name ?? 'activity' }}"><i class="bi bi-three-dots" aria-hidden="true"></i></button>
+                                    <button type="button" class="btn btn-sm btn-link app-row-actions-toggle" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" aria-label="Activity actions for {{ $activity->classificationLabel() }}"><i class="bi bi-three-dots" aria-hidden="true"></i></button>
                                     <div class="dropdown-menu dropdown-menu-end">
                                         @if($canView)
                                             <a href="{{ route('activities.show', $activity) }}" class="dropdown-item"><i class="bi bi-eye me-2" aria-hidden="true"></i>View activity</a>

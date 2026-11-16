@@ -47,6 +47,7 @@ class LoggingField extends Model implements HasPrograms
         'available_in_agreements',
         'available_in_contact_families',
         'available_in_activities',
+        'available_in_sub_activities',
         'program_scope_mode',
     ];
 
@@ -60,6 +61,7 @@ class LoggingField extends Model implements HasPrograms
             'available_in_agreements' => 'boolean',
             'available_in_contact_families' => 'boolean',
             'available_in_activities' => 'boolean',
+            'available_in_sub_activities' => 'boolean',
             'program_scope_mode' => ProgramScopeMode::class,
         ];
     }
@@ -132,6 +134,14 @@ class LoggingField extends Model implements HasPrograms
             ->withTimestamps();
     }
 
+    /** @return BelongsToMany<SubActivity, $this> */
+    public function subActivities(): BelongsToMany
+    {
+        return $this->belongsToMany(SubActivity::class, 'sub_activity_logging_field_assignments', 'logging_field_id', 'sub_activity_id')
+            ->withPivot('is_required')
+            ->withTimestamps();
+    }
+
     /** @return BelongsToMany<Program, $this> */
     public function programs(): BelongsToMany
     {
@@ -147,6 +157,7 @@ class LoggingField extends Model implements HasPrograms
             'available_in_agreements' => 'Agreements',
             'available_in_contact_families' => 'Activity Families',
             'available_in_activities' => 'Activity Types',
+            'available_in_sub_activities' => 'Sub-activities',
         ];
     }
 

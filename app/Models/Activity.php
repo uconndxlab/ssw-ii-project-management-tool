@@ -34,6 +34,7 @@ class Activity extends Model implements HasPrograms
         'user_id',
         'engagement_date',
         'activity_type_id',
+        'sub_activity_id',
         'completion_count',
         'allotted_duration_hours',
         'allotted_duration_days',
@@ -118,6 +119,12 @@ class Activity extends Model implements HasPrograms
         return $this->belongsTo(User::class);
     }
 
+    /** @return BelongsTo<SubActivity, $this> */
+    public function subActivity(): BelongsTo
+    {
+        return $this->belongsTo(SubActivity::class);
+    }
+
     /** @return BelongsTo<ActivityType, $this> */
     public function activityType(): BelongsTo
     {
@@ -132,14 +139,29 @@ class Activity extends Model implements HasPrograms
         return $this->activityType?->contactFamily;
     }
 
+    public function classificationLabel(): string
+    {
+        return ($this->activityType->name ?? 'Activity').($this->subActivity ? ' › '.$this->subActivity->name : '');
+    }
+
+    public function canKeepNoSubActivity(ActivityType $activityType): bool
+    {
+        if ($this->sub_activity_id !== null || (int) $this->activity_type_id !== (int) $activityType->id) {
+            return false;
+        }
+        $earliest = $activityType->subActivities()->min('created_at');
+
+        return $earliest !== null && $this->created_at !== null && $this->created_at->lt($earliest);
+    }
+
     public function identityLabel(bool $includeType = true): string
     {
-        $this->loadMissing(['activityType.contactFamily', 'user']);
+        $this->loadMissing(['activityType.contactFamily', 'subActivity', 'user']);
 
         $parts = [];
 
         if ($includeType) {
-            $parts[] = $this->activityType?->name;
+            $parts[] = $this->classificationLabel();
         }
 
         $parts[] = $this->activityType?->contactFamily?->name;
@@ -264,6 +286,12 @@ class Activity extends Model implements HasPrograms
     public function getActivityTypeLoggingValuesAttribute(): array
     {
         return $this->buildLoggingFieldValueMap('activity_type');
+    }
+
+    /** @return array<int|string, mixed> */
+    public function getSubActivityLoggingValuesAttribute(): array
+    {
+        return $this->buildLoggingFieldValueMap('sub_activity');
     }
 
     public function loggingFieldAnswer(string $contextType, int $fieldId, ?int $contextId = null): ?ActivityLoggingFieldAnswer

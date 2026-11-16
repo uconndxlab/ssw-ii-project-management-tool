@@ -99,7 +99,7 @@ class ProjectController extends Controller
         $recentActivities = Activity::query()
             ->visibleTo($this->actor())
             ->whereHas('programs', fn ($query) => $query->whereIn('programs.id', $programs->pluck('id')))
-            ->with(['activityType.contactFamily', 'user', 'programs', 'agreements'])
+            ->with(['subActivity', 'activityType.contactFamily', 'user', 'programs', 'agreements'])
             ->orderByRecentDisplay()
             ->limit(10)
             ->get();

@@ -3,6 +3,10 @@
     <template data-toast="success">{{ session('success') ?? session('status') }}</template>
 @endif
 
+@if(session('warning'))
+    <template data-toast="warning">{{ session('warning') }}</template>
+@endif
+
 @if(session('allocation_warnings') && count(session('allocation_warnings')) > 0)
     <template data-toast="warning" data-toast-title="Deliverable allocation needs attention">
         <ul>

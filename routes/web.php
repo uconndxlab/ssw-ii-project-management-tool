@@ -24,6 +24,7 @@ use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\RecentRecordController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\StateController;
+use App\Http\Controllers\SubActivityController;
 use App\Http\Controllers\TeamController;
 use Illuminate\Support\Facades\Route;
 
@@ -86,7 +87,9 @@ Route::middleware(['auth', 'active'])->group(function () {
     // admin protected in policy instead
     Route::resource('logging-fields', LoggingFieldController::class);
     Route::resource('contact-families', ContactFamilyController::class)->except(['show']);
+    Route::get('/sub-activities/by-type', [SubActivityController::class, 'getByType'])->name('sub-activities.by-type');
     Route::resource('activity-types', ActivityTypeController::class)->except(['show']);
+    Route::resource('sub-activities', SubActivityController::class)->except(['show']);
     Route::resource('certification-tools', CertificationToolController::class)->except(['show']);
     Route::resource('certificates', CertificateController::class);
     Route::resource('certification-candidates', CertificationCandidateController::class)

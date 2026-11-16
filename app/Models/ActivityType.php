@@ -54,6 +54,12 @@ class ActivityType extends Model implements HasPrograms
         return $this->belongsTo(ContactFamily::class);
     }
 
+    /** @return HasMany<SubActivity, $this> */
+    public function subActivities(): HasMany
+    {
+        return $this->hasMany(SubActivity::class)->orderBy('sort_order')->orderBy('name');
+    }
+
     /** @return HasMany<Activity, $this> */
     public function activities(): HasMany
     {

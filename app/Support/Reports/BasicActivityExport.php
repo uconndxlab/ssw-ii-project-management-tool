@@ -15,6 +15,7 @@ class BasicActivityExport
         'agreement' => 'This agreement',
         'contact_family' => 'Activity family',
         'activity_type' => 'Activity type',
+        'sub_activity' => 'Sub-activity',
         'other_agreement' => 'Other agreements',
     ];
 
@@ -49,12 +50,12 @@ class BasicActivityExport
         try {
             fwrite($output, "\xEF\xBB\xBF");
             $this->writeRow($output, array_merge([
-                'Date', 'Activity family', 'Activity type', 'Agreements covered', 'Organizations',
+                'Date', 'Activity family', 'Activity type', 'Sub-activity', 'Agreements covered', 'Organizations',
                 'Completions', 'Logged by', 'Internal only', 'Cancelled', 'Not yet complete',
             ], $columns->map(fn (array $column): string => $column[1]->name.' ('.self::SOURCES[$column[0]].')')->all()));
 
             $activities = $this->activities()
-                ->with(['activityType.contactFamily', 'agreements', 'organizations', 'user', 'loggingFieldAnswers'])
+                ->with(['subActivity', 'activityType.contactFamily', 'agreements', 'organizations', 'user', 'loggingFieldAnswers'])
                 ->orderBy('engagement_date')->orderBy('activities.id')->lazy(500);
 
             foreach ($activities as $activity) {
@@ -64,6 +65,7 @@ class BasicActivityExport
                     $activity->engagement_date->format('Y-m-d'),
                     $activity->activityType?->contactFamily->name ?? '',
                     $activity->activityType->name ?? '',
+                    $activity->subActivity->name ?? '',
                     $activity->agreements->sortBy('name')->pluck('name')->implode('; '),
                     $activity->organizations->sortBy('name')->pluck('name')->implode('; '),
                     (string) $activity->completion_count,

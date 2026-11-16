@@ -2,19 +2,25 @@ const dialog = document.querySelector('[data-confirm-dialog]');
 const acceptButton = dialog.querySelector('[data-confirm-accept]');
 const approvedButtons = new WeakSet();
 
-window.appConfirm = ({ title, record = '', message, action = 'Continue', cancelLabel = 'Cancel', icon = null, tone = 'danger', trigger = document.activeElement }) => {
+// tone: danger (default), warning or primary. details: optional bullet lines shown under the message.
+window.appConfirm = ({ title, record = '', message = '', details = [], action = 'Continue', cancelLabel = 'Cancel', icon = null, tone = 'danger', trigger = document.activeElement }) => {
     if (dialog.open) {
         return Promise.resolve(false);
     }
 
     const returnFocus = trigger?.closest('.dropdown')?.querySelector('[data-bs-toggle="dropdown"]') ?? trigger;
-    const destructive = tone !== 'primary';
+    const destructive = tone === 'danger';
+    const detailList = dialog.querySelector('#app-confirm-details');
     dialog.querySelector('#app-confirm-title').textContent = title;
     dialog.querySelector('#app-confirm-record').textContent = record;
     dialog.querySelector('#app-confirm-record').hidden = !record;
     dialog.querySelector('#app-confirm-message').textContent = message;
-    dialog.querySelector('[data-confirm-icon]').className = `bi ${icon ?? (destructive ? 'bi-trash3' : 'bi-files')}`;
-    dialog.classList.toggle('app-confirm-dialog--primary', !destructive);
+    dialog.querySelector('#app-confirm-message').hidden = !message;
+    detailList.replaceChildren(...details.map((line) => Object.assign(document.createElement('li'), { textContent: line })));
+    detailList.hidden = details.length === 0;
+    dialog.querySelector('[data-confirm-icon]').className = `bi ${icon ?? { danger: 'bi-trash3', warning: 'bi-exclamation-triangle' }[tone] ?? 'bi-files'}`;
+    dialog.classList.toggle('app-confirm-dialog--primary', tone === 'primary');
+    dialog.classList.toggle('app-confirm-dialog--warning', tone === 'warning');
     acceptButton.className = destructive ? 'btn btn-danger' : 'btn btn-primary';
     acceptButton.textContent = action;
     dialog.querySelector('[value="cancel"]').textContent = cancelLabel;

@@ -121,14 +121,14 @@ class OrganizationController extends Controller
         $allActivities = Activity::whereHas('agreements', function ($query) use ($agreements) {
             $query->whereIn('agreements.id', $agreements->pluck('id'));
         })
-            ->with(['activityType.contactFamily', 'user', 'agreements'])
+            ->with(['subActivity', 'activityType.contactFamily', 'user', 'agreements'])
             ->orderByRecentDisplay()
             ->get();
 
         $recentActivities = Activity::query()
             ->visibleTo($this->actor())
             ->whereHas('agreements', fn ($query) => $query->whereIn('agreements.id', $agreements->modelKeys()))
-            ->with(['activityType.contactFamily', 'user', 'agreements'])
+            ->with(['subActivity', 'activityType.contactFamily', 'user', 'agreements'])
             ->orderByRecentDisplay()
             ->limit(5)
             ->get();

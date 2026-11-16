@@ -18,6 +18,7 @@ use App\Models\CertificationToolDimension;
 use App\Models\ContactFamily;
 use App\Models\Program;
 use App\Models\Project;
+use App\Models\SubActivity;
 use App\Support\Authorization\CertificateProgressAccess;
 use App\Support\Authorization\ScopeSync;
 use App\Support\ProjectProgramScope;
@@ -104,7 +105,7 @@ class CertificateController extends Controller
         $actor = $this->actor();
         $certificate->load([
             'programs.projects', 'prerequisites', 'roles', 'requirementGroups',
-            'requirements.contactFamily', 'requirements.activityType',
+            'requirements.contactFamily', 'requirements.activityType', 'requirements.subActivity',
             'requirements.certificationTool', 'requirements.certificationRole',
             'requirements.dimensionRules.dimension.options',
         ]);
@@ -275,6 +276,9 @@ class CertificateController extends Controller
     {
         $contactFamilies = ContactFamily::orderBy('sort_order')->orderBy('name')->get();
         $activityTypes = ActivityType::orderBy('sort_order')->orderBy('name')->get();
+        $subActivities = SubActivity::query()
+            ->where(fn ($query) => $query->active()->orWhereIn('id', $certificate?->requirements()->pluck('sub_activity_id') ?? []))
+            ->orderBy('sort_order')->orderBy('name')->get();
         $certificationTools = CertificationTool::query()
             ->where(fn ($query) => $query->notRetired()->orWhereIn('id', $certificate?->requirements()->pluck('certification_tool_id') ?? []))
             ->visibleTo($this->actor())
@@ -289,7 +293,7 @@ class CertificateController extends Controller
         }
         $otherCertificates = $otherCertificatesQuery->orderBy('name')->get(['id', 'name']);
 
-        return compact('contactFamilies', 'activityTypes', 'certificationTools', 'globalRoles', 'otherCertificates');
+        return compact('contactFamilies', 'activityTypes', 'subActivities', 'certificationTools', 'globalRoles', 'otherCertificates');
     }
 
     /**
@@ -339,6 +343,7 @@ class CertificateController extends Controller
             'requirements.*.kind' => ['nullable', 'in:'.implode(',', CertificateRequirementKind::values())],
             'requirements.*.contact_family_id' => ['nullable', 'integer', 'exists:contact_families,id'],
             'requirements.*.activity_type_id' => ['nullable', 'integer', 'exists:activity_types,id'],
+            'requirements.*.sub_activity_id' => ['nullable', 'integer', 'exists:sub_activities,id'],
             'requirements.*.certification_tool_id' => ['nullable', 'integer', 'exists:certification_tools,id'],
             'requirements.*.certification_role_id' => ['nullable', 'integer', Rule::exists('certification_roles', 'id')->where(fn ($query) => $query->whereNull('certificate_id')->orWhere('certificate_id', $certificate->id ?? 0))],
             'requirements.*.role_index' => ['nullable', 'integer'],
@@ -548,6 +553,11 @@ class CertificateController extends Controller
             }
 
             $kind = CertificateRequirementKind::tryFrom($row['kind']);
+
+            if (! empty($row['sub_activity_id']) && (empty($row['activity_type_id'])
+                || ! SubActivity::query()->whereKey($row['sub_activity_id'])->where('activity_type_id', $row['activity_type_id'])->exists())) {
+                $validator->errors()->add("requirements.{$index}.sub_activity_id", 'Choose a sub-activity belonging to the selected activity type.');
+            }
 
             if (blank($row['target_count'] ?? null)) {
                 $validator->errors()->add("requirements.{$index}.target_count", 'Enter a target count.');
@@ -843,6 +853,7 @@ class CertificateController extends Controller
                 'kind' => $kind->value,
                 'contact_family_id' => $kind->usesClassification() ? (($row['contact_family_id'] ?? null) ?: null) : null,
                 'activity_type_id' => $kind->usesClassification() ? (($row['activity_type_id'] ?? null) ?: null) : null,
+                'sub_activity_id' => $kind->usesClassification() ? (($row['sub_activity_id'] ?? null) ?: null) : null,
                 'certification_tool_id' => $kind->usesTool() ? (($row['certification_tool_id'] ?? null) ?: null) : null,
                 'certification_role_id' => filled($row['role_index'] ?? null) ? ($roleIndexToId[$row['role_index']] ?? null) : (($row['certification_role_id'] ?? null) ?: null),
                 'target_count' => $row['target_count'] ?? 1,

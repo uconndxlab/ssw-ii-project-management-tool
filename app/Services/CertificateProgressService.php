@@ -26,7 +26,7 @@ class CertificateProgressService
      */
     public function evaluate(CertificateEnrollment $enrollment, ?CarbonInterface $previousAwardDate = null): array
     {
-        $enrollment->load(['certificate.programs', 'certificate.requirements.dimensionRules.dimension.options', 'certificate.requirements.certificationTool', 'certificate.requirements.activityType', 'certificate.requirementGroups', 'attestations.satisfiedBy']);
+        $enrollment->load(['certificate.programs', 'certificate.requirements.dimensionRules.dimension.options', 'certificate.requirements.certificationTool', 'certificate.requirements.activityType', 'certificate.requirements.subActivity', 'certificate.requirementGroups', 'attestations.satisfiedBy']);
         $certificate = $enrollment->certificate;
         if ($certificate === null) {
             throw new \LogicException('Enrollment certificate is missing.');
@@ -36,7 +36,7 @@ class CertificateProgressService
         $requirements = $certificate->requirements->where('phase', $phase);
         $tags = ActivityCertificationCandidate::query()
             ->where('certification_candidate_id', $enrollment->certification_candidate_id)
-            ->with(['activity.programs', 'activity.activityType', 'submissions.dimensionValues'])
+            ->with(['activity.programs', 'activity.activityType', 'activity.subActivity', 'submissions.dimensionValues'])
             ->get();
         $blocked = $enrollment->cycle > 1 && $previousAwardDate === null;
         $results = $requirements->mapWithKeys(function (CertificateRequirement $requirement) use ($enrollment, $tags, $previousAwardDate, $blocked): array {
@@ -88,7 +88,8 @@ class CertificateProgressService
         foreach ($tags as $tag) {
             $activity = $tag->activity;
             if (($requirement->activity_type_id !== null && $activity->activity_type_id !== $requirement->activity_type_id)
-                || ($requirement->contact_family_id !== null && $activity->activityType?->contact_family_id !== $requirement->contact_family_id)) {
+                || ($requirement->contact_family_id !== null && $activity->activityType?->contact_family_id !== $requirement->contact_family_id)
+                || ($requirement->sub_activity_id !== null && $activity->sub_activity_id !== $requirement->sub_activity_id)) {
                 continue;
             }
             $reason = match (true) {

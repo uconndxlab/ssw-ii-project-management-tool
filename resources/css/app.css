@@ -497,6 +497,21 @@ main {
     background: var(--app-accent-subtle);
 }
 
+.app-confirm-dialog--warning .app-confirm-icon {
+    color: var(--bs-warning-text-emphasis);
+    background: var(--bs-warning-bg-subtle);
+}
+
+.app-confirm-details {
+    margin: 0;
+    padding-left: 1.25rem;
+    color: var(--app-muted);
+}
+
+.app-confirm-details li + li {
+    margin-top: 0.25rem;
+}
+
 .app-confirm-record {
     margin: 0 0 0.5rem;
     overflow-wrap: anywhere;

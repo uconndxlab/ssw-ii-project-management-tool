@@ -2,7 +2,7 @@
     'states',
     'organizations',
     'agreements',
-    'activityTypes',
+    'activityTypes', 'subActivities',
     'filterProjects',
     'filterPrograms',
     'sort',

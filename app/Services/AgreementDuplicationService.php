@@ -163,6 +163,7 @@ class AgreementDuplicationService
     {
         $newDeliverable = $copy->deliverables()->create([
             'activity_type_id' => $deliverable->activity_type_id,
+            'sub_activity_id' => $deliverable->sub_activity_id,
             'contact_family_id' => $deliverable->contact_family_id,
             'program_id' => $deliverable->program_id,
             'metric_type' => $deliverable->metric_type,

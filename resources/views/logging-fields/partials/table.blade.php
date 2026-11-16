@@ -71,7 +71,10 @@
                             @if($field->available_in_activities)
                                 <span class="badge app-tag">Activity Types</span>
                             @endif
-                            @if(! $field->available_in_agreements && ! $field->available_in_contact_families && ! $field->available_in_activities)
+                            @if($field->available_in_sub_activities)
+                                <span class="badge app-tag">Sub-activities</span>
+                            @endif
+                            @if(! $field->available_in_agreements && ! $field->available_in_contact_families && ! $field->available_in_activities && ! $field->available_in_sub_activities)
                                 <span class="badge app-tag">Unassigned</span>
                             @endif
                         </div>

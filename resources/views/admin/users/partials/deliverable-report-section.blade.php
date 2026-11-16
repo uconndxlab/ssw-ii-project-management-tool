@@ -30,6 +30,9 @@
                                                 {{ $progress['metric_summary'] }}
                                                 <span class="badge app-tag ms-1">Assigned</span>
                                             </div>
+                                            @if($deliverable->sub_activity_id)
+                                                <div class="text-muted small">{{ $progress['activity_type_label'] }}</div>
+                                            @endif
                                             @if($deliverable->suggested_due_date)
                                                 <div class="text-muted small">Suggested due {{ $deliverable->suggested_due_date->format('M d, Y') }}</div>
                                             @endif

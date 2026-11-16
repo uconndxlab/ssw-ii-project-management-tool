@@ -11,6 +11,7 @@ use App\Models\AgreementDeliverable;
 use App\Models\ContactFamily;
 use App\Models\Organization;
 use App\Models\Program;
+use App\Models\SubActivity;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\CertificationAssignmentSyncService;
@@ -116,6 +117,7 @@ class AgreementRequest extends FormRequest
             'deliverables' => ['nullable', 'array'],
             'deliverables.*.id' => ['nullable', 'integer'],
             'deliverables.*.activity_type_id' => ['nullable', 'exists:activity_types,id'],
+            'deliverables.*.sub_activity_id' => ['nullable', 'exists:sub_activities,id'],
             'deliverables.*.contact_family_id' => ['nullable', 'exists:contact_families,id'],
             'deliverables.*.program_id' => ['nullable', 'exists:programs,id'],
             'deliverables.*.metric_type' => ['nullable', Rule::in(['time', 'completion'])],
@@ -597,7 +599,7 @@ class AgreementRequest extends FormRequest
             }
 
             $scopedActivityTypes = ActivityType::query()
-                ->with('programs:id')
+                ->with(['programs:id', 'subActivities.programs:id'])
                 ->get();
 
             foreach ($this->input('deliverables', []) as $deliverableKey => $row) {
@@ -624,6 +626,20 @@ class AgreementRequest extends FormRequest
 
                     if ($activityType && (int) $activityType->contact_family_id !== (int) $contactFamily->id) {
                         $validator->errors()->add("deliverables.{$deliverableKey}.activity_type_id", 'Deliverable activity types must belong to the selected activity family.');
+                    }
+                }
+
+                if (! empty($row['sub_activity_id'])) {
+                    $subActivity = SubActivity::query()->with('programs:id')->find((int) $row['sub_activity_id']);
+                    if (empty($row['activity_type_id']) || ($subActivity && (int) $subActivity->activity_type_id !== (int) $row['activity_type_id'])) {
+                        $validator->errors()->add("deliverables.{$deliverableKey}.sub_activity_id", 'Deliverable sub-activities must belong to the selected activity type.');
+                    }
+                    if ($subActivity && ! $matchesSelectedPrograms(
+                        $subActivity->programs->pluck('id')->map(fn ($id) => (int) $id)->values(),
+                        $subActivity->program_scope_mode,
+                        SubActivity::class
+                    )) {
+                        $validator->errors()->add('deliverables', 'Deliverable sub-activities must be global or match one of the selected programs.');
                     }
                 }
 
@@ -678,7 +694,8 @@ class AgreementRequest extends FormRequest
                         if (! ActivityTypeDuration::selectionSupportsAllottedTime(
                             $contactFamilyId,
                             $activityTypeId,
-                            $activityTypesInScope
+                            $activityTypesInScope,
+                            ! empty($row['sub_activity_id']) ? (int) $row['sub_activity_id'] : null
                         )) {
                             $validator->errors()->add(
                                 "deliverables.{$deliverableKey}.time_basis",
@@ -690,14 +707,16 @@ class AgreementRequest extends FormRequest
                                 $contactFamilyId,
                                 $activityTypeId,
                                 $activityTypesInScope,
-                                $requestedUnit
+                                $requestedUnit,
+                                ! empty($row['sub_activity_id']) ? (int) $row['sub_activity_id'] : null
                             );
 
                             if (! $normalizedUnit) {
                                 $units = ActivityTypeDuration::resolveAllottedUnitsForSelection(
                                     $contactFamilyId,
                                     $activityTypeId,
-                                    $activityTypesInScope
+                                    $activityTypesInScope,
+                                    ! empty($row['sub_activity_id']) ? (int) $row['sub_activity_id'] : null
                                 );
 
                                 if ($units['is_mixed'] && ! $requestedUnit) {
@@ -826,6 +845,7 @@ class AgreementRequest extends FormRequest
     {
         return (int) ($deliverable->contact_family_id ?? 0) !== (int) ($row['contact_family_id'] ?? 0)
             || (int) ($deliverable->activity_type_id ?? 0) !== (int) ($row['activity_type_id'] ?? 0)
+            || (int) ($deliverable->sub_activity_id ?? 0) !== (int) ($row['sub_activity_id'] ?? 0)
             || (int) ($deliverable->program_id ?? 0) !== (int) ($row['program_id'] ?? 0);
     }
 

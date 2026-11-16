@@ -35,6 +35,7 @@
                 'kind' => $requirement->kind?->value ?? $requirement->kind,
                 'contact_family_id' => $requirement->contact_family_id,
                 'activity_type_id' => $requirement->activity_type_id,
+                'sub_activity_id' => $requirement->sub_activity_id,
                 'certification_tool_id' => $requirement->certification_tool_id,
                 'certification_role_id' => $requirement->certification_role_id,
                 'target_count' => $requirement->target_count,
