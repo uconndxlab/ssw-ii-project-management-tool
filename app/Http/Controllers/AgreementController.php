@@ -81,10 +81,10 @@ class AgreementController extends Controller
         $search = trim((string) $request->input('search', ''));
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
-                $q->whereIlike('name', "%{$search}%")
-                    ->orWhereHas('states', fn ($stateQuery) => $stateQuery->whereIlike('name', "%{$search}%"))
-                    ->orWhereHas('programs.projects', fn ($projectQuery) => $projectQuery->whereIlike('name', "%{$search}%"))
-                    ->orWhereHas('programs', fn ($programQuery) => $programQuery->whereIlike('name', "%{$search}%"));
+                $q->whereLike('name', "%{$search}%")
+                    ->orWhereHas('states', fn ($stateQuery) => $stateQuery->whereLike('name', "%{$search}%"))
+                    ->orWhereHas('programs.projects', fn ($projectQuery) => $projectQuery->whereLike('name', "%{$search}%"))
+                    ->orWhereHas('programs', fn ($programQuery) => $programQuery->whereLike('name', "%{$search}%"));
             });
         }
 

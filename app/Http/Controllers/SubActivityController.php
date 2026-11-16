@@ -41,9 +41,9 @@ class SubActivityController extends Controller
         $search = trim((string) $request->input('search', ''));
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
-                $q->whereIlike('sub_activities.name', "%{$search}%")
+                $q->whereLike('sub_activities.name', "%{$search}%")
                     ->orWhereHas('activityType', function ($familyQuery) use ($search) {
-                        $familyQuery->whereIlike('name', "%{$search}%");
+                        $familyQuery->whereLike('name', "%{$search}%");
                     });
             });
         }

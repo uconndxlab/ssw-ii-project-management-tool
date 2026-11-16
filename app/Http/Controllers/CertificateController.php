@@ -49,7 +49,7 @@ class CertificateController extends Controller
             ->with(['programs.projects']);
 
         if ($request->filled('search')) {
-            $query->whereIlike('name', '%'.$request->input('search').'%');
+            $query->whereLike('name', '%'.$request->input('search').'%');
         }
 
         if ($request->filled('active')) {

@@ -45,9 +45,9 @@ class AdminUserController extends Controller
         if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
-                $q->whereIlike('name', "%{$search}%")
-                    ->orWhereIlike('email', "%{$search}%")
-                    ->orWhereIlike('po_number', "%{$search}%");
+                $q->whereLike('name', "%{$search}%")
+                    ->orWhereLike('email', "%{$search}%")
+                    ->orWhereLike('po_number', "%{$search}%");
             });
         }
 
@@ -178,9 +178,9 @@ class AdminUserController extends Controller
         if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
-                $q->whereIlike('name', "%{$search}%")
-                    ->orWhereIlike('email', "%{$search}%")
-                    ->orWhereIlike('po_number', "%{$search}%");
+                $q->whereLike('name', "%{$search}%")
+                    ->orWhereLike('email', "%{$search}%")
+                    ->orWhereLike('po_number', "%{$search}%");
             });
         }
 

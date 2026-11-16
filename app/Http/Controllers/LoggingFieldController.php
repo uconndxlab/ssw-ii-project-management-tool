@@ -47,9 +47,9 @@ class LoggingFieldController extends Controller
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
-                $q->whereIlike('name', "%{$search}%")
-                    ->orWhereIlike('slug', "%{$search}%")
-                    ->orWhereIlike('help_text', "%{$search}%");
+                $q->whereLike('name', "%{$search}%")
+                    ->orWhereLike('slug', "%{$search}%")
+                    ->orWhereLike('help_text', "%{$search}%");
             });
         }
 
