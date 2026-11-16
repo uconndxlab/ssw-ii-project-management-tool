@@ -53,7 +53,7 @@ class TeamController extends Controller
         // Search
         $search = trim((string) $request->input('search', ''));
         if ($search !== '') {
-            $query->whereIlike('name', "%{$search}%");
+            $query->whereLike('name', "%{$search}%");
         }
 
         $sort = $request->input('sort', 'name');

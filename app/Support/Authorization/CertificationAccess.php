@@ -140,16 +140,6 @@ class CertificationAccess
         return array_values(array_unique(array_merge([], ...$candidate->enrollments->map(fn (CertificateEnrollment $enrollment) => $this->coachProgramIdsViaSupervisee($enrollment))->all())));
     }
 
-    public function coachesProgram(int $programId): bool
-    {
-        return in_array($programId, $this->coachProgramIds(), true);
-    }
-
-    public function managesProgram(int $programId): bool
-    {
-        return in_array($programId, $this->managerProgramIds(), true);
-    }
-
     public function canGrantDuty(User $target, CertificationDuty $duty, PrivilegeScopeType $scopeType, ?int $scopeId): bool
     {
         $access = $this->user->access();

@@ -38,9 +38,9 @@ class ActivityTypeController extends Controller
         $search = trim((string) $request->input('search', ''));
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
-                $q->whereIlike('activity_types.name', "%{$search}%")
+                $q->whereLike('activity_types.name', "%{$search}%")
                     ->orWhereHas('contactFamily', function ($familyQuery) use ($search) {
-                        $familyQuery->whereIlike('name', "%{$search}%");
+                        $familyQuery->whereLike('name', "%{$search}%");
                     });
             });
         }

@@ -20,8 +20,8 @@ test('certification access reflects active coach and manager duties', function (
     expect($access->isCoach())->toBeTrue();
     expect($access->isManager())->toBeTrue();
     expect($access->hasDuty(CertificationDuty::Coach))->toBeTrue();
-    expect($access->coachesProgram($program->id))->toBeTrue();
-    expect($access->managesProgram($program->id))->toBeTrue();
+    expect($access->coachProgramIds())->toContain($program->id);
+    expect($access->managerProgramIds())->toContain($program->id);
 });
 
 test('system-scope duty implies all programs', function () {
@@ -71,7 +71,7 @@ test('revoked duty row is retained but excluded from access checks', function ()
 
     $reloaded = User::query()->findOrFail($user->id);
     expect($reloaded->certification()->isCoach())->toBeFalse();
-    expect($reloaded->certification()->coachesProgram($program->id))->toBeFalse();
+    expect($reloaded->certification()->coachProgramIds())->not->toContain($program->id);
 });
 
 test('canGrantDuty delegates to admin scope and allows self-grant', function () {

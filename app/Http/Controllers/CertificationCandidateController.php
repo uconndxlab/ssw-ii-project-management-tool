@@ -29,7 +29,7 @@ class CertificationCandidateController extends Controller
             $query->active();
         }
         if ($request->filled('search')) {
-            $query->where(fn (Builder $search) => $search->whereIlike('name', '%'.$request->string('search').'%')->orWhereIlike('email', '%'.$request->string('search').'%'));
+            $query->where(fn (Builder $search) => $search->whereLike('name', '%'.$request->string('search').'%')->orWhereLike('email', '%'.$request->string('search').'%'));
         }
         if ($request->filled('program_id') || $request->filled('project_id')) {
             $query->whereHas('rosterLinks.agreement', function (Builder $agreements) use ($request, $actor) {

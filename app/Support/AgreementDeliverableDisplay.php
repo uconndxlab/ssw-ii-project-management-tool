@@ -76,26 +76,6 @@ class AgreementDeliverableDisplay
         return self::groupProgressItems($items);
     }
 
-    public static function userCanContributeToDeliverable(
-        Agreement $agreement,
-        AgreementDeliverable $deliverable,
-        User $user
-    ): bool {
-        $teamLookup = $agreement->teams->keyBy(fn (Team $team) => (int) $team->id);
-        $memberIds = self::buildAgreementMemberUserIds($agreement);
-        $userId = (int) $user->id;
-
-        if (! $memberIds->contains($userId)) {
-            return false;
-        }
-
-        if ($deliverable->contribution_basis === 'contact') {
-            return true;
-        }
-
-        return self::currentlyAssignedUserIds($deliverable, $teamLookup, $memberIds)->contains($userId);
-    }
-
     public static function userIsTaggedOrAssigned(
         Agreement $agreement,
         AgreementDeliverable $deliverable,

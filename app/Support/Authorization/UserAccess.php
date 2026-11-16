@@ -122,11 +122,6 @@ class UserAccess
         return $this->isAdminViewer() && $this->privileges()->isNotEmpty();
     }
 
-    public function canAccessAdminSetup(): bool
-    {
-        return $this->hasAdmin();
-    }
-
     public function canViewPrimaryNav(): bool
     {
         return ! $this->isInput();
@@ -232,24 +227,6 @@ class UserAccess
         return in_array($projectId, $this->adminProjectIds(), true);
     }
 
-    public function viewsProgram(int $programId): bool
-    {
-        if ($this->hasSystemView()) {
-            return true;
-        }
-
-        return in_array($programId, $this->viewProgramIds(), true);
-    }
-
-    public function viewsProject(int $projectId): bool
-    {
-        if ($this->hasSystemView()) {
-            return true;
-        }
-
-        return in_array($projectId, $this->viewProjectIds(), true);
-    }
-
     public function canGrant(PrivilegeCapability $capability, PrivilegeScopeType $scopeType, ?int $scopeId): bool
     {
         if ($this->isInput() || ! $this->hasAdmin()) {
@@ -328,35 +305,6 @@ class UserAccess
                     ->where('scope_type', PrivilegeScopeType::System->value);
             })
             ->exists();
-    }
-
-    /**
-     * View-privilege overlap on assigned programs/projects. All-mode is system-wide, not every viewer.
-     *
-     * @param  list<int>  $programIds
-     * @param  list<int>  $projectIds
-     */
-    public function scopedRecordOverlapsView(?ProgramScopeMode $mode, array $programIds, array $projectIds = []): bool
-    {
-        if ($this->isInput()) {
-            return false;
-        }
-
-        if ($this->hasSystemView()) {
-            return true;
-        }
-
-        if ($this->hasView()) {
-            if ($mode === ProgramScopeMode::Specific && array_intersect($programIds, $this->viewProgramIds()) !== []) {
-                return true;
-            }
-
-            if ($projectIds !== [] && array_intersect($projectIds, $this->viewProjectIds()) !== []) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /**

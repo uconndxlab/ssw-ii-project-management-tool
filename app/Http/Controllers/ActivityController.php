@@ -77,26 +77,26 @@ class ActivityController extends Controller
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
                 $q->whereHas('agreements', function ($agreementQuery) use ($search) {
-                    $agreementQuery->whereIlike('name', "%{$search}%")
+                    $agreementQuery->whereLike('name', "%{$search}%")
                         ->orWhereHas('organizations', function ($orgQuery) use ($search) {
-                            $orgQuery->whereIlike('name', "%{$search}%");
+                            $orgQuery->whereLike('name', "%{$search}%");
                         })
                         ->orWhereHas('states', function ($stateQuery) use ($search) {
-                            $stateQuery->whereIlike('name', "%{$search}%");
+                            $stateQuery->whereLike('name', "%{$search}%");
                         });
                 })
                     ->orWhereHas('organizations', function ($orgQuery) use ($search) {
-                        $orgQuery->whereIlike('name', "%{$search}%");
+                        $orgQuery->whereLike('name', "%{$search}%");
                     })
                     ->orWhereHas('states', function ($stateQuery) use ($search) {
-                        $stateQuery->whereIlike('name', "%{$search}%");
+                        $stateQuery->whereLike('name', "%{$search}%");
                     })
                     ->orWhereHas('activityType', function ($typeQuery) use ($search) {
-                        $typeQuery->whereIlike('name', "%{$search}%");
+                        $typeQuery->whereLike('name', "%{$search}%");
                     })
-                    ->orWhereHas('subActivity', fn ($subQuery) => $subQuery->whereIlike('name', "%{$search}%"))
+                    ->orWhereHas('subActivity', fn ($subQuery) => $subQuery->whereLike('name', "%{$search}%"))
                     ->orWhereHas('user', function ($userQuery) use ($search) {
-                        $userQuery->whereIlike('name', "%{$search}%");
+                        $userQuery->whereLike('name', "%{$search}%");
                     });
             });
         }

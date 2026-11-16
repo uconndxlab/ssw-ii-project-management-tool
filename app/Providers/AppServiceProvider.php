@@ -5,8 +5,6 @@ namespace App\Providers;
 use App\Models\User;
 use App\Support\NightwatchSqlMessage;
 use Illuminate\Auth\Notifications\ResetPassword;
-use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
-use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
@@ -26,7 +24,6 @@ class AppServiceProvider extends ServiceProvider
     {
 
         $this->registerNightwatchRedactions();
-        $this->registerCaseInsensitiveLike();
         $this->registerAuthorization();
         $this->registerNumericRouteParameters();
 
@@ -69,29 +66,6 @@ class AppServiceProvider extends ServiceProvider
             }
 
             return true;
-        });
-    }
-
-    private function registerCaseInsensitiveLike(): void
-    {
-        $operator = function ($query): string {
-            return $query->getConnection()->getDriverName() === 'pgsql' ? 'ilike' : 'like';
-        };
-
-        EloquentBuilder::macro('whereIlike', function (string $column, mixed $value) use ($operator) {
-            return $this->where($column, $operator($this), $value);
-        });
-
-        EloquentBuilder::macro('orWhereIlike', function (string $column, mixed $value) use ($operator) {
-            return $this->orWhere($column, $operator($this), $value);
-        });
-
-        QueryBuilder::macro('whereIlike', function (string $column, mixed $value) use ($operator) {
-            return $this->where($column, $operator($this), $value);
-        });
-
-        QueryBuilder::macro('orWhereIlike', function (string $column, mixed $value) use ($operator) {
-            return $this->orWhere($column, $operator($this), $value);
         });
     }
 
