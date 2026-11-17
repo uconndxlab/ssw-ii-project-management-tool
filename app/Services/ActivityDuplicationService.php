@@ -121,7 +121,7 @@ class ActivityDuplicationService
                 'certification_instrument_id', 'outcome', 'recorded_by_user_id', 'notes',
             ]));
             $submissionCopy->dimensionValues()->createMany($submission->dimensionValues->map->only([
-                'certification_instrument_dimension_id', 'certification_instrument_dimension_option_id',
+                'certification_instrument_dimension_id', 'certification_instrument_dimension_option_id', 'result',
             ])->all());
             $submissionCopy->scores()->createMany($submission->scores->map->only([
                 'certification_instrument_score_field_id', 'value',

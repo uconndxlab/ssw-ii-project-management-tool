@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
- * Recorded-only numeric field. Never evaluated by the system - see the spine's "no score math" rule.
+ * Recorded-only field (a number, or Pass/Fail stored as 1/0). Never evaluated by the system - see the spine's "no score math" rule.
  *
  * @property CertificationInstrumentScoreUnit $unit
  */

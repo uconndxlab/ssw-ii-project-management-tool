@@ -3,6 +3,12 @@
     $field = 'requirements['.$reqIndex.']';
     $kind = $row['kind'] ?? '';
     $deleted = filter_var($row['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN);
+    $isTrainingKind = $kind === 'training_sections';
+    $sectionRule = $isTrainingKind ? (collect($row['dimension_rules'] ?? [])->first() ?? []) : [];
+    $sectionField = $field.'[dimension_rules][sections]';
+    $sectionPrefix = $prefix.'.dimension_rules.sections';
+    $checkedSections = array_map('strval', $sectionRule['option_ids'] ?? []);
+    $sectionMode = $sectionRule['mode'] ?? 'coverage';
 @endphp
 <article class="cert-requirement border rounded mb-2" id="cert-req-{{ $reqIndex }}" data-cert-requirement="{{ $reqIndex }}" @if($deleted) hidden @endif>
     @if(filled($row['id'] ?? null))<input type="hidden" name="{{ $field }}[id]" value="{{ $row['id'] }}">@endif
@@ -24,7 +30,7 @@
         <x-form-field label="Work to count" :for="'req-'.$reqIndex.'-kind'" :name="$prefix.'.kind'">
             <select class="form-select" id="req-{{ $reqIndex }}-kind" name="{{ $field }}[kind]" data-cert-kind>
                 <option value="">Choose requirement type…</option>
-                @foreach(['activity_count' => 'Activity work', 'tool_submission' => 'Tool submissions', 'attestation' => 'Coach confirmation'] as $value => $label)
+                @foreach(['activity_count' => 'Activity work', 'tool_submission' => 'Tool submissions', 'training_sections' => 'Training sections', 'attestation' => 'Coach confirmation'] as $value => $label)
                     <option value="{{ $value }}" @selected($kind === $value)>{{ $label }}</option>
                 @endforeach
             </select>
@@ -33,7 +39,7 @@
             <x-form-field label="Requirement name" :for="'req-'.$reqIndex.'-label'" :name="$prefix.'.label'" help="Give this requirement a short, recognizable name.">
                 <input class="form-control" id="req-{{ $reqIndex }}-label" name="{{ $field }}[label]" value="{{ $row['label'] ?? '' }}" maxlength="255" data-cert-label>
             </x-form-field>
-            <div data-cert-for="activity_count tool_submission">
+            <div data-cert-for="activity_count tool_submission training_sections">
                 <div class="row g-3">
                     <div class="col-md-4">
                         <x-form-field label="Target" :for="'req-'.$reqIndex.'-target'" :name="$prefix.'.target_count'">
@@ -55,7 +61,7 @@
                     </div>
                 </div>
             </div>
-            <div data-cert-for="activity_count tool_submission">
+            <div data-cert-for="activity_count tool_submission training_sections">
                 <div class="row g-3">
                     <div class="col-md-6">
                         <x-form-field label="Activity family" :for="'req-'.$reqIndex.'-family'" :name="$prefix.'.contact_family_id'">
@@ -69,7 +75,7 @@
                         <x-form-field label="Activity type" :for="'req-'.$reqIndex.'-type'" :name="$prefix.'.activity_type_id'">
                             <select class="form-select" id="req-{{ $reqIndex }}-type" name="{{ $field }}[activity_type_id]" data-cert-type>
                                 <option value="">Any activity type</option>
-                                @foreach($activityTypes as $type)<option value="{{ $type->id }}" @selected((string)($row['activity_type_id'] ?? '') === (string)$type->id)>{{ $type->name }}</option>@endforeach
+                                @foreach($activityTypes as $type)<option value="{{ $type->id }}" data-family="{{ $type->contact_family_id }}" @selected((string)($row['activity_type_id'] ?? '') === (string)$type->id)>{{ $type->name }}</option>@endforeach
                             </select>
                         </x-form-field>
                     </div>
@@ -89,12 +95,12 @@
                     <div class="form-text" data-cert-effective-window></div>
                 </x-form-field>
             </div>
-            <div data-cert-for="tool_submission">
+            <div data-cert-for="tool_submission training_sections">
                 <x-form-field label="Submission tool" :for="'req-'.$reqIndex.'-tool'" :name="$prefix.'.certification_instrument_id'">
                     <select class="form-select" id="req-{{ $reqIndex }}-tool" name="{{ $field }}[certification_instrument_id]" data-cert-tool>
-                        <option value="">Select tool…</option>
+                        <option value="">Select…</option>
                         @foreach($certificationInstruments as $tool)
-                            <option value="{{ $tool->id }}" data-scope-mode="{{ $tool->program_scope_mode->value }}" data-program-ids="{{ $tool->programs->pluck('id')->implode(',') }}" @selected((string)($row['certification_instrument_id'] ?? '') === (string)$tool->id)>{{ $tool->name }}{{ $tool->retired_at ? ' (retired)' : '' }}</option>
+                            <option value="{{ $tool->id }}" data-type="{{ $tool->type->value }}" data-scope-mode="{{ $tool->program_scope_mode->value }}" data-program-ids="{{ $tool->programs->pluck('id')->implode(',') }}" @selected((string)($row['certification_instrument_id'] ?? '') === (string)$tool->id)>{{ $tool->name }}{{ $tool->retired_at ? ' (retired)' : '' }}</option>
                         @endforeach
                     </select>
                     <div class="form-text" data-cert-tool-empty hidden>
@@ -104,21 +110,64 @@
                     <div class="text-danger small" data-cert-tool-warning hidden>Selected tool does not share this certificate’s program scope. Choose a compatible tool or correct the scope.</div>
                 </x-form-field>
                 <input type="hidden" name="{{ $field }}[requires_passing]" value="0">
-                <div class="form-check mb-3">
-                    <input type="checkbox" class="form-check-input" id="req-{{ $reqIndex }}-passing" name="{{ $field }}[requires_passing]" value="1" @checked(filter_var($row['requires_passing'] ?? true, FILTER_VALIDATE_BOOLEAN)) data-cert-passing>
-                    <label class="form-check-label" for="req-{{ $reqIndex }}-passing">Only coach-marked passing submissions count</label>
+                <div class="form-check form-switch m-0 ps-0 mb-3 d-flex align-items-center gap-2">
+                    <input type="checkbox" class="form-check-input ms-0" role="switch" id="req-{{ $reqIndex }}-passing" name="{{ $field }}[requires_passing]" value="1" @checked(filter_var($row['requires_passing'] ?? true, FILTER_VALIDATE_BOOLEAN)) data-cert-passing>
+                    <label class="form-check-label" for="req-{{ $reqIndex }}-passing" data-cert-passing-label>Only coach-marked passing submissions count</label>
                 </div>
+            </div>
+            <div data-cert-for="tool_submission">
                 <fieldset class="border rounded p-3 mb-3">
                     <legend class="float-none w-auto fs-6 px-1">Submission coverage and quotas</legend>
                     <p class="text-muted small">All rules use the same eligible submission pool. One submission can count toward the total, its phase coverage, and a review or observation quota. Tool phases describe submissions; initial and renewal are certificate stages.</p>
                     <div data-cert-rules>
-                        @foreach($row['dimension_rules'] ?? [] as $ruleIndex => $rule)
+                        @foreach($isTrainingKind ? [] : ($row['dimension_rules'] ?? []) as $ruleIndex => $rule)
                             @include('admin.certificates.partials.dimension-rule-row', ['row' => $rule])
                         @endforeach
                     </div>
                     <button type="button" class="btn btn-sm btn-outline-primary" data-cert-add="rule">Add coverage or quota</button>
                     <p class="form-text mb-0" data-cert-add-rule-help></p>
                     <template data-cert-rule-template>@include('admin.certificates.partials.dimension-rule-row', ['row' => [], 'ruleIndex' => '__RULE__'])</template>
+                </fieldset>
+            </div>
+            <div data-cert-for="training_sections">
+                <fieldset class="border rounded p-3 mb-3" data-cert-sections-rule>
+                    <legend class="float-none w-auto fs-6 px-1">Sections needed</legend>
+                    @if(filled($sectionRule['id'] ?? null))<input type="hidden" name="{{ $sectionField }}[id]" value="{{ $sectionRule['id'] }}">@endif
+                    <x-form-field label="Check the sections this requirement needs" :for="'req-'.$reqIndex.'-sections'" :name="$sectionPrefix.'.option_ids'" :group="true">
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-2" data-cert-sections-actions>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-cert-sections-all="1">Select all</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-cert-sections-all="0">Clear</button>
+                            <span class="small text-muted" data-cert-sections-count></span>
+                        </div>
+                        <div id="req-{{ $reqIndex }}-sections">
+                            @foreach($certificationInstruments->filter->isTraining() as $training)
+                                <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-1" data-cert-sections="{{ $training->id }}">
+                                    @foreach($training->sectionsDimension()?->options ?? [] as $option)
+                                        <div class="col">
+                                            <div class="form-check">
+                                                <input type="checkbox" class="form-check-input" id="req-{{ $reqIndex }}-section-{{ $option->id }}" name="{{ $sectionField }}[option_ids][]" value="{{ $option->id }}" @checked(in_array((string) $option->id, $checkedSections, true))>
+                                                <label class="form-check-label" for="req-{{ $reqIndex }}-section-{{ $option->id }}">{{ $option->label }}@if($option->scored) <span class="text-muted small">· Pass/Fail</span>@endif</label>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endforeach
+                        </div>
+                        <p class="form-text mb-0" data-cert-sections-empty></p>
+                    </x-form-field>
+                    <x-form-field label="How many" :for="'req-'.$reqIndex.'-section-mode-coverage'" :name="$sectionPrefix.'.min_count'" :group="true">
+                        <div class="form-check">
+                            <input type="radio" class="form-check-input" id="req-{{ $reqIndex }}-section-mode-coverage" name="{{ $sectionField }}[mode]" value="coverage" @checked($sectionMode !== 'quota') data-cert-section-mode>
+                            <label class="form-check-label" for="req-{{ $reqIndex }}-section-mode-coverage">Every checked section</label>
+                        </div>
+                        <div class="form-check d-flex flex-wrap align-items-center gap-2">
+                            <input type="radio" class="form-check-input" id="req-{{ $reqIndex }}-section-mode-quota" name="{{ $sectionField }}[mode]" value="quota" @checked($sectionMode === 'quota') data-cert-section-mode>
+                            <label class="form-check-label" for="req-{{ $reqIndex }}-section-mode-quota">At least</label>
+                            <input type="number" class="form-control form-control-sm" style="width:5rem" min="1" id="req-{{ $reqIndex }}-section-minimum" name="{{ $sectionField }}[min_count]" value="{{ $sectionRule['min_count'] ?? '' }}" placeholder="N" aria-label="Minimum number of checked sections" data-cert-section-minimum>
+                            <span>of the checked sections</span>
+                        </div>
+                    </x-form-field>
+                    <p class="small text-muted mb-0">Sections count across all eligible submissions of this training. With “Scored sections need a Pass”, a scored section counts once any submission records a Pass.</p>
                 </fieldset>
             </div>
             <x-form-field label="Group" :for="'req-'.$reqIndex.'-group'" :name="$prefix.'.group_index'">

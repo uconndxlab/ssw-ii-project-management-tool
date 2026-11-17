@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CertificationInstrumentDimensionType;
 use Database\Factories\CertificationInstrumentDimensionFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -9,6 +10,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
+/**
+ * @property CertificationInstrumentDimensionType $type
+ */
 class CertificationInstrumentDimension extends Model
 {
     /** @use HasFactory<CertificationInstrumentDimensionFactory> */
@@ -17,6 +21,7 @@ class CertificationInstrumentDimension extends Model
     protected $fillable = [
         'certification_instrument_id',
         'name',
+        'type',
         'slug',
         'sort_order',
     ];
@@ -33,6 +38,7 @@ class CertificationInstrumentDimension extends Model
     protected function casts(): array
     {
         return [
+            'type' => CertificationInstrumentDimensionType::class,
             'sort_order' => 'integer',
         ];
     }

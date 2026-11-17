@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\CertificationInstrumentType;
 use App\Enums\ProgramScopeMode;
 use App\Models\CertificationInstrument;
 use App\Models\Program;
@@ -21,6 +22,13 @@ class CertificationInstrumentFactory extends Factory
             'sort_order' => 0,
             'program_scope_mode' => ProgramScopeMode::Specific,
         ];
+    }
+
+    public function training(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'type' => CertificationInstrumentType::Training,
+        ]);
     }
 
     public function inactive(): static

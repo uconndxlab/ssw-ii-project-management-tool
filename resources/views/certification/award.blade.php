@@ -62,7 +62,7 @@
                                                 @if($item['submission'])
                                                     <div>{{ ucfirst(str_replace('_', ' ', $item['submission']['outcome'])) }}@if($item['submission']['recorded_by']) · {{ $item['submission']['recorded_by'] }}@endif</div>
                                                     @foreach($item['submission']['options'] as $option)<div>{{ $option }}</div>@endforeach
-                                                    @foreach($item['submission']['scores'] as $score)<div>{{ $score['field'] }}: {{ rtrim(rtrim($score['value'], '0'), '.') }}{{ $score['unit'] === 'percent' ? '%' : '' }}</div>@endforeach
+                                                    @foreach($item['submission']['scores'] as $score)<div>{{ $score['field'] }}: {{ (\App\Enums\CertificationInstrumentScoreUnit::tryFrom($score['unit']) ?? \App\Enums\CertificationInstrumentScoreUnit::Number)->format($score['value']) }}</div>@endforeach
                                                     @if($item['submission']['notes'])<div class="text-muted">{{ $item['submission']['notes'] }}</div>@endif
                                                 @else
                                                     {{ $item['units'] }} unit(s)

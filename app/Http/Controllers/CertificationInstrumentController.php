@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\CertificationInstrumentDimensionType;
 use App\Enums\CertificationInstrumentScoreUnit;
+use App\Enums\CertificationInstrumentType;
 use App\Enums\ProgramScopeMode;
 use App\Models\CertificationInstrument;
 use App\Models\CertificationInstrumentDimension;
@@ -101,6 +103,7 @@ class CertificationInstrumentController extends Controller
         $tool = DB::transaction(function () use ($validated) {
             $tool = CertificationInstrument::create([
                 'name' => $validated['name'],
+                'type' => $validated['type'],
                 'description' => $validated['description'] ?? null,
                 'active' => $validated['active'],
                 'sort_order' => $validated['sort_order'] ?? 0,
@@ -122,7 +125,7 @@ class CertificationInstrumentController extends Controller
 
         return redirect()
             ->route('certification-instruments.edit', $tool)
-            ->with('success', 'Certification tool created successfully.');
+            ->with('success', $tool->type->label().' created successfully.');
     }
 
     public function edit(CertificationInstrument $certificationInstrument): View|RedirectResponse
@@ -131,8 +134,12 @@ class CertificationInstrumentController extends Controller
 
         $projects = ProjectProgramScope::assignableProjectsWithProgramsFor($this->actor(), $certificationInstrument);
         $certificationInstrument->load(['programs.projects', 'dimensions.options', 'scoreFields']);
+        $usedOptionIds = DB::table('certification_instrument_submission_dimension_values')
+            ->whereIn('certification_instrument_dimension_id', $certificationInstrument->dimensions->modelKeys())
+            ->distinct()->pluck('certification_instrument_dimension_option_id')->map(fn ($id) => (int) $id)->all();
+        $typeLocked = $this->isUsed($certificationInstrument);
 
-        return view('admin.certification-instruments.edit', compact('certificationInstrument', 'projects'));
+        return view('admin.certification-instruments.edit', compact('certificationInstrument', 'projects', 'usedOptionIds', 'typeLocked'));
     }
 
     public function update(Request $request, CertificationInstrument $certificationInstrument): View|RedirectResponse
@@ -144,6 +151,7 @@ class CertificationInstrumentController extends Controller
         DB::transaction(function () use ($validated, $certificationInstrument) {
             $certificationInstrument->update([
                 'name' => $validated['name'],
+                'type' => $validated['type'],
                 'description' => $validated['description'] ?? null,
                 'active' => $validated['active'],
                 'sort_order' => $validated['sort_order'] ?? 0,
@@ -160,24 +168,51 @@ class CertificationInstrumentController extends Controller
             $this->syncScoreFields($certificationInstrument, $validated['score_fields'] ?? []);
         });
 
-        return $this->redirectAfterSave($certificationInstrument, 'Certification tool updated successfully.');
+        return $this->redirectAfterSave($certificationInstrument, $certificationInstrument->type->label().' updated successfully.');
     }
 
     public function destroy(CertificationInstrument $certificationInstrument): View|RedirectResponse
     {
         $this->authorize('delete', $certificationInstrument);
 
-        if ($certificationInstrument->requirements()->exists() || CertificationInstrumentSubmission::query()->where('certification_instrument_id', $certificationInstrument->id)->exists()) {
+        $label = strtolower($certificationInstrument->type->label());
+        if ($this->isUsed($certificationInstrument)) {
             return redirect()
                 ->route('certification-instruments.index')
-                ->with('error', 'Cannot delete this tool. It is used by certificate requirements or recorded submissions. Mark it inactive instead.');
+                ->with('error', "Cannot delete this {$label}. It is used by certificate requirements or recorded submissions. Mark it inactive instead.");
         }
 
         $certificationInstrument->delete();
 
         return redirect()
             ->route('certification-instruments.index')
-            ->with('success', 'Certification tool deleted successfully.');
+            ->with('success', ucfirst($label).' deleted successfully.');
+    }
+
+    private function isUsed(CertificationInstrument $instrument): bool
+    {
+        return $instrument->requirements()->exists() || CertificationInstrumentSubmission::query()->where('certification_instrument_id', $instrument->id)->exists();
+    }
+
+    /**
+     * The dimension rows to validate and sync. A training's sections become its one sections dimension,
+     * so it never keeps choose-one dimensions.
+     *
+     * @param  array<string, mixed>  $input
+     * @return array<int|string, mixed>
+     */
+    private function dimensionRows(array $input, ?CertificationInstrument $instrument): array
+    {
+        if (($input['type'] ?? null) !== CertificationInstrumentType::Training->value) {
+            return is_array($input['dimensions'] ?? null) ? $input['dimensions'] : [];
+        }
+
+        return [[
+            'id' => $instrument?->dimensions()->where('type', CertificationInstrumentDimensionType::Sections->value)->value('id'),
+            'name' => 'Sections',
+            'type' => CertificationInstrumentDimensionType::Sections->value,
+            'options' => is_array($input['sections'] ?? null) ? $input['sections'] : [],
+        ]];
     }
 
     /**
@@ -185,8 +220,10 @@ class CertificationInstrumentController extends Controller
      */
     private function validateTool(Request $request, ?CertificationInstrument $certificationInstrument = null): array
     {
+        $request->merge(['type' => $request->input('type') ?: ($certificationInstrument !== null ? $certificationInstrument->type->value : CertificationInstrumentType::Tool->value)]);
         $validator = Validator::make($request->all(), [
             'name' => ['required', 'string', 'max:255', 'unique:certification_instruments,name,'.($certificationInstrument !== null ? $certificationInstrument->id : 'NULL').',id'],
+            'type' => ['nullable', 'in:'.implode(',', CertificationInstrumentType::values())],
             'description' => ['nullable', 'string'],
             'active' => ['boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
@@ -205,6 +242,12 @@ class CertificationInstrumentController extends Controller
             'dimensions.*.options.*._delete' => ['nullable', 'boolean'],
             'dimensions.*.options.*.label' => ['nullable', 'string', 'max:255'],
             'dimensions.*.options.*.sort_order' => ['nullable', 'integer', 'min:0'],
+            'sections' => ['nullable', 'array'],
+            'sections.*.id' => ['nullable', 'integer'],
+            'sections.*._delete' => ['nullable', 'boolean'],
+            'sections.*.label' => ['nullable', 'string', 'max:255'],
+            'sections.*.scored' => ['nullable', 'boolean'],
+            'sections.*.sort_order' => ['nullable', 'integer', 'min:0'],
             'score_fields' => ['nullable', 'array'],
             'score_fields.*.id' => ['nullable', 'integer'],
             'score_fields.*._delete' => ['nullable', 'boolean'],
@@ -232,6 +275,9 @@ class CertificationInstrumentController extends Controller
 
             $this->validateNestedToolRows($validator, $request, $certificationInstrument);
             if ($certificationInstrument !== null) {
+                if ($request->input('type') !== $certificationInstrument->type->value && $this->isUsed($certificationInstrument)) {
+                    $validator->errors()->add('type', 'The type cannot change once this '.strtolower($certificationInstrument->type->label()).' has submissions or certificate requirements.');
+                }
                 $this->validateUsedDefinitions($validator, $request, $certificationInstrument);
             }
         });
@@ -241,25 +287,45 @@ class CertificationInstrumentController extends Controller
         $validated['active'] = $request->boolean('active');
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
         $validated['program_scope_mode'] = ProjectProgramScope::normalizeMode($validated['program_scope_mode'] ?? null, CertificationInstrument::class)->value;
+        $validated['dimensions'] = $this->dimensionRows($validated, $certificationInstrument);
 
         return $validated;
     }
 
     private function validateUsedDefinitions(ValidatorInstance $validator, Request $request, CertificationInstrument $tool): void
     {
-        $dimensions = collect($request->array('dimensions'))->filter(fn ($row) => is_array($row) && ! filter_var($row['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN) && filled($row['name'] ?? null));
+        $dimensions = collect($this->dimensionRows($request->all(), $tool))->filter(fn ($row) => is_array($row) && ! filter_var($row['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN) && filled($row['name'] ?? null));
         $dimensionIds = $dimensions->pluck('id')->filter()->all();
         $optionIds = $dimensions->flatMap(fn ($row) => collect(is_array($row['options'] ?? null) ? $row['options'] : [])->filter(fn ($option) => is_array($option) && ! filter_var($option['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN) && filled($option['label'] ?? null))->pluck('id'))->filter()->all();
         $used = DB::table('certification_instrument_submission_dimension_values')->whereIn('certification_instrument_dimension_id', $tool->dimensions()->pluck('id'))->get();
+        $key = $tool->isTraining() ? 'sections' : 'dimensions';
         foreach ($used as $value) {
             if (! in_array($value->certification_instrument_dimension_id, $dimensionIds) || ! in_array($value->certification_instrument_dimension_option_id, $optionIds)) {
-                $validator->errors()->add('dimensions', 'Dimensions and options used by recorded submissions cannot be removed. Retire the tool instead.');
+                $validator->errors()->add($key, ($tool->isTraining() ? 'Sections' : 'Dimensions and options').' used by recorded submissions cannot be removed. Retire the '.strtolower($tool->type->label()).' instead.');
                 break;
             }
         }
-        $scoreIds = collect($request->array('score_fields'))->filter(fn ($row) => is_array($row) && ! filter_var($row['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN) && filled($row['name'] ?? null))->pluck('id')->filter()->all();
-        if (DB::table('certification_instrument_submission_scores')->whereIn('certification_instrument_score_field_id', $tool->scoreFields()->pluck('id'))->whereNotIn('certification_instrument_score_field_id', $scoreIds)->exists()) {
-            $validator->errors()->add('score_fields', 'Score fields used by recorded submissions cannot be removed. Retire the tool instead.');
+        $usedOptionIds = $used->pluck('certification_instrument_dimension_option_id')->map(fn ($id) => (int) $id)->all();
+        $scoredById = CertificationInstrumentDimensionOption::query()->whereKey($usedOptionIds)->pluck('scored', 'id');
+        foreach ($request->input('sections', []) ?? [] as $index => $row) {
+            $id = is_array($row) ? (int) ($row['id'] ?? 0) : 0;
+            if ($tool->isTraining() && $scoredById->has($id) && filter_var($row['scored'] ?? false, FILTER_VALIDATE_BOOLEAN) !== (bool) $scoredById->get($id)) {
+                $validator->errors()->add("sections.{$index}.scored", 'Pass/Fail scoring cannot change on a section used by recorded submissions.');
+            }
+        }
+        $scoreRows = collect($request->array('score_fields'))->filter(fn ($row) => is_array($row) && ! filter_var($row['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN) && filled($row['name'] ?? null));
+        $scoreIds = $scoreRows->pluck('id')->filter()->all();
+        $usedScoreIds = DB::table('certification_instrument_submission_scores')->whereIn('certification_instrument_score_field_id', $tool->scoreFields()->pluck('id'))->distinct()->pluck('certification_instrument_score_field_id')->map(fn ($id) => (int) $id);
+        if ($usedScoreIds->diff(array_map('intval', $scoreIds))->isNotEmpty()) {
+            $validator->errors()->add('score_fields', 'Score fields used by recorded submissions cannot be removed. Retire the '.strtolower($tool->type->label()).' instead.');
+        }
+        $passFail = CertificationInstrumentScoreUnit::PassFail->value;
+        $units = $tool->scoreFields()->get()->mapWithKeys(fn (CertificationInstrumentScoreField $field) => [$field->id => $field->unit->value]);
+        foreach ($scoreRows as $index => $row) {
+            $id = (int) ($row['id'] ?? 0);
+            if ($usedScoreIds->contains($id) && (($row['unit'] ?? null) === $passFail) !== ($units->get($id) === $passFail)) {
+                $validator->errors()->add("score_fields.{$index}.unit", 'A score field used by recorded submissions cannot change to or from Pass/Fail.');
+            }
         }
     }
 
@@ -318,6 +384,22 @@ class CertificationInstrumentController extends Controller
 
                 $seenOptionValues[$value] = true;
             }
+        }
+
+        $seenSectionLabels = [];
+
+        foreach ($request->input('type') === CertificationInstrumentType::Training->value ? ($request->input('sections', []) ?? []) : [] as $index => $row) {
+            if (! is_array($row) || filter_var($row['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN) || blank($row['label'] ?? null)) {
+                continue;
+            }
+
+            $value = Str::slug($row['label']);
+
+            if (isset($seenSectionLabels[$value])) {
+                $validator->errors()->add("sections.{$index}.label", 'Section names must be unique on this training.');
+            }
+
+            $seenSectionLabels[$value] = true;
         }
 
         $seenScoreFieldSlugs = [];
@@ -390,6 +472,7 @@ class CertificationInstrumentController extends Controller
 
             $data = [
                 'name' => $row['name'],
+                'type' => $row['type'] ?? CertificationInstrumentDimensionType::ChooseOne->value,
                 'sort_order' => $sortOrder++,
             ];
 
@@ -450,6 +533,7 @@ class CertificationInstrumentController extends Controller
 
             $data = [
                 'label' => $row['label'],
+                'scored' => $dimension->type === CertificationInstrumentDimensionType::Sections && filter_var($row['scored'] ?? false, FILTER_VALIDATE_BOOLEAN),
                 'sort_order' => $sortOrder++,
             ];
 

@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\CertificationInstrumentDimensionType;
+use App\Enums\CertificationInstrumentType;
 use App\Enums\ProgramScopeMode;
 use App\Models\Concerns\HasProgramScope;
 use App\Models\Concerns\VisibleToUser;
@@ -15,8 +17,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 /**
- * A scoring instrument (COMET, SAS, CREST, ...) built via the tool builder. Not an activity type.
+ * A tool (COMET, SAS, CREST, ...) or a training (sections such as Wraparound 101) built in the
+ * instrument builder. Not an activity type.
  *
+ * @property CertificationInstrumentType $type
  * @property ProgramScopeMode $program_scope_mode
  */
 class CertificationInstrument extends Model implements HasPrograms
@@ -35,6 +39,7 @@ class CertificationInstrument extends Model implements HasPrograms
 
     protected $fillable = [
         'name',
+        'type',
         'description',
         'active',
         'sort_order',
@@ -45,6 +50,7 @@ class CertificationInstrument extends Model implements HasPrograms
     protected function casts(): array
     {
         return [
+            'type' => CertificationInstrumentType::class,
             'active' => 'boolean',
             'sort_order' => 'integer',
             'program_scope_mode' => ProgramScopeMode::class,
@@ -62,6 +68,17 @@ class CertificationInstrument extends Model implements HasPrograms
     public function dimensions(): HasMany
     {
         return $this->hasMany(CertificationInstrumentDimension::class)->orderBy('sort_order');
+    }
+
+    public function isTraining(): bool
+    {
+        return $this->type === CertificationInstrumentType::Training;
+    }
+
+    /** A training's one sections list; null for tools. Uses loaded dimensions when present. */
+    public function sectionsDimension(): ?CertificationInstrumentDimension
+    {
+        return $this->dimensions->first(fn (CertificationInstrumentDimension $dimension) => $dimension->type === CertificationInstrumentDimensionType::Sections);
     }
 
     /** @return HasMany<CertificationInstrumentScoreField, $this> */

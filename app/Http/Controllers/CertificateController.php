@@ -6,6 +6,7 @@ use App\Enums\CertificateDimensionRuleMode;
 use App\Enums\CertificateGroupSatisfyMode;
 use App\Enums\CertificateRequirementKind;
 use App\Enums\CertificateRequirementPhase;
+use App\Enums\CertificationInstrumentDimensionType;
 use App\Enums\ProgramScopeMode;
 use App\Models\ActivityType;
 use App\Models\Certificate;
@@ -559,6 +560,11 @@ class CertificateController extends Controller
                 $validator->errors()->add("requirements.{$index}.sub_activity_id", 'Choose a sub-activity belonging to the selected activity type.');
             }
 
+            if (! empty($row['activity_type_id']) && ! empty($row['contact_family_id'])
+                && ! ActivityType::query()->whereKey($row['activity_type_id'])->where('contact_family_id', $row['contact_family_id'])->exists()) {
+                $validator->errors()->add("requirements.{$index}.activity_type_id", 'Choose an activity type in the selected family.');
+            }
+
             if (blank($row['target_count'] ?? null)) {
                 $validator->errors()->add("requirements.{$index}.target_count", 'Enter a target count.');
             }
@@ -576,7 +582,7 @@ class CertificateController extends Controller
                 }
             }
 
-            if ($kind !== CertificateRequirementKind::ToolSubmission) {
+            if ($kind?->usesTool() !== true) {
                 foreach ($row['dimension_rules'] ?? [] as $rule) {
                     if (! filter_var($rule['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
                         $validator->errors()->add("requirements.{$index}.kind", 'Remove the submission rules before changing the requirement kind.');
@@ -585,14 +591,21 @@ class CertificateController extends Controller
                 }
             }
 
-            if ($kind === CertificateRequirementKind::ToolSubmission && blank($row['certification_instrument_id'] ?? null)) {
-                $validator->errors()->add("requirements.{$index}.certification_instrument_id", 'A tool submission requirement must select a tool.');
+            $isTraining = $kind === CertificateRequirementKind::TrainingSections;
+
+            if ($kind?->usesTool() && blank($row['certification_instrument_id'] ?? null)) {
+                $validator->errors()->add("requirements.{$index}.certification_instrument_id", $isTraining ? 'A training sections requirement must select a training.' : 'A tool submission requirement must select a tool.');
             }
 
             $toolId = ! empty($row['certification_instrument_id']) ? (int) $row['certification_instrument_id'] : null;
+            $tool = null;
 
-            if ($kind === CertificateRequirementKind::ToolSubmission && $toolId) {
-                $tool = CertificationInstrument::query()->with('programs:id')->find($toolId);
+            if ($kind?->usesTool() && $toolId) {
+                $tool = CertificationInstrument::query()->with(['programs:id', 'dimensions.options'])->find($toolId);
+
+                if ($tool instanceof CertificationInstrument && $tool->isTraining() !== $isTraining) {
+                    $validator->errors()->add("requirements.{$index}.certification_instrument_id", $isTraining ? 'Choose a training, not a tool.' : 'Choose a tool, not a training.');
+                }
 
                 if ($tool instanceof CertificationInstrument && ! ProjectProgramScope::scopedEntityVisibleToCertificatePrograms(
                     $tool->program_scope_mode,
@@ -607,7 +620,11 @@ class CertificateController extends Controller
                 }
             }
 
-            foreach ($row['dimension_rules'] ?? [] as $ruleIndex => $rule) {
+            if ($isTraining) {
+                $this->validateSectionRule($validator, $index, $row, $tool instanceof CertificationInstrument ? $tool : null);
+            }
+
+            foreach ($isTraining ? [] : ($row['dimension_rules'] ?? []) as $ruleIndex => $rule) {
                 if (! is_array($rule) || filter_var($rule['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
                     continue;
                 }
@@ -675,6 +692,33 @@ class CertificateController extends Controller
             if ($requiredCount < 1 || $requiredCount > $availableCount) {
                 $validator->errors()->add("requirement_groups.{$index}.required_count", 'Required count must be between 1 and the number of requirements in the group.');
             }
+        }
+    }
+
+    /**
+     * A training sections requirement keeps exactly one rule: the sections needed from the training.
+     *
+     * @param  array<string, mixed>  $row
+     */
+    private function validateSectionRule(ValidatorInstance $validator, int|string $index, array $row, ?CertificationInstrument $training): void
+    {
+        $rules = array_filter($row['dimension_rules'] ?? [], fn ($rule) => is_array($rule) && ! filter_var($rule['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN));
+        $key = "requirements.{$index}.dimension_rules.sections";
+        if (count($rules) !== 1) {
+            $validator->errors()->add($key.'.option_ids', 'Choose the sections this requirement needs.');
+
+            return;
+        }
+        $rule = reset($rules);
+        $optionIds = array_values(array_unique(array_map('intval', $rule['option_ids'] ?? [])));
+        $sectionIds = $training?->sectionsDimension()?->options->modelKeys() ?? [];
+        if ($optionIds === []) {
+            $validator->errors()->add($key.'.option_ids', 'Check at least one section.');
+        } elseif ($training !== null && array_diff($optionIds, $sectionIds) !== []) {
+            $validator->errors()->add($key.'.option_ids', 'Sections must belong to the selected training.');
+        }
+        if (($rule['mode'] ?? null) === CertificateDimensionRuleMode::Quota->value && ((int) ($rule['min_count'] ?? 0) < 1 || (int) $rule['min_count'] > count($optionIds))) {
+            $validator->errors()->add($key.'.min_count', 'Enter a number between 1 and the number of checked sections.');
         }
     }
 
@@ -857,7 +901,7 @@ class CertificateController extends Controller
                 'certification_instrument_id' => $kind->usesTool() ? (($row['certification_instrument_id'] ?? null) ?: null) : null,
                 'certification_role_id' => filled($row['role_index'] ?? null) ? ($roleIndexToId[$row['role_index']] ?? null) : (($row['certification_role_id'] ?? null) ?: null),
                 'target_count' => $row['target_count'] ?? 1,
-                'requires_passing' => $kind === CertificateRequirementKind::ToolSubmission
+                'requires_passing' => $kind->usesTool()
                     ? filter_var($row['requires_passing'] ?? true, FILTER_VALIDATE_BOOLEAN)
                     : true,
                 'threshold_note' => $row['threshold_note'] ?? null,
@@ -878,7 +922,14 @@ class CertificateController extends Controller
                 $requirement = $certificate->requirements()->create($data);
             }
 
-            $this->syncDimensionRules($requirement, $kind === CertificateRequirementKind::ToolSubmission ? ($row['dimension_rules'] ?? []) : []);
+            $this->syncDimensionRules($requirement, match ($kind) {
+                CertificateRequirementKind::ToolSubmission => $row['dimension_rules'] ?? [],
+                // The sections rule always targets the training's own sections list.
+                CertificateRequirementKind::TrainingSections => array_map(fn ($rule) => is_array($rule) ? array_merge($rule, [
+                    'certification_instrument_dimension_id' => CertificationInstrumentDimension::query()->where('certification_instrument_id', $row['certification_instrument_id'] ?? 0)->where('type', CertificationInstrumentDimensionType::Sections->value)->value('id'),
+                ]) : $rule, $row['dimension_rules'] ?? []),
+                default => [],
+            });
             $retainedIds->push($requirement->id);
         }
 

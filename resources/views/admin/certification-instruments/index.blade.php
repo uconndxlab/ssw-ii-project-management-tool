@@ -4,7 +4,7 @@
 
 @section('content')
 
-<x-page-header context="index" title="Tools & Trainings" action-entity-label="Certification Tool" description="{{ $certificationInstruments->total() }} total" :action-url="auth()->user()->can('create', App\Models\CertificationInstrument::class) ? route('certification-instruments.create') : null" />
+<x-page-header context="index" title="Tools & Trainings" action-entity-label="Tool or Training" description="{{ $certificationInstruments->total() }} total" :action-url="auth()->user()->can('create', App\Models\CertificationInstrument::class) ? route('certification-instruments.create') : null" />
 
 <div class="card shadow-sm mb-3">
     <div class="card-body py-2">

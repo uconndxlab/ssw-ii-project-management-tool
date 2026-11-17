@@ -6,8 +6,8 @@
       hx-push-url="true">
     <div class="row g-2 align-items-center">
         <div class="col-md-3">
-            <input aria-label="Search tools" type="text" name="search" class="form-control form-control-sm"
-                   placeholder="Search tools…" value="{{ request('search') }}"
+            <input aria-label="Search tools and trainings" type="text" name="search" class="form-control form-control-sm"
+                   placeholder="Search tools and trainings…" value="{{ request('search') }}"
                    hx-get="{{ route('certification-instruments.index') }}"
                    hx-trigger="keyup changed delay:400ms, search"
                    hx-target="#certification-instruments-table" hx-swap="innerHTML"

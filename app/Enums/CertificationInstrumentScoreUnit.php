@@ -7,6 +7,7 @@ enum CertificationInstrumentScoreUnit: string
     case Percent = 'percent';
     case Points = 'points';
     case Number = 'number';
+    case PassFail = 'pass_fail';
 
     /** @return list<string> */
     public static function values(): array
@@ -20,6 +21,7 @@ enum CertificationInstrumentScoreUnit: string
             self::Percent => 'Percentage',
             self::Points => 'Points',
             self::Number => 'Number',
+            self::PassFail => 'Pass/Fail',
         };
     }
 
@@ -28,7 +30,15 @@ enum CertificationInstrumentScoreUnit: string
         return match ($this) {
             self::Percent => '%',
             self::Points => 'pts',
-            self::Number => null,
+            self::Number, self::PassFail => null,
         };
+    }
+
+    /** Display text for a stored value: Pass/Fail fields store 1 = Pass and 0 = Fail. */
+    public function format(string $value): string
+    {
+        return $this === self::PassFail
+            ? ((float) $value === 1.0 ? 'Pass' : 'Fail')
+            : rtrim(rtrim($value, '0'), '.').($this === self::Percent ? '%' : '');
     }
 }

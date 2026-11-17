@@ -4,6 +4,9 @@ namespace App\Services;
 
 use App\Enums\CertificateRequirementPhase;
 use App\Enums\CertificateTagOutcome;
+use App\Enums\CertificationInstrumentDimensionType;
+use App\Enums\CertificationInstrumentScoreUnit;
+use App\Enums\CertificationSectionResult;
 use App\Enums\ProgramScopeMode;
 use App\Models\Activity;
 use App\Models\ActivityCertificationCandidate;
@@ -15,6 +18,7 @@ use App\Models\CertificateEnrollment;
 use App\Models\CertificateRequirement;
 use App\Models\CertificationCandidate;
 use App\Models\CertificationInstrument;
+use App\Models\CertificationInstrumentDimension;
 use App\Models\CertificationInstrumentSubmission;
 use App\Models\User;
 use App\Notifications\ActivityReviewRequested;
@@ -111,7 +115,7 @@ class CertificationEvidenceService
             'certification_candidates.*.notes' => ['nullable', 'string', 'max:10000'],
             'certification_candidates.*._delete' => ['nullable', 'boolean'],
             'certification_candidates.*.submissions' => ['sometimes', 'array', 'max:100'],
-            'certification_candidates.*.submissions.*' => ['array:id,certification_instrument_id,outcome,notes,_delete,dimensions,scores'],
+            'certification_candidates.*.submissions.*' => ['array:id,certification_instrument_id,outcome,notes,_delete,dimensions,sections,section_results,scores'],
             'certification_candidates.*.submissions.*.id' => ['nullable', 'integer', 'distinct'],
             'certification_candidates.*.submissions.*.certification_instrument_id' => ['required', 'integer'],
             'certification_candidates.*.submissions.*.outcome' => ['nullable', Rule::enum(CertificateTagOutcome::class)],
@@ -119,6 +123,10 @@ class CertificationEvidenceService
             'certification_candidates.*.submissions.*._delete' => ['nullable', 'boolean'],
             'certification_candidates.*.submissions.*.dimensions' => ['sometimes', 'array'],
             'certification_candidates.*.submissions.*.dimensions.*' => ['nullable', 'integer'],
+            'certification_candidates.*.submissions.*.sections' => ['sometimes', 'array', 'max:500'],
+            'certification_candidates.*.submissions.*.sections.*' => ['integer'],
+            'certification_candidates.*.submissions.*.section_results' => ['sometimes', 'array'],
+            'certification_candidates.*.submissions.*.section_results.*' => ['nullable', Rule::enum(CertificationSectionResult::class)],
             'certification_candidates.*.submissions.*.scores' => ['sometimes', 'array'],
             'certification_candidates.*.submissions.*.scores.*' => ['nullable', 'numeric', 'between:-99999999,99999999'],
             'needs_certification_review' => ['sometimes', 'boolean'],
@@ -265,41 +273,94 @@ class CertificationEvidenceService
         if ($submission === null && (! $tool->active || $tool->retired_at !== null || ! $this->overlaps($tool, $programIds))) {
             $this->invalid($key.'.certification_instrument_id', 'Choose an active tool available for the activity programs.');
         }
-        if (empty($row['outcome'])) {
+        if (empty($row['outcome']) && ! $tool->isTraining()) {
             $this->invalid($key.'.outcome', 'Choose the coach-judged outcome. Scores never decide it.');
         }
-        $dimensions = $row['dimensions'] ?? [];
-        if (array_diff(array_keys($dimensions), $tool->dimensions->modelKeys()) !== []) {
-            $this->invalid($key.'.dimensions', 'Choose dimensions belonging to this tool.');
-        }
-        foreach ($tool->dimensions as $dimension) {
-            if (! in_array((int) ($dimensions[$dimension->id] ?? 0), $dimension->options->modelKeys(), true)) {
-                $this->invalid($key.'.dimensions.'.$dimension->id, 'Choose '.$dimension->name.' for this submission.');
-            }
-        }
+        $values = $tool->isTraining() ? $this->sectionValues($tool, $row, $key) : $this->chooseOneValues($tool, $row, $key);
         if (array_diff(array_keys($row['scores'] ?? []), $tool->scoreFields->modelKeys()) !== []) {
             $this->invalid($key.'.scores', 'Use score fields belonging to this tool.');
         }
-        $submission ??= new CertificationInstrumentSubmission(['activity_certification_candidate_id' => $tag->id, 'certification_instrument_id' => $tool->id]);
-        $submission->fill(['outcome' => $row['outcome'], 'notes' => $row['notes'] ?? null]);
         $scores = array_filter($row['scores'] ?? [], fn ($value) => $value !== null && $value !== '');
+        foreach ($tool->scoreFields->where('unit', CertificationInstrumentScoreUnit::PassFail) as $field) {
+            if (isset($scores[$field->id]) && ! in_array((float) $scores[$field->id], [0.0, 1.0], true)) {
+                $this->invalid($key.'.scores.'.$field->id, 'Choose Pass or Fail for '.$field->name.', or leave it blank.');
+            }
+        }
+        $submission ??= new CertificationInstrumentSubmission(['activity_certification_candidate_id' => $tag->id, 'certification_instrument_id' => $tool->id]);
+        // A training's overall outcome is optional: blank is recorded as Not scored.
+        $submission->fill(['outcome' => ($row['outcome'] ?? null) ?: CertificateTagOutcome::NotScored->value, 'notes' => $row['notes'] ?? null]);
+        $savedValues = $submission->dimensionValues->map(fn ($value) => [(int) $value->certification_instrument_dimension_id, (int) $value->certification_instrument_dimension_option_id, $value->result?->value])->sortBy(fn ($value) => $value[1])->values()->all();
         if ($submission->exists && ! $submission->isDirty()
-            && $submission->dimensionValues->pluck('certification_instrument_dimension_option_id', 'certification_instrument_dimension_id')->all() == $dimensions
+            && $savedValues === collect($values)->sortBy(fn ($value) => $value[1])->values()->all()
             && $submission->scores->pluck('value', 'certification_instrument_score_field_id')->all() == $scores) {
             return;
         }
         $submission->recorded_by_user_id = $actor->id;
         $submission->save();
         $submission->dimensionValues()->delete();
-        foreach ($dimensions as $dimensionId => $optionId) {
-            $submission->dimensionValues()->create(['certification_instrument_dimension_id' => $dimensionId, 'certification_instrument_dimension_option_id' => $optionId]);
+        foreach ($values as [$dimensionId, $optionId, $result]) {
+            $submission->dimensionValues()->create(['certification_instrument_dimension_id' => $dimensionId, 'certification_instrument_dimension_option_id' => $optionId, 'result' => $result]);
         }
         $submission->scores()->delete();
-        foreach ($row['scores'] ?? [] as $fieldId => $value) {
-            if ($value !== null && $value !== '') {
-                $submission->scores()->create(['certification_instrument_score_field_id' => $fieldId, 'value' => $value]);
-            }
+        foreach ($scores as $fieldId => $value) {
+            $submission->scores()->create(['certification_instrument_score_field_id' => $fieldId, 'value' => $value]);
         }
+    }
+
+    /**
+     * One option for every choose-one dimension of a tool.
+     *
+     * @param  array<string, mixed>  $row
+     * @return list<array{0: int, 1: int, 2: null}>
+     */
+    private function chooseOneValues(CertificationInstrument $tool, array $row, string $key): array
+    {
+        $dimensions = $row['dimensions'] ?? [];
+        if (array_diff(array_keys($dimensions), $tool->dimensions->modelKeys()) !== []) {
+            $this->invalid($key.'.dimensions', 'Choose dimensions belonging to this tool.');
+        }
+        $values = [];
+        foreach ($tool->dimensions as $dimension) {
+            if (! in_array((int) ($dimensions[$dimension->id] ?? 0), $dimension->options->modelKeys(), true)) {
+                $this->invalid($key.'.dimensions.'.$dimension->id, 'Choose '.$dimension->name.' for this submission.');
+            }
+            $values[] = [$dimension->id, (int) $dimensions[$dimension->id], null];
+        }
+
+        return $values;
+    }
+
+    /**
+     * The ticked sections of a training. Scored sections need a Pass or Fail; unscored ones take no result.
+     *
+     * @param  array<string, mixed>  $row
+     * @return list<array{0: int, 1: int, 2: string|null}>
+     */
+    private function sectionValues(CertificationInstrument $tool, array $row, string $key): array
+    {
+        $dimension = $tool->sectionsDimension();
+        $ticked = array_values(array_unique(array_map('intval', $row['sections'] ?? [])));
+        $results = array_filter($row['section_results'] ?? [], fn ($result) => filled($result));
+        if (! empty($row['dimensions']) || ! $dimension instanceof CertificationInstrumentDimension || $ticked === []) {
+            $this->invalid($key.'.sections', 'Tick at least one section covered in this submission.');
+        }
+        if (array_diff($ticked, $dimension->options->modelKeys()) !== [] || array_diff(array_map('intval', array_keys($results)), $ticked) !== []) {
+            $this->invalid($key.'.sections', 'Choose sections belonging to this training.');
+        }
+        $values = [];
+        foreach ($dimension->options->whereIn('id', $ticked) as $option) {
+            $optionId = $option->id;
+            $result = $results[$optionId] ?? null;
+            if ($option->scored && $result === null) {
+                $this->invalid($key.'.section_results.'.$optionId, 'Choose Pass or Fail for '.$option->label.'.');
+            }
+            if (! $option->scored && $result !== null) {
+                $this->invalid($key.'.section_results.'.$optionId, $option->label.' is not scored. Leave its result blank.');
+            }
+            $values[] = [$dimension->id, $optionId, $result];
+        }
+
+        return $values;
     }
 
     /**
@@ -360,7 +421,9 @@ class CertificationEvidenceService
                     'id' => $submission->id, 'certification_instrument_id' => $submission->certification_instrument_id,
                     'outcome' => $submission->outcome->value, 'notes' => $submission->notes,
                     'editable' => $this->canRecord($actor, $programIds, $submission->instrument, $tag->candidate),
-                    'dimensions' => $submission->dimensionValues->pluck('certification_instrument_dimension_option_id', 'certification_instrument_dimension_id')->all(),
+                    'dimensions' => $submission->instrument->isTraining() ? [] : $submission->dimensionValues->pluck('certification_instrument_dimension_option_id', 'certification_instrument_dimension_id')->all(),
+                    'sections' => $submission->instrument->isTraining() ? $submission->dimensionValues->pluck('certification_instrument_dimension_option_id')->all() : [],
+                    'section_results' => $submission->instrument->isTraining() ? $submission->dimensionValues->filter(fn ($value) => $value->result !== null)->mapWithKeys(fn ($value) => [$value->certification_instrument_dimension_option_id => $value->result?->value])->all() : [],
                     'scores' => $submission->scores->pluck('value', 'certification_instrument_score_field_id')->all(),
                 ])->values()->all() : [],
             ];
@@ -376,10 +439,11 @@ class CertificationEvidenceService
                 ->filter(fn (array $coach) => $coach['program_ids'] !== [])->unique(fn (array $coach) => $coach['id'].'-'.$coach['agreement_id'])->values()->all(),
             'reviewers' => $activity?->reviewRequests()->whereNull('cleared_at')->with('coach:id,name')->get()->map(fn (ActivityReviewRequest $request) => ['id' => $request->coach_user_id, 'name' => $request->coach->name])->values()->all() ?? [],
             'tools' => $tools->map(fn ($tool) => [
-                'id' => $tool->id, 'name' => $tool->name, 'description' => $tool->description,
+                'id' => $tool->id, 'name' => $tool->name, 'description' => $tool->description, 'type' => $tool->type->value,
                 'active' => $tool->active && $tool->retired_at === null, 'mode' => $tool->program_scope_mode->value,
                 'program_ids' => $tool->programs->modelKeys(),
-                'dimensions' => $tool->dimensions->map(fn ($dimension) => ['id' => $dimension->id, 'name' => $dimension->name, 'options' => $dimension->options->map(fn ($option) => ['id' => $option->id, 'label' => $option->label])->all()])->all(),
+                'dimensions' => $tool->dimensions->where('type', CertificationInstrumentDimensionType::ChooseOne)->map(fn ($dimension) => ['id' => $dimension->id, 'name' => $dimension->name, 'options' => $dimension->options->map(fn ($option) => ['id' => $option->id, 'label' => $option->label])->all()])->values()->all(),
+                'sections' => $tool->sectionsDimension()?->options->map(fn ($option) => ['id' => $option->id, 'label' => $option->label, 'scored' => $option->scored])->values()->all() ?? [],
                 'score_fields' => $tool->scoreFields->map(fn ($field) => ['id' => $field->id, 'name' => $field->name, 'unit' => $field->unit->value])->all(),
             ])->values()->all(),
         ];

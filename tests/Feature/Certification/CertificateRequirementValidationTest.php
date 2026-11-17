@@ -3,10 +3,12 @@
 use App\Enums\CertificateDimensionRuleMode;
 use App\Enums\CertificateRequirementKind;
 use App\Enums\CertificateRequirementPhase;
+use App\Models\ActivityType;
 use App\Models\Certificate;
 use App\Models\CertificationInstrument;
 use App\Models\CertificationInstrumentDimension;
 use App\Models\CertificationInstrumentDimensionOption;
+use App\Models\ContactFamily;
 
 test('tool submission requirement requires certification_instrument_id', function () {
     $admin = createSystemAdmin();
@@ -169,4 +171,28 @@ test('prerequisite cycle is rejected on update', function () {
             'prerequisite_certificate_ids' => [$certB->id],
         ]))
         ->assertSessionHasErrors('prerequisite_certificate_ids');
+});
+
+test('an activity type outside the selected family is rejected', function () {
+    $admin = createSystemAdmin();
+    $training = ContactFamily::factory()->create();
+    $coaching = ContactFamily::factory()->create();
+    $coachingType = ActivityType::factory()->for($coaching)->create();
+
+    $this->actingAs($admin)
+        ->from(route('certificates.create'))
+        ->post(route('certificates.store'), minimalCertificatePayload([
+            'requirements' => [
+                0 => [
+                    'phase' => CertificateRequirementPhase::Initial->value,
+                    'kind' => CertificateRequirementKind::ActivityCount->value,
+                    'contact_family_id' => $training->id,
+                    'activity_type_id' => $coachingType->id,
+                    'target_count' => 1,
+                ],
+            ],
+        ]))
+        ->assertSessionHasErrors('requirements.0.activity_type_id');
+
+    expect(Certificate::where('name', 'Validation Cert')->exists())->toBeFalse();
 });

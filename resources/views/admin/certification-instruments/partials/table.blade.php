@@ -12,6 +12,7 @@
             <thead>
                 <tr>
                     <th><x-table-sort-link column="name" label="Name" :sort="$s" :direction="$d" :url="$url('name')" target="#certification-instruments-table" /></th>
+                    <th>Type</th>
                     <th>Dimensions</th>
                     <th>Score Fields</th>
                     <th>Projects</th>
@@ -29,7 +30,8 @@
                             <span class="app-tag ms-1">Retired</span>
                         @endif
                     </td>
-                    <td data-label="Dimensions">{{ $tool->dimensions_count }}</td>
+                    <td data-label="Type">{{ $tool->type->label() }}</td>
+                    <td data-label="Dimensions">{{ $tool->isTraining() ? '—' : $tool->dimensions_count }}</td>
                     <td data-label="Score fields">{{ $tool->score_fields_count }}</td>
                     <td data-label="Projects">
                         <x-table-badge-list
@@ -51,22 +53,25 @@
                         <x-status-badge :active="$tool->active" />
                     </td>
                     <td class="app-col-actions">
-                        @php $actionKey = 'certification-instrument-actions-' . $tool->id; @endphp
+                        @php
+                            $actionKey = 'certification-instrument-actions-' . $tool->id;
+                            $typeLabel = strtolower($tool->type->label());
+                        @endphp
                         @if(auth()->user()->can('update', $tool) || auth()->user()->can('delete', $tool))
                         <div class="dropdown app-row-actions d-inline-block">
-                            <button type="button" class="btn btn-sm btn-link app-row-actions-toggle" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" aria-label="Certification tool actions for {{ $tool->name }}"><i class="bi bi-three-dots" aria-hidden="true"></i></button>
+                            <button type="button" class="btn btn-sm btn-link app-row-actions-toggle" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" aria-label="{{ $tool->type->label() }} actions for {{ $tool->name }}"><i class="bi bi-three-dots" aria-hidden="true"></i></button>
                             <div class="dropdown-menu dropdown-menu-end">
                             @can('update', $tool)
-                            <a href="{{ route('certification-instruments.edit', $tool) }}" class="dropdown-item"><i class="bi bi-pencil-square me-2" aria-hidden="true"></i>Edit tool</a>
+                            <a href="{{ route('certification-instruments.edit', $tool) }}" class="dropdown-item"><i class="bi bi-pencil-square me-2" aria-hidden="true"></i>Edit {{ $typeLabel }}</a>
                             @endcan
                             @can('delete', $tool)
                             <hr class="dropdown-divider">
                             <button type="submit" form="{{ $actionKey }}-delete"
                                     data-confirm
-                                    data-confirm-title="Delete certification tool?"
+                                    data-confirm-title="Delete {{ $typeLabel }}?"
                                     data-confirm-record="{{ $tool->name }}"
                                     data-confirm-message="This action cannot be undone."
-                                    data-confirm-action="Delete tool" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete tool</button>
+                                    data-confirm-action="Delete {{ $typeLabel }}" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete {{ $typeLabel }}</button>
                             @endcan
                             </div>
                         </div>
@@ -81,10 +86,10 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="7" class="text-center py-5">
+                    <td colspan="8" class="text-center py-5">
                         <p class="text-muted mb-2">No tools or trainings found.</p>
                         @can('create', App\Models\CertificationInstrument::class)
-                        <a href="{{ route('certification-instruments.create') }}" class="btn btn-sm btn-primary">Add Certification Tool</a>
+                        <a href="{{ route('certification-instruments.create') }}" class="btn btn-sm btn-primary">Create Tool or Training</a>
                         @endcan
                     </td>
                 </tr>

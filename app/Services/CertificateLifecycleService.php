@@ -316,7 +316,7 @@ class CertificateLifecycleService
                             'activity_type' => $tag->activity->activityType?->name, 'sub_activity' => $tag->activity->subActivity?->name, 'units' => $tag->completion_units, 'tag_notes' => $tag->notes,
                             'submission' => $submission ? [
                                 'id' => $submission->id, 'outcome' => $submission->outcome->value, 'notes' => $submission->notes, 'recorded_by' => $submission->recordedBy?->name,
-                                'options' => $submission->dimensionValues->map(fn ($value) => $value->dimension->name.': '.$value->option->label)->values()->all(),
+                                'options' => $submission->dimensionValues->map(fn ($value) => $value->dimension->name.': '.$value->option->label.($value->result ? ' · '.$value->result->label() : ''))->values()->all(),
                                 'scores' => $submission->scores->map(fn ($score) => ['field' => $score->field->name, 'value' => (string) $score->value, 'unit' => $score->field->unit->value])->values()->all(),
                             ] : null,
                         ];

@@ -17,6 +17,7 @@ class CertificationInstrumentDimensionOption extends Model
         'certification_instrument_dimension_id',
         'label',
         'value',
+        'scored',
         'sort_order',
     ];
 
@@ -32,6 +33,7 @@ class CertificationInstrumentDimensionOption extends Model
     protected function casts(): array
     {
         return [
+            'scored' => 'boolean',
             'sort_order' => 'integer',
         ];
     }
