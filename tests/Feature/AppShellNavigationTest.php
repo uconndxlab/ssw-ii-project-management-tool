@@ -37,7 +37,7 @@ test('enhanced viewers get a read-only certification setup group', function () {
 
     $this->actingAs(createProgramViewer($program))->get(route('dashboard'))
         ->assertOk()
-        ->assertSeeInOrder(['>Certification Setup<', '>Candidates<', '>Certification Tools<', '>Certificates<'], false)
+        ->assertSeeInOrder(['>Certification Setup<', '>Candidates<', '>Tools &amp; Trainings<', '>Certificates<'], false)
         ->assertDontSee('>Reference Data<', false);
 });
 

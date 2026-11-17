@@ -6,7 +6,7 @@ use App\Enums\ProgramScopeMode;
 use App\Models\Concerns\HasProgramScope;
 use App\Models\Concerns\VisibleToUser;
 use App\Models\Contracts\HasPrograms;
-use Database\Factories\CertificationToolFactory;
+use Database\Factories\CertificationInstrumentFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -19,9 +19,9 @@ use Illuminate\Support\Str;
  *
  * @property ProgramScopeMode $program_scope_mode
  */
-class CertificationTool extends Model implements HasPrograms
+class CertificationInstrument extends Model implements HasPrograms
 {
-    /** @use HasFactory<CertificationToolFactory> */
+    /** @use HasFactory<CertificationInstrumentFactory> */
     use HasFactory, HasProgramScope, VisibleToUser;
 
     protected static function booted(): void
@@ -55,19 +55,19 @@ class CertificationTool extends Model implements HasPrograms
     /** @return BelongsToMany<Program, $this> */
     public function programs(): BelongsToMany
     {
-        return $this->belongsToMany(Program::class, 'certification_tool_program')->withTimestamps();
+        return $this->belongsToMany(Program::class, 'certification_instrument_program')->withTimestamps();
     }
 
-    /** @return HasMany<CertificationToolDimension, $this> */
+    /** @return HasMany<CertificationInstrumentDimension, $this> */
     public function dimensions(): HasMany
     {
-        return $this->hasMany(CertificationToolDimension::class)->orderBy('sort_order');
+        return $this->hasMany(CertificationInstrumentDimension::class)->orderBy('sort_order');
     }
 
-    /** @return HasMany<CertificationToolScoreField, $this> */
+    /** @return HasMany<CertificationInstrumentScoreField, $this> */
     public function scoreFields(): HasMany
     {
-        return $this->hasMany(CertificationToolScoreField::class)->orderBy('sort_order');
+        return $this->hasMany(CertificationInstrumentScoreField::class)->orderBy('sort_order');
     }
 
     /** @return HasMany<CertificateRequirement, $this> */

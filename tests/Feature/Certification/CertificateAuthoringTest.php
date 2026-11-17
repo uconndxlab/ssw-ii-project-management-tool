@@ -5,10 +5,10 @@ use App\Models\Certificate;
 use App\Models\CertificateRequirement;
 use App\Models\CertificateRequirementDimensionRule;
 use App\Models\CertificateRequirementGroup;
+use App\Models\CertificationInstrument;
+use App\Models\CertificationInstrumentDimension;
+use App\Models\CertificationInstrumentDimensionOption;
 use App\Models\CertificationRole;
-use App\Models\CertificationTool;
-use App\Models\CertificationToolDimension;
-use App\Models\CertificationToolDimensionOption;
 use App\Models\ContactFamily;
 
 test('new contextual roles and sparse group links save together and reopen without changing ids', function () {
@@ -85,17 +85,17 @@ test('foreign catalog row ids are rejected without modifying either certificate'
 test('dimension rules cannot be moved from a different requirement', function () {
     $admin = createSystemAdmin();
     $certificate = Certificate::factory()->create();
-    $tool = CertificationTool::factory()->create(['program_scope_mode' => 'all']);
-    $dimension = CertificationToolDimension::factory()->for($tool, 'tool')->create();
-    $option = CertificationToolDimensionOption::factory()->for($dimension, 'dimension')->create();
+    $tool = CertificationInstrument::factory()->create(['program_scope_mode' => 'all']);
+    $dimension = CertificationInstrumentDimension::factory()->for($tool, 'instrument')->create();
+    $option = CertificationInstrumentDimensionOption::factory()->for($dimension, 'dimension')->create();
     $first = CertificateRequirement::factory()->for($certificate)->toolSubmission($tool)->create();
     $second = CertificateRequirement::factory()->for($certificate)->toolSubmission($tool)->create();
-    $foreign = CertificateRequirementDimensionRule::factory()->for($first, 'requirement')->create(['certification_tool_dimension_id' => $dimension->id]);
+    $foreign = CertificateRequirementDimensionRule::factory()->for($first, 'requirement')->create(['certification_instrument_dimension_id' => $dimension->id]);
 
     $this->actingAs($admin)->put(route('certificates.update', $certificate), minimalCertificatePayload([
         'name' => $certificate->name,
-        'requirements' => [4 => ['id' => $second->id, 'kind' => 'tool_submission', 'certification_tool_id' => $tool->id, 'target_count' => 6,
-            'dimension_rules' => [8 => ['id' => $foreign->id, 'certification_tool_dimension_id' => $dimension->id, 'mode' => 'coverage', 'option_ids' => [$option->id]]],
+        'requirements' => [4 => ['id' => $second->id, 'kind' => 'tool_submission', 'certification_instrument_id' => $tool->id, 'target_count' => 6,
+            'dimension_rules' => [8 => ['id' => $foreign->id, 'certification_instrument_dimension_id' => $dimension->id, 'mode' => 'coverage', 'option_ids' => [$option->id]]],
         ]],
     ]))->assertSessionHasErrors('requirements.4.dimension_rules.8.id');
 
@@ -105,14 +105,14 @@ test('dimension rules cannot be moved from a different requirement', function ()
 
 test('coverage and quota categories must belong to their selected dimension', function (string $mode) {
     $admin = createSystemAdmin();
-    $tool = CertificationTool::factory()->create(['program_scope_mode' => 'all']);
-    $dimension = CertificationToolDimension::factory()->for($tool, 'tool')->create();
-    $otherDimension = CertificationToolDimension::factory()->for($tool, 'tool')->create();
-    $foreign = CertificationToolDimensionOption::factory()->for($otherDimension, 'dimension')->create();
+    $tool = CertificationInstrument::factory()->create(['program_scope_mode' => 'all']);
+    $dimension = CertificationInstrumentDimension::factory()->for($tool, 'instrument')->create();
+    $otherDimension = CertificationInstrumentDimension::factory()->for($tool, 'instrument')->create();
+    $foreign = CertificationInstrumentDimensionOption::factory()->for($otherDimension, 'dimension')->create();
 
     $this->actingAs($admin)->post(route('certificates.store'), minimalCertificatePayload([
-        'requirements' => [['kind' => 'tool_submission', 'certification_tool_id' => $tool->id, 'target_count' => 6,
-            'dimension_rules' => [['certification_tool_dimension_id' => $dimension->id, 'mode' => $mode, 'option_ids' => [$foreign->id], 'min_count' => 4]],
+        'requirements' => [['kind' => 'tool_submission', 'certification_instrument_id' => $tool->id, 'target_count' => 6,
+            'dimension_rules' => [['certification_instrument_dimension_id' => $dimension->id, 'mode' => $mode, 'option_ids' => [$foreign->id], 'min_count' => 4]],
         ]],
     ]))->assertSessionHasErrors('requirements.0.dimension_rules.0.option_ids');
 
@@ -160,8 +160,8 @@ test('invalid nested configuration restores all authored fields for correction',
 
 test('nested catalog references reject arrays of otherwise valid ids', function () {
     $admin = createSystemAdmin();
-    $tool = CertificationTool::factory()->create(['program_scope_mode' => 'all']);
-    $dimension = CertificationToolDimension::factory()->for($tool, 'tool')->create();
+    $tool = CertificationInstrument::factory()->create(['program_scope_mode' => 'all']);
+    $dimension = CertificationInstrumentDimension::factory()->for($tool, 'instrument')->create();
     $role = CertificationRole::factory()->create(['certificate_id' => null]);
     $family = ContactFamily::factory()->create();
     $type = ActivityType::factory()->create();
@@ -169,13 +169,13 @@ test('nested catalog references reject arrays of otherwise valid ids', function 
     $this->actingAs($admin)->post(route('certificates.store'), minimalCertificatePayload([
         'requirements' => [['kind' => 'tool_submission', 'target_count' => 6,
             'contact_family_id' => [$family->id], 'activity_type_id' => [$type->id],
-            'certification_tool_id' => [$tool->id], 'certification_role_id' => [$role->id],
-            'dimension_rules' => [['certification_tool_dimension_id' => [$dimension->id], 'mode' => 'coverage']],
+            'certification_instrument_id' => [$tool->id], 'certification_role_id' => [$role->id],
+            'dimension_rules' => [['certification_instrument_dimension_id' => [$dimension->id], 'mode' => 'coverage']],
         ]],
     ]))->assertSessionHasErrors([
         'requirements.0.contact_family_id', 'requirements.0.activity_type_id',
-        'requirements.0.certification_tool_id', 'requirements.0.certification_role_id',
-        'requirements.0.dimension_rules.0.certification_tool_dimension_id',
+        'requirements.0.certification_instrument_id', 'requirements.0.certification_role_id',
+        'requirements.0.dimension_rules.0.certification_instrument_dimension_id',
     ]);
 
     expect(Certificate::where('name', 'Validation Cert')->exists())->toBeFalse();
@@ -184,18 +184,18 @@ test('nested catalog references reject arrays of otherwise valid ids', function 
 test('existing dimension ids survive edits and incompatible kind changes require deleting the rules', function () {
     $admin = createSystemAdmin();
     $certificate = Certificate::factory()->create();
-    $tool = CertificationTool::factory()->create(['program_scope_mode' => 'all']);
-    $dimension = CertificationToolDimension::factory()->for($tool, 'tool')->create();
-    $option = CertificationToolDimensionOption::factory()->for($dimension, 'dimension')->create();
+    $tool = CertificationInstrument::factory()->create(['program_scope_mode' => 'all']);
+    $dimension = CertificationInstrumentDimension::factory()->for($tool, 'instrument')->create();
+    $option = CertificationInstrumentDimensionOption::factory()->for($dimension, 'dimension')->create();
     $requirement = CertificateRequirement::factory()->for($certificate)->toolSubmission($tool)->create();
     $rule = CertificateRequirementDimensionRule::factory()->for($requirement, 'requirement')->create([
-        'certification_tool_dimension_id' => $dimension->id, 'option_ids' => [$option->id],
+        'certification_instrument_dimension_id' => $dimension->id, 'option_ids' => [$option->id],
     ]);
     $payload = minimalCertificatePayload([
         'name' => $certificate->name,
-        'requirements' => [14 => ['id' => $requirement->id, 'kind' => 'tool_submission', 'certification_tool_id' => $tool->id, 'target_count' => 6,
+        'requirements' => [14 => ['id' => $requirement->id, 'kind' => 'tool_submission', 'certification_instrument_id' => $tool->id, 'target_count' => 6,
             'threshold_note' => 'Coach judgment, not score math',
-            'dimension_rules' => [19 => ['id' => $rule->id, 'certification_tool_dimension_id' => $dimension->id, 'mode' => 'quota', 'option_ids' => [$option->id], 'min_count' => 4]],
+            'dimension_rules' => [19 => ['id' => $rule->id, 'certification_instrument_dimension_id' => $dimension->id, 'mode' => 'quota', 'option_ids' => [$option->id], 'min_count' => 4]],
         ]],
     ]);
 
@@ -213,7 +213,7 @@ test('existing dimension ids survive edits and incompatible kind changes require
     $payload['requirements'][14]['dimension_rules'][19]['_delete'] = 1;
     $this->put(route('certificates.update', $certificate), $payload)->assertSessionHasNoErrors()->assertRedirect();
     expect($requirement->fresh()->kind->value)->toBe('attestation');
-    expect($requirement->fresh()->certification_tool_id)->toBeNull();
+    expect($requirement->fresh()->certification_instrument_id)->toBeNull();
     $this->assertModelMissing($rule);
 });
 

@@ -11,7 +11,7 @@ use App\Models\ActivityType;
 use App\Models\Agreement;
 use App\Models\Certificate;
 use App\Models\CertificationCandidate;
-use App\Models\CertificationTool;
+use App\Models\CertificationInstrument;
 use App\Models\ContactFamily;
 use App\Models\Contracts\HasPrograms;
 use App\Models\LoggingField;
@@ -893,7 +893,7 @@ class UserAccess
             $record instanceof LoggingField => $this->hasAdmin() && $this->applyScopedEntityVisibility(LoggingField::query()->whereKey($record->id))->exists(),
             $record instanceof ActivityType => $this->hasAdmin() && $this->applyScopedEntityVisibility(ActivityType::query()->whereKey($record->id))->exists(),
             $record instanceof SubActivity => $this->hasAdmin() && $this->applyScopedEntityVisibility(SubActivity::query()->whereKey($record->id))->exists(),
-            $record instanceof CertificationTool => $this->hasView() && $this->applyScopedEntityVisibility(CertificationTool::query()->whereKey($record->id))->exists(),
+            $record instanceof CertificationInstrument => $this->hasView() && $this->applyScopedEntityVisibility(CertificationInstrument::query()->whereKey($record->id))->exists(),
             $record instanceof Certificate => $this->hasView() && $this->applyScopedEntityVisibility(Certificate::query()->whereKey($record->id))->exists(),
             $record instanceof CertificationCandidate => $this->applyCertificationCandidateVisibility(CertificationCandidate::query()->whereKey($record->id))->exists(),
             $record instanceof Activity => $this->canViewActivity($record),

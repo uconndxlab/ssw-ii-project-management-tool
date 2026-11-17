@@ -4,11 +4,11 @@ use App\Enums\CertificateDimensionRuleMode;
 use App\Enums\CertificateRequirementKind;
 use App\Enums\CertificateRequirementPhase;
 use App\Models\Certificate;
-use App\Models\CertificationTool;
-use App\Models\CertificationToolDimension;
-use App\Models\CertificationToolDimensionOption;
+use App\Models\CertificationInstrument;
+use App\Models\CertificationInstrumentDimension;
+use App\Models\CertificationInstrumentDimensionOption;
 
-test('tool submission requirement requires certification_tool_id', function () {
+test('tool submission requirement requires certification_instrument_id', function () {
     $admin = createSystemAdmin();
 
     $this->actingAs($admin)
@@ -23,7 +23,7 @@ test('tool submission requirement requires certification_tool_id', function () {
                 ],
             ],
         ]))
-        ->assertSessionHasErrors('requirements.0.certification_tool_id');
+        ->assertSessionHasErrors('requirements.0.certification_instrument_id');
 
     expect(Certificate::where('name', 'Validation Cert')->exists())->toBeFalse();
 });
@@ -31,9 +31,9 @@ test('tool submission requirement requires certification_tool_id', function () {
 test('dimension rule must belong to the selected tool', function () {
     $admin = createSystemAdmin();
     [$project, $program] = createProjectWithProgram();
-    $toolA = CertificationTool::factory()->forProgram($program)->create();
-    $toolB = CertificationTool::factory()->forProgram($program)->create();
-    $foreignDimension = CertificationToolDimension::factory()->for($toolB, 'tool')->create();
+    $toolA = CertificationInstrument::factory()->forProgram($program)->create();
+    $toolB = CertificationInstrument::factory()->forProgram($program)->create();
+    $foreignDimension = CertificationInstrumentDimension::factory()->for($toolB, 'instrument')->create();
 
     $this->actingAs($admin)
         ->from(route('certificates.create'))
@@ -42,11 +42,11 @@ test('dimension rule must belong to the selected tool', function () {
                 0 => [
                     'phase' => CertificateRequirementPhase::Initial->value,
                     'kind' => CertificateRequirementKind::ToolSubmission->value,
-                    'certification_tool_id' => $toolA->id,
+                    'certification_instrument_id' => $toolA->id,
                     'target_count' => 1,
                     'dimension_rules' => [
                         0 => [
-                            'certification_tool_dimension_id' => $foreignDimension->id,
+                            'certification_instrument_dimension_id' => $foreignDimension->id,
                             'mode' => CertificateDimensionRuleMode::Coverage->value,
                             'option_ids' => [],
                         ],
@@ -54,15 +54,15 @@ test('dimension rule must belong to the selected tool', function () {
                 ],
             ],
         ]))
-        ->assertSessionHasErrors('requirements.0.dimension_rules.0.certification_tool_dimension_id');
+        ->assertSessionHasErrors('requirements.0.dimension_rules.0.certification_instrument_dimension_id');
 });
 
 test('quota dimension rule requires min_count', function () {
     $admin = createSystemAdmin();
     [$project, $program] = createProjectWithProgram();
-    $tool = CertificationTool::factory()->forProgram($program)->create();
-    $dimension = CertificationToolDimension::factory()->for($tool, 'tool')->create();
-    $option = CertificationToolDimensionOption::factory()->for($dimension, 'dimension')->create();
+    $tool = CertificationInstrument::factory()->forProgram($program)->create();
+    $dimension = CertificationInstrumentDimension::factory()->for($tool, 'instrument')->create();
+    $option = CertificationInstrumentDimensionOption::factory()->for($dimension, 'dimension')->create();
 
     $this->actingAs($admin)
         ->from(route('certificates.create'))
@@ -71,11 +71,11 @@ test('quota dimension rule requires min_count', function () {
                 0 => [
                     'phase' => CertificateRequirementPhase::Initial->value,
                     'kind' => CertificateRequirementKind::ToolSubmission->value,
-                    'certification_tool_id' => $tool->id,
+                    'certification_instrument_id' => $tool->id,
                     'target_count' => 1,
                     'dimension_rules' => [
                         0 => [
-                            'certification_tool_dimension_id' => $dimension->id,
+                            'certification_instrument_dimension_id' => $dimension->id,
                             'mode' => CertificateDimensionRuleMode::Quota->value,
                             'option_ids' => [$option->id],
                         ],
@@ -89,8 +89,8 @@ test('quota dimension rule requires min_count', function () {
 test('coverage dimension rule requires at least one option', function () {
     $admin = createSystemAdmin();
     [$project, $program] = createProjectWithProgram();
-    $tool = CertificationTool::factory()->forProgram($program)->create();
-    $dimension = CertificationToolDimension::factory()->for($tool, 'tool')->create();
+    $tool = CertificationInstrument::factory()->forProgram($program)->create();
+    $dimension = CertificationInstrumentDimension::factory()->for($tool, 'instrument')->create();
 
     $this->actingAs($admin)
         ->from(route('certificates.create'))
@@ -99,11 +99,11 @@ test('coverage dimension rule requires at least one option', function () {
                 0 => [
                     'phase' => CertificateRequirementPhase::Initial->value,
                     'kind' => CertificateRequirementKind::ToolSubmission->value,
-                    'certification_tool_id' => $tool->id,
+                    'certification_instrument_id' => $tool->id,
                     'target_count' => 1,
                     'dimension_rules' => [
                         0 => [
-                            'certification_tool_dimension_id' => $dimension->id,
+                            'certification_instrument_dimension_id' => $dimension->id,
                             'mode' => CertificateDimensionRuleMode::Coverage->value,
                             'option_ids' => [],
                         ],

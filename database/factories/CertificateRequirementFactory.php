@@ -6,7 +6,7 @@ use App\Enums\CertificateRequirementKind;
 use App\Enums\CertificateRequirementPhase;
 use App\Models\Certificate;
 use App\Models\CertificateRequirement;
-use App\Models\CertificationTool;
+use App\Models\CertificationInstrument;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /** @extends Factory<CertificateRequirement> */
@@ -33,11 +33,11 @@ class CertificateRequirementFactory extends Factory
         ]);
     }
 
-    public function toolSubmission(?CertificationTool $tool = null): static
+    public function toolSubmission(?CertificationInstrument $tool = null): static
     {
         return $this->state(fn (array $attributes) => [
             'kind' => CertificateRequirementKind::ToolSubmission,
-            'certification_tool_id' => $tool?->id ?? CertificationTool::factory(),
+            'certification_instrument_id' => $tool?->id ?? CertificationInstrument::factory(),
         ]);
     }
 
@@ -47,7 +47,7 @@ class CertificateRequirementFactory extends Factory
             'kind' => CertificateRequirementKind::Attestation,
             'contact_family_id' => null,
             'activity_type_id' => null,
-            'certification_tool_id' => null,
+            'certification_instrument_id' => null,
         ]);
     }
 

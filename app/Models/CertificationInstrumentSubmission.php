@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use App\Enums\CertificateTagOutcome;
-use Database\Factories\CertificationToolSubmissionFactory;
+use Database\Factories\CertificationInstrumentSubmissionFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,14 +11,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property CertificateTagOutcome $outcome
- * @property-read CertificationTool $tool
+ * @property-read CertificationInstrument $instrument
  */
-class CertificationToolSubmission extends Model
+class CertificationInstrumentSubmission extends Model
 {
-    /** @use HasFactory<CertificationToolSubmissionFactory> */
+    /** @use HasFactory<CertificationInstrumentSubmissionFactory> */
     use HasFactory;
 
-    protected $fillable = ['activity_certification_candidate_id', 'certification_tool_id', 'outcome', 'recorded_by_user_id', 'notes'];
+    protected $fillable = ['activity_certification_candidate_id', 'certification_instrument_id', 'outcome', 'recorded_by_user_id', 'notes'];
 
     protected function casts(): array
     {
@@ -31,10 +31,10 @@ class CertificationToolSubmission extends Model
         return $this->belongsTo(ActivityCertificationCandidate::class, 'activity_certification_candidate_id');
     }
 
-    /** @return BelongsTo<CertificationTool, $this> */
-    public function tool(): BelongsTo
+    /** @return BelongsTo<CertificationInstrument, $this> */
+    public function instrument(): BelongsTo
     {
-        return $this->belongsTo(CertificationTool::class, 'certification_tool_id');
+        return $this->belongsTo(CertificationInstrument::class, 'certification_instrument_id');
     }
 
     /** @return BelongsTo<User, $this> */
@@ -43,15 +43,15 @@ class CertificationToolSubmission extends Model
         return $this->belongsTo(User::class, 'recorded_by_user_id');
     }
 
-    /** @return HasMany<CertificationToolSubmissionDimensionValue, $this> */
+    /** @return HasMany<CertificationInstrumentSubmissionDimensionValue, $this> */
     public function dimensionValues(): HasMany
     {
-        return $this->hasMany(CertificationToolSubmissionDimensionValue::class);
+        return $this->hasMany(CertificationInstrumentSubmissionDimensionValue::class);
     }
 
-    /** @return HasMany<CertificationToolSubmissionScore, $this> */
+    /** @return HasMany<CertificationInstrumentSubmissionScore, $this> */
     public function scores(): HasMany
     {
-        return $this->hasMany(CertificationToolSubmissionScore::class);
+        return $this->hasMany(CertificationInstrumentSubmissionScore::class);
     }
 }

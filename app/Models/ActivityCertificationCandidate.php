@@ -48,9 +48,9 @@ class ActivityCertificationCandidate extends Model
         return $this->belongsTo(CertificationRole::class, 'certification_role_id');
     }
 
-    /** @return HasMany<CertificationToolSubmission, $this> */
+    /** @return HasMany<CertificationInstrumentSubmission, $this> */
     public function submissions(): HasMany
     {
-        return $this->hasMany(CertificationToolSubmission::class);
+        return $this->hasMany(CertificationInstrumentSubmission::class);
     }
 }

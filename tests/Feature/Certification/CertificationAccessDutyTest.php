@@ -3,7 +3,7 @@
 use App\Enums\CertificationDuty;
 use App\Enums\PrivilegeScopeType;
 use App\Models\Certificate;
-use App\Models\CertificationTool;
+use App\Models\CertificationInstrument;
 use App\Models\Program;
 use App\Models\User;
 use App\Models\UserCertificationDuty;
@@ -105,16 +105,16 @@ test('canGrantDuty delegates to admin scope and allows self-grant', function () 
 test('duty grants certificate visibility without changing scoped tool visibility', function () {
     [$project, $program] = createProjectWithProgram();
     $coach = User::factory()->create();
-    $tool = CertificationTool::factory()->forProgram($program)->create();
+    $tool = CertificationInstrument::factory()->forProgram($program)->create();
     $certificate = Certificate::factory()->forProgram($program)->create();
 
-    $visibleBefore = CertificationTool::query()->visibleTo($coach)->whereKey($tool)->exists();
+    $visibleBefore = CertificationInstrument::query()->visibleTo($coach)->whereKey($tool)->exists();
     expect($coach->can('view', $certificate))->toBeFalse();
 
     UserCertificationDuty::factory()->coach()->atProgram($program)->create(['user_id' => $coach->id]);
 
     $reloaded = User::query()->findOrFail($coach->id);
-    $visibleAfter = CertificationTool::query()->visibleTo($reloaded)->whereKey($tool)->exists();
+    $visibleAfter = CertificationInstrument::query()->visibleTo($reloaded)->whereKey($tool)->exists();
 
     expect($visibleAfter)->toBe($visibleBefore);
     expect($reloaded->can('view', $certificate))->toBeTrue();

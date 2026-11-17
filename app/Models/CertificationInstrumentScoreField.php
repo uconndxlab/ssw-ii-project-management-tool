@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use App\Enums\CertificationToolScoreUnit;
-use Database\Factories\CertificationToolScoreFieldFactory;
+use App\Enums\CertificationInstrumentScoreUnit;
+use Database\Factories\CertificationInstrumentScoreFieldFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,15 +12,15 @@ use Illuminate\Support\Str;
 /**
  * Recorded-only numeric field. Never evaluated by the system - see the spine's "no score math" rule.
  *
- * @property CertificationToolScoreUnit $unit
+ * @property CertificationInstrumentScoreUnit $unit
  */
-class CertificationToolScoreField extends Model
+class CertificationInstrumentScoreField extends Model
 {
-    /** @use HasFactory<CertificationToolScoreFieldFactory> */
+    /** @use HasFactory<CertificationInstrumentScoreFieldFactory> */
     use HasFactory;
 
     protected $fillable = [
-        'certification_tool_id',
+        'certification_instrument_id',
         'name',
         'slug',
         'unit',
@@ -39,14 +39,14 @@ class CertificationToolScoreField extends Model
     protected function casts(): array
     {
         return [
-            'unit' => CertificationToolScoreUnit::class,
+            'unit' => CertificationInstrumentScoreUnit::class,
             'sort_order' => 'integer',
         ];
     }
 
-    /** @return BelongsTo<CertificationTool, $this> */
-    public function tool(): BelongsTo
+    /** @return BelongsTo<CertificationInstrument, $this> */
+    public function instrument(): BelongsTo
     {
-        return $this->belongsTo(CertificationTool::class, 'certification_tool_id');
+        return $this->belongsTo(CertificationInstrument::class, 'certification_instrument_id');
     }
 }

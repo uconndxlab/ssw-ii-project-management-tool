@@ -2,7 +2,7 @@
     $fieldId = $row['id'] ?? null;
     $isExisting = filled($fieldId);
     $unit = $row['unit'] ?? null;
-    $unitValue = $unit instanceof \App\Enums\CertificationToolScoreUnit ? $unit->value : ($unit ?? \App\Enums\CertificationToolScoreUnit::Percent->value);
+    $unitValue = $unit instanceof \App\Enums\CertificationInstrumentScoreUnit ? $unit->value : ($unit ?? \App\Enums\CertificationInstrumentScoreUnit::Percent->value);
 @endphp
 <div class="repeater-row-card repeater-row-inline" data-repeater-row data-existing="{{ $isExisting ? '1' : '0' }}">
     @if($isExisting)
@@ -18,7 +18,7 @@
                placeholder="e.g. Overall Match %" aria-label="Score field name">
         <select class="form-select form-select-sm flex-shrink-0" style="width:9rem;"
                 name="score_fields[{{ $fieldIndex }}][unit]" aria-label="Unit">
-            @foreach(\App\Enums\CertificationToolScoreUnit::cases() as $case)
+            @foreach(\App\Enums\CertificationInstrumentScoreUnit::cases() as $case)
                 <option value="{{ $case->value }}" @selected($unitValue === $case->value)>{{ $case->label() }}</option>
             @endforeach
         </select>

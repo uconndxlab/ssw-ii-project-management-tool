@@ -1,10 +1,10 @@
 @php
-    $isEditMode = isset($certificationTool);
-    $selectedProjectIds = old('project_ids', $isEditMode ? $certificationTool->projects->pluck('id')->toArray() : []);
-    $selectedProgramIds = old('program_ids', $isEditMode ? $certificationTool->programs->pluck('id')->toArray() : []);
-    $scopeId = $isEditMode ? 'certification-tool-edit-scope' : 'certification-tool-create-scope';
+    $isEditMode = isset($certificationInstrument);
+    $selectedProjectIds = old('project_ids', $isEditMode ? $certificationInstrument->projects->pluck('id')->toArray() : []);
+    $selectedProgramIds = old('program_ids', $isEditMode ? $certificationInstrument->programs->pluck('id')->toArray() : []);
+    $scopeId = $isEditMode ? 'certification-instrument-edit-scope' : 'certification-instrument-create-scope';
 
-    $dimensionRows = old('dimensions', $isEditMode ? $certificationTool->dimensions->map(fn ($d) => [
+    $dimensionRows = old('dimensions', $isEditMode ? $certificationInstrument->dimensions->map(fn ($d) => [
         'id' => $d->id,
         'name' => $d->name,
         'sort_order' => $d->sort_order,
@@ -15,7 +15,7 @@
         ])->all(),
     ])->all() : []);
 
-    $scoreFieldRows = old('score_fields', $isEditMode ? $certificationTool->scoreFields->map(fn ($f) => [
+    $scoreFieldRows = old('score_fields', $isEditMode ? $certificationInstrument->scoreFields->map(fn ($f) => [
         'id' => $f->id,
         'name' => $f->name,
         'unit' => $f->unit,
@@ -26,12 +26,12 @@
 <x-section-card title="Information">
     <x-form-field label="Name" for="name" name="name" :required="true">
         <input type="text" class="form-control @error('name') is-invalid @enderror"
-               id="name" name="name" value="{{ old('name', $certificationTool->name ?? '') }}" required>
+               id="name" name="name" value="{{ old('name', $certificationInstrument->name ?? '') }}" required>
     </x-form-field>
 
     <x-form-field label="Description" for="description" name="description">
         <textarea class="form-control @error('description') is-invalid @enderror"
-                  id="description" name="description" rows="3">{{ old('description', $certificationTool->description ?? '') }}</textarea>
+                  id="description" name="description" rows="3">{{ old('description', $certificationInstrument->description ?? '') }}</textarea>
     </x-form-field>
 
     <x-project-program-scope-picker
@@ -40,8 +40,8 @@
         :selected-project-ids="$selectedProjectIds"
         :selected-program-ids="$selectedProgramIds"
         :show-scope-mode-selector="true"
-        :selected-scope-mode="old('program_scope_mode', $certificationTool->program_scope_mode?->value ?? 'specific')"
-        :lock-all="$isEditMode && $certificationTool->program_scope_mode?->value === 'all'"
+        :selected-scope-mode="old('program_scope_mode', $certificationInstrument->program_scope_mode?->value ?? 'specific')"
+        :lock-all="$isEditMode && $certificationInstrument->program_scope_mode?->value === 'all'"
         project-empty-selection-label="All projects"
         program-empty-selection-label="All programs"
     />
@@ -51,7 +51,7 @@
             name="active"
             label="Active"
             help="Only active tools can be used on new certificate requirements."
-            :checked="old('active', $isEditMode ? $certificationTool->active : true)"
+            :checked="old('active', $isEditMode ? $certificationInstrument->active : true)"
             class="mb-0"
         />
     </x-form-options>
@@ -63,10 +63,10 @@
         name="dimensions"
         :rows="$dimensionRows"
         add-label="Add dimension"
-        :template="view('admin.certification-tools.partials.dimension-row', ['row' => [], 'dimIndex' => '__INDEX__'])->render()"
+        :template="view('admin.certification-instruments.partials.dimension-row', ['row' => [], 'dimIndex' => '__INDEX__'])->render()"
     >
         @foreach($dimensionRows as $dimIndex => $dimension)
-            @include('admin.certification-tools.partials.dimension-row', ['row' => $dimension, 'dimIndex' => $dimIndex])
+            @include('admin.certification-instruments.partials.dimension-row', ['row' => $dimension, 'dimIndex' => $dimIndex])
         @endforeach
     </x-repeater-rows>
 </x-section-card>
@@ -77,10 +77,10 @@
         name="score_fields"
         :rows="$scoreFieldRows"
         add-label="Add score field"
-        :template="view('admin.certification-tools.partials.score-field-row', ['row' => [], 'fieldIndex' => '__INDEX__'])->render()"
+        :template="view('admin.certification-instruments.partials.score-field-row', ['row' => [], 'fieldIndex' => '__INDEX__'])->render()"
     >
         @foreach($scoreFieldRows as $fieldIndex => $field)
-            @include('admin.certification-tools.partials.score-field-row', ['row' => $field, 'fieldIndex' => $fieldIndex])
+            @include('admin.certification-instruments.partials.score-field-row', ['row' => $field, 'fieldIndex' => $fieldIndex])
         @endforeach
     </x-repeater-rows>
 </x-section-card>

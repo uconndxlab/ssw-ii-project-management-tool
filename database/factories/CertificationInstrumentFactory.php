@@ -3,14 +3,14 @@
 namespace Database\Factories;
 
 use App\Enums\ProgramScopeMode;
-use App\Models\CertificationTool;
+use App\Models\CertificationInstrument;
 use App\Models\Program;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/** @extends Factory<CertificationTool> */
-class CertificationToolFactory extends Factory
+/** @extends Factory<CertificationInstrument> */
+class CertificationInstrumentFactory extends Factory
 {
-    protected $model = CertificationTool::class;
+    protected $model = CertificationInstrument::class;
 
     public function definition(): array
     {
@@ -40,7 +40,7 @@ class CertificationToolFactory extends Factory
 
     public function forProgram(Program $program): static
     {
-        return $this->afterCreating(function (CertificationTool $tool) use ($program) {
+        return $this->afterCreating(function (CertificationInstrument $tool) use ($program) {
             $tool->programs()->sync([$program->id]);
         });
     }

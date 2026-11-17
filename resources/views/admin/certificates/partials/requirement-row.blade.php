@@ -90,11 +90,11 @@
                 </x-form-field>
             </div>
             <div data-cert-for="tool_submission">
-                <x-form-field label="Submission tool" :for="'req-'.$reqIndex.'-tool'" :name="$prefix.'.certification_tool_id'">
-                    <select class="form-select" id="req-{{ $reqIndex }}-tool" name="{{ $field }}[certification_tool_id]" data-cert-tool>
+                <x-form-field label="Submission tool" :for="'req-'.$reqIndex.'-tool'" :name="$prefix.'.certification_instrument_id'">
+                    <select class="form-select" id="req-{{ $reqIndex }}-tool" name="{{ $field }}[certification_instrument_id]" data-cert-tool>
                         <option value="">Select tool…</option>
-                        @foreach($certificationTools as $tool)
-                            <option value="{{ $tool->id }}" data-scope-mode="{{ $tool->program_scope_mode->value }}" data-program-ids="{{ $tool->programs->pluck('id')->implode(',') }}" @selected((string)($row['certification_tool_id'] ?? '') === (string)$tool->id)>{{ $tool->name }}{{ $tool->retired_at ? ' (retired)' : '' }}</option>
+                        @foreach($certificationInstruments as $tool)
+                            <option value="{{ $tool->id }}" data-scope-mode="{{ $tool->program_scope_mode->value }}" data-program-ids="{{ $tool->programs->pluck('id')->implode(',') }}" @selected((string)($row['certification_instrument_id'] ?? '') === (string)$tool->id)>{{ $tool->name }}{{ $tool->retired_at ? ' (retired)' : '' }}</option>
                         @endforeach
                     </select>
                     <div class="form-text" data-cert-tool-empty hidden>

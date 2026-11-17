@@ -12,9 +12,9 @@ use App\Models\Certificate;
 use App\Models\CertificateRequirement;
 use App\Models\CertificateRequirementDimensionRule;
 use App\Models\CertificateRequirementGroup;
+use App\Models\CertificationInstrument;
+use App\Models\CertificationInstrumentDimension;
 use App\Models\CertificationRole;
-use App\Models\CertificationTool;
-use App\Models\CertificationToolDimension;
 use App\Models\ContactFamily;
 use App\Models\Program;
 use App\Models\Project;
@@ -106,7 +106,7 @@ class CertificateController extends Controller
         $certificate->load([
             'programs.projects', 'prerequisites', 'roles', 'requirementGroups',
             'requirements.contactFamily', 'requirements.activityType', 'requirements.subActivity',
-            'requirements.certificationTool', 'requirements.certificationRole',
+            'requirements.certificationInstrument', 'requirements.certificationRole',
             'requirements.dimensionRules.dimension.options',
         ]);
         $globalRoles = CertificationRole::query()->whereNull('certificate_id')->orderBy('sort_order')->get();
@@ -279,8 +279,8 @@ class CertificateController extends Controller
         $subActivities = SubActivity::query()
             ->where(fn ($query) => $query->active()->orWhereIn('id', $certificate?->requirements()->pluck('sub_activity_id') ?? []))
             ->orderBy('sort_order')->orderBy('name')->get();
-        $certificationTools = CertificationTool::query()
-            ->where(fn ($query) => $query->notRetired()->orWhereIn('id', $certificate?->requirements()->pluck('certification_tool_id') ?? []))
+        $certificationInstruments = CertificationInstrument::query()
+            ->where(fn ($query) => $query->notRetired()->orWhereIn('id', $certificate?->requirements()->pluck('certification_instrument_id') ?? []))
             ->visibleTo($this->actor())
             ->with(['dimensions.options', 'programs:id'])
             ->orderBy('sort_order')
@@ -293,7 +293,7 @@ class CertificateController extends Controller
         }
         $otherCertificates = $otherCertificatesQuery->orderBy('name')->get(['id', 'name']);
 
-        return compact('contactFamilies', 'activityTypes', 'subActivities', 'certificationTools', 'globalRoles', 'otherCertificates');
+        return compact('contactFamilies', 'activityTypes', 'subActivities', 'certificationInstruments', 'globalRoles', 'otherCertificates');
     }
 
     /**
@@ -344,7 +344,7 @@ class CertificateController extends Controller
             'requirements.*.contact_family_id' => ['nullable', 'integer', 'exists:contact_families,id'],
             'requirements.*.activity_type_id' => ['nullable', 'integer', 'exists:activity_types,id'],
             'requirements.*.sub_activity_id' => ['nullable', 'integer', 'exists:sub_activities,id'],
-            'requirements.*.certification_tool_id' => ['nullable', 'integer', 'exists:certification_tools,id'],
+            'requirements.*.certification_instrument_id' => ['nullable', 'integer', 'exists:certification_instruments,id'],
             'requirements.*.certification_role_id' => ['nullable', 'integer', Rule::exists('certification_roles', 'id')->where(fn ($query) => $query->whereNull('certificate_id')->orWhere('certificate_id', $certificate->id ?? 0))],
             'requirements.*.role_index' => ['nullable', 'integer'],
             'requirements.*.target_count' => ['nullable', 'integer', 'min:1'],
@@ -357,10 +357,10 @@ class CertificateController extends Controller
             'requirements.*.dimension_rules.*' => ['array'],
             'requirements.*.dimension_rules.*.id' => ['nullable', 'integer', 'distinct'],
             'requirements.*.dimension_rules.*._delete' => ['nullable', 'boolean'],
-            'requirements.*.dimension_rules.*.certification_tool_dimension_id' => ['nullable', 'integer', 'exists:certification_tool_dimensions,id'],
+            'requirements.*.dimension_rules.*.certification_instrument_dimension_id' => ['nullable', 'integer', 'exists:certification_instrument_dimensions,id'],
             'requirements.*.dimension_rules.*.mode' => ['nullable', 'in:'.implode(',', CertificateDimensionRuleMode::values())],
             'requirements.*.dimension_rules.*.option_ids' => ['nullable', 'array'],
-            'requirements.*.dimension_rules.*.option_ids.*' => ['integer', 'exists:certification_tool_dimension_options,id'],
+            'requirements.*.dimension_rules.*.option_ids.*' => ['integer', 'exists:certification_instrument_dimension_options,id'],
             'requirements.*.dimension_rules.*.min_count' => ['nullable', 'integer', 'min:1'],
         ]);
 
@@ -585,23 +585,23 @@ class CertificateController extends Controller
                 }
             }
 
-            if ($kind === CertificateRequirementKind::ToolSubmission && blank($row['certification_tool_id'] ?? null)) {
-                $validator->errors()->add("requirements.{$index}.certification_tool_id", 'A tool submission requirement must select a tool.');
+            if ($kind === CertificateRequirementKind::ToolSubmission && blank($row['certification_instrument_id'] ?? null)) {
+                $validator->errors()->add("requirements.{$index}.certification_instrument_id", 'A tool submission requirement must select a tool.');
             }
 
-            $toolId = ! empty($row['certification_tool_id']) ? (int) $row['certification_tool_id'] : null;
+            $toolId = ! empty($row['certification_instrument_id']) ? (int) $row['certification_instrument_id'] : null;
 
             if ($kind === CertificateRequirementKind::ToolSubmission && $toolId) {
-                $tool = CertificationTool::query()->with('programs:id')->find($toolId);
+                $tool = CertificationInstrument::query()->with('programs:id')->find($toolId);
 
-                if ($tool instanceof CertificationTool && ! ProjectProgramScope::scopedEntityVisibleToCertificatePrograms(
+                if ($tool instanceof CertificationInstrument && ! ProjectProgramScope::scopedEntityVisibleToCertificatePrograms(
                     $tool->program_scope_mode,
                     $tool->programs->pluck('id'),
                     $certificateMode,
                     $certificateProgramIds,
                 )) {
                     $validator->errors()->add(
-                        "requirements.{$index}.certification_tool_id",
+                        "requirements.{$index}.certification_instrument_id",
                         'The selected tool must be global or share at least one program with this certificate.',
                     );
                 }
@@ -612,16 +612,16 @@ class CertificateController extends Controller
                     continue;
                 }
 
-                if (blank($rule['certification_tool_dimension_id'] ?? null)) {
-                    $validator->errors()->add("requirements.{$index}.dimension_rules.{$ruleIndex}.certification_tool_dimension_id", 'Choose a submission dimension.');
+                if (blank($rule['certification_instrument_dimension_id'] ?? null)) {
+                    $validator->errors()->add("requirements.{$index}.dimension_rules.{$ruleIndex}.certification_instrument_dimension_id", 'Choose a submission dimension.');
 
                     continue;
                 }
 
-                $dimension = CertificationToolDimension::query()->find((int) $rule['certification_tool_dimension_id']);
+                $dimension = CertificationInstrumentDimension::query()->find((int) $rule['certification_instrument_dimension_id']);
 
-                if ($dimension instanceof CertificationToolDimension && $toolId && (int) $dimension->certification_tool_id !== $toolId) {
-                    $validator->errors()->add("requirements.{$index}.dimension_rules.{$ruleIndex}.certification_tool_dimension_id", 'Dimension must belong to the selected tool.');
+                if ($dimension instanceof CertificationInstrumentDimension && $toolId && (int) $dimension->certification_instrument_id !== $toolId) {
+                    $validator->errors()->add("requirements.{$index}.dimension_rules.{$ruleIndex}.certification_instrument_dimension_id", 'Dimension must belong to the selected tool.');
                 }
 
                 $ruleMode = CertificateDimensionRuleMode::tryFrom($rule['mode'] ?? '');
@@ -636,7 +636,7 @@ class CertificateController extends Controller
 
                 if (empty($rule['option_ids'] ?? [])) {
                     $validator->errors()->add("requirements.{$index}.dimension_rules.{$ruleIndex}.option_ids", 'Select at least one category.');
-                } elseif ($dimension instanceof CertificationToolDimension && $dimension->options()->whereIn('id', $rule['option_ids'])->count() !== count(array_unique($rule['option_ids']))) {
+                } elseif ($dimension instanceof CertificationInstrumentDimension && $dimension->options()->whereIn('id', $rule['option_ids'])->count() !== count(array_unique($rule['option_ids']))) {
                     $validator->errors()->add("requirements.{$index}.dimension_rules.{$ruleIndex}.option_ids", 'Categories must belong to the selected dimension.');
                 }
             }
@@ -854,7 +854,7 @@ class CertificateController extends Controller
                 'contact_family_id' => $kind->usesClassification() ? (($row['contact_family_id'] ?? null) ?: null) : null,
                 'activity_type_id' => $kind->usesClassification() ? (($row['activity_type_id'] ?? null) ?: null) : null,
                 'sub_activity_id' => $kind->usesClassification() ? (($row['sub_activity_id'] ?? null) ?: null) : null,
-                'certification_tool_id' => $kind->usesTool() ? (($row['certification_tool_id'] ?? null) ?: null) : null,
+                'certification_instrument_id' => $kind->usesTool() ? (($row['certification_instrument_id'] ?? null) ?: null) : null,
                 'certification_role_id' => filled($row['role_index'] ?? null) ? ($roleIndexToId[$row['role_index']] ?? null) : (($row['certification_role_id'] ?? null) ?: null),
                 'target_count' => $row['target_count'] ?? 1,
                 'requires_passing' => $kind === CertificateRequirementKind::ToolSubmission
@@ -917,12 +917,12 @@ class CertificateController extends Controller
                 continue;
             }
 
-            if (blank($row['certification_tool_dimension_id'] ?? null)) {
+            if (blank($row['certification_instrument_dimension_id'] ?? null)) {
                 continue;
             }
 
             $data = [
-                'certification_tool_dimension_id' => $row['certification_tool_dimension_id'],
+                'certification_instrument_dimension_id' => $row['certification_instrument_dimension_id'],
                 'mode' => $row['mode'] ?? CertificateDimensionRuleMode::Coverage->value,
                 'option_ids' => array_values(array_unique(array_map('intval', $row['option_ids'] ?? []))),
                 'min_count' => ($row['mode'] ?? null) === CertificateDimensionRuleMode::Quota->value ? (($row['min_count'] ?? null) ?: null) : null,

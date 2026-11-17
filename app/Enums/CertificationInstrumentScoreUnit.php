@@ -2,7 +2,7 @@
 
 namespace App\Enums;
 
-enum CertificationToolScoreUnit: string
+enum CertificationInstrumentScoreUnit: string
 {
     case Percent = 'percent';
     case Points = 'points';

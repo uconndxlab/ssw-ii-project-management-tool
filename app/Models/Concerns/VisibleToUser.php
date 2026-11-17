@@ -7,7 +7,7 @@ use App\Models\ActivityType;
 use App\Models\Agreement;
 use App\Models\Certificate;
 use App\Models\CertificationCandidate;
-use App\Models\CertificationTool;
+use App\Models\CertificationInstrument;
 use App\Models\ContactFamily;
 use App\Models\LoggingField;
 use App\Models\Organization;
@@ -45,7 +45,7 @@ trait VisibleToUser
             LoggingField::class,
             ActivityType::class,
             SubActivity::class,
-            CertificationTool::class,
+            CertificationInstrument::class,
             Certificate::class => $access->applyScopedEntityVisibility($query),
             default => $query,
         };

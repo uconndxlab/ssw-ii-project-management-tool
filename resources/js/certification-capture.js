@@ -106,8 +106,8 @@ function initCertificationCapture() {
             for (const sub of row.submissions) {
                 if (sub.editable === false) continue;
                 const name = `${prefix}[submissions][${sub.key}]`;
-                if (!form.elements.namedItem(`${name}[certification_tool_id]`) || Number(sub._delete)) continue;
-                for (const key of ['certification_tool_id', 'outcome', 'notes']) {
+                if (!form.elements.namedItem(`${name}[certification_instrument_id]`) || Number(sub._delete)) continue;
+                for (const key of ['certification_instrument_id', 'outcome', 'notes']) {
                     const input = form.elements.namedItem(`${name}[${key}]`);
                     if (input) sub[key] = input.value;
                 }
@@ -123,7 +123,7 @@ function initCertificationCapture() {
     }
     function submission(row, sub) {
         const name = `certification_candidates[${row.key}][submissions][${sub.key}]`;
-        const tool = tools.find(t => Number(t.id) === Number(sub.certification_tool_id));
+        const tool = tools.find(t => Number(t.id) === Number(sub.certification_instrument_id));
         const editable = sub.editable !== false && coach(tool, personFor(row));
         const deleted = Boolean(Number(sub._delete));
         const outcome = { passed: 'Passed', not_passed: 'Did not pass', not_scored: 'Not scored' }[sub.outcome] || 'Choose outcome';
@@ -137,9 +137,9 @@ function initCertificationCapture() {
         }
         if (deleted && !sub.id) return html + '</div>';
         html += hidden(`${name}[id]`, sub.id || '') + hidden(`${name}[_delete]`, deleted ? 1 : 0);
-        if (deleted) return html + hidden(`${name}[certification_tool_id]`, sub.certification_tool_id) + '</div>';
+        if (deleted) return html + hidden(`${name}[certification_instrument_id]`, sub.certification_instrument_id) + '</div>';
         html += `<div class="p-3"${row.openSubmission === sub.key ? '' : ' hidden'}>`;
-        html += sub.id ? hidden(`${name}[certification_tool_id]`, sub.certification_tool_id) : field('Tool', `${name}[certification_tool_id]`, select(`${name}[certification_tool_id]`, allowed, sub.certification_tool_id, 'Choose a tool…', true), true, 'Tools used by this candidate’s certificates appear first.');
+        html += sub.id ? hidden(`${name}[certification_instrument_id]`, sub.certification_instrument_id) : field('Tool', `${name}[certification_instrument_id]`, select(`${name}[certification_instrument_id]`, allowed, sub.certification_instrument_id, 'Choose a tool…', true), true, 'Tools used by this candidate’s certificates appear first.');
         if (tool) {
             if (!tool.active || !overlap(tool)) html += '<p class="text-warning-emphasis small">This saved tool is unavailable for new submissions. Its evidence is preserved.</p>';
             if (tool.description) html += `<p class="small text-muted">${esc(tool.description)}</p>`;
@@ -164,7 +164,7 @@ function initCertificationCapture() {
         if (row.certification_role_id && !roleOptions.some(role => String(role.id) === String(row.certification_role_id))) roleOptions.push({ id: row.certification_role_id, name: `${row.role_name || 'Saved role'} (unavailable)` });
         const savedCount = Number(row.submission_count || 0);
         const count = row.submissions.length ? row.submissions.filter(sub => !Number(sub._delete)).length : savedCount;
-        const removable = !savedCount || (row.submissions.length === savedCount && row.submissions.every(sub => sub.editable !== false && coach(tools.find(tool => Number(tool.id) === Number(sub.certification_tool_id)), personFor(row))));
+        const removable = !savedCount || (row.submissions.length === savedCount && row.submissions.every(sub => sub.editable !== false && coach(tools.find(tool => Number(tool.id) === Number(sub.certification_instrument_id)), personFor(row))));
         let html = `<div class="border rounded mb-2 bg-white${deleted ? ' opacity-75' : ''}" data-candidate="${esc(row.key)}">`;
         html += hidden(`${name}[id]`, row.id || '') + hidden(`${name}[certification_candidate_id]`, row.certification_candidate_id) + hidden(`${name}[agreement_id]`, row.agreement_id) + hidden(`${name}[_delete]`, deleted ? 1 : 0);
         html += `<div class="d-flex align-items-center flex-wrap gap-2 p-2"><strong class="${deleted ? 'text-decoration-line-through' : ''}">${esc(person?.name || 'Saved candidate')}</strong><span class="small text-muted">${esc(roleOptions.find(role => String(role.id) === String(row.certification_role_id))?.name || 'No role')} · ${esc(row.completion_units)} unit(s) · ${count} submission(s)</span><div class="d-flex gap-2 ms-auto">${!deleted ? `<button type="button" class="btn btn-sm btn-outline-secondary" data-candidate-action="edit" aria-expanded="${open === row.key}">${open === row.key ? 'Done editing' : 'Edit'}</button>` : ''}${removable ? `<button type="button" class="btn btn-sm btn-outline-${deleted ? 'secondary' : 'danger'}" data-candidate-action="${deleted ? 'undo' : 'remove'}">${deleted ? 'Undo removal' : 'Remove'}</button>` : ''}</div></div>`;
@@ -293,7 +293,7 @@ function initCertificationCapture() {
             if (action === 'add-submission') {
                 open = row.key;
                 row.openSubmission = String(Math.max(0, ...row.submissions.map(sub => Number(sub.key) + 1)));
-                row.submissions.push({ key: row.openSubmission, certification_tool_id: '', outcome: '', dimensions: {}, scores: {} });
+                row.submissions.push({ key: row.openSubmission, certification_instrument_id: '', outcome: '', dimensions: {}, scores: {} });
             }
         }
         const subEl = button.closest('[data-submission]');
@@ -343,7 +343,7 @@ function initCertificationCapture() {
             }
             return;
         }
-        if (event.target.name?.endsWith('[certification_tool_id]')) { capture(); render(); }
+        if (event.target.name?.endsWith('[certification_instrument_id]')) { capture(); render(); }
     });
     function scopeChanged() { capture(); render(); restrictPicker(); }
     form.addEventListener('project-program-scope:change', scopeChanged);
