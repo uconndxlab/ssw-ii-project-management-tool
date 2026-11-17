@@ -8,7 +8,7 @@
         @endif
         @if($requirement->requires_passing) · Passing required @endif
     </p>
-    @if($requirement->certificationInstrument)<p class="small mb-1">Tool: {{ $requirement->certificationInstrument->name }}</p>@endif
+    @if($requirement->certificationInstrument)<p class="small mb-1">{{ $requirement->certificationInstrument->type->label() }}: {{ $requirement->certificationInstrument->name }}</p>@endif
     @if($requirement->contactFamily || $requirement->activityType)<p class="small mb-1">Activity: {{ $requirement->contactFamily?->name }}{{ $requirement->activityType ? ' · ' . $requirement->activityType->name . ($requirement->subActivity ? ' › ' . $requirement->subActivity->name : '') : '' }}</p>@endif
     @if($requirement->certificationRole)<p class="small mb-1">Role: {{ $requirement->certificationRole->name }}</p>@endif
     @foreach($requirement->dimensionRules as $rule)

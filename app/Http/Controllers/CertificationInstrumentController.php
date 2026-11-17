@@ -134,9 +134,7 @@ class CertificationInstrumentController extends Controller
 
         $projects = ProjectProgramScope::assignableProjectsWithProgramsFor($this->actor(), $certificationInstrument);
         $certificationInstrument->load(['programs.projects', 'dimensions.options', 'scoreFields']);
-        $usedOptionIds = DB::table('certification_instrument_submission_dimension_values')
-            ->whereIn('certification_instrument_dimension_id', $certificationInstrument->dimensions->modelKeys())
-            ->distinct()->pluck('certification_instrument_dimension_option_id')->map(fn ($id) => (int) $id)->all();
+        $usedOptionIds = $this->usedOptionIds($certificationInstrument);
         $typeLocked = $this->isUsed($certificationInstrument);
 
         return view('admin.certification-instruments.edit', compact('certificationInstrument', 'projects', 'usedOptionIds', 'typeLocked'));
@@ -189,6 +187,14 @@ class CertificationInstrumentController extends Controller
             ->with('success', ucfirst($label).' deleted successfully.');
     }
 
+    /** @return array<int> options chosen on recorded submissions; they can't be removed or rescored */
+    private function usedOptionIds(CertificationInstrument $instrument): array
+    {
+        return DB::table('certification_instrument_submission_dimension_values')
+            ->whereIn('certification_instrument_dimension_id', $instrument->dimensions()->pluck('id'))
+            ->distinct()->pluck('certification_instrument_dimension_option_id')->map(fn ($id) => (int) $id)->all();
+    }
+
     private function isUsed(CertificationInstrument $instrument): bool
     {
         return $instrument->requirements()->exists() || CertificationInstrumentSubmission::query()->where('certification_instrument_id', $instrument->id)->exists();
@@ -208,7 +214,7 @@ class CertificationInstrumentController extends Controller
         }
 
         return [[
-            'id' => $instrument?->dimensions()->where('type', CertificationInstrumentDimensionType::Sections->value)->value('id'),
+            'id' => $instrument?->sectionsDimension()?->id,
             'name' => 'Sections',
             'type' => CertificationInstrumentDimensionType::Sections->value,
             'options' => is_array($input['sections'] ?? null) ? $input['sections'] : [],
@@ -223,7 +229,7 @@ class CertificationInstrumentController extends Controller
         $request->merge(['type' => $request->input('type') ?: ($certificationInstrument !== null ? $certificationInstrument->type->value : CertificationInstrumentType::Tool->value)]);
         $validator = Validator::make($request->all(), [
             'name' => ['required', 'string', 'max:255', 'unique:certification_instruments,name,'.($certificationInstrument !== null ? $certificationInstrument->id : 'NULL').',id'],
-            'type' => ['nullable', 'in:'.implode(',', CertificationInstrumentType::values())],
+            'type' => ['required', 'in:'.implode(',', CertificationInstrumentType::values())],
             'description' => ['nullable', 'string'],
             'active' => ['boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
@@ -297,16 +303,12 @@ class CertificationInstrumentController extends Controller
         $dimensions = collect($this->dimensionRows($request->all(), $tool))->filter(fn ($row) => is_array($row) && ! filter_var($row['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN) && filled($row['name'] ?? null));
         $dimensionIds = $dimensions->pluck('id')->filter()->all();
         $optionIds = $dimensions->flatMap(fn ($row) => collect(is_array($row['options'] ?? null) ? $row['options'] : [])->filter(fn ($option) => is_array($option) && ! filter_var($option['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN) && filled($option['label'] ?? null))->pluck('id'))->filter()->all();
-        $used = DB::table('certification_instrument_submission_dimension_values')->whereIn('certification_instrument_dimension_id', $tool->dimensions()->pluck('id'))->get();
-        $key = $tool->isTraining() ? 'sections' : 'dimensions';
-        foreach ($used as $value) {
-            if (! in_array($value->certification_instrument_dimension_id, $dimensionIds) || ! in_array($value->certification_instrument_dimension_option_id, $optionIds)) {
-                $validator->errors()->add($key, ($tool->isTraining() ? 'Sections' : 'Dimensions and options').' used by recorded submissions cannot be removed. Retire the '.strtolower($tool->type->label()).' instead.');
-                break;
-            }
+        $usedOptionIds = $this->usedOptionIds($tool);
+        $usedOptions = CertificationInstrumentDimensionOption::query()->whereKey($usedOptionIds)->get(['id', 'certification_instrument_dimension_id', 'scored']);
+        if ($usedOptions->contains(fn ($option) => ! in_array($option->certification_instrument_dimension_id, $dimensionIds) || ! in_array($option->id, $optionIds))) {
+            $validator->errors()->add($tool->isTraining() ? 'sections' : 'dimensions', ($tool->isTraining() ? 'Sections' : 'Dimensions and options').' used by recorded submissions cannot be removed. Retire the '.strtolower($tool->type->label()).' instead.');
         }
-        $usedOptionIds = $used->pluck('certification_instrument_dimension_option_id')->map(fn ($id) => (int) $id)->all();
-        $scoredById = CertificationInstrumentDimensionOption::query()->whereKey($usedOptionIds)->pluck('scored', 'id');
+        $scoredById = $usedOptions->pluck('scored', 'id');
         foreach ($request->input('sections', []) ?? [] as $index => $row) {
             $id = is_array($row) ? (int) ($row['id'] ?? 0) : 0;
             if ($tool->isTraining() && $scoredById->has($id) && filter_var($row['scored'] ?? false, FILTER_VALIDATE_BOOLEAN) !== (bool) $scoredById->get($id)) {

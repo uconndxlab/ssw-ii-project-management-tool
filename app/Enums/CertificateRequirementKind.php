@@ -18,10 +18,10 @@ enum CertificateRequirementKind: string
     public function label(): string
     {
         return match ($this) {
-            self::ActivityCount => 'Logged Activities',
-            self::ToolSubmission => 'Tool Submissions',
-            self::TrainingSections => 'Training Sections',
-            self::Attestation => 'Manual Attestation',
+            self::ActivityCount => 'Activity work',
+            self::ToolSubmission => 'Tool submissions',
+            self::TrainingSections => 'Training sections',
+            self::Attestation => 'Coach confirmation',
         };
     }
 
@@ -35,7 +35,8 @@ enum CertificateRequirementKind: string
         };
     }
 
-    public function usesTool(): bool
+    /** Tool submissions and training sections both count submissions of one instrument. */
+    public function usesInstrument(): bool
     {
         return $this === self::ToolSubmission || $this === self::TrainingSections;
     }

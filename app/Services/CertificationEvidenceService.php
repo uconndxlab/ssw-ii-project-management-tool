@@ -341,7 +341,10 @@ class CertificationEvidenceService
         $dimension = $tool->sectionsDimension();
         $ticked = array_values(array_unique(array_map('intval', $row['sections'] ?? [])));
         $results = array_filter($row['section_results'] ?? [], fn ($result) => filled($result));
-        if (! empty($row['dimensions']) || ! $dimension instanceof CertificationInstrumentDimension || $ticked === []) {
+        if (! empty($row['dimensions'])) {
+            $this->invalid($key.'.dimensions', 'Trainings record sections, not dimensions.');
+        }
+        if (! $dimension instanceof CertificationInstrumentDimension || $ticked === []) {
             $this->invalid($key.'.sections', 'Tick at least one section covered in this submission.');
         }
         if (array_diff($ticked, $dimension->options->modelKeys()) !== [] || array_diff(array_map('intval', array_keys($results)), $ticked) !== []) {

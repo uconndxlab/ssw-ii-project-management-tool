@@ -30,8 +30,8 @@
         <x-form-field label="Work to count" :for="'req-'.$reqIndex.'-kind'" :name="$prefix.'.kind'">
             <select class="form-select" id="req-{{ $reqIndex }}-kind" name="{{ $field }}[kind]" data-cert-kind>
                 <option value="">Choose requirement type…</option>
-                @foreach(['activity_count' => 'Activity work', 'tool_submission' => 'Tool submissions', 'training_sections' => 'Training sections', 'attestation' => 'Coach confirmation'] as $value => $label)
-                    <option value="{{ $value }}" @selected($kind === $value)>{{ $label }}</option>
+                @foreach(\App\Enums\CertificateRequirementKind::cases() as $kindCase)
+                    <option value="{{ $kindCase->value }}" @selected($kind === $kindCase->value)>{{ $kindCase->label() }}</option>
                 @endforeach
             </select>
         </x-form-field>

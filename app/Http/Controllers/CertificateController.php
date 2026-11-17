@@ -6,7 +6,6 @@ use App\Enums\CertificateDimensionRuleMode;
 use App\Enums\CertificateGroupSatisfyMode;
 use App\Enums\CertificateRequirementKind;
 use App\Enums\CertificateRequirementPhase;
-use App\Enums\CertificationInstrumentDimensionType;
 use App\Enums\ProgramScopeMode;
 use App\Models\ActivityType;
 use App\Models\Certificate;
@@ -582,7 +581,7 @@ class CertificateController extends Controller
                 }
             }
 
-            if ($kind?->usesTool() !== true) {
+            if ($kind?->usesInstrument() !== true) {
                 foreach ($row['dimension_rules'] ?? [] as $rule) {
                     if (! filter_var($rule['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
                         $validator->errors()->add("requirements.{$index}.kind", 'Remove the submission rules before changing the requirement kind.');
@@ -593,14 +592,14 @@ class CertificateController extends Controller
 
             $isTraining = $kind === CertificateRequirementKind::TrainingSections;
 
-            if ($kind?->usesTool() && blank($row['certification_instrument_id'] ?? null)) {
+            if ($kind?->usesInstrument() && blank($row['certification_instrument_id'] ?? null)) {
                 $validator->errors()->add("requirements.{$index}.certification_instrument_id", $isTraining ? 'A training sections requirement must select a training.' : 'A tool submission requirement must select a tool.');
             }
 
             $toolId = ! empty($row['certification_instrument_id']) ? (int) $row['certification_instrument_id'] : null;
             $tool = null;
 
-            if ($kind?->usesTool() && $toolId) {
+            if ($kind?->usesInstrument() && $toolId) {
                 $tool = CertificationInstrument::query()->with(['programs:id', 'dimensions.options'])->find($toolId);
 
                 if ($tool instanceof CertificationInstrument && $tool->isTraining() !== $isTraining) {
@@ -898,10 +897,10 @@ class CertificateController extends Controller
                 'contact_family_id' => $kind->usesClassification() ? (($row['contact_family_id'] ?? null) ?: null) : null,
                 'activity_type_id' => $kind->usesClassification() ? (($row['activity_type_id'] ?? null) ?: null) : null,
                 'sub_activity_id' => $kind->usesClassification() ? (($row['sub_activity_id'] ?? null) ?: null) : null,
-                'certification_instrument_id' => $kind->usesTool() ? (($row['certification_instrument_id'] ?? null) ?: null) : null,
+                'certification_instrument_id' => $kind->usesInstrument() ? (($row['certification_instrument_id'] ?? null) ?: null) : null,
                 'certification_role_id' => filled($row['role_index'] ?? null) ? ($roleIndexToId[$row['role_index']] ?? null) : (($row['certification_role_id'] ?? null) ?: null),
                 'target_count' => $row['target_count'] ?? 1,
-                'requires_passing' => $kind->usesTool()
+                'requires_passing' => $kind->usesInstrument()
                     ? filter_var($row['requires_passing'] ?? true, FILTER_VALIDATE_BOOLEAN)
                     : true,
                 'threshold_note' => $row['threshold_note'] ?? null,
@@ -922,11 +921,14 @@ class CertificateController extends Controller
                 $requirement = $certificate->requirements()->create($data);
             }
 
+            $sectionsDimensionId = $kind === CertificateRequirementKind::TrainingSections
+                ? CertificationInstrument::query()->with('dimensions')->find((int) ($row['certification_instrument_id'] ?? 0))?->sectionsDimension()?->id
+                : null;
             $this->syncDimensionRules($requirement, match ($kind) {
                 CertificateRequirementKind::ToolSubmission => $row['dimension_rules'] ?? [],
                 // The sections rule always targets the training's own sections list.
                 CertificateRequirementKind::TrainingSections => array_map(fn ($rule) => is_array($rule) ? array_merge($rule, [
-                    'certification_instrument_dimension_id' => CertificationInstrumentDimension::query()->where('certification_instrument_id', $row['certification_instrument_id'] ?? 0)->where('type', CertificationInstrumentDimensionType::Sections->value)->value('id'),
+                    'certification_instrument_dimension_id' => $sectionsDimensionId,
                 ]) : $rule, $row['dimension_rules'] ?? []),
                 default => [],
             });

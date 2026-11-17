@@ -25,7 +25,7 @@
                         <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
                             <h3 class="h6 mb-0" id="requirement-{{ $requirement->id }}">{{ $requirement->label ?: ($requirement->certificationInstrument?->name ?? ($requirement->activityType ? $requirement->activityType->name.($requirement->subActivity ? ' › '.$requirement->subActivity->name : '') : $requirement->kind->label())) }}</h3>
                             @if($requirement->activityType && ($requirement->label || $requirement->certificationInstrument))<span class="small text-muted">{{ $requirement->activityType->name }}{{ $requirement->subActivity ? ' › '.$requirement->subActivity->name : '' }}</span>@endif
-                            <span class="small text-muted">{{ match ($requirement->kind) { \App\Enums\CertificateRequirementKind::Attestation => 'Coach confirmation', \App\Enums\CertificateRequirementKind::ToolSubmission => 'Tool submissions', \App\Enums\CertificateRequirementKind::TrainingSections => 'Training sections', default => 'Activity work' } }}</span>
+                            <span class="small text-muted">{{ $requirement->kind->label() }}</span>
                             <span class="ms-auto app-status {{ $row['satisfied'] ? 'app-status--success' : 'app-status--neutral' }}">{{ $row['satisfied'] ? 'Met' : 'Not met' }}</span>
                         </div>
                         @if($requirement->kind === \App\Enums\CertificateRequirementKind::Attestation)

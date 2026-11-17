@@ -254,7 +254,7 @@ if (root) {
                 }
             });
         });
-        $('[data-cert-title]', row).textContent = value('[data-cert-label]', row) || ({activity_count: 'Activity work', tool_submission: 'Tool submissions', training_sections: 'Training sections', attestation: 'Coach confirmation'}[kind] ?? 'New requirement');
+        $('[data-cert-title]', row).textContent = value('[data-cert-label]', row) || (kind ? text('[data-cert-kind]', row) : 'New requirement');
         $('[data-cert-summary]', row).textContent = requirementSentence(row, true);
     }
 

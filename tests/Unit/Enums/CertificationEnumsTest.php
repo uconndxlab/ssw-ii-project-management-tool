@@ -17,9 +17,10 @@ test('certificate requirement kind has expected cases and labels', function () {
         'attestation',
     ]);
 
-    expect(CertificateRequirementKind::ActivityCount->label())->toBe('Logged Activities');
-    expect(CertificateRequirementKind::ToolSubmission->label())->toBe('Tool Submissions');
-    expect(CertificateRequirementKind::Attestation->label())->toBe('Manual Attestation');
+    expect(CertificateRequirementKind::ActivityCount->label())->toBe('Activity work');
+    expect(CertificateRequirementKind::ToolSubmission->label())->toBe('Tool submissions');
+    expect(CertificateRequirementKind::TrainingSections->label())->toBe('Training sections');
+    expect(CertificateRequirementKind::Attestation->label())->toBe('Coach confirmation');
 });
 
 test('certificate requirement phase has expected cases and labels', function () {
