@@ -289,7 +289,7 @@ Header actions are captured once and repeated in the compact bar. In the full he
 
 Form headers are sticky. Once the full header scrolls out of view a compact bar slides in at the top of the form column without moving the page: back link to the parent crumb, title, status and actions. The bar is the same white surface and buttons as the full header, condensed, with a hairline and the bar shadow; it no longer inverts to dark. Form headers take `save-label`, `form-id` and `last-saved-at`.
 
-Breadcrumbs show route hierarchy, independent of navigation history: resource index → record on show pages, resource index → Create on create pages, resource index → record → Edit where a show route exists. The current crumb exposes `aria-current="page"`. `RouteBreadcrumbs` supplies the hierarchy and the form Cancel target (the record or list page the user came from, else the parent crumb).
+Breadcrumbs show route hierarchy, independent of navigation history: resource index → record on show pages, resource index → Create on create pages, resource index → record → Edit where a show route exists. The current crumb exposes `aria-current="page"`. Crumb links are ink (`--app-ink`) and turn accent ink with an underline on hover; the current crumb stays muted. `RouteBreadcrumbs` supplies the hierarchy and the form Cancel target (the record or list page the user came from, else the parent crumb).
 
 ### Cards / Containers
 

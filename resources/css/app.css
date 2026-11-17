@@ -183,6 +183,16 @@ main {
     min-width: 0;
 }
 
+.app-breadcrumbs a {
+    color: var(--app-ink);
+}
+
+.app-breadcrumbs a:hover,
+.app-breadcrumbs a:focus-visible {
+    color: var(--app-accent-ink);
+    text-decoration: underline !important;
+}
+
 .app-record-facts dt {
     color: var(--app-muted);
     font-size: 0.8125rem;
