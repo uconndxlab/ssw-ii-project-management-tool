@@ -31,6 +31,9 @@
                     <th>
                         <x-table-sort-link column="activity_type" label="Activity Type" :sort="$s" :direction="$d" :url="$url('activity_type')" :target="$activityTarget" :push-url="!$embedded" />
                     </th>
+                    @if($hideAgreement)
+                        <th>Organizations</th>
+                    @endif
                     <th>Project</th>
                     <th>Program</th>
                     <th>
@@ -68,6 +71,11 @@
                     <td data-label="Type">
                         <span class="app-tag">{{ $activity->classificationLabel() }}</span>
                     </td>
+                    @if($hideAgreement)
+                        <td data-label="Organizations">
+                            <x-table-badge-list kind="organization" :items="$activity->organizations" route-name="organizations.show" />
+                        </td>
+                    @endif
                     <td data-label="Project">
                         <x-table-badge-list kind="project" :items="$activity->projects" route-name="projects.show" />
                     </td>
