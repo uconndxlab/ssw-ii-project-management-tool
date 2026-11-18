@@ -116,6 +116,20 @@ it('exports the union of answered fields with display values and escapes formula
         ->and(array_slice($rows[2], 11))->toBe(['', '', 'Original.pdf', 'No']);
 });
 
+it('exports the option label for a single select answer', function () {
+    $agreement = Agreement::factory()->create();
+    $activity = Activity::factory()->hasAttached($agreement)->create();
+    $select = LoggingField::factory()->create([
+        'name' => 'Level of Support', 'field_type' => 'select',
+        'options_json' => [['id' => '5889de7b-4d3d-4934-a027-8cdcc6afee3f', 'label' => 'Intensive']],
+    ]);
+    ActivityLoggingFieldAnswer::factory()->for($activity)->for($select)->text('5889de7b-4d3d-4934-a027-8cdcc6afee3f')->create();
+
+    $response = $this->actingAs(createSystemAdmin())->post(route('agreements.reports.store', $agreement))->assertOk();
+
+    expect(agreementReportRows($response->streamedContent())[1][11])->toBe('Intensive');
+});
+
 it('labels each logging field column with where it was asked', function () {
     $agreement = Agreement::factory()->create(['name' => 'Texas Agreement']);
     $other = Agreement::factory()->create(['name' => 'Ohio Agreement']);
