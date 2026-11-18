@@ -327,7 +327,7 @@
                                                             @elseif(is_bool($value))
                                                                 {{ $value ? 'Yes' : 'No' }}
                                                             @elseif($hasRenderableValue($value))
-                                                                {{ $value }}
+                                                                {{ $optionLabelMap[(string) $value] ?? $value }}
                                                             @else
                                                                 <span class="text-muted">-</span>
                                                             @endif
@@ -372,7 +372,7 @@
                                             @elseif(is_bool($value))
                                                 {{ $value ? 'Yes' : 'No' }}
                                             @elseif($hasRenderableValue($value))
-                                                {{ $value }}
+                                                {{ $optionLabelMap[(string) $value] ?? $value }}
                                             @else
                                                 <span class="text-muted">-</span>
                                             @endif
@@ -409,7 +409,7 @@
                                             @elseif(is_bool($value))
                                                 {{ $value ? 'Yes' : 'No' }}
                                             @elseif($hasRenderableValue($value))
-                                                {{ $value }}
+                                                {{ $optionLabelMap[(string) $value] ?? $value }}
                                             @else
                                                 <span class="text-muted">-</span>
                                             @endif
@@ -446,7 +446,7 @@
                                             @elseif(is_bool($value))
                                                 {{ $value ? 'Yes' : 'No' }}
                                             @elseif($hasRenderableValue($value))
-                                                {{ $value }}
+                                                {{ $optionLabelMap[(string) $value] ?? $value }}
                                             @else
                                                 <span class="text-muted">-</span>
                                             @endif

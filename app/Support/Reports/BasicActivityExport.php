@@ -108,9 +108,8 @@ class BasicActivityExport
         }
 
         $value = $answer->value;
+        $labels = $field->optionLabelMap();
         if (is_array($value)) {
-            $labels = $field->optionLabelMap();
-
             return implode('; ', array_map(fn ($selected) => $labels[(string) $selected] ?? (string) $selected, $value));
         }
 
@@ -118,7 +117,7 @@ class BasicActivityExport
             return $value ? 'Yes' : 'No';
         }
 
-        return (string) $value;
+        return $labels[(string) $value] ?? (string) $value;
     }
 
     /**
