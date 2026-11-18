@@ -3,6 +3,7 @@
 use App\Models\Activity;
 use App\Models\ActivityType;
 use App\Models\Agreement;
+use App\Models\Organization;
 
 it('shows agreement sections and reporting downloads to system admins', function () {
     $agreement = Agreement::factory()->create();
@@ -79,6 +80,28 @@ it('keeps embedded activity visibility identical to the activities index', funct
     $this->get(route('activities.index', ['embedded' => 1, 'agreement_id' => $agreement->id]), ['HX-Request' => 'true'])
         ->assertOk()
         ->assertViewHas('activities', fn ($activities) => $activities->pluck('id')->all() === $expectedIds);
+});
+
+it('links viewable organizations and shows restricted organization names in embedded agreement activities', function () {
+    [, $program] = createProjectWithProgram();
+    $viewer = createProgramViewer($program);
+    $agreement = Agreement::factory()->hasAttached($program)->create();
+    $activity = Activity::factory()->hasAttached($agreement)->hasAttached($program)->create();
+    $visible = Organization::factory()->hasAttached($program)->create(['name' => 'Accessible Organization']);
+    $restricted = Organization::factory()->create(['name' => 'Restricted Organization']);
+    $activity->organizations()->attach([$visible->id, $restricted->id]);
+
+    $response = $this->actingAs($viewer)
+        ->get(route('activities.index', ['embedded' => 1, 'agreement_id' => $agreement->id]), ['HX-Request' => 'true']);
+
+    $response->assertOk()
+        ->assertSee('<th>Organizations</th>', false)
+        ->assertSee('data-label="Organizations"', false)
+        ->assertDontSee('data-label="Agreement"', false)
+        ->assertSee($visible->name)
+        ->assertSee('href="'.route('organizations.show', $visible).'"', false)
+        ->assertSee($restricted->name)
+        ->assertDontSee('href="'.route('organizations.show', $restricted).'"', false);
 });
 
 it('denies embedded access to agreements the actor cannot view', function () {
