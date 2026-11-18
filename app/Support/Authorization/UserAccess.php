@@ -57,7 +57,7 @@ class UserAccess
     private array $visibleUserIds = [];
 
     /** @var array<int, bool> */
-    private array $activityActionLogScopeIds = [];  
+    private array $activityActionLogScopeIds = [];
 
     /** @var Collection<int, UserPrivilege>|null */
     private ?Collection $privileges = null;
