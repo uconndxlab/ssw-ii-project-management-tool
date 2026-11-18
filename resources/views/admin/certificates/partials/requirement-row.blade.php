@@ -77,6 +77,7 @@
                                 <option value="">Any activity type</option>
                                 @foreach($activityTypes as $type)<option value="{{ $type->id }}" data-family="{{ $type->contact_family_id }}" @selected((string)($row['activity_type_id'] ?? '') === (string)$type->id)>{{ $type->name }}</option>@endforeach
                             </select>
+                            <div class="form-text" data-cert-type-locked hidden>Set by the selected training.</div>
                         </x-form-field>
                     </div>
                 </div>
@@ -100,7 +101,7 @@
                     <select class="form-select" id="req-{{ $reqIndex }}-tool" name="{{ $field }}[certification_instrument_id]" data-cert-tool>
                         <option value="">Select…</option>
                         @foreach($certificationInstruments as $tool)
-                            <option value="{{ $tool->id }}" data-type="{{ $tool->type->value }}" data-scope-mode="{{ $tool->program_scope_mode->value }}" data-program-ids="{{ $tool->programs->pluck('id')->implode(',') }}" @selected((string)($row['certification_instrument_id'] ?? '') === (string)$tool->id)>{{ $tool->name }}{{ $tool->retired_at ? ' (retired)' : '' }}</option>
+                            <option value="{{ $tool->id }}" data-type="{{ $tool->type->value }}" data-activity-type="{{ $tool->activity_type_id }}" data-scope-mode="{{ $tool->program_scope_mode->value }}" data-program-ids="{{ $tool->programs->pluck('id')->implode(',') }}" @selected((string)($row['certification_instrument_id'] ?? '') === (string)$tool->id)>{{ $tool->name }}{{ $tool->retired_at ? ' (retired)' : '' }}</option>
                         @endforeach
                     </select>
                     <div class="form-text" data-cert-tool-empty hidden>

@@ -157,7 +157,8 @@ function initCertificationCapture() {
         const deleted = Boolean(Number(sub._delete));
         const training = tool?.type === 'training';
         const outcome = { passed: 'Passed', not_passed: 'Did not pass', not_scored: 'Not scored' }[sub.outcome] || (training ? 'Not scored' : 'Choose outcome');
-        const allowed = tools.filter(t => t.active && overlap(t) && coach(t, personFor(row))).sort((a, b) => {
+        // A training is only offered on its own activity type; tools go on any activity.
+        const allowed = tools.filter(t => t.active && overlap(t) && coach(t, personFor(row)) && (t.type !== 'training' || Number(t.activity_type_id) === Number(form.querySelector('#activity_type_id')?.value))).sort((a, b) => {
             const matches = matching(personFor(row)).map(req => Number(req.tool_id));
             return Number(matches.includes(b.id)) - Number(matches.includes(a.id));
         });

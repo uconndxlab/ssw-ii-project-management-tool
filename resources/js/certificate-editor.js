@@ -176,6 +176,15 @@ if (root) {
         });
         const familySelect = $('[data-cert-family]', row);
         const typeSelect = $('[data-cert-type]', row);
+        // A training decides its activity type and family; the server fills them in from the training.
+        const trainingType = kind === 'training_sections' ? $('[data-cert-tool]', row).selectedOptions[0]?.dataset.activityType : '';
+        if (trainingType) {
+            typeSelect.value = trainingType;
+            familySelect.value = typeSelect.selectedOptions[0]?.dataset.family ?? '';
+        }
+        familySelect.disabled = familySelect.disabled || Boolean(trainingType);
+        typeSelect.disabled = typeSelect.disabled || Boolean(trainingType);
+        $('[data-cert-type-locked]', row).hidden = !trainingType;
         if (typeSelect.value && !familySelect.value) familySelect.value = typeSelect.selectedOptions[0]?.dataset.family ?? '';
         [...typeSelect.options].forEach((option) => {
             if (!option.value) return;

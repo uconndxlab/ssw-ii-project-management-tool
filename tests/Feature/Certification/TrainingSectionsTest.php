@@ -2,6 +2,7 @@
 
 use App\Models\Activity;
 use App\Models\ActivityCertificationCandidate;
+use App\Models\ActivityType;
 use App\Models\Certificate;
 use App\Models\CertificateEnrollment;
 use App\Models\CertificateRequirement;
@@ -25,7 +26,7 @@ function trainingFixture(): array
 {
     $f = certificationActivityFixture();
     UserCertificationDuty::factory()->coach()->atProgram($f['program'])->create(['user_id' => $f['actor']->id]);
-    $training = CertificationInstrument::factory()->training()->forProgram($f['program'])->create(['name' => 'W101']);
+    $training = CertificationInstrument::factory()->training()->forProgram($f['program'])->create(['name' => 'W101', 'activity_type_id' => $f['type']->id]);
     $sections = CertificationInstrumentDimension::factory()->for($training, 'instrument')->create(['name' => 'Sections', 'type' => 'sections']);
     $s1 = CertificationInstrumentDimensionOption::factory()->for($sections, 'dimension')->create(['label' => 'Section 1', 'scored' => true, 'sort_order' => 1]);
     $s2 = CertificationInstrumentDimensionOption::factory()->for($sections, 'dimension')->create(['label' => 'Section 2', 'scored' => true, 'sort_order' => 2]);
@@ -66,8 +67,9 @@ function trainingSectionsResult(array $f, CertificateRequirement $requirement): 
 
 test('an admin builds a training with scored and unscored sections and a pass fail score field', function () {
     $admin = createSystemAdmin();
+    $activityType = ActivityType::factory()->create();
     $payload = toolStorePayload([
-        'name' => 'Wraparound 101', 'type' => 'training', 'dimensions' => [],
+        'name' => 'Wraparound 101', 'type' => 'training', 'activity_type_id' => $activityType->id, 'dimensions' => [],
         'sections' => [['label' => 'Engagement', 'scored' => '1'], ['label' => 'Planning', 'scored' => '0']],
         'score_fields' => [['name' => 'Overall', 'unit' => 'pass_fail']],
     ]);
@@ -76,6 +78,7 @@ test('an admin builds a training with scored and unscored sections and a pass fa
 
     $training = CertificationInstrument::query()->where('name', 'Wraparound 101')->sole();
     expect($training->type->value)->toBe('training')
+        ->and($training->activity_type_id)->toBe($activityType->id)
         ->and($training->dimensions->sole()->type->value)->toBe('sections')
         ->and($training->sectionsDimension()->options->pluck('scored', 'label')->all())->toBe(['Engagement' => true, 'Planning' => false])
         ->and($training->scoreFields->sole()->unit->value)->toBe('pass_fail');
@@ -94,8 +97,11 @@ test('a used training keeps its type, section scoring and pass fail units', func
 
     $this->actingAs($f['actor'])->put(route('certification-instruments.update', $f['training']), $base + ['type' => 'tool'])
         ->assertSessionHasErrors(['type', 'sections.0.scored', 'score_fields.1.unit']);
+    $this->actingAs($f['actor'])->put(route('certification-instruments.update', $f['training']), $base + ['type' => 'training', 'activity_type_id' => ActivityType::factory()->create()->id])
+        ->assertSessionHasErrors(['activity_type_id']);
 
     expect($f['training']->fresh()->type->value)->toBe('training')
+        ->and($f['training']->fresh()->activity_type_id)->toBe($f['type']->id)
         ->and($f['s1']->fresh()->scored)->toBeTrue()
         ->and($numeric->fresh()->unit->value)->toBe('number');
 });
@@ -173,6 +179,7 @@ test('invalid training submissions roll back the activity', function (string $ca
         'section from another training' => [$submission['sections'] = [CertificationInstrumentDimensionOption::factory()->create()->id], $key.'sections'][1],
         'no sections' => [$submission = ['sections' => [], 'section_results' => []] + $submission, $key.'sections'][1],
         'pass fail score other than 0 or 1' => [$submission['scores'] = [$f['passFail']->id => '2'], $key.'scores.'.$f['passFail']->id][1],
+        'training of another activity type' => [$f['training']->update(['activity_type_id' => ActivityType::factory()->create()->id]), $key.'certification_instrument_id'][1],
     };
     $payload = $f['payload'];
     $payload['certification_candidates'][0]['submissions'] = [$submission];
@@ -180,7 +187,38 @@ test('invalid training submissions roll back the activity', function (string $ca
     $this->actingAs($f['actor'])->post(route('activities.store'), $payload)->assertSessionHasErrors($error);
 
     $this->assertDatabaseCount('activities', 0);
-})->with(['scored section without a result', 'unscored section with a result', 'section from another training', 'no sections', 'pass fail score other than 0 or 1']);
+})->with(['scored section without a result', 'unscored section with a result', 'section from another training', 'no sections', 'pass fail score other than 0 or 1', 'training of another activity type']);
+
+test('a training needs an activity type and a tool never keeps one', function () {
+    $admin = createSystemAdmin();
+
+    $this->actingAs($admin)->post(route('certification-instruments.store'), toolStorePayload(['name' => 'W101', 'type' => 'training', 'dimensions' => [], 'sections' => [['label' => 'Engagement']]]))
+        ->assertSessionHasErrors(['activity_type_id']);
+    $this->actingAs($admin)->post(route('certification-instruments.store'), toolStorePayload(['activity_type_id' => ActivityType::factory()->create()->id]))
+        ->assertSessionHasNoErrors();
+
+    expect(CertificationInstrument::query()->sole()->activity_type_id)->toBeNull();
+});
+
+test('a training sections requirement takes its activity type and family from the training', function () {
+    $admin = createSystemAdmin();
+    $payload = minimalCertificatePayload();
+    $program = Program::query()->findOrFail($payload['program_ids'][0]);
+    $training = CertificationInstrument::factory()->training()->forProgram($program)->create();
+    $sections = CertificationInstrumentDimension::factory()->for($training, 'instrument')->create(['name' => 'Sections', 'type' => 'sections']);
+    $option = CertificationInstrumentDimensionOption::factory()->for($sections, 'dimension')->create();
+    $otherType = ActivityType::factory()->create();
+    $payload['requirements'] = [[
+        'phase' => 'initial', 'kind' => 'training_sections', 'certification_instrument_id' => $training->id, 'target_count' => 1,
+        'activity_type_id' => $otherType->id, 'contact_family_id' => $otherType->contact_family_id,
+        'dimension_rules' => ['sections' => ['mode' => 'coverage', 'option_ids' => [$option->id]]],
+    ]];
+
+    $this->actingAs($admin)->post(route('certificates.store'), $payload)->assertSessionHasNoErrors();
+
+    expect(Certificate::query()->where('name', 'Validation Cert')->sole()->requirements->sole()->only(['activity_type_id', 'contact_family_id']))
+        ->toBe(['activity_type_id' => $training->activity_type_id, 'contact_family_id' => $training->activityType->contact_family_id]);
+});
 
 test('a training sections requirement stores its sections rule on the training sections list', function () {
     $admin = createSystemAdmin();

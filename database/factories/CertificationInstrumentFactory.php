@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Enums\CertificationInstrumentType;
 use App\Enums\ProgramScopeMode;
+use App\Models\ActivityType;
 use App\Models\CertificationInstrument;
 use App\Models\Program;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -28,6 +29,7 @@ class CertificationInstrumentFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'type' => CertificationInstrumentType::Training,
+            'activity_type_id' => ActivityType::factory(),
         ]);
     }
 

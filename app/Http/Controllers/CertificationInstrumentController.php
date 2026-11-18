@@ -6,6 +6,7 @@ use App\Enums\CertificationInstrumentDimensionType;
 use App\Enums\CertificationInstrumentScoreUnit;
 use App\Enums\CertificationInstrumentType;
 use App\Enums\ProgramScopeMode;
+use App\Models\ActivityType;
 use App\Models\CertificationInstrument;
 use App\Models\CertificationInstrumentDimension;
 use App\Models\CertificationInstrumentDimensionOption;
@@ -19,6 +20,7 @@ use App\Support\TablePagination;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -90,8 +92,9 @@ class CertificationInstrumentController extends Controller
         $this->authorize('create', CertificationInstrument::class);
 
         $projects = ProjectProgramScope::assignableProjectsWithProgramsFor($this->actor());
+        $activityTypes = $this->activityTypeOptions();
 
-        return view('admin.certification-instruments.create', compact('projects'));
+        return view('admin.certification-instruments.create', compact('projects', 'activityTypes'));
     }
 
     public function store(Request $request): View|RedirectResponse
@@ -104,6 +107,7 @@ class CertificationInstrumentController extends Controller
             $tool = CertificationInstrument::create([
                 'name' => $validated['name'],
                 'type' => $validated['type'],
+                'activity_type_id' => $validated['activity_type_id'],
                 'description' => $validated['description'] ?? null,
                 'active' => $validated['active'],
                 'sort_order' => $validated['sort_order'] ?? 0,
@@ -136,8 +140,9 @@ class CertificationInstrumentController extends Controller
         $certificationInstrument->load(['programs.projects', 'dimensions.options', 'scoreFields']);
         $usedOptionIds = $this->usedOptionIds($certificationInstrument);
         $typeLocked = $this->isUsed($certificationInstrument);
+        $activityTypes = $this->activityTypeOptions($certificationInstrument);
 
-        return view('admin.certification-instruments.edit', compact('certificationInstrument', 'projects', 'usedOptionIds', 'typeLocked'));
+        return view('admin.certification-instruments.edit', compact('certificationInstrument', 'projects', 'usedOptionIds', 'typeLocked', 'activityTypes'));
     }
 
     public function update(Request $request, CertificationInstrument $certificationInstrument): View|RedirectResponse
@@ -150,6 +155,7 @@ class CertificationInstrumentController extends Controller
             $certificationInstrument->update([
                 'name' => $validated['name'],
                 'type' => $validated['type'],
+                'activity_type_id' => $validated['activity_type_id'],
                 'description' => $validated['description'] ?? null,
                 'active' => $validated['active'],
                 'sort_order' => $validated['sort_order'] ?? 0,
@@ -195,6 +201,14 @@ class CertificationInstrumentController extends Controller
             ->distinct()->pluck('certification_instrument_dimension_option_id')->map(fn ($id) => (int) $id)->all();
     }
 
+    /** @return Collection<int, ActivityType> active types grouped by family, plus the training's current one */
+    private function activityTypeOptions(?CertificationInstrument $instrument = null): Collection
+    {
+        return ActivityType::query()->with('contactFamily:id,name')
+            ->where(fn ($query) => $query->where('active', true)->orWhere('id', $instrument?->activity_type_id))
+            ->orderBy('sort_order')->orderBy('name')->get();
+    }
+
     private function isUsed(CertificationInstrument $instrument): bool
     {
         return $instrument->requirements()->exists() || CertificationInstrumentSubmission::query()->where('certification_instrument_id', $instrument->id)->exists();
@@ -230,6 +244,7 @@ class CertificationInstrumentController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => ['required', 'string', 'max:255', 'unique:certification_instruments,name,'.($certificationInstrument !== null ? $certificationInstrument->id : 'NULL').',id'],
             'type' => ['required', 'in:'.implode(',', CertificationInstrumentType::values())],
+            'activity_type_id' => ['nullable', 'required_if:type,training', 'integer', 'exists:activity_types,id'],
             'description' => ['nullable', 'string'],
             'active' => ['boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
@@ -284,6 +299,9 @@ class CertificationInstrumentController extends Controller
                 if ($request->input('type') !== $certificationInstrument->type->value && $this->isUsed($certificationInstrument)) {
                     $validator->errors()->add('type', 'The type cannot change once this '.strtolower($certificationInstrument->type->label()).' has submissions or certificate requirements.');
                 }
+                if ($certificationInstrument->activity_type_id !== null && (int) $request->input('activity_type_id') !== $certificationInstrument->activity_type_id && $this->isUsed($certificationInstrument)) {
+                    $validator->errors()->add('activity_type_id', 'The activity type cannot change once this training has submissions or certificate requirements.');
+                }
                 $this->validateUsedDefinitions($validator, $request, $certificationInstrument);
             }
         });
@@ -294,6 +312,7 @@ class CertificationInstrumentController extends Controller
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
         $validated['program_scope_mode'] = ProjectProgramScope::normalizeMode($validated['program_scope_mode'] ?? null, CertificationInstrument::class)->value;
         $validated['dimensions'] = $this->dimensionRows($validated, $certificationInstrument);
+        $validated['activity_type_id'] = $validated['type'] === CertificationInstrumentType::Training->value ? (int) $validated['activity_type_id'] : null;
 
         return $validated;
     }

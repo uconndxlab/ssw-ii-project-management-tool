@@ -301,6 +301,7 @@ class CertificateController extends Controller
      */
     private function validateCertificate(Request $request, ?Certificate $certificate = null): array
     {
+        $request->merge(['requirements' => $this->withTrainingActivityType($request->input('requirements'))]);
         $validator = Validator::make($request->all(), [
             'name' => ['required', 'string', 'max:255', 'unique:certificates,name,'.($certificate !== null ? $certificate->id : 'NULL').',id'],
             'description' => ['nullable', 'string'],
@@ -619,6 +620,10 @@ class CertificateController extends Controller
                 }
             }
 
+            if ($isTraining && $tool instanceof CertificationInstrument && $tool->isTraining() && $tool->activity_type_id === null) {
+                $validator->errors()->add("requirements.{$index}.certification_instrument_id", 'Set this training’s activity type in Tools & Trainings first.');
+            }
+
             if ($isTraining) {
                 $this->validateSectionRule($validator, $index, $row, $tool instanceof CertificationInstrument ? $tool : null);
             }
@@ -692,6 +697,29 @@ class CertificateController extends Controller
                 $validator->errors()->add("requirement_groups.{$index}.required_count", 'Required count must be between 1 and the number of requirements in the group.');
             }
         }
+    }
+
+    /**
+     * A training decides its requirement's activity type and family, whatever the form posted.
+     */
+    private function withTrainingActivityType(mixed $rows): mixed
+    {
+        if (! is_array($rows)) {
+            return $rows;
+        }
+        $isTrainingRow = fn ($row) => is_array($row) && ($row['kind'] ?? null) === CertificateRequirementKind::TrainingSections->value && is_numeric($row['certification_instrument_id'] ?? null);
+        $trainings = CertificationInstrument::query()->with('activityType:id,contact_family_id')
+            ->whereKey(collect($rows)->filter($isTrainingRow)->pluck('certification_instrument_id')->map(fn ($id) => (int) $id)->all())
+            ->get()->keyBy('id');
+        foreach ($rows as $index => $row) {
+            $training = $isTrainingRow($row) ? $trainings->get((int) $row['certification_instrument_id']) : null;
+            if ($training?->isTraining() && $training->activityType !== null) {
+                $rows[$index]['activity_type_id'] = $training->activity_type_id;
+                $rows[$index]['contact_family_id'] = $training->activityType->contact_family_id;
+            }
+        }
+
+        return $rows;
     }
 
     /**

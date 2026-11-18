@@ -12,6 +12,7 @@ use Database\Factories\CertificationInstrumentFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
@@ -40,6 +41,7 @@ class CertificationInstrument extends Model implements HasPrograms
     protected $fillable = [
         'name',
         'type',
+        'activity_type_id',
         'description',
         'active',
         'sort_order',
@@ -62,6 +64,16 @@ class CertificationInstrument extends Model implements HasPrograms
     public function programs(): BelongsToMany
     {
         return $this->belongsToMany(Program::class, 'certification_instrument_program')->withTimestamps();
+    }
+
+    /**
+     * The activity type a training is delivered under; tools have none.
+     *
+     * @return BelongsTo<ActivityType, $this>
+     */
+    public function activityType(): BelongsTo
+    {
+        return $this->belongsTo(ActivityType::class);
     }
 
     /** @return HasMany<CertificationInstrumentDimension, $this> */

@@ -179,7 +179,7 @@ class CertificationEvidenceService
             $tag->fill(['certification_role_id' => $roleId, 'completion_units' => $row['completion_units'], 'notes' => $row['notes'] ?? null])->save();
             $savedSubmissions = $tag->submissions()->with(['dimensionValues', 'scores'])->get()->keyBy('id');
             foreach ($row['submissions'] ?? [] as $submissionIndex => $submissionRow) {
-                $this->saveSubmission($tag, $actor, $programIds, $submissionRow, $savedSubmissions, $key.'.submissions.'.$submissionIndex);
+                $this->saveSubmission($tag, $actor, $programIds, $submissionRow, $savedSubmissions, $key.'.submissions.'.$submissionIndex, $activity->activity_type_id);
             }
         }
         $coachIds = array_key_exists('review_coach_user_ids', $data) ? array_map('intval', $data['review_coach_user_ids']) : null;
@@ -252,13 +252,13 @@ class CertificationEvidenceService
      * @param  array<string, mixed>  $row
      * @param  Collection<int, CertificationInstrumentSubmission>  $existing
      */
-    private function saveSubmission(ActivityCertificationCandidate $tag, User $actor, array $programIds, array $row, Collection $existing, string $key): void
+    private function saveSubmission(ActivityCertificationCandidate $tag, User $actor, array $programIds, array $row, Collection $existing, string $key, ?int $activityTypeId): void
     {
         $submission = ! empty($row['id']) ? $existing->get((int) $row['id']) : null;
         if (! empty($row['id']) && $submission === null) {
             $this->invalid($key.'.id', 'Select a submission belonging to this candidate tag.');
         }
-        $tool = CertificationInstrument::query()->with(['programs', 'dimensions.options', 'scoreFields'])->whereKey($row['certification_instrument_id'])->first();
+        $tool = CertificationInstrument::query()->with(['programs', 'dimensions.options', 'scoreFields', 'activityType'])->whereKey($row['certification_instrument_id'])->first();
         if ($tool === null || ! $this->canRecord($actor, $programIds, $tool, $tag->candidate)) {
             $this->invalid($key, 'A certification coach in a program shared by the activity, tool, and candidate’s certificate must record submissions.');
         }
@@ -272,6 +272,9 @@ class CertificationEvidenceService
         }
         if ($submission === null && (! $tool->active || $tool->retired_at !== null || ! $this->overlaps($tool, $programIds))) {
             $this->invalid($key.'.certification_instrument_id', 'Choose an active tool available for the activity programs.');
+        }
+        if ($submission === null && $tool->isTraining() && $tool->activity_type_id !== $activityTypeId) {
+            $this->invalid($key.'.certification_instrument_id', 'This training is recorded on '.($tool->activityType->name ?? 'another activity type').' activities only.');
         }
         if (empty($row['outcome']) && ! $tool->isTraining()) {
             $this->invalid($key.'.outcome', 'Choose the coach-judged outcome. Scores never decide it.');
@@ -442,7 +445,7 @@ class CertificationEvidenceService
                 ->filter(fn (array $coach) => $coach['program_ids'] !== [])->unique(fn (array $coach) => $coach['id'].'-'.$coach['agreement_id'])->values()->all(),
             'reviewers' => $activity?->reviewRequests()->whereNull('cleared_at')->with('coach:id,name')->get()->map(fn (ActivityReviewRequest $request) => ['id' => $request->coach_user_id, 'name' => $request->coach->name])->values()->all() ?? [],
             'tools' => $tools->map(fn ($tool) => [
-                'id' => $tool->id, 'name' => $tool->name, 'description' => $tool->description, 'type' => $tool->type->value,
+                'id' => $tool->id, 'name' => $tool->name, 'description' => $tool->description, 'type' => $tool->type->value, 'activity_type_id' => $tool->activity_type_id,
                 'active' => $tool->active && $tool->retired_at === null, 'mode' => $tool->program_scope_mode->value,
                 'program_ids' => $tool->programs->modelKeys(),
                 'dimensions' => $tool->dimensions->where('type', CertificationInstrumentDimensionType::ChooseOne)->map(fn ($dimension) => ['id' => $dimension->id, 'name' => $dimension->name, 'options' => $dimension->options->map(fn ($option) => ['id' => $option->id, 'label' => $option->label])->all()])->values()->all(),

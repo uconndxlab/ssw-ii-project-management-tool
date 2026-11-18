@@ -54,6 +54,29 @@
         @endif
     </x-form-field>
 
+    @php
+        $selectedActivityTypeId = (string) old('activity_type_id', $isEditMode ? $certificationInstrument->activity_type_id : '');
+        $activityTypeLocked = $typeLocked && $isEditMode && $certificationInstrument->activity_type_id !== null;
+    @endphp
+    <div data-instrument-for="training" @if($instrumentType !== 'training') hidden @endif>
+        <x-form-field label="Activity type" for="activity_type_id" name="activity_type_id" :required="true"
+            :help="$activityTypeLocked ? 'The activity type is locked because this training has submissions or certificate requirements.' : 'The activity this training is delivered under. Its requirements and submissions only count on this activity type.'">
+            <select class="form-select @error('activity_type_id') is-invalid @enderror" id="activity_type_id" name="activity_type_id" @disabled($activityTypeLocked)>
+                <option value="">Choose an activity type…</option>
+                @foreach($activityTypes->groupBy(fn ($type) => $type->contactFamily?->name ?? 'Other') as $familyName => $types)
+                    <optgroup label="{{ $familyName }}">
+                        @foreach($types as $activityType)
+                            <option value="{{ $activityType->id }}" @selected($selectedActivityTypeId === (string) $activityType->id)>{{ $activityType->name }}{{ $activityType->active ? '' : ' (inactive)' }}</option>
+                        @endforeach
+                    </optgroup>
+                @endforeach
+            </select>
+            @if($activityTypeLocked)
+                <input type="hidden" name="activity_type_id" value="{{ $selectedActivityTypeId }}">
+            @endif
+        </x-form-field>
+    </div>
+
     <x-form-field label="Name" for="name" name="name" :required="true">
         <input type="text" class="form-control @error('name') is-invalid @enderror"
                id="name" name="name" value="{{ old('name', $certificationInstrument->name ?? '') }}" required>
