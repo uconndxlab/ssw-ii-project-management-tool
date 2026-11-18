@@ -70,7 +70,7 @@ class ActivityController extends Controller
 
         $query = Activity::query()
             ->visibleTo($this->actor())
-            ->with(['agreements.organizations', 'agreements.states', 'user', 'subActivity', 'activityType', 'organizations', 'states', 'programs.projects']);
+            ->with(['agreements.organizations', 'agreements.states', 'user', 'participants:id', 'subActivity', 'activityType', 'organizations', 'states', 'programs.projects']);
 
         // Search
         $search = trim((string) $request->input('search', ''));
@@ -217,6 +217,25 @@ class ActivityController extends Controller
         $direction = $request->input('direction', 'desc') === 'asc' ? 'asc' : 'desc';
 
         switch ($sort) {
+            case 'organization':
+                $query->orderByRaw("COALESCE((SELECT MIN(organizations.name) FROM organizations
+                    INNER JOIN activity_organization ON activity_organization.organization_id = organizations.id
+                    WHERE activity_organization.activity_id = activities.id), '') {$direction}");
+                break;
+
+            case 'program':
+                $query->orderByRaw("COALESCE((SELECT MIN(programs.name) FROM programs
+                    INNER JOIN activity_program ON activity_program.program_id = programs.id
+                    WHERE activity_program.activity_id = activities.id), '') {$direction}");
+                break;
+
+            case 'project':
+                $query->orderByRaw("COALESCE((SELECT MIN(projects.name) FROM projects
+                    INNER JOIN program_project ON program_project.project_id = projects.id
+                    INNER JOIN activity_program ON activity_program.program_id = program_project.program_id
+                    WHERE activity_program.activity_id = activities.id), '') {$direction}");
+                break;
+
             case 'agreement':
                 $query->orderByRaw($this->minActivityAgreementNameSql().($direction === 'desc' ? ' DESC' : ' ASC'));
                 break;
@@ -239,8 +258,12 @@ class ActivityController extends Controller
                 break;
         }
 
+        $query->orderBy('activities.id', $direction);
+
         $activities = $query->withCount('certificationCandidates')->paginate(TablePagination::perPage($request))->withQueryString();
-        $this->actor()->access()->primeCertificationReviewers($activities->getCollection()->pluck('id')->map(fn ($id) => (int) $id)->all());
+        $activityIds = $activities->getCollection()->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $this->actor()->access()->primeCertificationReviewers($activityIds);
+        $this->actor()->access()->primeActivityVisibility($activityIds);
 
         if ($embedded) {
             return view('agreements.partials.activity-tab', compact(

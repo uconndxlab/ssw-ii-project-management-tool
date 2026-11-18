@@ -33,7 +33,7 @@
     {{-- ── Summary ─────────────────────────────────────────────────────── --}}
     <x-slot:summary>
         @if(!$user->active)
-            <div class="alert alert-light border small mb-3 py-2">
+            <div class="alert alert-secondary small mb-3 py-2">
                 Membership was cleared when this user was deactivated. Activity history and contributions below are unchanged.
             </div>
         @endif

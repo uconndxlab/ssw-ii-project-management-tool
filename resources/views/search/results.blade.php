@@ -29,9 +29,7 @@
 
     {{-- No results --}}
     @if($agreements->isEmpty() && $organizations->isEmpty() && $users->isEmpty())
-        <div class="alert alert-light border">
-            No results found for <strong>{{ $query }}</strong>.
-        </div>
+        <p class="text-muted">No results found for <strong>{{ $query }}</strong>.</p>
     @endif
 
     <div class="row g-4">

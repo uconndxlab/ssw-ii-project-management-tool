@@ -95,7 +95,7 @@ it('links viewable organizations and shows restricted organization names in embe
         ->get(route('activities.index', ['embedded' => 1, 'agreement_id' => $agreement->id]), ['HX-Request' => 'true']);
 
     $response->assertOk()
-        ->assertSee('<th>Organizations</th>', false)
+        ->assertSee('sort=organization', false)
         ->assertSee('data-label="Organizations"', false)
         ->assertDontSee('data-label="Agreement"', false)
         ->assertSee($visible->name)
