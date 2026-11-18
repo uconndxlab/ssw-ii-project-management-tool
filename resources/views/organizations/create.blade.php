@@ -9,6 +9,7 @@
     <form method="POST" action="{{ route('organizations.store') }}" id="organizations-create-form">
         @csrf
         <x-page-header form-id="organizations-create-form" save-label="Create Organization" context="form" entity-type="Organization" />
+        <x-form-note title="Before you start">Organizations appear on Log Activity only after they're added to at least one agreement.</x-form-note>
         @include('organizations.partials.form-fields')
     </form>
 </x-form-shell>

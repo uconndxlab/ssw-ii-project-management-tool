@@ -19,7 +19,7 @@
 </x-page-header>
 
 @cannot('update', $loggingField)
-    <div class="alert alert-warning">
+    <x-form-note tone="warning">
         @cannot('updateAttachments', $loggingField)
             <p class="mb-2">You can't edit this field because it is used on records you can't edit.</p>
             @foreach($attachmentGroups as $group)
@@ -30,7 +30,7 @@
         @else
             <p class="mb-0">You can't edit this field because it is also used by programs you don't manage.</p>
         @endcannot
-    </div>
+    </x-form-note>
 @endcannot
 
 <x-entity-show>

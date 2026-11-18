@@ -219,7 +219,7 @@ class OrganizationController extends Controller
     public function edit(Organization $organization): View
     {
         $this->authorize('update', $organization);
-        $organization->load(['states', 'programs.projects', 'users', 'contacts']);
+        $organization->load(['states', 'programs.projects', 'users', 'contacts'])->loadCount('agreements');
         $states = State::orderBy('name', 'asc')->get();
         $projects = ProjectProgramScope::assignableProjectsWithProgramsFor($this->actor(), $organization);
         $users = User::query()->active()->orderBy('name', 'asc')->get();

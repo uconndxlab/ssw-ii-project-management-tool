@@ -50,6 +50,15 @@ class UserAccess
     /** @var array<int, bool> */
     private array $certificationReviewerActivityIds = [];
 
+    /** @var array<int, bool> */
+    private array $visibleActivityIds = [];
+
+    /** @var array<int, bool> */
+    private array $visibleUserIds = [];
+
+    /** @var array<int, bool> */
+    private array $activityActionLogScopeIds = [];
+
     /** @var Collection<int, UserPrivilege>|null */
     private ?Collection $privileges = null;
 
@@ -693,6 +702,10 @@ class UserAccess
     // Members/Input: logger or Delivered By (or a supervisee). Viewers: that, or the activity or its agreement is in their program scope.
     public function canViewActivity(Activity $activity): bool
     {
+        if (array_key_exists($activity->id, $this->visibleActivityIds)) {
+            return $this->visibleActivityIds[$activity->id];
+        }
+
         if ($this->isCertificationReviewerOnActivity($activity)) {
             return true;
         }
@@ -749,6 +762,19 @@ class UserAccess
         }
     }
 
+    /** @param array<int> $activityIds */
+    public function primeActivityVisibility(array $activityIds): void
+    {
+        $visible = $this->applyActivityVisibility(Activity::query()->whereKey($activityIds))->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $inScope = Activity::query()->whereKey($activityIds)
+            ->whereHas('programs', fn (Builder $query) => $this->applyProgramVisibility($query))
+            ->pluck('id')->map(fn ($id) => (int) $id)->all();
+        foreach ($activityIds as $id) {
+            $this->visibleActivityIds[(int) $id] = in_array((int) $id, $visible, true);
+            $this->activityActionLogScopeIds[(int) $id] = in_array((int) $id, $inScope, true);
+        }
+    }
+
     // Owner, supervisor of owner, or enhanced viewer/admin whose view scope covers the activity
     // (program visibility — not merely Delivered By).
     public function canViewActivityActionLog(Activity $activity): bool
@@ -767,6 +793,10 @@ class UserAccess
 
         if ($this->hasSystemView()) {
             return true;
+        }
+
+        if (array_key_exists($activity->id, $this->activityActionLogScopeIds)) {
+            return $this->activityActionLogScopeIds[$activity->id];
         }
 
         return Activity::query()
@@ -917,7 +947,7 @@ class UserAccess
         }
 
         if ($this->hasView()) {
-            return $this->userIsInViewMembership($target);
+            return $this->visibleUserIds[$target->id] ??= $this->userIsInViewMembership($target);
         }
 
         return false;
