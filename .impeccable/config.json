@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "bootstrap-icons",
+        "createdAt": "2026-11-18T18:05:55.022Z",
+        "reason": "agent: Bootstrap-Icons is the icon font (bi-* classes), not a text typeface; DESIGN.md typography covers text only"
+      }
+    ]
+  }
+}

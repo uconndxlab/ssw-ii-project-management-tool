@@ -2019,30 +2019,114 @@ textarea.form-control {
     border-radius: var(--bs-dropdown-item-border-radius);
 }
 
-/* Notes: a tinted panel with a 4px tone rule on the left, the same rule toasts use. */
+/* Notes inside cards: a tinted panel with a 1px tone outline and a filled tone icon, the same outline and icon as
+   toasts and form notes. The icon floats into the left padding so it sits on the first line of any content. */
 .alert {
-    --bs-alert-border-radius: 0 var(--bs-border-radius) var(--bs-border-radius) 0;
     --bs-alert-padding-y: 0.625rem;
-    --app-note-rule: var(--app-control-border);
-    border-width: 0 0 0 0.25rem;
-    border-left-color: var(--app-note-rule);
+    --app-note-tone: var(--app-muted);
+    padding-left: calc(var(--bs-alert-padding-x) + 1.625rem);
 }
 
 .alert-primary,
 .alert-info {
-    --app-note-rule: var(--app-accent);
+    --app-note-tone: var(--app-accent);
 }
 
 .alert-success {
-    --app-note-rule: var(--bs-success);
+    --app-note-tone: var(--bs-success);
 }
 
 .alert-warning {
-    --app-note-rule: var(--bs-warning);
+    --app-note-tone: var(--bs-warning);
 }
 
 .alert-danger {
-    --app-note-rule: var(--bs-danger);
+    --app-note-tone: var(--bs-danger);
+}
+
+.alert::before {
+    float: left;
+    width: 1rem;
+    margin: 0 0.625rem 0 -1.625rem;
+    font-family: bootstrap-icons;
+    font-size: 1rem;
+    color: var(--app-note-tone);
+    content: "\f430" / "";
+}
+
+.alert-success::before {
+    content: "\f26a" / "";
+}
+
+.alert-warning::before {
+    content: "\f33a" / "";
+}
+
+.alert-danger::before {
+    content: "\f622" / "";
+}
+
+/* Callout: the shared anatomy of toasts and form notes. White panel, 1px tone outline, filled tone icon, optional title.
+   .app-toast and .app-form-note add only their elevation, padding and behavior. */
+.app-callout {
+    --app-callout-tone: var(--app-accent);
+    --app-callout-line: var(--bs-info-border-subtle);
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    color: var(--bs-body-color);
+    background-color: var(--bs-body-bg);
+    border: 1px solid var(--app-callout-line);
+    border-radius: var(--bs-border-radius-lg);
+}
+
+.app-callout--success {
+    --app-callout-tone: var(--bs-success);
+    --app-callout-line: var(--bs-success-border-subtle);
+}
+
+.app-callout--warning {
+    --app-callout-tone: var(--bs-warning);
+    --app-callout-line: var(--bs-warning-border-subtle);
+}
+
+.app-callout--danger {
+    --app-callout-tone: var(--bs-danger);
+    --app-callout-line: var(--bs-danger-border-subtle);
+}
+
+/* The icon's line box matches the first line (title or message) and the body's 1px offset, so it centers on it. */
+.app-callout-icon {
+    flex: none;
+    font-size: 1.25rem;
+    line-height: 1.5rem;
+    margin-top: 0.0625rem;
+    color: var(--app-callout-tone);
+}
+
+.app-callout:not(:has(.app-callout-title)) .app-callout-icon {
+    font-size: 1.125rem;
+    line-height: 1.3125rem;
+}
+
+.app-callout-body {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-top: 0.0625rem;
+    overflow-wrap: anywhere;
+}
+
+.app-callout-title {
+    font-size: 1rem;
+    line-height: 1.5rem;
+    font-weight: 600;
+    color: var(--app-ink);
+}
+
+/* Form note: page-level context above a form's first section, at section-card elevation. Never dismissed. */
+.app-form-note {
+    padding: 0.75rem 1rem;
+    box-shadow: var(--app-card-shadow);
 }
 
 /* Certification review banner on the activity page: who asked, for what, and which candidates are yours. */
@@ -2133,54 +2217,16 @@ textarea.form-control {
     }
 }
 
+/* Toast: a callout floating at popover elevation, with a close button and an optional timer. */
 .app-toast {
-    --app-toast-tone: var(--app-accent);
     position: relative;
-    display: flex;
-    align-items: flex-start;
-    gap: 0.625rem;
-    padding: 0.75rem 0.75rem 0.875rem 0.875rem;
+    padding: 0.75rem 0.75rem 0.875rem 1rem;
     overflow: hidden;
-    color: var(--bs-body-color);
-    background-color: var(--bs-body-bg);
-    border-left: 0.25rem solid var(--app-toast-tone);
-    border-radius: var(--bs-border-radius-lg);
     box-shadow: var(--app-shadow-pop);
     pointer-events: auto;
 }
 
-.app-toast--success {
-    --app-toast-tone: var(--bs-success);
-}
-
-.app-toast--warning {
-    --app-toast-tone: var(--bs-warning);
-}
-
-.app-toast--danger {
-    --app-toast-tone: var(--bs-danger);
-}
-
-.app-toast-icon {
-    flex: none;
-    font-size: 1.125rem;
-    line-height: 1.25rem;
-    color: var(--app-toast-tone);
-}
-
-.app-toast-body {
-    flex: 1 1 auto;
-    min-width: 0;
-    padding-top: 0.0625rem;
-    overflow-wrap: anywhere;
-}
-
-.app-toast-title {
-    font-weight: 600;
-    color: var(--app-ink);
-}
-
-.app-toast-body ul {
+.app-toast .app-callout-body ul {
     margin: 0.25rem 0 0;
     padding-left: 1.125rem;
 }
@@ -2211,9 +2257,9 @@ textarea.form-control {
     position: absolute;
     right: 0.75rem;
     bottom: 0.5rem;
-    left: 0.875rem;
+    left: 1rem;
     height: 2px;
-    background-color: var(--app-toast-tone);
+    background-color: var(--app-callout-tone);
     border-radius: 1px;
     transform-origin: left center;
     animation-name: app-toast-timer;
