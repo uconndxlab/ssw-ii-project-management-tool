@@ -35,7 +35,7 @@ final class AgreementOverview
 
     /**
      * @param  Collection<int, array<string, mixed>>  $deliverableGroups
-     * @return array{total: int, buckets: list<array{key: string, label: string, tone: string, count: int}>, blocks: list<array{tone: string, count: int}>, attention: list<array{deliverable_id: int, bucket: string, title: string, meta: string, status_label: string, status_tone: string}>, note: ?string}
+     * @return array{total: int, buckets: list<array{key: string, label: string, tone: string, count: int, striped: bool}>, blocks: list<array{tone: string, count: int, striped: bool}>, attention: list<array{deliverable_id: int, bucket: string, title: string, meta: string, status_label: string, status_tone: string, status_striped: bool}>, note: ?string}
      */
     public function deliverableSummary(Collection $deliverableGroups): array
     {
@@ -44,11 +44,13 @@ final class AgreementOverview
             ->flatMap(fn (array $activity): Collection => $activity['program_groups'])
             ->flatMap(fn (array $program): Collection => $program['deliverables']);
         $definitions = [];
-        foreach (['off_track', 'needs_attention', 'no_assignees', 'no_progress_made', 'progress_made', 'on_track', 'complete', 'no_target', 'not_applicable'] as $key) {
+        foreach (['off_track', 'needs_attention', 'progress_made', 'on_track', 'complete', 'no_progress_made', 'not_applicable', 'no_assignees', 'no_target'] as $key) {
             $status = DeliverableStatus::tryFrom($key);
-            $definitions[$key] = $status ? self::statusChip($status) : [
+            // Setup gaps (no assignees, no target) sit outside the progress gradient, so they are striped.
+            $definitions[$key] = $status ? [...self::statusChip($status), 'striped' => false] : [
                 'label' => $key === 'no_assignees' ? 'No assignees' : 'No target',
                 'tone' => $key === 'no_assignees' ? 'warning' : 'neutral',
+                'striped' => true,
             ];
         }
         $grouped = $items->groupBy(function (array $item): string {
@@ -64,19 +66,26 @@ final class AgreementOverview
         });
         $buckets = [];
         $toneCounts = array_fill_keys(['danger', 'warning', 'progress', 'success', 'neutral'], 0);
+        $flagBlocks = [];
         foreach ($definitions as $key => $chip) {
             $count = $grouped->get($key, collect())->count();
             if ($count > 0) {
-                $buckets[] = ['key' => $key, ...$chip, 'count' => $count];
-                $toneCounts[$chip['tone']] += $count;
+                $buckets[] = ['key' => $key, 'label' => $chip['label'], 'tone' => $chip['tone'], 'count' => $count, 'striped' => $chip['striped']];
+                // Striped setup gaps get their own blocks at the end of the bar.
+                if ($chip['striped']) {
+                    $flagBlocks[] = ['tone' => $chip['tone'], 'count' => $count, 'striped' => true];
+                } else {
+                    $toneCounts[$chip['tone']] += $count;
+                }
             }
         }
         $blocks = [];
         foreach ($toneCounts as $tone => $count) {
             if ($count > 0) {
-                $blocks[] = ['tone' => $tone, 'count' => $count];
+                $blocks[] = ['tone' => $tone, 'count' => $count, 'striped' => false];
             }
         }
+        $blocks = [...$blocks, ...$flagBlocks];
         $queues = [];
         foreach (['off_track', 'needs_attention', 'no_assignees'] as $key) {
             $queues[$key] = $grouped->get($key, collect())->sortBy(fn (array $item) => [
@@ -112,6 +121,7 @@ final class AgreementOverview
                     'meta' => implode(' · ', array_filter([$item['deliverable']->contactFamily?->name, $item['metric_summary'], $quantity])),
                     'status_label' => $definitions[$key]['label'],
                     'status_tone' => $definitions[$key]['tone'],
+                    'status_striped' => $definitions[$key]['striped'],
                 ];
             }
         }

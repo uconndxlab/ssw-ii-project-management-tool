@@ -3,23 +3,20 @@
         @forelse($certificationRosterDisplay as $entry)
             @php $candidate = $entry['roster']->candidate; @endphp
             @continue(! $candidate)
-            <x-relationship-ledger-row :title="$candidate->name" :href="auth()->user()->can('view', $candidate) ? route('certification-candidates.show', $candidate) : null" multi-link>
-                <x-slot:actions><x-restricted-count :count="$entry['restricted_count']" kind="certificates" /></x-slot:actions>
-                <x-slot:footer>
-                    <div class="w-100">
-                        @forelse($entry['enrollments'] as $enrollment)
-                            @php $badge = $enrollment->lifecycleBadge(); @endphp
-                            <div class="mb-2">
-                                <a class="app-link" href="{{ route('certificate-enrollments.show', ['certificateEnrollment' => $enrollment, 'agreement_id' => $agreement->id]) }}">{{ $enrollment->certificate->name }}</a>
-                                <span class="{{ $badge['class'] }}">{{ $badge['label'] }}</span>
-                                <div class="text-muted small">{{ $enrollment->supervisingCoach ? 'Coach '.$enrollment->supervisingCoach->name : 'No coach selected' }}</div>
-                            </div>
-                        @empty
-                            <span class="text-muted">No certificate assigned</span>
-                        @endforelse
-                    </div>
-                </x-slot:footer>
-            </x-relationship-ledger-row>
+            <div class="app-ledger-group" data-ledger-group>
+                <div class="app-ledger-group-head">
+                    @can('view', $candidate)<a class="app-link" href="{{ route('certification-candidates.show', $candidate) }}">{{ $candidate->name }}</a>@else{{ $candidate->name }}@endcan
+                    <x-restricted-count :count="$entry['restricted_count']" kind="certificates" />
+                </div>
+                @forelse($entry['enrollments'] as $enrollment)
+                    @php $badge = $enrollment->lifecycleBadge(); @endphp
+                    <x-relationship-ledger-row :title="$enrollment->certificate->name" :href="route('certificate-enrollments.show', ['certificateEnrollment' => $enrollment, 'agreement_id' => $agreement->id])" :subtitle="$enrollment->supervisingCoach ? 'Coach '.$enrollment->supervisingCoach->name : 'No coach selected'" class="app-ledger-row--status-aside">
+                        <x-slot:actions><span class="{{ $badge['class'] }}">{{ $badge['label'] }}</span></x-slot:actions>
+                    </x-relationship-ledger-row>
+                @empty
+                    <div class="app-ledger-row app-ledger-row--simple text-muted small">No certificate assigned</div>
+                @endforelse
+            </div>
         @empty
             <p class="text-muted small mb-0">No candidates assigned.</p>
         @endforelse

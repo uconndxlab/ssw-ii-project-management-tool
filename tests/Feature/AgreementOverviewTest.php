@@ -39,7 +39,7 @@ it('counts active deliverables once and keeps partly unassigned items in their s
     expect($summary['total'])->toBe(3);
     expect(array_column($summary['buckets'], 'count', 'key'))->toBe(['off_track' => 1, 'no_assignees' => 1, 'no_target' => 1]);
     expect(array_sum(array_column($summary['buckets'], 'count')))->toBe(3);
-    expect($summary['blocks'])->toBe([['tone' => 'danger', 'count' => 1], ['tone' => 'warning', 'count' => 1], ['tone' => 'neutral', 'count' => 1]]);
+    expect($summary['blocks'])->toBe([['tone' => 'danger', 'count' => 1, 'striped' => false], ['tone' => 'warning', 'count' => 1, 'striped' => true], ['tone' => 'neutral', 'count' => 1, 'striped' => true]]);
 });
 
 it('selects attention round robin but displays severity groups with most behind first', function () {
@@ -147,7 +147,7 @@ it('keeps the overview on the agreement window when deliverables are filtered', 
     AgreementDeliverable::factory()->for($agreement)->create(['target_quantity' => 20]);
 
     $this->actingAs(createSystemAdmin())->get(route('agreements.show', [$agreement, ...$query]))->assertOk()
-        ->assertViewHas('overviewDeliverables', fn ($summary) => $summary['buckets'] === [['key' => 'off_track', 'label' => 'Off track', 'tone' => 'danger', 'count' => 1]])
+        ->assertViewHas('overviewDeliverables', fn ($summary) => $summary['buckets'] === [['key' => 'off_track', 'label' => 'Off track', 'tone' => 'danger', 'count' => 1, 'striped' => false]])
         ->assertViewHas('deliverableGroups', fn ($groups) => $groups->first()['activity_groups']->first()['program_groups']->first()['deliverables']->first()['status'] === DeliverableStatus::OnTrack);
 })->with([
     'future window' => [['from' => '2027-01-01', 'to' => '2027-12-31']],
@@ -163,7 +163,7 @@ it('classifies assigned users with no personal targets as having no scored assig
 
     $summary = (new AgreementOverview($agreement, $user))->deliverableSummary(overviewProgress($agreement));
 
-    expect($summary['buckets'])->toBe([['key' => 'no_assignees', 'label' => 'No assignees', 'tone' => 'warning', 'count' => 1]]);
+    expect($summary['buckets'])->toBe([['key' => 'no_assignees', 'label' => 'No assignees', 'tone' => 'warning', 'count' => 1, 'striped' => true]]);
 });
 
 it('sorts organizations by payor then recipient then name ignoring case', function () {

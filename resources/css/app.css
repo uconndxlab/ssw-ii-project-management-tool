@@ -3919,6 +3919,12 @@ a.app-row-link:focus-visible::after {
     white-space: nowrap;
 }
 
+/* Heading counts sit on the canvas, so they take the card surface instead of the in-card tint. */
+.app-record-section-heading > .app-count {
+    background-color: var(--bs-body-bg);
+    color: var(--app-muted);
+}
+
 .app-record-section-card > .card-body {
     padding: 14px;
 }
@@ -4000,6 +4006,27 @@ a.app-row-link:focus-visible::after {
 .app-ledger-group + .app-ledger-group > .app-ledger-group-head {
     margin-top: .5rem;
     border-top: 1px solid var(--app-line);
+}
+
+/* Status centred on the whole row (title + meta), like the deliverable attention rows. */
+.app-ledger-row--status-aside {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 1rem;
+}
+
+.app-ledger-row--status-aside > .app-ledger-row-head {
+    display: contents;
+}
+
+.app-ledger-row--status-aside > :is(.app-ledger-meta, .app-ledger-description) {
+    grid-column: 1;
+}
+
+.app-ledger-row--status-aside .app-ledger-row-roles {
+    grid-column: 2;
+    grid-row: 1 / span 2;
 }
 
 .app-ledger-group > .app-ledger-row {
@@ -4093,6 +4120,12 @@ a.app-row-link:focus-visible::after {
 
 .app-status-block--neutral {
     background: var(--app-line-strong);
+}
+
+/* Setup gaps (no assignees, no target): striped so they read as flags, not steps on the progress scale. */
+.app-status-block--striped,
+.app-status--striped {
+    background-image: repeating-linear-gradient(-45deg, transparent 0 3px, rgb(255 255 255 / .55) 3px 5px);
 }
 
 .app-status--progress {
