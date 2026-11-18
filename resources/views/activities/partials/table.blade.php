@@ -32,10 +32,16 @@
                         <x-table-sort-link column="activity_type" label="Activity Type" :sort="$s" :direction="$d" :url="$url('activity_type')" :target="$activityTarget" :push-url="!$embedded" />
                     </th>
                     @if($hideAgreement)
-                        <th>Organizations</th>
+                        <th>
+                            <x-table-sort-link column="organization" label="Organizations" :sort="$s" :direction="$d" :url="$url('organization')" :target="$activityTarget" :push-url="!$embedded" />
+                        </th>
                     @endif
-                    <th>Project</th>
-                    <th>Program</th>
+                    <th>
+                        <x-table-sort-link column="project" label="Project" :sort="$s" :direction="$d" :url="$url('project')" :target="$activityTarget" :push-url="!$embedded" />
+                    </th>
+                    <th>
+                        <x-table-sort-link column="program" label="Program" :sort="$s" :direction="$d" :url="$url('program')" :target="$activityTarget" :push-url="!$embedded" />
+                    </th>
                     <th>
                         <x-table-sort-link column="logged_by" label="Logged By" :sort="$s" :direction="$d" :url="$url('logged_by')" :target="$activityTarget" :push-url="!$embedded" />
                     </th>

@@ -357,25 +357,46 @@ main {
 /* Desktop lists fit the window; the table owns both scroll axes, leaving its footer in view.
    Short windows retain document scrolling so filters and controls remain reachable. */
 @media (min-width: 992px) and (min-height: 600px) {
-    .app-main:has(> .container > [data-index-table]) {
+    .app-main:has(> .container > [data-index-table]),
+    .app-main:has(#agreement-activities):has(#section-activity:not([hidden])) {
         height: 100dvh;
         min-height: 0;
     }
 
-    .app-main:has(> .container > [data-index-table]) > .container {
+    .app-main:has(> .container > [data-index-table]) > .container,
+    .app-main:has(#agreement-activities):has(#section-activity:not([hidden])) > .container {
         display: flex;
         flex-direction: column;
         height: 100%;
         min-height: 0;
     }
 
-    .app-main:has(> .container > [data-index-table]) > .container > * {
+    .app-main:has(> .container > [data-index-table]) > .container > *,
+    .app-main:has(#agreement-activities):has(#section-activity:not([hidden])) > .container > * {
         flex-shrink: 0;
     }
 
     .app-main > .container > [data-index-table] {
         flex: 1 1 0;
         min-height: 0;
+    }
+
+    .app-main:has(#agreement-activities):has(#section-activity:not([hidden])) [data-section-tabs],
+    #section-activity:not([hidden]):has(#agreement-activities),
+    #section-activity:not([hidden]) > #agreement-activities {
+        display: flex;
+        flex-direction: column;
+        flex: 1 1 0;
+        min-height: 0;
+    }
+
+    #section-activity:not([hidden]) > #agreement-activities > .card:first-child {
+        flex-shrink: 0;
+    }
+
+    #section-activity:not([hidden]) > #agreement-activities > .app-index-table-card {
+        flex: 1 1 0;
+        height: auto;
     }
 
     [data-index-table] > .app-index-table-card {

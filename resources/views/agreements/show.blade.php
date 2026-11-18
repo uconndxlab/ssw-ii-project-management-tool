@@ -316,6 +316,7 @@
     </div>
     <div id="section-activity" data-section="activity" hidden>
         <div id="agreement-activities"
+             data-index-table
              hx-get="{{ route('activities.index', ['agreement_id' => $agreement->id, 'embedded' => 1]) }}"
              hx-trigger="intersect once" hx-swap="innerHTML" hx-push-url="false">
             <p class="text-muted" role="status">Loading activities…</p>
