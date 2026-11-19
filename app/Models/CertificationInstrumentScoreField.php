@@ -13,6 +13,7 @@ use Illuminate\Support\Str;
  * Recorded-only field (a number, or Pass/Fail stored as 1/0). Never evaluated by the system - see the spine's "no score math" rule.
  *
  * @property CertificationInstrumentScoreUnit $unit
+ * @property int|null $max_points Points only: scores are whole numbers from 0 to this; null means no ceiling.
  */
 class CertificationInstrumentScoreField extends Model
 {
@@ -24,6 +25,7 @@ class CertificationInstrumentScoreField extends Model
         'name',
         'slug',
         'unit',
+        'max_points',
         'sort_order',
     ];
 
@@ -40,6 +42,7 @@ class CertificationInstrumentScoreField extends Model
     {
         return [
             'unit' => CertificationInstrumentScoreUnit::class,
+            'max_points' => 'integer',
             'sort_order' => 'integer',
         ];
     }

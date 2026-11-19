@@ -40,7 +40,7 @@ function initCertificationCapture() {
         return group.length ? `<optgroup label="${label}">${group.map(item => `<option value="${esc(item.id)}"${String(item.id) === String(value) ? ' selected' : ''}>${esc(item.name)}</option>`).join('')}</optgroup>` : '';
     }).join('')}</select>`;
     const scoreValue = value => value === undefined || value === null || value === '' ? '' : String(Number(value));
-    const scoreText = (score, value) => scoreValue(value) === '' ? '—' : score.unit === 'pass_fail' ? (Number(value) === 1 ? 'Pass' : 'Fail') : scoreValue(value);
+    const scoreText = (score, value) => scoreValue(value) === '' ? '—' : score.unit === 'pass_fail' ? (Number(value) === 1 ? 'Pass' : 'Fail') : scoreValue(value) + (score.max_points ? ` / ${score.max_points}` : '');
     // e.g. "5 sections (4 passed, 1 failed)"; unscored sections are only counted.
     const sectionSummary = sub => {
         const ticked = (sub.sections || []).length;
@@ -182,6 +182,7 @@ function initCertificationCapture() {
             if (tool.score_fields.length) html += '<h4 class="h6">Recorded scores <span class="text-muted fw-normal small">· optional</span></h4><div class="row g-3">' + tool.score_fields.map(score => {
                 const key = `${name}[scores][${score.id}]`;
                 if (score.unit === 'pass_fail') return `<div class="col-sm-6">${field(score.name, key, select(key, [{ id: 1, name: 'Pass' }, { id: 0, name: 'Fail' }], scoreValue(sub.scores?.[score.id]), 'No score'), false, 'Pass/Fail')}</div>`;
+                if (score.max_points) return `<div class="col-sm-6">${field(score.name, key, `<input type="number" step="1" min="0" max="${esc(score.max_points)}" class="form-control" id="${esc(key)}" name="${esc(key)}" value="${esc(scoreValue(sub.scores?.[score.id]))}">`, false, `Points · whole number, 0 to ${score.max_points}`)}</div>`;
                 return `<div class="col-sm-6">${field(score.name, key, `<input type="number" step="any" min="-99999999" max="99999999" class="form-control" id="${esc(key)}" name="${esc(key)}" value="${esc(sub.scores?.[score.id])}">`, false, score.unit === 'percent' ? 'Percent' : score.unit === 'points' ? 'Points' : '')}</div>`;
             }).join('') + '</div>';
             const guidance = matching(personFor(row)).filter(req => Number(req.tool_id) === tool.id).map(req => req.guidance).filter(Boolean);

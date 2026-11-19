@@ -274,6 +274,7 @@ class CertificationInstrumentController extends Controller
             'score_fields.*._delete' => ['nullable', 'boolean'],
             'score_fields.*.name' => ['nullable', 'string', 'max:255'],
             'score_fields.*.unit' => ['nullable', 'in:'.implode(',', CertificationInstrumentScoreUnit::values())],
+            'score_fields.*.max_points' => ['nullable', 'integer', 'min:1', 'max:999'],
             'score_fields.*.sort_order' => ['nullable', 'integer', 'min:0'],
         ]);
 
@@ -346,6 +347,15 @@ class CertificationInstrumentController extends Controller
             $id = (int) ($row['id'] ?? 0);
             if ($usedScoreIds->contains($id) && (($row['unit'] ?? null) === $passFail) !== ($units->get($id) === $passFail)) {
                 $validator->errors()->add("score_fields.{$index}.unit", 'A score field used by recorded submissions cannot change to or from Pass/Fail.');
+            }
+        }
+        $recordedScores = DB::table('certification_instrument_submission_scores')->whereIn('certification_instrument_score_field_id', $usedScoreIds)->get(['certification_instrument_score_field_id', 'value'])->groupBy('certification_instrument_score_field_id');
+        foreach ($scoreRows as $index => $row) {
+            $maxPoints = ($row['unit'] ?? null) === CertificationInstrumentScoreUnit::Points->value && filter_var($row['max_points'] ?? null, FILTER_VALIDATE_INT) ? (int) $row['max_points'] : null;
+            $outOfRange = $maxPoints === null ? null : $recordedScores->get((int) ($row['id'] ?? 0), collect())->pluck('value')
+                ->first(fn ($value) => (float) $value < 0 || (float) $value > $maxPoints || floor((float) $value) !== (float) $value);
+            if ($outOfRange !== null) {
+                $validator->errors()->add("score_fields.{$index}.max_points", "{$row['name']} can't be out of {$maxPoints}: a recorded submission already scored ".CertificationInstrumentScoreUnit::Points->format((string) $outOfRange).' on it. Use a higher number, or edit that submission first.');
             }
         }
     }
@@ -609,9 +619,11 @@ class CertificationInstrumentController extends Controller
                 continue;
             }
 
+            $unit = $row['unit'] ?? CertificationInstrumentScoreUnit::Percent->value;
             $data = [
                 'name' => $row['name'],
-                'unit' => $row['unit'] ?? CertificationInstrumentScoreUnit::Percent->value,
+                'unit' => $unit,
+                'max_points' => $unit === CertificationInstrumentScoreUnit::Points->value && filled($row['max_points'] ?? null) ? (int) $row['max_points'] : null,
                 'sort_order' => $sortOrder++,
             ];
 

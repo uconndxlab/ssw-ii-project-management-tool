@@ -30,6 +30,7 @@
         'id' => $f->id,
         'name' => $f->name,
         'unit' => $f->unit,
+        'max_points' => $f->max_points,
         'sort_order' => $f->sort_order,
     ])->all() : []);
 @endphp
