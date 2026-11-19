@@ -29,6 +29,7 @@ use App\Services\DeliverableContributionService;
 use App\Services\PrivateFileService;
 use App\Support\ActivityTypeDuration;
 use App\Support\AgreementDeliverableDisplay;
+use App\Support\Authorization\AccessReasons;
 use App\Support\Authorization\ScopeSync;
 use App\Support\CarbonDate;
 use App\Support\DeliverableActivityHistogram;
@@ -60,10 +61,6 @@ class AgreementController extends Controller
         $this->authorize('viewAny', Agreement::class);
 
         $user = $this->actor();
-        $states = State::query()->get(['id', 'name'])->sortBy('name')->values();
-        $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
-        $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
-
         $query = Agreement::query()
             ->visibleTo($user)
             ->with([
@@ -71,10 +68,9 @@ class AgreementController extends Controller
                 'programs.projects:id,name',
                 'principalInvestigators:id,name',
             ]);
+        $user->access()->applyAgreementIndexVisibility($query);
 
-        if (! $user->access()->hasView()) {
-            $query->active();
-        } elseif ($request->filled('active')) {
+        if ($request->filled('active')) {
             $query->where('agreements.active', $request->input('active') === '1');
         }
 
@@ -114,6 +110,15 @@ class AgreementController extends Controller
         $this->applyAgreementIndexSort($query, $sort, $direction);
 
         $agreements = $query->paginate(TablePagination::perPage($request))->withQueryString();
+        $roleReasons = AccessReasons::forPage($agreements->getCollection(), $this->actor());
+
+        if ($request->header('HX-Request') === 'true' && $request->input('partial') !== 'filters') {
+            return view('agreements.partials.table', compact('agreements', 'roleReasons', 'sort', 'direction'));
+        }
+
+        $states = State::query()->get(['id', 'name'])->sortBy('name')->values();
+        $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
+        $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
 
         if ($request->header('HX-Request') === 'true' && $request->input('partial') === 'filters') {
             return view('agreements.partials.filters', compact(
@@ -125,12 +130,8 @@ class AgreementController extends Controller
             ));
         }
 
-        if ($request->header('HX-Request') === 'true') {
-            return view('agreements.partials.table', compact('agreements', 'sort', 'direction'));
-        }
-
         return view('agreements.index', compact(
-            'agreements',
+            'agreements', 'roleReasons',
             'states',
             'filterProjects',
             'filterPrograms',

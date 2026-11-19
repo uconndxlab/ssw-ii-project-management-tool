@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\User;
+use App\Support\Authorization\HydratedRecordIds;
 use App\Support\NightwatchSqlMessage;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -17,6 +18,11 @@ use Laravel\Nightwatch\Records\Request as RequestRecord;
 
 class AppServiceProvider extends ServiceProvider
 {
+    public function register(): void
+    {
+        $this->app->scoped(HydratedRecordIds::class);
+    }
+
     /**
      * Bootstrap any application services.
      */

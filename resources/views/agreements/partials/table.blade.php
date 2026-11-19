@@ -35,6 +35,7 @@
                     <th>
                         <x-table-sort-link column="principal_investigators" label="PI" :sort="$s" :direction="$d" :url="$url('principal_investigators')" target="#agreements-table" />
                     </th>
+                    <th>My role</th>
                     <th class="app-col-actions"><span class="visually-hidden">Actions</span></th>
                 </tr>
             </thead>
@@ -85,6 +86,9 @@
                             {{ $agreement->principalInvestigators->sortBy('name')->pluck('name')->join(', ') }}
                         @endif
                     </td>
+                    <td data-label="My role">
+                        <x-access-reason-list :reasons="$roleReasons[$agreement->id] ?? []" />
+                    </td>
                     <td class="app-col-actions">
                         @php $actionKey = 'agreement-actions-' . $agreement->id; @endphp
                         <div class="dropdown app-row-actions d-inline-block">
@@ -131,7 +135,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="9" class="text-center py-5">
+                    <td colspan="10" class="text-center py-5">
                         <p class="text-muted mb-2">
                             @can('create', App\Models\Agreement::class) No agreements found.
                             @else You are not assigned to any agreements.

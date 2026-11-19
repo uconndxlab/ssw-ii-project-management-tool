@@ -1,8 +1,8 @@
 @php
     $embedded = $embedded ?? false;
     $embedKey = request()->filled('certification_candidate_id') ? 'certification_candidate_id' : 'agreement_id';
-    $hideAgreement = $embedded && $embedKey === 'agreement_id';
-    $activityTarget = $embedded ? ($hideAgreement ? '#agreement-activities' : '#candidate-activities') : '#activities-table';
+    $agreementContext = $embedded && $embedKey === 'agreement_id';
+    $activityTarget = $embedded ? ($agreementContext ? '#agreement-activities' : '#candidate-activities') : '#activities-table';
     $s = $sort ?? 'date';
     $d = $direction ?? 'desc';
     $flip = function ($col) use ($s, $d) {
@@ -23,15 +23,13 @@
                     <th class="text-nowrap">
                         <x-table-sort-link column="date" label="Date" :sort="$s" :direction="$d" :url="$url('date')" :target="$activityTarget" :push-url="!$embedded" />
                     </th>
-                    @unless($hideAgreement)
-                        <th>
-                            <x-table-sort-link column="agreement" label="Agreement" :sort="$s" :direction="$d" :url="$url('agreement')" :target="$activityTarget" :push-url="!$embedded" />
-                        </th>
-                    @endunless
+                    <th>
+                        <x-table-sort-link column="agreement" label="Agreement" :sort="$s" :direction="$d" :url="$url('agreement')" :target="$activityTarget" :push-url="!$embedded" />
+                    </th>
                     <th>
                         <x-table-sort-link column="activity_type" label="Activity Type" :sort="$s" :direction="$d" :url="$url('activity_type')" :target="$activityTarget" :push-url="!$embedded" />
                     </th>
-                    @if($hideAgreement)
+                    @if($agreementContext)
                         <th>
                             <x-table-sort-link column="organization" label="Organizations" :sort="$s" :direction="$d" :url="$url('organization')" :target="$activityTarget" :push-url="!$embedded" />
                         </th>
@@ -45,6 +43,7 @@
                     <th>
                         <x-table-sort-link column="logged_by" label="Logged By" :sort="$s" :direction="$d" :url="$url('logged_by')" :target="$activityTarget" :push-url="!$embedded" />
                     </th>
+                    <th>My role</th>
                     <th class="app-col-actions"><span class="visually-hidden">Actions</span></th>
                 </tr>
             </thead>
@@ -61,23 +60,21 @@
                             <x-status-badge :active="false" inactive-label="Cancelled" tone="danger" class="ms-1" />
                         @endif
                     </td>
-                    @unless($hideAgreement)
-                        <td data-label="Agreement">
-                            <x-table-badge-list
-                                kind="agreement"
-                                :items="$activity->agreements->map(fn ($agreement) => [
-                                    'name' => $agreement->name,
-                                    'href' => $agreement->isLinkable() ? route('agreements.show', $agreement) : null,
-                                ])"
-                                href-key="href"
-                                container-class="app-chip-list app-chip-list--primary"
-                            />
-                        </td>
-                    @endunless
+                    <td data-label="Agreement">
+                        <x-table-badge-list
+                            kind="agreement"
+                            :items="$activity->agreements->map(fn ($agreement) => [
+                                'name' => $agreement->name,
+                                'href' => $agreement->isLinkable() ? route('agreements.show', $agreement) : null,
+                            ])"
+                            href-key="href"
+                            container-class="app-chip-list app-chip-list--primary"
+                        />
+                    </td>
                     <td data-label="Type">
                         <span class="app-tag">{{ $activity->classificationLabel() }}</span>
                     </td>
-                    @if($hideAgreement)
+                    @if($agreementContext)
                         <td data-label="Organizations">
                             <x-table-badge-list kind="organization" :items="$activity->organizations" route-name="organizations.show" />
                         </td>
@@ -90,6 +87,9 @@
                     </td>
                     <td data-label="Logged by">
                         <x-user-link :user="$activity->user" />
+                    </td>
+                    <td data-label="My role">
+                        <x-access-reason-list :reasons="$roleReasons[$activity->id] ?? []" />
                     </td>
                     <td class="app-col-actions">
                         @php
@@ -147,7 +147,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="{{ $hideAgreement ? 6 : 7 }}" class="text-center py-5">
+                    <td colspan="{{ $agreementContext ? 9 : 8 }}" class="text-center py-5">
                         <p class="text-muted mb-2">No activities found.</p>
                         <a href="{{ route('activities.create') }}" class="btn btn-sm btn-primary">Log Activity</a>
                     </td>
