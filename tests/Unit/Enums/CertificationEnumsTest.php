@@ -7,18 +7,20 @@ use App\Enums\CertificateRequirementKind;
 use App\Enums\CertificateRequirementPhase;
 use App\Enums\CertificateTagOutcome;
 use App\Enums\CertificationDuty;
-use App\Enums\CertificationToolScoreUnit;
+use App\Enums\CertificationInstrumentScoreUnit;
 
 test('certificate requirement kind has expected cases and labels', function () {
     expect(CertificateRequirementKind::values())->toBe([
         'activity_count',
         'tool_submission',
+        'training_sections',
         'attestation',
     ]);
 
-    expect(CertificateRequirementKind::ActivityCount->label())->toBe('Logged Activities');
-    expect(CertificateRequirementKind::ToolSubmission->label())->toBe('Tool Submissions');
-    expect(CertificateRequirementKind::Attestation->label())->toBe('Manual Attestation');
+    expect(CertificateRequirementKind::ActivityCount->label())->toBe('Activity work');
+    expect(CertificateRequirementKind::ToolSubmission->label())->toBe('Tool submissions');
+    expect(CertificateRequirementKind::TrainingSections->label())->toBe('Training sections');
+    expect(CertificateRequirementKind::Attestation->label())->toBe('Coach confirmation');
 });
 
 test('certificate requirement phase has expected cases and labels', function () {
@@ -43,13 +45,17 @@ test('certificate group satisfy mode has expected cases and labels', function ()
 });
 
 test('certification tool score unit has expected cases labels and suffixes', function () {
-    expect(CertificationToolScoreUnit::values())->toBe(['percent', 'points', 'number']);
-    expect(CertificationToolScoreUnit::Percent->label())->toBe('Percentage');
-    expect(CertificationToolScoreUnit::Points->label())->toBe('Points');
-    expect(CertificationToolScoreUnit::Number->label())->toBe('Number');
-    expect(CertificationToolScoreUnit::Percent->suffix())->toBe('%');
-    expect(CertificationToolScoreUnit::Points->suffix())->toBe('pts');
-    expect(CertificationToolScoreUnit::Number->suffix())->toBeNull();
+    expect(CertificationInstrumentScoreUnit::values())->toBe(['percent', 'points', 'number', 'pass_fail']);
+    expect(CertificationInstrumentScoreUnit::Percent->label())->toBe('Percentage');
+    expect(CertificationInstrumentScoreUnit::Points->label())->toBe('Points');
+    expect(CertificationInstrumentScoreUnit::Number->label())->toBe('Number');
+    expect(CertificationInstrumentScoreUnit::Percent->suffix())->toBe('%');
+    expect(CertificationInstrumentScoreUnit::Points->suffix())->toBe('pts');
+    expect(CertificationInstrumentScoreUnit::Number->suffix())->toBeNull();
+    expect(CertificationInstrumentScoreUnit::PassFail->suffix())->toBeNull();
+    expect(CertificationInstrumentScoreUnit::PassFail->format('1.0000'))->toBe('Pass');
+    expect(CertificationInstrumentScoreUnit::PassFail->format('0.0000'))->toBe('Fail');
+    expect(CertificationInstrumentScoreUnit::Percent->format('85.5000'))->toBe('85.5%');
 });
 
 test('certification duty has expected cases and labels', function () {

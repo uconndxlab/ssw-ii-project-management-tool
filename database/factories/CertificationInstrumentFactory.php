@@ -2,15 +2,17 @@
 
 namespace Database\Factories;
 
+use App\Enums\CertificationInstrumentType;
 use App\Enums\ProgramScopeMode;
-use App\Models\CertificationTool;
+use App\Models\ActivityType;
+use App\Models\CertificationInstrument;
 use App\Models\Program;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/** @extends Factory<CertificationTool> */
-class CertificationToolFactory extends Factory
+/** @extends Factory<CertificationInstrument> */
+class CertificationInstrumentFactory extends Factory
 {
-    protected $model = CertificationTool::class;
+    protected $model = CertificationInstrument::class;
 
     public function definition(): array
     {
@@ -21,6 +23,14 @@ class CertificationToolFactory extends Factory
             'sort_order' => 0,
             'program_scope_mode' => ProgramScopeMode::Specific,
         ];
+    }
+
+    public function training(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'type' => CertificationInstrumentType::Training,
+            'activity_type_id' => ActivityType::factory(),
+        ]);
     }
 
     public function inactive(): static
@@ -40,7 +50,7 @@ class CertificationToolFactory extends Factory
 
     public function forProgram(Program $program): static
     {
-        return $this->afterCreating(function (CertificationTool $tool) use ($program) {
+        return $this->afterCreating(function (CertificationInstrument $tool) use ($program) {
             $tool->programs()->sync([$program->id]);
         });
     }

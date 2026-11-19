@@ -2,21 +2,26 @@
 
 namespace App\Models;
 
-use Database\Factories\CertificationToolDimensionFactory;
+use App\Enums\CertificationInstrumentDimensionType;
+use Database\Factories\CertificationInstrumentDimensionFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
-class CertificationToolDimension extends Model
+/**
+ * @property CertificationInstrumentDimensionType $type
+ */
+class CertificationInstrumentDimension extends Model
 {
-    /** @use HasFactory<CertificationToolDimensionFactory> */
+    /** @use HasFactory<CertificationInstrumentDimensionFactory> */
     use HasFactory;
 
     protected $fillable = [
-        'certification_tool_id',
+        'certification_instrument_id',
         'name',
+        'type',
         'slug',
         'sort_order',
     ];
@@ -33,19 +38,20 @@ class CertificationToolDimension extends Model
     protected function casts(): array
     {
         return [
+            'type' => CertificationInstrumentDimensionType::class,
             'sort_order' => 'integer',
         ];
     }
 
-    /** @return BelongsTo<CertificationTool, $this> */
-    public function tool(): BelongsTo
+    /** @return BelongsTo<CertificationInstrument, $this> */
+    public function instrument(): BelongsTo
     {
-        return $this->belongsTo(CertificationTool::class, 'certification_tool_id');
+        return $this->belongsTo(CertificationInstrument::class, 'certification_instrument_id');
     }
 
-    /** @return HasMany<CertificationToolDimensionOption, $this> */
+    /** @return HasMany<CertificationInstrumentDimensionOption, $this> */
     public function options(): HasMany
     {
-        return $this->hasMany(CertificationToolDimensionOption::class)->orderBy('sort_order');
+        return $this->hasMany(CertificationInstrumentDimensionOption::class)->orderBy('sort_order');
     }
 }

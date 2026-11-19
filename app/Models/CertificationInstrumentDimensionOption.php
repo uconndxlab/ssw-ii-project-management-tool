@@ -2,21 +2,22 @@
 
 namespace App\Models;
 
-use Database\Factories\CertificationToolDimensionOptionFactory;
+use Database\Factories\CertificationInstrumentDimensionOptionFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
-class CertificationToolDimensionOption extends Model
+class CertificationInstrumentDimensionOption extends Model
 {
-    /** @use HasFactory<CertificationToolDimensionOptionFactory> */
+    /** @use HasFactory<CertificationInstrumentDimensionOptionFactory> */
     use HasFactory;
 
     protected $fillable = [
-        'certification_tool_dimension_id',
+        'certification_instrument_dimension_id',
         'label',
         'value',
+        'scored',
         'sort_order',
     ];
 
@@ -32,13 +33,14 @@ class CertificationToolDimensionOption extends Model
     protected function casts(): array
     {
         return [
+            'scored' => 'boolean',
             'sort_order' => 'integer',
         ];
     }
 
-    /** @return BelongsTo<CertificationToolDimension, $this> */
+    /** @return BelongsTo<CertificationInstrumentDimension, $this> */
     public function dimension(): BelongsTo
     {
-        return $this->belongsTo(CertificationToolDimension::class, 'certification_tool_dimension_id');
+        return $this->belongsTo(CertificationInstrumentDimension::class, 'certification_instrument_dimension_id');
     }
 }

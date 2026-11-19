@@ -292,12 +292,12 @@ class CertificateLifecycleService
                 $requirement->loadMissing(['certificationRole', 'contactFamily']);
 
                 return [
-                    'id' => $requirement->id, 'label' => $requirement->label ?: ($requirement->certificationTool->name ?? ($requirement->activityType ? $requirement->activityType->name.($requirement->subActivity ? ' › '.$requirement->subActivity->name : '') : $requirement->kind->label())),
+                    'id' => $requirement->id, 'label' => $requirement->label ?: ($requirement->certificationInstrument->name ?? ($requirement->activityType ? $requirement->activityType->name.($requirement->subActivity ? ' › '.$requirement->subActivity->name : '') : $requirement->kind->label())),
                     'kind' => $requirement->kind->value, 'group_id' => $requirement->certificate_requirement_group_id,
                     'target' => $row['target'], 'count' => $row['count'], 'satisfied' => $row['satisfied'], 'requires_passing' => $requirement->requires_passing,
                     'window_months' => $requirement->window_months, 'window_start' => $row['window_start']?->toDateString(),
                     'threshold_note' => $requirement->threshold_note, 'notes' => $requirement->notes,
-                    'filters' => ['tool' => $requirement->certificationTool?->name, 'activity_type' => $requirement->activityType?->name, 'sub_activity' => $requirement->subActivity?->name, 'contact_family' => $requirement->contactFamily?->name, 'role' => $requirement->certificationRole?->name],
+                    'filters' => ['tool' => $requirement->certificationInstrument?->name, 'activity_type' => $requirement->activityType?->name, 'sub_activity' => $requirement->subActivity?->name, 'contact_family' => $requirement->contactFamily?->name, 'role' => $requirement->certificationRole?->name],
                     'rules' => $row['rules']->map(fn (array $rule) => [
                         'dimension' => $rule['rule']->dimension->name, 'mode' => $rule['rule']->mode->value,
                         'options' => $rule['rule']->dimension->options->whereIn('id', $rule['rule']->option_ids)->pluck('label')->values()->all(),
@@ -316,7 +316,7 @@ class CertificateLifecycleService
                             'activity_type' => $tag->activity->activityType?->name, 'sub_activity' => $tag->activity->subActivity?->name, 'units' => $tag->completion_units, 'tag_notes' => $tag->notes,
                             'submission' => $submission ? [
                                 'id' => $submission->id, 'outcome' => $submission->outcome->value, 'notes' => $submission->notes, 'recorded_by' => $submission->recordedBy?->name,
-                                'options' => $submission->dimensionValues->map(fn ($value) => $value->dimension->name.': '.$value->option->label)->values()->all(),
+                                'options' => $submission->dimensionValues->map(fn ($value) => $value->dimension->name.': '.$value->option->label.($value->result ? ' · '.$value->result->label() : ''))->values()->all(),
                                 'scores' => $submission->scores->map(fn ($score) => ['field' => $score->field->name, 'value' => (string) $score->value, 'unit' => $score->field->unit->value])->values()->all(),
                             ] : null,
                         ];

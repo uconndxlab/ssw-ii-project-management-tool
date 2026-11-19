@@ -19,7 +19,7 @@ class CertificateRequirementDimensionRule extends Model
 
     protected $fillable = [
         'certificate_requirement_id',
-        'certification_tool_dimension_id',
+        'certification_instrument_dimension_id',
         'mode',
         'option_ids',
         'min_count',
@@ -40,9 +40,9 @@ class CertificateRequirementDimensionRule extends Model
         return $this->belongsTo(CertificateRequirement::class, 'certificate_requirement_id');
     }
 
-    /** @return BelongsTo<CertificationToolDimension, $this> */
+    /** @return BelongsTo<CertificationInstrumentDimension, $this> */
     public function dimension(): BelongsTo
     {
-        return $this->belongsTo(CertificationToolDimension::class, 'certification_tool_dimension_id');
+        return $this->belongsTo(CertificationInstrumentDimension::class, 'certification_instrument_dimension_id');
     }
 }

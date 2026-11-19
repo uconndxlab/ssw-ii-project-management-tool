@@ -118,13 +118,13 @@ class ActivityDuplicationService
 
         foreach ($tag->submissions as $submission) {
             $submissionCopy = $tagCopy->submissions()->create($submission->only([
-                'certification_tool_id', 'outcome', 'recorded_by_user_id', 'notes',
+                'certification_instrument_id', 'outcome', 'recorded_by_user_id', 'notes',
             ]));
             $submissionCopy->dimensionValues()->createMany($submission->dimensionValues->map->only([
-                'certification_tool_dimension_id', 'certification_tool_dimension_option_id',
+                'certification_instrument_dimension_id', 'certification_instrument_dimension_option_id', 'result',
             ])->all());
             $submissionCopy->scores()->createMany($submission->scores->map->only([
-                'certification_tool_score_field_id', 'value',
+                'certification_instrument_score_field_id', 'value',
             ])->all());
         }
     }

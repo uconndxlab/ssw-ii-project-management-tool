@@ -50,10 +50,10 @@
                 index-token="__OPT_INDEX__"
                 add-label="Add option"
                 variant="flat"
-                :template="view('admin.certification-tools.partials.dimension-option-row', ['row' => [], 'dimIndex' => $dimIndex, 'optIndex' => '__OPT_INDEX__'])->render()"
+                :template="view('admin.certification-instruments.partials.dimension-option-row', ['row' => [], 'dimIndex' => $dimIndex, 'optIndex' => '__OPT_INDEX__'])->render()"
             >
                 @foreach($options as $optIndex => $option)
-                    @include('admin.certification-tools.partials.dimension-option-row', ['row' => $option, 'dimIndex' => $dimIndex, 'optIndex' => $optIndex])
+                    @include('admin.certification-instruments.partials.dimension-option-row', ['row' => $option, 'dimIndex' => $dimIndex, 'optIndex' => $optIndex])
                 @endforeach
             </x-repeater-rows>
         </div>

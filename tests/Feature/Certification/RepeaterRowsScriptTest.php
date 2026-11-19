@@ -2,13 +2,13 @@
 
 use App\Models\Certificate;
 use App\Models\CertificateRequirement;
-use App\Models\CertificationTool;
-use App\Models\CertificationToolDimension;
-use App\Models\CertificationToolDimensionOption;
+use App\Models\CertificationInstrument;
+use App\Models\CertificationInstrumentDimension;
+use App\Models\CertificationInstrumentDimensionOption;
 
 test('certification tool create page loads repeater script outside row templates', function () {
     $admin = createSystemAdmin();
-    $html = $this->actingAs($admin)->get(route('certification-tools.create'))->getContent();
+    $html = $this->actingAs($admin)->get(route('certification-instruments.create'))->getContent();
 
     expect($html)->toContain('data-repeater-add');
     expect($html)->toContain("addBtn = e.target.closest('[data-repeater-add]')");
@@ -26,15 +26,15 @@ test('certification tool create page loads repeater script outside row templates
 
 test('certification tool edit page renders existing rows as collapsible display cards', function () {
     $admin = createSystemAdmin();
-    $tool = CertificationTool::factory()->create();
-    $dimension = CertificationToolDimension::factory()->for($tool, 'tool')->create(['name' => 'Phase']);
-    CertificationToolDimensionOption::factory()->for($dimension, 'dimension')->count(3)->sequence(
+    $tool = CertificationInstrument::factory()->create();
+    $dimension = CertificationInstrumentDimension::factory()->for($tool, 'instrument')->create(['name' => 'Phase']);
+    CertificationInstrumentDimensionOption::factory()->for($dimension, 'dimension')->count(3)->sequence(
         ['label' => 'Phase 1'],
         ['label' => 'Phase 2'],
         ['label' => 'Phase 3'],
     )->create();
 
-    $html = $this->actingAs($admin)->get(route('certification-tools.edit', $tool))->getContent();
+    $html = $this->actingAs($admin)->get(route('certification-instruments.edit', $tool))->getContent();
 
     // Existing dimension starts collapsed in display mode; the add-template starts in edit mode.
     expect($html)->toContain('data-repeater-mode="display"');
@@ -56,9 +56,9 @@ test('certification tool edit page renders existing rows as collapsible display 
 
 test('certificate edit page renders requirement rows with dimension options', function () {
     $admin = createSystemAdmin();
-    $tool = CertificationTool::factory()->create();
-    $dimension = CertificationToolDimension::factory()->for($tool, 'tool')->create(['name' => 'Review Mode']);
-    CertificationToolDimensionOption::factory()->for($dimension, 'dimension')->count(2)->sequence(
+    $tool = CertificationInstrument::factory()->create();
+    $dimension = CertificationInstrumentDimension::factory()->for($tool, 'instrument')->create(['name' => 'Review Mode']);
+    CertificationInstrumentDimensionOption::factory()->for($dimension, 'dimension')->count(2)->sequence(
         ['label' => 'Full'],
         ['label' => 'Partial'],
     )->create();
@@ -66,7 +66,7 @@ test('certificate edit page renders requirement rows with dimension options', fu
     $certificate = Certificate::factory()->create();
     CertificateRequirement::factory()->for($certificate)->create([
         'kind' => 'tool_submission',
-        'certification_tool_id' => $tool->id,
+        'certification_instrument_id' => $tool->id,
         'label' => 'Submit reviews',
     ]);
 

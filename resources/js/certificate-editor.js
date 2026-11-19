@@ -85,9 +85,25 @@ if (root) {
             : `Cover every ${dimension}: ${labels.join(', ') || 'choose categories'}`;
     }
 
+    const checkedSections = (row) => $$('[data-cert-sections]:not([hidden]) input:checked', row);
+
+    function sectionsSentence(row) {
+        const count = checkedSections(row).length;
+        if (!count) return 'Choose the sections needed';
+        const quota = $('[data-cert-section-mode][value=quota]', row).checked;
+        return quota ? `At least ${value('[data-cert-section-minimum]', row) || '?'} of ${count} checked sections` : `Every one of ${count} checked ${count === 1 ? 'section' : 'sections'}`;
+    }
+
     function requirementSentence(row, compact = false) {
         const kind = value('[data-cert-kind]', row);
-        if (!kind) return 'Choose Activity work, Tool submissions or Coach confirmation.';
+        if (!kind) return 'Choose Activity work, Tool submissions, Training sections or Coach confirmation.';
+        if (kind === 'training_sections') {
+            const training = value('[data-cert-tool]', row) ? text('[data-cert-tool]', row) : 'training (choose one)';
+            const pieces = [sectionsSentence(row), `${training} · minimum ${value('[data-cert-target]', row) || '?'} ${value('[data-cert-target]', row) === '1' ? 'submission' : 'submissions'}`, $('[data-cert-passing]', row).checked ? 'Scored sections need a Pass' : 'Passing not required'];
+            pieces.push(text('[data-cert-family]', row), text('[data-cert-type]', row) + (value('[data-cert-sub]', row) ? ` › ${text('[data-cert-sub]', row)}` : ''), text('[data-cert-role]', row), windowSentence(row));
+            if (!compact && value('[data-cert-threshold]', row)) pieces.push(`Guidance: ${value('[data-cert-threshold]', row)}`);
+            return pieces.join(' · ');
+        }
         if (kind === 'attestation') return `Coach confirmation${value('[data-cert-threshold]', row) ? ` · Guidance: ${value('[data-cert-threshold]', row)}` : ''}`;
         const count = value('[data-cert-target]', row) || '?';
         const pieces = [kind === 'tool_submission' ? `${count} ${value('[data-cert-tool]', row) ? text('[data-cert-tool]', row) : 'tool'} submissions${value('[data-cert-tool]', row) ? '' : ' (choose a tool)'}` : `${count} activity completion units`];
@@ -158,6 +174,23 @@ if (root) {
             block.hidden = !shown;
             $$('input, select, textarea, button', block).forEach((input) => { input.disabled = !shown; });
         });
+        const familySelect = $('[data-cert-family]', row);
+        const typeSelect = $('[data-cert-type]', row);
+        // A training decides its activity type and family; the server fills them in from the training.
+        const trainingType = kind === 'training_sections' ? $('[data-cert-tool]', row).selectedOptions[0]?.dataset.activityType : '';
+        if (trainingType) {
+            typeSelect.value = trainingType;
+            familySelect.value = typeSelect.selectedOptions[0]?.dataset.family ?? '';
+        }
+        familySelect.disabled = familySelect.disabled || Boolean(trainingType);
+        typeSelect.disabled = typeSelect.disabled || Boolean(trainingType);
+        $('[data-cert-type-locked]', row).hidden = !trainingType;
+        if (typeSelect.value && !familySelect.value) familySelect.value = typeSelect.selectedOptions[0]?.dataset.family ?? '';
+        [...typeSelect.options].forEach((option) => {
+            if (!option.value) return;
+            option.hidden = Boolean(familySelect.value) && option.dataset.family !== familySelect.value;
+            option.disabled = option.hidden;
+        });
         const type = value('[data-cert-type]', row);
         const subSelect = $('[data-cert-sub]', row);
         [...subSelect.options].forEach((option) => {
@@ -166,19 +199,24 @@ if (root) {
             option.disabled = option.hidden;
         });
         if (!type || subSelect.selectedOptions[0]?.disabled) subSelect.value = '';
-        subSelect.disabled = !['activity_count', 'tool_submission'].includes(kind) || !type || ![...subSelect.options].some((option) => option.value && !option.disabled);
+        subSelect.disabled = !['activity_count', 'tool_submission', 'training_sections'].includes(kind) || !type || ![...subSelect.options].some((option) => option.value && !option.disabled);
         if (subSelect.disabled) subSelect.value = '';
         if (kind === 'attestation') $('[data-cert-target]', row).value = '1';
         // The target is still submitted for confirmations, whose single check is the target.
         $('[data-cert-target]', row).disabled = false;
-        $('[data-cert-target-help]', row).textContent = kind === 'activity_count' ? 'Counts recorded completion units, not the number of activities.' : 'Total submissions; coverage and quotas apply within this same set.';
+        const training = kind === 'training_sections';
+        $('[data-cert-target-help]', row).textContent = kind === 'activity_count' ? 'Counts recorded completion units, not the number of activities.' : training ? 'Eligible submissions of this training. Sections are counted across all of them.' : 'Total submissions; coverage and quotas apply within this same set.';
+        row.querySelector(`label[for="${$('[data-cert-target]', row).id}"]`).textContent = training ? 'Minimum submissions' : 'Target';
+        row.querySelector(`label[for="${$('[data-cert-tool]', row).id}"]`).textContent = training ? 'Training' : 'Submission tool';
+        $('[data-cert-tool] option[value=""]', row).textContent = training ? 'Select training…' : 'Select tool…';
+        $('[data-cert-passing-label]', row).textContent = training ? 'Scored sections need a Pass' : 'Only coach-marked passing submissions count';
         $('[data-cert-effective-window]', row).textContent = windowSentence(row);
         const mode = value('[name=program_scope_mode]:checked') || value('[name=program_scope_mode]');
         const selectedPrograms = new Set($$('[name="program_ids[]"]').map((input) => input.value));
         const toolSelect = $('[data-cert-tool]', row);
         [...toolSelect.options].forEach((option) => {
             if (!option.value) return;
-            const compatible = mode === 'all' ? option.dataset.scopeMode !== 'none' : mode === 'specific' && (option.dataset.scopeMode === 'all' || option.dataset.programIds.split(',').some((id) => selectedPrograms.has(id)));
+            const compatible = option.dataset.type === (training ? 'training' : 'tool') && (mode === 'all' ? option.dataset.scopeMode !== 'none' : mode === 'specific' && (option.dataset.scopeMode === 'all' || option.dataset.programIds.split(',').some((id) => selectedPrograms.has(id))));
             option.hidden = !compatible && option.value !== tool;
             option.disabled = !compatible && option.value !== tool;
             option.dataset.compatible = String(compatible);
@@ -190,7 +228,16 @@ if (root) {
         empty.hidden = compatibleTools;
         $('[data-cert-tool-empty-message]', row).textContent = missingPrograms
             ? 'Choose the certificate’s programs in Basics to see compatible tools.'
-            : 'No submission tools match this scope. Check the programs in Basics or the tool catalog.';
+            : `No ${training ? 'trainings' : 'submission tools'} match this scope. Check the programs in Basics or Tools & Trainings.`;
+        $$('[data-cert-sections]', row).forEach((block) => {
+            block.hidden = block.dataset.certSections !== tool;
+            $$('input', block).forEach((input) => { input.disabled = block.hidden || !training; });
+        });
+        const sectionTotal = $$('[data-cert-sections]:not([hidden]) input', row).length;
+        $('[data-cert-sections-actions]', row).hidden = !sectionTotal;
+        $('[data-cert-sections-count]', row).textContent = `${checkedSections(row).length} of ${sectionTotal} checked`;
+        $('[data-cert-sections-empty]', row).textContent = !tool ? 'Choose a training to see its sections.' : !sectionTotal ? 'This training has no sections yet. Add them in Tools & Trainings.' : '';
+        $('[data-cert-section-minimum]', row).disabled = !training || !$('[data-cert-section-mode][value=quota]', row).checked;
         const hasDimensions = tool && $('[data-cert-rule-template]', row).content.querySelector(`option[data-tool="${tool}"]`);
         $('[data-cert-add=rule]', row).disabled = kind !== 'tool_submission' || !hasDimensions;
         $('[data-cert-add-rule-help]', row).textContent = !tool ? 'Choose a tool before adding coverage or quotas.' : !hasDimensions ? 'This tool has no category dimensions. Its total and passing requirement still apply.' : '';
@@ -216,7 +263,7 @@ if (root) {
                 }
             });
         });
-        $('[data-cert-title]', row).textContent = value('[data-cert-label]', row) || ({activity_count: 'Activity work', tool_submission: 'Tool submissions', attestation: 'Coach confirmation'}[kind] ?? 'New requirement');
+        $('[data-cert-title]', row).textContent = value('[data-cert-label]', row) || (kind ? text('[data-cert-kind]', row) : 'New requirement');
         $('[data-cert-summary]', row).textContent = requirementSentence(row, true);
     }
 
@@ -369,6 +416,11 @@ if (root) {
             sync();
             $('[data-cert-add=requirement]', renewal).focus();
         }
+        if (button.dataset.certSectionsAll) {
+            $$('[data-cert-sections]:not([hidden]) input', row).forEach((input) => { input.checked = button.dataset.certSectionsAll === '1'; });
+            sync();
+            announce(`${checkedSections(row).length} sections checked.`);
+        }
         if (button.hasAttribute('data-cert-copy')) await copyInitial(button);
     });
 
@@ -426,12 +478,23 @@ if (root) {
     root.addEventListener('change', async (event) => {
         const input = event.target;
         const row = input.closest('[data-cert-requirement]');
+        if (input.matches('[data-cert-family]')) {
+            const typeSelect = $('[data-cert-type]', row);
+            if (input.value && typeSelect.value && typeSelect.selectedOptions[0]?.dataset.family !== input.value) typeSelect.value = '';
+        }
+        if (input.matches('[data-cert-type]') && input.value) $('[data-cert-family]', row).value = input.selectedOptions[0].dataset.family;
         if (input.matches('[data-cert-kind]')) {
             const previous = input.dataset.previous ?? '';
             if (previous && previous !== input.value) {
-                const destructive = previous === 'tool_submission' || input.value === 'attestation';
-                if (destructive && !await confirmChange(input, 'Change requirement type?', 'Incompatible submission rules and filters will be cleared. The requirement name and notes are kept.', 'Change type')) { input.value = previous; return; }
-                if (previous === 'tool_submission') { resetRules(row); $('[data-cert-tool]', row).value = ''; }
+                const instrumentKinds = ['tool_submission', 'training_sections'];
+                const destructive = instrumentKinds.includes(previous) || input.value === 'attestation';
+                if (destructive && !await confirmChange(input, 'Change requirement type?', 'Incompatible submission rules, sections and filters will be cleared. The requirement name and notes are kept.', 'Change type')) { input.value = previous; return; }
+                if (instrumentKinds.includes(previous)) {
+                    resetRules(row);
+                    $('[data-cert-tool]', row).value = '';
+                    $('[data-cert-tool]', row).dataset.previous = '';
+                    $$('[data-cert-sections] input', row).forEach((section) => { section.checked = false; });
+                }
                 if (input.value === 'attestation') {
                     ['family', 'type', 'sub', 'role', 'window'].forEach((field) => { $(`[data-cert-${field}]`, row).value = ''; });
                     $('[data-cert-target]', row).value = '1';
@@ -440,8 +503,9 @@ if (root) {
             input.dataset.previous = input.value;
         }
         if (input.matches('[data-cert-tool]')) {
-            if (input.dataset.previous !== input.value && rows('[data-cert-rule]', row).length && !await confirmChange(input, 'Change tool?', 'Coverage and quota rules for the previous tool will be cleared.', 'Change tool')) { input.value = input.dataset.previous ?? ''; return; }
-            if (input.dataset.previous !== input.value) resetRules(row);
+            const sections = checkedSections(row);
+            if (input.dataset.previous !== input.value && (rows('[data-cert-rule]', row).length || sections.length) && !await confirmChange(input, sections.length ? 'Change training?' : 'Change tool?', sections.length ? 'The checked sections of the previous training will be cleared.' : 'Coverage and quota rules for the previous tool will be cleared.', sections.length ? 'Change training' : 'Change tool')) { input.value = input.dataset.previous ?? ''; return; }
+            if (input.dataset.previous !== input.value) { resetRules(row); sections.forEach((section) => { section.checked = false; }); }
             input.dataset.previous = input.value;
         }
         if (input.matches('[data-cert-dimension]')) {

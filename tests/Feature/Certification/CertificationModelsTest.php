@@ -7,27 +7,27 @@ use App\Models\Certificate;
 use App\Models\CertificateRequirement;
 use App\Models\CertificateRequirementDimensionRule;
 use App\Models\CertificateRequirementGroup;
+use App\Models\CertificationInstrument;
+use App\Models\CertificationInstrumentDimension;
+use App\Models\CertificationInstrumentDimensionOption;
+use App\Models\CertificationInstrumentScoreField;
 use App\Models\CertificationRole;
-use App\Models\CertificationTool;
-use App\Models\CertificationToolDimension;
-use App\Models\CertificationToolDimensionOption;
-use App\Models\CertificationToolScoreField;
 use App\Models\User;
 use App\Models\UserCertificationDuty;
 
 test('certification tool generates slug on create and orders nested relations', function () {
-    $tool = CertificationTool::factory()->create(['name' => 'COMET Tool']);
+    $tool = CertificationInstrument::factory()->create(['name' => 'COMET Tool']);
 
     expect($tool->slug)->toBe('comet-tool');
 
-    $dimB = CertificationToolDimension::factory()->for($tool, 'tool')->create(['name' => 'B', 'sort_order' => 2]);
-    $dimA = CertificationToolDimension::factory()->for($tool, 'tool')->create(['name' => 'A', 'sort_order' => 1]);
+    $dimB = CertificationInstrumentDimension::factory()->for($tool, 'instrument')->create(['name' => 'B', 'sort_order' => 2]);
+    $dimA = CertificationInstrumentDimension::factory()->for($tool, 'instrument')->create(['name' => 'A', 'sort_order' => 1]);
 
     $tool->refresh();
     expect($tool->dimensions->pluck('id')->all())->toBe([$dimA->id, $dimB->id]);
 
-    $optB = CertificationToolDimensionOption::factory()->for($dimA, 'dimension')->create(['label' => 'B', 'sort_order' => 2]);
-    $optA = CertificationToolDimensionOption::factory()->for($dimA, 'dimension')->create(['label' => 'A', 'sort_order' => 1]);
+    $optB = CertificationInstrumentDimensionOption::factory()->for($dimA, 'dimension')->create(['label' => 'B', 'sort_order' => 2]);
+    $optA = CertificationInstrumentDimensionOption::factory()->for($dimA, 'dimension')->create(['label' => 'A', 'sort_order' => 1]);
 
     $dimA->refresh();
     expect($dimA->options->pluck('id')->all())->toBe([$optA->id, $optB->id]);
@@ -35,7 +35,7 @@ test('certification tool generates slug on create and orders nested relations', 
 });
 
 test('certification tool score field generates slug on create', function () {
-    $field = CertificationToolScoreField::factory()->create(['name' => 'Overall Match %']);
+    $field = CertificationInstrumentScoreField::factory()->create(['name' => 'Overall Match %']);
 
     expect($field->slug)->toBe('overall-match');
 });
@@ -72,8 +72,8 @@ test('certificate requirementsForPhase filters by phase', function () {
 });
 
 test('certificate requirement casts kind and relates to dimension rules', function () {
-    $tool = CertificationTool::factory()->create();
-    $dimension = CertificationToolDimension::factory()->for($tool, 'tool')->create();
+    $tool = CertificationInstrument::factory()->create();
+    $dimension = CertificationInstrumentDimension::factory()->for($tool, 'instrument')->create();
     $requirement = CertificateRequirement::factory()
         ->toolSubmission($tool)
         ->for(Certificate::factory())
@@ -81,7 +81,7 @@ test('certificate requirement casts kind and relates to dimension rules', functi
 
     CertificateRequirementDimensionRule::factory()
         ->for($requirement, 'requirement')
-        ->create(['certification_tool_dimension_id' => $dimension->id, 'option_ids' => [1, 2]]);
+        ->create(['certification_instrument_dimension_id' => $dimension->id, 'option_ids' => [1, 2]]);
 
     $requirement->refresh();
     expect($requirement->kind)->toBe(CertificateRequirementKind::ToolSubmission);
@@ -113,13 +113,13 @@ test('user certification duty casts duty and scope type', function () {
 });
 
 test('certificate and tool scopeActive and scopeNotRetired work', function () {
-    $active = CertificationTool::factory()->create();
-    $retired = CertificationTool::factory()->retired()->create();
+    $active = CertificationInstrument::factory()->create();
+    $retired = CertificationInstrument::factory()->retired()->create();
 
-    expect(CertificationTool::query()->active()->pluck('id')->all())->toContain($active->id);
-    expect(CertificationTool::query()->active()->pluck('id')->all())->not->toContain($retired->id);
-    expect(CertificationTool::query()->notRetired()->pluck('id')->all())->toContain($active->id);
-    expect(CertificationTool::query()->notRetired()->pluck('id')->all())->not->toContain($retired->id);
+    expect(CertificationInstrument::query()->active()->pluck('id')->all())->toContain($active->id);
+    expect(CertificationInstrument::query()->active()->pluck('id')->all())->not->toContain($retired->id);
+    expect(CertificationInstrument::query()->notRetired()->pluck('id')->all())->toContain($active->id);
+    expect(CertificationInstrument::query()->notRetired()->pluck('id')->all())->not->toContain($retired->id);
 
     $activeCert = Certificate::factory()->create();
     $retiredCert = Certificate::factory()->retired()->create();
@@ -131,10 +131,10 @@ test('certificate and tool scopeActive and scopeNotRetired work', function () {
 test('certificate and tool visibleTo resolves without throwing', function () {
     [$project, $program] = createProjectWithProgram();
     $admin = createSystemAdmin();
-    $tool = CertificationTool::factory()->forProgram($program)->create();
+    $tool = CertificationInstrument::factory()->forProgram($program)->create();
     $certificate = Certificate::factory()->forProgram($program)->create();
 
-    expect(CertificationTool::query()->visibleTo($admin)->whereKey($tool)->exists())->toBeTrue();
+    expect(CertificationInstrument::query()->visibleTo($admin)->whereKey($tool)->exists())->toBeTrue();
     expect(Certificate::query()->visibleTo($admin)->whereKey($certificate)->exists())->toBeTrue();
 });
 

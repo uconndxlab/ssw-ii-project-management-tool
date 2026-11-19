@@ -9,12 +9,12 @@
     <input type="hidden" name="{{ $ruleField }}[_delete]" value="{{ $ruleDeleted ? 1 : 0 }}" data-cert-delete>
     <div class="row g-3">
         <div class="col-md-6">
-            <x-form-field label="Dimension" :for="$ruleControl.'-dimension'" :name="$rulePrefix.'.certification_tool_dimension_id'">
-                <select class="form-select" id="{{ $ruleControl }}-dimension" name="{{ $ruleField }}[certification_tool_dimension_id]" data-cert-dimension>
+            <x-form-field label="Dimension" :for="$ruleControl.'-dimension'" :name="$rulePrefix.'.certification_instrument_dimension_id'">
+                <select class="form-select" id="{{ $ruleControl }}-dimension" name="{{ $ruleField }}[certification_instrument_dimension_id]" data-cert-dimension>
                     <option value="">Choose dimension…</option>
-                    @foreach($certificationTools as $tool)
+                    @foreach($certificationInstruments->reject->isTraining() as $tool)
                         @foreach($tool->dimensions as $dimension)
-                            <option value="{{ $dimension->id }}" data-tool="{{ $tool->id }}" @selected((string)($row['certification_tool_dimension_id'] ?? '') === (string)$dimension->id)>{{ $dimension->name }}</option>
+                            <option value="{{ $dimension->id }}" data-tool="{{ $tool->id }}" @selected((string)($row['certification_instrument_dimension_id'] ?? '') === (string)$dimension->id)>{{ $dimension->name }}</option>
                         @endforeach
                     @endforeach
                 </select>
@@ -36,7 +36,7 @@
     </div>
     <x-form-field label="Categories" :for="$ruleControl.'-options'" :name="$rulePrefix.'.option_ids'" :group="true">
         <div id="{{ $ruleControl }}-options">
-            @foreach($certificationTools as $tool)
+            @foreach($certificationInstruments->reject->isTraining() as $tool)
                 @foreach($tool->dimensions as $dimension)
                     <div data-cert-options="{{ $dimension->id }}">
                         @foreach($dimension->options as $option)

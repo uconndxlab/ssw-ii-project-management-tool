@@ -105,7 +105,7 @@ test('every index filter control has an accessible name', function (string $rout
 })->with([
     'agreements.index', 'activities.index', 'organizations.index', 'projects.index', 'programs.index',
     'states.index', 'teams.index', 'logging-fields.index', 'admin.users.index', 'activity-types.index',
-    'certificates.index', 'certification-tools.index', 'contact-families.index',
+    'certificates.index', 'certification-instruments.index', 'contact-families.index',
 ]);
 
 test('pagination arrows and the current page are announced', function () {

@@ -7,12 +7,14 @@ use App\Enums\CertificateGroupSatisfyMode;
 use App\Enums\CertificateRequirementKind;
 use App\Enums\CertificateRequirementPhase;
 use App\Enums\CertificateTagOutcome;
+use App\Enums\CertificationSectionResult;
 use App\Enums\ProgramScopeMode;
 use App\Models\ActivityCertificationCandidate;
 use App\Models\CertificateEnrollment;
 use App\Models\CertificateRequirement;
+use App\Models\CertificateRequirementDimensionRule;
 use App\Models\CertificateRequirementGroup;
-use App\Models\CertificationToolSubmission;
+use App\Models\CertificationInstrumentSubmission;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
 
@@ -26,7 +28,7 @@ class CertificateProgressService
      */
     public function evaluate(CertificateEnrollment $enrollment, ?CarbonInterface $previousAwardDate = null): array
     {
-        $enrollment->load(['certificate.programs', 'certificate.requirements.dimensionRules.dimension.options', 'certificate.requirements.certificationTool', 'certificate.requirements.activityType', 'certificate.requirements.subActivity', 'certificate.requirementGroups', 'attestations.satisfiedBy']);
+        $enrollment->load(['certificate.programs', 'certificate.requirements.dimensionRules.dimension.options', 'certificate.requirements.certificationInstrument', 'certificate.requirements.activityType', 'certificate.requirements.subActivity', 'certificate.requirementGroups', 'attestations.satisfiedBy']);
         $certificate = $enrollment->certificate;
         if ($certificate === null) {
             throw new \LogicException('Enrollment certificate is missing.');
@@ -110,8 +112,9 @@ class CertificateProgressService
 
                 continue;
             }
-            foreach ($tag->submissions->where('certification_tool_id', $requirement->certification_tool_id) as $submission) {
-                $submissionReason = $reason ?? ($requirement->requires_passing && $submission->outcome !== CertificateTagOutcome::Passed ? 'This requirement needs passing work.' : null);
+            foreach ($tag->submissions->where('certification_instrument_id', $requirement->certification_instrument_id) as $submission) {
+                // A training's overall outcome never gates it; its passing rule applies per section below.
+                $submissionReason = $reason ?? ($requirement->kind === CertificateRequirementKind::ToolSubmission && $requirement->requires_passing && $submission->outcome !== CertificateTagOutcome::Passed ? 'This requirement needs passing work.' : null);
                 $result['evidence']->push(['tag' => $tag, 'submission' => $submission, 'reason' => $submissionReason]);
                 if ($submissionReason === null) {
                     $pool->push($submission);
@@ -122,7 +125,7 @@ class CertificateProgressService
             $result['count'] = $pool->count();
             $result['rules'] = $requirement->dimensionRules->map(function ($rule) use ($pool): array {
                 $options = array_map('intval', $rule->option_ids ?? []);
-                $values = $pool->map(fn (CertificationToolSubmission $submission) => $submission->dimensionValues->firstWhere('certification_tool_dimension_id', $rule->certification_tool_dimension_id)?->certification_tool_dimension_option_id)->filter();
+                $values = $pool->map(fn (CertificationInstrumentSubmission $submission) => $submission->dimensionValues->firstWhere('certification_instrument_dimension_id', $rule->certification_instrument_dimension_id)?->certification_instrument_dimension_option_id)->filter();
                 $count = $rule->mode === CertificateDimensionRuleMode::Coverage
                     ? count(array_intersect($options, $values->unique()->all()))
                     : $values->filter(fn ($id) => in_array((int) $id, $options, true))->count();
@@ -131,8 +134,35 @@ class CertificateProgressService
                 return ['rule' => $rule, 'count' => $count, 'target' => $target, 'satisfied' => $target > 0 && $count >= $target];
             });
         }
+        if ($requirement->kind === CertificateRequirementKind::TrainingSections) {
+            $result['count'] = $pool->count();
+            $result['rules'] = $requirement->dimensionRules->map(fn ($rule) => $this->sectionRule($rule, $pool, $requirement->requires_passing));
+        }
         $result['satisfied'] = ! $blocked && $result['count'] >= $result['target'] && $result['rules']->every(fn ($row) => $row['satisfied']);
 
         return $result;
+    }
+
+    /**
+     * Distinct sections across the pool. With passing required, a scored section counts once any
+     * eligible submission records a Pass (an earlier Fail does not undo it); unscored ones count when ticked.
+     *
+     * @param  Collection<int, CertificationInstrumentSubmission>  $pool
+     * @return array<string, mixed>
+     */
+    private function sectionRule(CertificateRequirementDimensionRule $rule, Collection $pool, bool $requiresPassing): array
+    {
+        $values = $pool->flatMap(fn (CertificationInstrumentSubmission $submission) => $submission->dimensionValues->where('certification_instrument_dimension_id', $rule->certification_instrument_dimension_id));
+        $optionIds = array_map('intval', $rule->option_ids ?? []);
+        $sections = ($rule->dimension->options ?? collect())->filter(fn ($option) => in_array($option->id, $optionIds, true))->map(function ($option) use ($values, $requiresPassing): array {
+            $ticks = $values->where('certification_instrument_dimension_option_id', $option->id);
+            $passed = $ticks->contains(fn ($value) => $value->result === CertificationSectionResult::Passed);
+
+            return ['option' => $option, 'done' => $ticks->isNotEmpty(), 'passed' => $passed, 'counted' => $requiresPassing && $option->scored ? $passed : $ticks->isNotEmpty()];
+        })->values();
+        $count = $sections->where('counted', true)->count();
+        $target = $rule->mode === CertificateDimensionRuleMode::Coverage ? $sections->count() : (int) $rule->min_count;
+
+        return ['rule' => $rule, 'count' => $count, 'target' => $target, 'satisfied' => $target > 0 && $count >= $target, 'sections' => $sections];
     }
 }

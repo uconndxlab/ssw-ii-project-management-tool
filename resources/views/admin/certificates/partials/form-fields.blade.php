@@ -36,7 +36,7 @@
                 'contact_family_id' => $requirement->contact_family_id,
                 'activity_type_id' => $requirement->activity_type_id,
                 'sub_activity_id' => $requirement->sub_activity_id,
-                'certification_tool_id' => $requirement->certification_tool_id,
+                'certification_instrument_id' => $requirement->certification_instrument_id,
                 'certification_role_id' => $requirement->certification_role_id,
                 'target_count' => $requirement->target_count,
                 'requires_passing' => $requirement->requires_passing,
@@ -46,7 +46,7 @@
                 'notes' => $requirement->notes,
                 'dimension_rules' => $requirement->dimensionRules->map(fn ($rule) => [
                     'id' => $rule->id,
-                    'certification_tool_dimension_id' => $rule->certification_tool_dimension_id,
+                    'certification_instrument_dimension_id' => $rule->certification_instrument_dimension_id,
                     'mode' => $rule->mode?->value ?? $rule->mode,
                     'option_ids' => $rule->option_ids ?? [],
                     'min_count' => $rule->min_count,

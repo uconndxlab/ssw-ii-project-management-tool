@@ -50,6 +50,7 @@ class RouteBreadcrumbs
             $label = match ($resource) {
                 'contact-families' => 'Activity Families',
                 'certification-candidates' => 'Candidates',
+                'certification-instruments' => 'Tools & Trainings',
                 'sub-activities' => 'Sub-activities',
                 default => Str::headline(Str::afterLast($resource, '.')),
             };

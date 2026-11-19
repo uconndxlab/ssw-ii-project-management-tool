@@ -5,7 +5,7 @@ namespace Database\Factories;
 use App\Enums\CertificateDimensionRuleMode;
 use App\Models\CertificateRequirement;
 use App\Models\CertificateRequirementDimensionRule;
-use App\Models\CertificationToolDimension;
+use App\Models\CertificationInstrumentDimension;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /** @extends Factory<CertificateRequirementDimensionRule> */
@@ -17,7 +17,7 @@ class CertificateRequirementDimensionRuleFactory extends Factory
     {
         return [
             'certificate_requirement_id' => CertificateRequirement::factory(),
-            'certification_tool_dimension_id' => CertificationToolDimension::factory(),
+            'certification_instrument_dimension_id' => CertificationInstrumentDimension::factory(),
             'mode' => CertificateDimensionRuleMode::Coverage,
             'option_ids' => [],
         ];

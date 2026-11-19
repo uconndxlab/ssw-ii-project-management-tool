@@ -3,10 +3,10 @@
 use App\Models\Activity;
 use App\Models\CertificateRequirement;
 use App\Models\CertificationCandidate;
+use App\Models\CertificationInstrument;
+use App\Models\CertificationInstrumentDimensionOption;
+use App\Models\CertificationInstrumentSubmission;
 use App\Models\CertificationRole;
-use App\Models\CertificationTool;
-use App\Models\CertificationToolDimensionOption;
-use App\Models\CertificationToolSubmission;
 use App\Models\Program;
 use App\Models\UserCertificationDuty;
 
@@ -48,7 +48,7 @@ test('duplication copies recorded submissions with their dimensions and scores',
     $submission = $copy->certificationCandidates->sole()->submissions->sole();
     expect($submission->outcome->value)->toBe('passed')
         ->and($submission->recorded_by_user_id)->toBe($f['actor']->id)
-        ->and($submission->dimensionValues->sole()->certification_tool_dimension_option_id)->toBe($f['option']->id)
+        ->and($submission->dimensionValues->sole()->certification_instrument_dimension_option_id)->toBe($f['option']->id)
         ->and($submission->scores->sole()->value)->toBe('5.0000')
         ->and($activity->certificationCandidates->sole()->submissions)->toHaveCount(1);
 });
@@ -62,10 +62,10 @@ test('coach records multiple independent submissions with required dimensions an
     $tag = $activity->certificationCandidates->first();
     expect($tag->submissions)->toHaveCount(2);
     expect($tag->submissions->first()->scores->first()->value)->toBe('5.0000');
-    expect($tag->submissions->first()->dimensionValues->first()->certification_tool_dimension_option_id)->toBe($f['option']->id);
+    expect($tag->submissions->first()->dimensionValues->first()->certification_instrument_dimension_option_id)->toBe($f['option']->id);
     expect($tag->submissions->first()->recorded_by_user_id)->toBe($f['actor']->id);
     $payload['certification_candidates'][0]['id'] = $tag->id;
-    $payload['certification_candidates'][0]['submissions'] = [['id' => $tag->submissions->first()->id, 'certification_tool_id' => $f['tool']->id, '_delete' => true]];
+    $payload['certification_candidates'][0]['submissions'] = [['id' => $tag->submissions->first()->id, 'certification_instrument_id' => $f['tool']->id, '_delete' => true]];
     $this->put(route('activities.update', $activity), $payload)->assertSessionHasNoErrors();
     expect($tag->submissions()->count())->toBe(1);
 });
@@ -80,7 +80,7 @@ test('forged candidate or dimension selections roll back the whole activity', fu
     } else {
         $submission = certificationSubmissionPayload($f);
         if ($bad === 'dimension') {
-            $submission['dimensions'][$f['dimension']->id] = CertificationToolDimensionOption::factory()->create()->id;
+            $submission['dimensions'][$f['dimension']->id] = CertificationInstrumentDimensionOption::factory()->create()->id;
         }
         if ($bad === 'missing dimension') {
             $submission['dimensions'] = [];
@@ -123,7 +123,7 @@ test('non coach cannot remove a candidate holding submissions or read scores in 
     $f = certificationActivityFixture();
     $activity = logCertificationFixture($f, $f['payload']);
     $tag = $activity->certificationCandidates->first();
-    $submission = CertificationToolSubmission::factory()->create(['activity_certification_candidate_id' => $tag->id, 'certification_tool_id' => $f['tool']->id, 'notes' => 'private submission narrative']);
+    $submission = CertificationInstrumentSubmission::factory()->create(['activity_certification_candidate_id' => $tag->id, 'certification_instrument_id' => $f['tool']->id, 'notes' => 'private submission narrative']);
     $viewer = createProgramViewer($f['program']);
     $activity->participants()->attach($viewer);
     $this->actingAs($viewer)->get(route('activities.edit', $activity))->assertOk()->assertDontSee('private submission narrative');
@@ -152,18 +152,18 @@ test('saved submission identity cannot be moved and used definitions cannot be d
     $activity = logCertificationFixture($f, $payload);
     $tag = $activity->certificationCandidates->first();
     $sub = $tag->submissions->first();
-    $other = CertificationTool::factory()->forProgram($f['program'])->create();
+    $other = CertificationInstrument::factory()->forProgram($f['program'])->create();
     $payload['certification_candidates'][0]['id'] = $tag->id;
     $payload['certification_candidates'][0]['submissions'][0]['id'] = $sub->id;
-    $payload['certification_candidates'][0]['submissions'][0]['certification_tool_id'] = $other->id;
-    $this->put(route('activities.update', $activity), $payload)->assertSessionHasErrors('certification_candidates.0.submissions.0.certification_tool_id');
+    $payload['certification_candidates'][0]['submissions'][0]['certification_instrument_id'] = $other->id;
+    $this->put(route('activities.update', $activity), $payload)->assertSessionHasErrors('certification_candidates.0.submissions.0.certification_instrument_id');
     $toolPayload = [
         'name' => $f['tool']->name, 'active' => true, 'program_scope_mode' => 'specific',
         'project_ids' => [$f['project']->id], 'program_ids' => [$f['program']->id],
         'dimensions' => [], 'score_fields' => [],
     ];
-    $this->put(route('certification-tools.update', $f['tool']), $toolPayload)->assertSessionHasErrors(['dimensions', 'score_fields']);
-    $this->delete(route('certification-tools.destroy', $f['tool']))->assertSessionHas('error');
+    $this->put(route('certification-instruments.update', $f['tool']), $toolPayload)->assertSessionHasErrors(['dimensions', 'score_fields']);
+    $this->delete(route('certification-instruments.destroy', $f['tool']))->assertSessionHas('error');
     expect($f['tool']->fresh())->not->toBeNull();
     expect($sub->fresh())->not->toBeNull();
 });
@@ -180,7 +180,7 @@ test('retired tools remain on saved submissions but reject new submissions', fun
     $payload['certification_candidates'][0]['submissions'][0]['id'] = $tag->submissions->first()->id;
     $this->put(route('activities.update', $activity), $payload)->assertSessionHasNoErrors();
     $payload['certification_candidates'][0]['submissions'][] = certificationSubmissionPayload($f);
-    $this->put(route('activities.update', $activity), $payload)->assertSessionHasErrors('certification_candidates.0.submissions.1.certification_tool_id');
+    $this->put(route('activities.update', $activity), $payload)->assertSessionHasErrors('certification_candidates.0.submissions.1.certification_instrument_id');
     expect($tag->submissions()->count())->toBe(1);
 });
 

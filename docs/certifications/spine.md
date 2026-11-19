@@ -115,6 +115,8 @@ DEFERRED: requirement sequencing (COMET inter-rater review must precede COMETs c
 the guide. Add `depends_on_requirement_id` later if asked.
 
 ## Schema (authoritative)
+(2026-11-17: `certification_tool*` tables/columns renamed to `certification_instrument*`; tools and
+trainings are both instruments. Models are `CertificationInstrument*`. Earlier handoffs keep the old names.)
 certification_candidates          name, email (nullable in storage — legacy-backfilled rows may have
                                   none; NORMALIZED trim+lowercase, unique when present; required +
                                   valid + unique whenever a form creates or actually edits a
@@ -138,19 +140,19 @@ certificate_requirement_groups    certificate_id, phase, label, satisfy_mode, re
                                   sort_order
 certificate_requirements          certificate_id, certificate_requirement_group_id nullable, phase, kind,
                                   contact_family_id nullable, activity_type_id nullable,
-                                  certification_tool_id nullable (required when kind=tool_submission),
+                                  certification_instrument_id nullable (required when kind=tool_submission),
                                   certification_role_id nullable, target_count, requires_passing,
                                   threshold_note (DISPLAY ONLY), window_months nullable, label, notes,
                                   sort_order
 certificate_requirement_dimension_rules
-                                  certificate_requirement_id, certification_tool_dimension_id,
+                                  certificate_requirement_id, certification_instrument_dimension_id,
                                   mode (coverage|quota), option_ids json, min_count nullable
-certification_tools               name, slug, description, active, sort_order, program_scope_mode, retired_at
-certification_tool_program        pivot via ScopeSync
-certification_tool_dimensions     certification_tool_id, name, slug, sort_order
-certification_tool_dimension_options
-                                  certification_tool_dimension_id, label, value, sort_order
-certification_tool_score_fields   certification_tool_id, name, slug, unit (percent|points|number), sort_order
+certification_instruments               name, slug, description, active, sort_order, program_scope_mode, retired_at
+certification_instrument_program        pivot via ScopeSync
+certification_instrument_dimensions     certification_instrument_id, name, slug, sort_order
+certification_instrument_dimension_options
+                                  certification_instrument_dimension_id, label, value, sort_order
+certification_instrument_score_fields   certification_instrument_id, name, slug, unit (percent|points|number), sort_order
 certification_roles               name, slug, certificate_id nullable (null = standard/global), active,
                                   sort_order. NO activity_type whitelist — role options on the log derive
                                   from REQUIREMENTS matching that activity's classification.
@@ -174,15 +176,15 @@ activity_certification_candidates IMPLEMENTED (Doc 3; plural table): activity_id
                                   certification_candidate_id, agreement_id nullable
                                   (PROVENANCE ONLY), certification_role_id nullable, completion_units, notes
                                   unique(activity_id, certification_candidate_id)
-certification_tool_submissions    IMPLEMENTED (Doc 3): activity_certification_candidate_id,
-                                  certification_tool_id, outcome
+certification_instrument_submissions    IMPLEMENTED (Doc 3): activity_certification_candidate_id,
+                                  certification_instrument_id, outcome
                                   (passed|not_passed|not_scored), recorded_by_user_id, notes
-certification_tool_submission_dimension_values
-                                  certification_tool_submission_id, certification_tool_dimension_id,
-                                  certification_tool_dimension_option_id
+certification_instrument_submission_dimension_values
+                                  certification_instrument_submission_id, certification_instrument_dimension_id,
+                                  certification_instrument_dimension_option_id
                                   unique(submission, dimension)
-certification_tool_submission_scores
-                                  certification_tool_submission_id, certification_tool_score_field_id,
+certification_instrument_submission_scores
+                                  certification_instrument_submission_id, certification_instrument_score_field_id,
                                   value decimal. unique(submission, score_field)
 certificate_action_logs           IMPLEMENTED (Doc 4): certificate_enrollment_id, certificate_award_id nullable,
                                   user_id nullable (null = system), action, cycle, context json, reason

@@ -10,10 +10,10 @@ use App\Models\AgreementDeliverable;
 use App\Models\Certificate;
 use App\Models\CertificateEnrollment;
 use App\Models\CertificationCandidate;
-use App\Models\CertificationTool;
-use App\Models\CertificationToolDimension;
-use App\Models\CertificationToolDimensionOption;
-use App\Models\CertificationToolScoreField;
+use App\Models\CertificationInstrument;
+use App\Models\CertificationInstrumentDimension;
+use App\Models\CertificationInstrumentDimensionOption;
+use App\Models\CertificationInstrumentScoreField;
 use App\Models\ContactFamily;
 use App\Models\Organization;
 use App\Models\Program;
@@ -68,10 +68,10 @@ function certificateStorePayload(array $overrides = [], bool $withNestedFixture 
 
     if ($withNestedFixture) {
         $prerequisite = Certificate::factory()->forProgram($program)->create(['name' => 'Coach Prereq '.uniqid()]);
-        $crestTool = CertificationTool::factory()->forProgram($program)->create(['name' => 'CREST '.uniqid()]);
-        $cometTool = CertificationTool::factory()->forProgram($program)->create(['name' => 'COMET '.uniqid()]);
-        $dimension = CertificationToolDimension::factory()->for($cometTool, 'tool')->create(['name' => 'Phase']);
-        $option = CertificationToolDimensionOption::factory()->for($dimension, 'dimension')->create(['label' => 'Phase 1']);
+        $crestTool = CertificationInstrument::factory()->forProgram($program)->create(['name' => 'CREST '.uniqid()]);
+        $cometTool = CertificationInstrument::factory()->forProgram($program)->create(['name' => 'COMET '.uniqid()]);
+        $dimension = CertificationInstrumentDimension::factory()->for($cometTool, 'instrument')->create(['name' => 'Phase']);
+        $option = CertificationInstrumentDimensionOption::factory()->for($dimension, 'dimension')->create(['label' => 'Phase 1']);
 
         $payload['prerequisite_certificate_ids'] = [$prerequisite->id];
         $payload['roles'] = [
@@ -96,7 +96,7 @@ function certificateStorePayload(array $overrides = [], bool $withNestedFixture 
                 'phase' => CertificateRequirementPhase::Initial->value,
                 'kind' => CertificateRequirementKind::ToolSubmission->value,
                 'label' => 'CREST submissions',
-                'certification_tool_id' => $crestTool->id,
+                'certification_instrument_id' => $crestTool->id,
                 'target_count' => 12,
                 'requires_passing' => '1',
             ],
@@ -104,12 +104,12 @@ function certificateStorePayload(array $overrides = [], bool $withNestedFixture 
                 'phase' => CertificateRequirementPhase::Initial->value,
                 'kind' => CertificateRequirementKind::ToolSubmission->value,
                 'label' => 'COMET with rules',
-                'certification_tool_id' => $cometTool->id,
+                'certification_instrument_id' => $cometTool->id,
                 'target_count' => 6,
                 'requires_passing' => '1',
                 'dimension_rules' => [
                     0 => [
-                        'certification_tool_dimension_id' => $dimension->id,
+                        'certification_instrument_dimension_id' => $dimension->id,
                         'mode' => CertificateDimensionRuleMode::Coverage->value,
                         'option_ids' => [$option->id],
                     ],
@@ -187,10 +187,10 @@ function certificationActivityFixture(): array
     $roster = AgreementCertificationCandidate::factory()->create(['agreement_id' => $agreement->id, 'certification_candidate_id' => $candidate->id, 'program_id' => $program->id]);
     $certificate = Certificate::factory()->forProgram($program)->create();
     $enrollment = CertificateEnrollment::factory()->create(['certificate_id' => $certificate->id, 'certification_candidate_id' => $candidate->id, 'sponsoring_agreement_id' => $agreement->id]);
-    $tool = CertificationTool::factory()->forProgram($program)->create();
-    $dimension = CertificationToolDimension::factory()->for($tool, 'tool')->create(['name' => 'Phase']);
-    $option = CertificationToolDimensionOption::factory()->for($dimension, 'dimension')->create(['label' => 'Phase 2']);
-    $score = CertificationToolScoreField::factory()->for($tool, 'tool')->create();
+    $tool = CertificationInstrument::factory()->forProgram($program)->create();
+    $dimension = CertificationInstrumentDimension::factory()->for($tool, 'instrument')->create(['name' => 'Phase']);
+    $option = CertificationInstrumentDimensionOption::factory()->for($dimension, 'dimension')->create(['label' => 'Phase 2']);
+    $score = CertificationInstrumentScoreField::factory()->for($tool, 'instrument')->create();
     $payload = [
         'agreement_ids' => [$agreement->id], 'state_ids' => [$state->id], 'organization_ids' => [$organization->id],
         'project_ids' => [$project->id], 'program_ids' => [$program->id], 'engagement_date' => '2026-10-26',
@@ -206,7 +206,7 @@ function certificationActivityFixture(): array
 function certificationSubmissionPayload(array $fixture, array $overrides = []): array
 {
     return array_merge([
-        'certification_tool_id' => $fixture['tool']->id, 'outcome' => 'passed',
+        'certification_instrument_id' => $fixture['tool']->id, 'outcome' => 'passed',
         'dimensions' => [$fixture['dimension']->id => $fixture['option']->id],
         'scores' => [$fixture['score']->id => 5],
     ], $overrides);

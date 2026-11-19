@@ -23,9 +23,9 @@
                     @endphp
                     <section class="border-bottom pb-3 mb-3" aria-labelledby="requirement-{{ $requirement->id }}">
                         <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-                            <h3 class="h6 mb-0" id="requirement-{{ $requirement->id }}">{{ $requirement->label ?: ($requirement->certificationTool?->name ?? ($requirement->activityType ? $requirement->activityType->name.($requirement->subActivity ? ' › '.$requirement->subActivity->name : '') : $requirement->kind->label())) }}</h3>
-                            @if($requirement->activityType && ($requirement->label || $requirement->certificationTool))<span class="small text-muted">{{ $requirement->activityType->name }}{{ $requirement->subActivity ? ' › '.$requirement->subActivity->name : '' }}</span>@endif
-                            <span class="small text-muted">{{ $requirement->kind === \App\Enums\CertificateRequirementKind::Attestation ? 'Coach confirmation' : ($requirement->kind === \App\Enums\CertificateRequirementKind::ToolSubmission ? 'Tool submissions' : 'Activity work') }}</span>
+                            <h3 class="h6 mb-0" id="requirement-{{ $requirement->id }}">{{ $requirement->label ?: ($requirement->certificationInstrument?->name ?? ($requirement->activityType ? $requirement->activityType->name.($requirement->subActivity ? ' › '.$requirement->subActivity->name : '') : $requirement->kind->label())) }}</h3>
+                            @if($requirement->activityType && ($requirement->label || $requirement->certificationInstrument))<span class="small text-muted">{{ $requirement->activityType->name }}{{ $requirement->subActivity ? ' › '.$requirement->subActivity->name : '' }}</span>@endif
+                            <span class="small text-muted">{{ $requirement->kind->label() }}</span>
                             <span class="ms-auto app-status {{ $row['satisfied'] ? 'app-status--success' : 'app-status--neutral' }}">{{ $row['satisfied'] ? 'Met' : 'Not met' }}</span>
                         </div>
                         @if($requirement->kind === \App\Enums\CertificateRequirementKind::Attestation)
@@ -53,8 +53,26 @@
                             @endif
                         @else
                             <ul class="list-unstyled small mb-2">
-                                <li class="d-flex justify-content-between gap-2"><span>{{ $requirement->kind === \App\Enums\CertificateRequirementKind::ToolSubmission ? ($requirement->requires_passing ? 'Total passing submissions' : 'Total submissions') : 'Completion units' }}</span><strong>{{ $row['count'] }} / {{ $row['target'] }}</strong></li>
+                                <li class="d-flex justify-content-between gap-2"><span>{{ match ($requirement->kind) { \App\Enums\CertificateRequirementKind::ToolSubmission => $requirement->requires_passing ? 'Total passing submissions' : 'Total submissions', \App\Enums\CertificateRequirementKind::TrainingSections => 'Submissions', default => 'Completion units' } }}</span><strong>{{ $row['count'] }} / {{ $row['target'] }}</strong></li>
                                 @foreach($row['rules'] as $ruleRow)
+                                    @if(isset($ruleRow['sections']))
+                                        @php $sections = $ruleRow['sections']; @endphp
+                                        <li class="d-flex justify-content-between gap-2 mt-1">
+                                            <span>Sections · {{ $ruleRow['rule']->mode->value === 'coverage' ? 'every checked section' : 'at least '.$ruleRow['target'].' of '.$sections->count() }}{{ $requirement->requires_passing ? ' · scored sections need a Pass' : '' }}</span>
+                                            <strong class="text-nowrap">{{ $ruleRow['count'] }} / {{ $ruleRow['target'] }} · {{ $ruleRow['satisfied'] ? 'Met' : 'Not met' }}</strong>
+                                        </li>
+                                        <li class="text-muted mt-1">{{ $sections->where('done', true)->count() }} of {{ $sections->count() }} sections recorded · {{ $sections->where('passed', true)->count() }} passed</li>
+                                        <li class="mt-2">
+                                            <ul class="list-unstyled d-flex flex-wrap gap-2 mb-0" aria-label="Section progress">
+                                                @foreach($sections as $section)
+                                                    <li class="app-status {{ $section['counted'] ? 'app-status--success' : ($section['done'] ? 'app-status--warning' : 'app-status--neutral') }}">
+                                                        {{ $section['counted'] ? '✓ ' : '' }}{{ $section['option']->label }}{{ $section['counted'] ? '' : ($section['done'] ? ' · needs a Pass' : '') }}<span class="visually-hidden">{{ $section['counted'] ? ': done' : ($section['done'] ? '' : ': not attempted') }}</span>
+                                                    </li>
+                                                @endforeach
+                                            </ul>
+                                        </li>
+                                        @continue
+                                    @endif
                                     <li class="d-flex justify-content-between gap-2 mt-1">
                                         <span>{{ $ruleRow['rule']->dimension->name }} {{ $ruleRow['rule']->mode->value === 'coverage' ? 'coverage' : 'quota' }} · {{ $ruleRow['rule']->dimension->options->whereIn('id', $ruleRow['rule']->option_ids)->pluck('label')->join(', ') }}</span>
                                         <strong class="text-nowrap">{{ $ruleRow['count'] }} / {{ $ruleRow['target'] }} · {{ $ruleRow['satisfied'] ? 'Met' : 'Not met' }}</strong>
@@ -77,8 +95,8 @@
                                                         <td><a href="{{ route('activities.show', $activity) }}">{{ $activity->classificationLabel() }}</a>@can('update', $activity)<div><a href="{{ route('activities.edit', $activity) }}#activity-certification">Edit evidence</a></div>@endcan</td>
                                                         <td>
                                                             @if($submission)
-                                                                @foreach($submission->dimensionValues as $value)<div>{{ $value->dimension->name }}: {{ $value->option->label }}</div>@endforeach
-                                                                @foreach($submission->scores as $score)<div>{{ $score->field->name }}: {{ rtrim(rtrim($score->value, '0'), '.') }}{{ $score->field->unit->value === 'percent' ? '%' : '' }}</div>@endforeach
+                                                                @foreach($submission->dimensionValues->groupBy('certification_instrument_dimension_id') as $values)<div>{{ $values->first()->dimension->name }}: {{ $values->map(fn ($value) => $value->option->label.($value->result ? ' · '.$value->result->label() : ''))->join(', ') }}</div>@endforeach
+                                                                @foreach($submission->scores as $score)<div>{{ $score->field->name }}: {{ $score->field->unit->format((string) $score->value) }}</div>@endforeach
                                                                 @if($submission->notes)<div class="text-muted">{{ $submission->notes }}</div>@endif
                                                             @else {{ $evidence['tag']->completion_units }} unit(s) @endif
                                                         </td>
@@ -91,7 +109,7 @@
                                         </tbody>
                                     </table>
                                 </div>
-                                @if($row['rules']->isNotEmpty())<p class="small text-muted mb-0">Total, coverage, and quotas independently use the same eligible submissions. A submission may contribute to all three.</p>@endif
+                                @if($row['rules']->isNotEmpty() && $requirement->kind === \App\Enums\CertificateRequirementKind::ToolSubmission)<p class="small text-muted mb-0">Total, coverage, and quotas independently use the same eligible submissions. A submission may contribute to all three.</p>@endif
                             </details>
                         @endif
                         @if($requirement->notes)<p class="small text-muted mt-2 mb-0">{{ $requirement->notes }}</p>@endif

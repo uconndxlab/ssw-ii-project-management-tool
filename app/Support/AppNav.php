@@ -70,7 +70,7 @@ class AppNav
             'header' => 'Certification Setup',
             'items' => [
                 self::item('Candidates', 'certification-candidates.index', ['certification-candidates.*'], 'bi-person-badge'),
-                self::item('Certification Tools', 'certification-tools.index', ['certification-tools.*'], 'bi-tools'),
+                self::item('Tools & Trainings', 'certification-instruments.index', ['certification-instruments.*'], 'bi-tools'),
                 self::item('Certificates', 'certificates.index', ['certificates.*'], 'bi-award'),
             ],
         ];
