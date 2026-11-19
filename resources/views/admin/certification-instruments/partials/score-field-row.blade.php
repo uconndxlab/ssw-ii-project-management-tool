@@ -17,11 +17,19 @@
                name="score_fields[{{ $fieldIndex }}][name]" value="{{ $row['name'] ?? '' }}"
                placeholder="e.g. Overall Match %" aria-label="Score field name">
         <select class="form-select form-select-sm flex-shrink-0" style="width:9rem;"
-                name="score_fields[{{ $fieldIndex }}][unit]" aria-label="Unit">
+                name="score_fields[{{ $fieldIndex }}][unit]" aria-label="Unit" data-score-unit>
             @foreach(\App\Enums\CertificationInstrumentScoreUnit::cases() as $case)
                 <option value="{{ $case->value }}" @selected($unitValue === $case->value)>{{ $case->label() }}</option>
             @endforeach
         </select>
+        <div class="input-group input-group-sm flex-shrink-0" style="width:8.5rem;" data-score-max-points
+             title="Optional. Scores become whole numbers from 0 to this. Leave blank for no maximum."
+             @if($unitValue !== \App\Enums\CertificationInstrumentScoreUnit::Points->value) hidden @endif>
+            <span class="input-group-text">out of</span>
+            <input type="number" class="form-control" min="1" max="999" step="1"
+                   name="score_fields[{{ $fieldIndex }}][max_points]" value="{{ $row['max_points'] ?? '' }}"
+                   aria-label="Points out of (optional)">
+        </div>
     </div>
     <div class="repeater-row-actions">
         <button type="button" class="repeater-icon-btn repeater-icon-btn-danger" data-repeater-remove title="Remove score field">

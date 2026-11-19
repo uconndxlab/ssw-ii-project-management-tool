@@ -293,6 +293,12 @@ class CertificationEvidenceService
                 $this->invalid($key.'.scores.'.$field->id, 'Choose Pass or Fail for '.$field->name.', or leave it blank.');
             }
         }
+        foreach ($tool->scoreFields->whereNotNull('max_points') as $field) {
+            $value = isset($scores[$field->id]) ? (float) $scores[$field->id] : null;
+            if ($value !== null && ($value < 0 || $value > $field->max_points || floor($value) !== $value)) {
+                $this->invalid($key.'.scores.'.$field->id, "Enter a whole number from 0 to {$field->max_points} for {$field->name}, or leave it blank.");
+            }
+        }
         $submission ??= new CertificationInstrumentSubmission(['activity_certification_candidate_id' => $tag->id, 'certification_instrument_id' => $tool->id]);
         // A training's overall outcome is optional: blank is recorded as Not scored.
         $submission->fill(['outcome' => ($row['outcome'] ?? null) ?: CertificateTagOutcome::NotScored->value, 'notes' => $row['notes'] ?? null]);
@@ -456,7 +462,7 @@ class CertificationEvidenceService
                 'program_ids' => $tool->programs->modelKeys(),
                 'dimensions' => $tool->dimensions->where('type', CertificationInstrumentDimensionType::ChooseOne)->map(fn ($dimension) => ['id' => $dimension->id, 'name' => $dimension->name, 'options' => $dimension->options->map(fn ($option) => ['id' => $option->id, 'label' => $option->label])->all()])->values()->all(),
                 'sections' => $tool->sectionsDimension()?->options->map(fn ($option) => ['id' => $option->id, 'label' => $option->label, 'scored' => $option->scored])->values()->all() ?? [],
-                'score_fields' => $tool->scoreFields->map(fn ($field) => ['id' => $field->id, 'name' => $field->name, 'unit' => $field->unit->value])->all(),
+                'score_fields' => $tool->scoreFields->map(fn ($field) => ['id' => $field->id, 'name' => $field->name, 'unit' => $field->unit->value, 'max_points' => $field->max_points])->all(),
             ])->values()->all(),
         ];
     }

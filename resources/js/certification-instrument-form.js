@@ -10,6 +10,12 @@ if (typeGroup) {
         form.querySelectorAll('[data-instrument-for]').forEach((card) => { card.hidden = card.dataset.instrumentFor !== type; });
     };
     typeGroup.addEventListener('change', showType);
+    // The "out of" box only applies to Points score fields.
+    form.addEventListener('change', (event) => {
+        if (!event.target.matches('[data-score-unit]')) return;
+        const maxPoints = event.target.closest('[data-repeater-row]').querySelector('[data-score-max-points]');
+        maxPoints.hidden = event.target.value !== 'points';
+    });
     form.addEventListener('repeater:row-added', (event) => {
         const scored = event.target.querySelector?.('[data-section-scored]');
         if (scored && scoringDefault) scored.checked = scoringDefault.checked;
