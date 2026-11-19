@@ -5,15 +5,15 @@ use App\Enums\CertificateRequirementKind;
 use App\Enums\CertificateRequirementPhase;
 use App\Models\ActivityType;
 use App\Models\Certificate;
-use App\Models\CertificationTool;
+use App\Models\CertificationInstrument;
 use App\Models\ContactFamily;
 
-function storeToolAsAdmin(array $payload): CertificationTool
+function storeToolAsAdmin(array $payload): CertificationInstrument
 {
     $admin = createSystemAdmin();
-    test()->actingAs($admin)->post(route('certification-tools.store'), $payload)->assertRedirect();
+    test()->actingAs($admin)->post(route('certification-instruments.store'), $payload)->assertRedirect();
 
-    return CertificationTool::where('name', $payload['name'])->firstOrFail();
+    return CertificationInstrument::where('name', $payload['name'])->firstOrFail();
 }
 
 test('acceptance tools can be authored per doc 1 acceptance 2', function () {
@@ -220,7 +220,7 @@ test('nwic local coach certificate is fully expressible including renewal', func
         'phase' => CertificateRequirementPhase::Initial->value,
         'kind' => CertificateRequirementKind::ToolSubmission->value,
         'label' => 'CREST — 12 submissions',
-        'certification_tool_id' => $crest->id,
+        'certification_instrument_id' => $crest->id,
         'target_count' => 12,
         'requires_passing' => '1',
     ];
@@ -229,18 +229,18 @@ test('nwic local coach certificate is fully expressible including renewal', func
         'phase' => CertificateRequirementPhase::Initial->value,
         'kind' => CertificateRequirementKind::ToolSubmission->value,
         'label' => 'Supervisor Checklist — 6',
-        'certification_tool_id' => $supervisor->id,
+        'certification_instrument_id' => $supervisor->id,
         'target_count' => 6,
         'requires_passing' => '1',
         'threshold_note' => '85%/80%',
         'dimension_rules' => [
             0 => [
-                'certification_tool_dimension_id' => $supervisorPhase->id,
+                'certification_instrument_dimension_id' => $supervisorPhase->id,
                 'mode' => CertificateDimensionRuleMode::Coverage->value,
                 'option_ids' => $phase234,
             ],
             1 => [
-                'certification_tool_dimension_id' => $supervisorReview->id,
+                'certification_instrument_dimension_id' => $supervisorReview->id,
                 'mode' => CertificateDimensionRuleMode::Quota->value,
                 'option_ids' => [$supervisorFull->id],
                 'min_count' => 4,
@@ -259,17 +259,17 @@ test('nwic local coach certificate is fully expressible including renewal', func
         'phase' => CertificateRequirementPhase::Initial->value,
         'kind' => CertificateRequirementKind::ToolSubmission->value,
         'label' => 'COMET — 6 across all 4 phases',
-        'certification_tool_id' => $comet->id,
+        'certification_instrument_id' => $comet->id,
         'target_count' => 6,
         'requires_passing' => '1',
         'dimension_rules' => [
             0 => [
-                'certification_tool_dimension_id' => $cometPhase->id,
+                'certification_instrument_dimension_id' => $cometPhase->id,
                 'mode' => CertificateDimensionRuleMode::Coverage->value,
                 'option_ids' => $cometPhase->options->pluck('id')->all(),
             ],
             1 => [
-                'certification_tool_dimension_id' => $cometReview->id,
+                'certification_instrument_dimension_id' => $cometReview->id,
                 'mode' => CertificateDimensionRuleMode::Quota->value,
                 'option_ids' => [$fullReview->id],
                 'min_count' => 4,
@@ -281,7 +281,7 @@ test('nwic local coach certificate is fully expressible including renewal', func
         'phase' => CertificateRequirementPhase::Initial->value,
         'kind' => CertificateRequirementKind::ToolSubmission->value,
         'label' => 'SAS — 9/12 across 3 sessions',
-        'certification_tool_id' => $sas->id,
+        'certification_instrument_id' => $sas->id,
         'target_count' => 3,
         'requires_passing' => '1',
         'threshold_note' => '75% per section',
@@ -306,7 +306,7 @@ test('nwic local coach certificate is fully expressible including renewal', func
         'phase' => CertificateRequirementPhase::Renewal->value,
         'kind' => CertificateRequirementKind::ToolSubmission->value,
         'label' => 'CREST renewal — 6 submissions',
-        'certification_tool_id' => $crest->id,
+        'certification_instrument_id' => $crest->id,
         'target_count' => 6,
         'requires_passing' => '1',
     ];

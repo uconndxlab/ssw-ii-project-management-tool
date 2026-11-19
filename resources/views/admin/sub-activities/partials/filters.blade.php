@@ -1,0 +1,73 @@
+<form id="sub-activity-filters"
+      data-table-filter-form
+      hx-get="{{ route('sub-activities.index') }}"
+      hx-target="#sub-activities-table"
+      hx-swap="innerHTML"
+      hx-push-url="true">
+    <div class="row g-2 align-items-center">
+        <div class="col-md-3">
+            <input aria-label="Search sub-activities" type="text" name="search" class="form-control form-control-sm"
+                   placeholder="Search sub-activities…" value="{{ request('search') }}"
+                   hx-get="{{ route('sub-activities.index') }}"
+                   hx-trigger="keyup changed delay:400ms, search"
+                   hx-target="#sub-activities-table" hx-swap="innerHTML"
+                   hx-push-url="true" hx-include="#sub-activity-filters">
+        </div>
+        <div class="col-md-2">
+            <select aria-label="Filter by activity type" name="activity_type_id" class="form-select form-select-sm"
+                    hx-get="{{ route('sub-activities.index') }}" hx-trigger="change"
+                    hx-target="#sub-activities-table" hx-swap="innerHTML"
+                    hx-push-url="true" hx-include="#sub-activity-filters">
+                <option value="">All Activity Types</option>
+                @foreach($activityTypes as $cf)
+                    <option value="{{ $cf->id }}" @selected((string) request('activity_type_id') === (string) $cf->id)>
+                        {{ $cf->name }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+        <div class="col-md-2">
+            <select aria-label="Filter by project" name="project_id" class="form-select form-select-sm"
+                    hx-get="{{ route('sub-activities.index') }}" hx-trigger="change"
+                    hx-target="#sub-activities-table" hx-swap="innerHTML"
+                    hx-push-url="true" hx-include="#sub-activity-filters">
+                <option value="">All Projects</option>
+                @foreach($filterProjects ?? [] as $project)
+                    <option value="{{ $project->id }}" @selected((string) request('project_id') === (string) $project->id)>
+                        {{ $project->name }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+        <div class="col-md-2">
+            <select aria-label="Filter by program" name="program_id" class="form-select form-select-sm"
+                    hx-get="{{ route('sub-activities.index') }}" hx-trigger="change"
+                    hx-target="#sub-activities-table" hx-swap="innerHTML"
+                    hx-push-url="true" hx-include="#sub-activity-filters">
+                <option value="">All Programs</option>
+                @foreach($filterPrograms ?? [] as $program)
+                    <option value="{{ $program->id }}" @selected((string) request('program_id') === (string) $program->id)>
+                        {{ $program->name }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+        <div class="col-md-2">
+            <select aria-label="Filter by status" name="active" class="form-select form-select-sm"
+                    hx-get="{{ route('sub-activities.index') }}" hx-trigger="change"
+                    hx-target="#sub-activities-table" hx-swap="innerHTML"
+                    hx-push-url="true" hx-include="#sub-activity-filters">
+                <option value="">All Statuses</option>
+                <option value="1" @selected(request('active') === '1')>Active</option>
+                <option value="0" @selected(request('active') === '0')>Inactive</option>
+            </select>
+        </div>
+        <x-table-filter-clear
+            :href="route('sub-activities.index')"
+            :filter-keys="['search', 'activity_type_id', 'project_id', 'program_id', 'active']"
+        />
+    </div>
+    <input type="hidden" name="per_page" value="{{ \App\Support\TablePagination::perPage(request()) }}">
+    <input type="hidden" name="sort"      value="{{ $sort ?? 'name' }}">
+    <input type="hidden" name="direction" value="{{ $direction ?? 'asc' }}">
+</form>

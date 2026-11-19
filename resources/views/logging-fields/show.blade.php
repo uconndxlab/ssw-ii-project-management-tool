@@ -19,7 +19,7 @@
 </x-page-header>
 
 @cannot('update', $loggingField)
-    <div class="alert alert-warning">
+    <x-form-note tone="warning">
         @cannot('updateAttachments', $loggingField)
             <p class="mb-2">You can't edit this field because it is used on records you can't edit.</p>
             @foreach($attachmentGroups as $group)
@@ -30,7 +30,7 @@
         @else
             <p class="mb-0">You can't edit this field because it is also used by programs you don't manage.</p>
         @endcannot
-    </div>
+    </x-form-note>
 @endcannot
 
 <x-entity-show>
@@ -46,6 +46,7 @@
                     @if($loggingField->available_in_agreements)<span class="badge app-tag">Agreements</span>@endif
                     @if($loggingField->available_in_contact_families)<span class="badge app-tag">Activity Families</span>@endif
                     @if($loggingField->available_in_activities)<span class="badge app-tag">Activity Types</span>@endif
+                    @if($loggingField->available_in_sub_activities)<span class="badge app-tag">Sub-activities</span>@endif
                 </div>
             </dd>
             <dt class="col-5 text-muted fw-normal small">Sort order</dt>
@@ -79,7 +80,7 @@
             </x-relationship-scroll-panel>
         @endforeach
         @can('delete', $loggingField)
-            @if($loggingField->agreements->isEmpty() && $loggingField->contactFamilies->isEmpty() && $loggingField->activityTypes->isEmpty())
+            @if($loggingField->agreements->isEmpty() && $loggingField->contactFamilies->isEmpty() && $loggingField->activityTypes->isEmpty() && $loggingField->subActivities->isEmpty())
                 <hr>
                 <h3 class="h6 text-danger mb-2">Delete This Field?</h3>
                 <p class="small text-muted mb-3">This field is not currently in use and can be safely deleted.</p>

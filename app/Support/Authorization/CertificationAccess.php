@@ -2,6 +2,7 @@
 
 namespace App\Support\Authorization;
 
+use App\Enums\AccessProfile;
 use App\Enums\CertificationDuty;
 use App\Enums\PrivilegeScopeType;
 use App\Enums\ProgramScopeMode;
@@ -57,7 +58,7 @@ class CertificationAccess
 
     public function hasDuty(CertificationDuty $duty): bool
     {
-        return $this->duties()->contains(fn (UserCertificationDuty $row) => $row->duty === $duty);
+        return ! $this->user->access()->isInput() && $this->duties()->contains(fn (UserCertificationDuty $row) => $row->duty === $duty);
     }
 
     public function isCoach(): bool
@@ -100,13 +101,13 @@ class CertificationAccess
     /** @return array<int> */
     public function coachProgramIds(): array
     {
-        return $this->coachProgramIds ??= $this->programIdsForDuty(CertificationDuty::Coach);
+        return $this->user->access()->isInput() ? [] : $this->coachProgramIds ??= $this->programIdsForDuty(CertificationDuty::Coach);
     }
 
     /** @return array<int> */
     public function managerProgramIds(): array
     {
-        return $this->managerProgramIds ??= $this->programIdsForDuty(CertificationDuty::Manager);
+        return $this->user->access()->isInput() ? [] : $this->managerProgramIds ??= $this->programIdsForDuty(CertificationDuty::Manager);
     }
 
     /**
@@ -138,16 +139,6 @@ class CertificationAccess
         $candidate->loadMissing('enrollments.supervisingCoach');
 
         return array_values(array_unique(array_merge([], ...$candidate->enrollments->map(fn (CertificateEnrollment $enrollment) => $this->coachProgramIdsViaSupervisee($enrollment))->all())));
-    }
-
-    public function coachesProgram(int $programId): bool
-    {
-        return in_array($programId, $this->coachProgramIds(), true);
-    }
-
-    public function managesProgram(int $programId): bool
-    {
-        return in_array($programId, $this->managerProgramIds(), true);
     }
 
     public function canGrantDuty(User $target, CertificationDuty $duty, PrivilegeScopeType $scopeType, ?int $scopeId): bool
@@ -195,6 +186,7 @@ class CertificationAccess
 
         return UserCertificationDuty::query()
             ->where('duty', CertificationDuty::Coach)
+            ->whereHas('user', fn (Builder $query) => $query->where('access_profile', '!=', AccessProfile::Input))
             ->whereNull('revoked_at')
             ->where(function (Builder $query) use ($programIds, $projectIds) {
                 $query->where('scope_type', PrivilegeScopeType::System);

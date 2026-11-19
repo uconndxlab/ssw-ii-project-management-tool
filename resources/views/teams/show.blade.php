@@ -103,7 +103,7 @@
                                                 ->whereIn('id', $team->users->pluck('id'));
                                         @endphp
                                         <tr>
-                                            <td>{{ $deliverable->activityType?->name ?? '—' }}</td>
+                                            <td>{{ $deliverable->classificationLabel() ?? '—' }}</td>
                                             <td>{{ $deliverable->contactFamily?->name ?? '—' }}</td>
                                             <td class="text-center">
                                                 @if($deliverable->metric_type === 'time')
@@ -170,7 +170,7 @@
                                                         <span>{{ $entry['agreement']->name }}</span>
                                                     @endif
                                                 </td>
-                                                <td>{{ $entry['deliverable']->activityType?->name ?? '—' }}</td>
+                                                <td>{{ $entry['deliverable']->classificationLabel() ?? '—' }}</td>
                                                 <td class="text-center">
                                                     @if($entry['deliverable']->metric_type === 'time')
                                                         {{ ($entry['deliverable']->time_basis ?? 'observed') === 'allotted' ? 'Allotted time' : 'Time' }}

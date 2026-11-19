@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\CertificationToolScoreUnit;
 use App\Enums\ProgramScopeMode;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -58,7 +57,7 @@ return new class extends Migration
             $table->foreignId('certification_tool_id')->constrained()->cascadeOnDelete();
             $table->string('name');
             $table->string('slug');
-            $table->string('unit')->default(CertificationToolScoreUnit::Percent->value);
+            $table->string('unit')->default('percent');
             $table->unsignedInteger('sort_order')->default(0);
             $table->timestamps();
 

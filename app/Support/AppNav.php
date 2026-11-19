@@ -70,7 +70,7 @@ class AppNav
             'header' => 'Certification Setup',
             'items' => [
                 self::item('Candidates', 'certification-candidates.index', ['certification-candidates.*'], 'bi-person-badge'),
-                self::item('Certification Tools', 'certification-tools.index', ['certification-tools.*'], 'bi-tools'),
+                self::item('Tools & Trainings', 'certification-instruments.index', ['certification-instruments.*'], 'bi-tools'),
                 self::item('Certificates', 'certificates.index', ['certificates.*'], 'bi-award'),
             ],
         ];
@@ -100,6 +100,7 @@ class AppNav
                 'items' => [
                     self::item('Activity Families', 'contact-families.index', ['contact-families.*'], 'bi-collection'),
                     self::item('Activity Types', 'activity-types.index', ['activity-types.*'], 'bi-tags'),
+                    self::item('Sub-activities', 'sub-activities.index', ['sub-activities.*'], 'bi-tag'),
                     self::item('Logging Fields', 'logging-fields.index', ['logging-fields.*'], 'bi-input-cursor-text'),
                 ],
             ],

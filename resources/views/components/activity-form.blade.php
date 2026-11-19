@@ -23,6 +23,8 @@
     'cancelledChecked' => false,
     'notYetCompleteChecked' => false,
     'completionCountValue' => 1,
+    'selectedSubActivityId' => null,
+    'subActivityLoggingData' => [],
     'allottedDurationHours' => null,
     'allottedDurationDays' => null,
     'activity' => null,
@@ -208,6 +210,8 @@
         ->flatMap(fn ($family) => $family->activityTypes)
         ->filter(fn ($type) => $type->activityTypeLoggingFields->isNotEmpty())
         ->values();
+    $subActivitiesWithLoggingFields = $contactFamilies->flatMap(fn ($family) => $family->activityTypes)->flatMap(fn ($type) => $type->subActivities)->filter(fn ($sub) => $sub->subActivityLoggingFields->isNotEmpty())->values();
+    $legacySubActivityExemption = $isEditMode && $activity->canKeepNoSubActivity($activity->activityType);
     $contactFamiliesWithLoggingFields = $contactFamilies
         ->filter(fn ($family) => $family->contactFamilyLoggingFields->isNotEmpty())
         ->values();
@@ -340,6 +344,10 @@
         ->first(fn ($type) => (string) $type->id === (string) $selectedActivityTypeId)?->name
         ?? $activity?->activityType?->name
         ?? 'Activity';
+    $selectedSubActivityLabel = $contactFamilies->flatMap(fn ($family) => $family->activityTypes)->flatMap(fn ($type) => $type->subActivities)->firstWhere('id', $selectedSubActivityId)?->name;
+    if ($selectedSubActivityLabel) {
+        $selectedActivityTypeLabel .= ' › '.$selectedSubActivityLabel;
+    }
     $recordDateLabel = 'No date';
 
     if (filled($engagementDateValue)) {
@@ -445,7 +453,8 @@
                                            required>
                                 </x-form-field>
                             </div>
-                            <div class="col-md-4">
+                            <div class="w-100 mt-0"></div>
+                            <div class="col-md">
                                 <x-form-field label="Family" for="contact_family_id" name="contact_family_id" :required="true" class="mb-0">
                                     <select class="form-select @error('contact_family_id') is-invalid @enderror"
                                             id="contact_family_id"
@@ -470,7 +479,7 @@
                                     <div class="form-text d-none" id="contact_family_helper_text"></div>
                                 </x-form-field>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md">
                                 <x-form-field label="Type" for="activity_type_id" name="activity_type_id" :required="true" class="mb-0">
                                     <select class="form-select @error('activity_type_id') is-invalid @enderror"
                                             id="activity_type_id"
@@ -482,6 +491,21 @@
                                     <div class="form-text d-none" id="activity_type_helper_text"></div>
                                 </x-form-field>
                             </div>
+                            <div class="col-md d-none" id="sub_activity_field">
+                                <x-form-field label="Sub-activity" for="sub_activity_id" name="sub_activity_id" :required="true" class="mb-0">
+                                    <select class="form-select @error('sub_activity_id') is-invalid @enderror" id="sub_activity_id" name="sub_activity_id"
+                                            hx-get="{{ route('sub-activities.by-type') }}" hx-vals='js:{sub_activity_id: document.getElementById("sub_activity_selected").value}' hx-trigger="refresh-sub-activities" hx-target="this" hx-swap="innerHTML" hx-include="#{{ $formId }}">
+                                        <option value="">Select sub-activity...</option>
+                                    </select>
+                                    <input type="hidden" id="sub_activity_selected" value="{{ $selectedSubActivityId }}">
+                                    <div class="form-text d-none" id="sub_activity_helper_text"></div>
+                                </x-form-field>
+                            </div>
+                            @if($isEditMode)
+                                <div class="col-12 d-none" id="sub_activity_duration_warning_row">
+                                    <div class="alert alert-warning py-2 mb-0" id="sub_activity_duration_warning" role="status"></div>
+                                </div>
+                            @endif
                         </div>
 
                         <x-form-field label="Delivered By" name="participant_user_ids" class="mt-4" help="Users on the selected programs who helped deliver this activity.">
@@ -712,6 +736,37 @@
                                 </x-form-subsection>
                             @endforeach
 
+                            @foreach($subActivitiesWithLoggingFields as $subActivity)
+                                <x-form-subsection
+                                    title="Sub-activity"
+                                    :meta="$subActivity->name"
+                                    class="d-none"
+                                    data-sub-activity-logging-group="{{ $subActivity->id }}"
+                                >
+                                    <div class="row g-3">
+                                        @foreach($subActivity->subActivityLoggingFields as $field)
+                                            <div class="{{ $field->is_full_width ? 'col-12' : 'col-md-6' }}"
+                                                 data-logging-field-item
+                                                 data-field-label="{{ e($field->name) }}"
+                                                 data-scope-program-ids='@json($field->programs->pluck("id")->map(fn ($id) => (string) $id)->values())'>
+                                                @include('activities.partials.logging-field-input', [
+                                                    'field' => $field,
+                                                    'inputName' => "sub_activity_logging_values[{$field->id}]",
+                                                    'oldKey' => "sub_activity_logging_values.{$field->id}",
+                                                    'value' => data_get($subActivityLoggingData, (string) $field->id),
+                                                    'inputId' => "sub_activity_field_{$subActivity->id}_{$field->id}",
+                                                    'downloadContext' => 'sub_activity',
+                                                    'isRequired' => (bool) $field->pivot->is_required,
+                                                ])
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                    <div class="alert alert-warning small mt-3 mb-0 d-none" data-logging-scope-warning>
+                                        <span data-logging-scope-warning-text></span>
+                                    </div>
+                                </x-form-subsection>
+                            @endforeach
+
                             @foreach($agreementsWithPerAgreementFields as $agreement)
                                 @php
                                     $fundingOptions = $fundingSourceOptionsByAgreement[$agreement->id] ?? ['payor' => [], 'payee' => []];
@@ -838,8 +893,8 @@
     const programUserIdsByProgramId = @json($programUserIdsByProgramId);
     const initialParticipantTimes = @json($normalizedParticipantTimeData);
     const initialCompletionCount = @json((int) old('completion_count', $completionCountValue));
-    let initialAllottedDurationHours = @json($allottedDurationHours !== null ? (float) $allottedDurationHours : null);
-    let initialAllottedDurationDays = @json($allottedDurationDays !== null ? (float) $allottedDurationDays : null);
+    const initialAllottedDurationHours = @json($allottedDurationHours !== null ? (float) $allottedDurationHours : null);
+    const initialAllottedDurationDays = @json($allottedDurationDays !== null ? (float) $allottedDurationDays : null);
     const form = document.getElementById(@json($formId));
     const isEditMode = @json($isEditMode);
     let agreementsPickerInitialized = false;
@@ -850,21 +905,27 @@
     if (!form) return;
 
     // Files and submissions this user cannot edit are not sent with the form, so the prefilled copy cannot include them.
-    form.addEventListener('click', async (event) => {
-        const button = event.target.closest('button[name="save_and_duplicate"]');
+    function droppedFromCopy() {
         const attachmentCount = form.querySelectorAll('[data-logging-document-file]:not(.d-none)').length;
         const lockedSubmissionCount = form.querySelectorAll('[data-submission-locked]').length;
+        const plural = (count, noun) => count + ' ' + noun + (count === 1 ? '' : 's');
 
-        if (!button || (!attachmentCount && !lockedSubmissionCount)) {
+        return [
+            attachmentCount ? plural(attachmentCount, 'attachment') : null,
+            lockedSubmissionCount ? plural(lockedSubmissionCount, 'certification submission') + ' you cannot edit' : null,
+        ].filter(Boolean).join(' and ');
+    }
+
+    // On edit, the save confirmation below lists what the copy drops, so only create asks here.
+    form.addEventListener('click', async (event) => {
+        const button = event.target.closest('button[name="save_and_duplicate"]');
+        const dropped = button && !isEditMode ? droppedFromCopy() : '';
+
+        if (!dropped) {
             return;
         }
 
         event.preventDefault();
-        const plural = (count, noun) => count + ' ' + noun + (count === 1 ? '' : 's');
-        const dropped = [
-            attachmentCount ? plural(attachmentCount, 'attachment') : null,
-            lockedSubmissionCount ? plural(lockedSubmissionCount, 'certification submission') + ' you cannot edit' : null,
-        ].filter(Boolean).join(' and ');
         const confirmed = await window.appConfirm({
             title: 'Some items will not be copied',
             message: 'This activity will be saved as is, but ' + dropped + ' will not carry over to the new copy.',
@@ -879,6 +940,33 @@
             form.requestSubmit(button);
         }
     });
+
+    // Creating only adds progress; any edit can move it, so confirm once before an edit saves.
+    let editSaveConfirmed = false;
+    document.addEventListener('submit', async (event) => {
+        if (!isEditMode || event.target !== form || editSaveConfirmed) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        const submitter = event.submitter;
+        const dropped = submitter?.name === 'save_and_duplicate' ? droppedFromCopy() : '';
+        const impact = 'Edits can change progress on the deliverables and certificates this activity counts toward.';
+        editSaveConfirmed = await window.appConfirm({
+            title: 'Save changes to this activity?',
+            message: dropped ? '' : impact,
+            details: dropped ? [impact, 'The new copy will not include ' + dropped + '.'] : [],
+            action: dropped ? 'Save & Duplicate' : 'Save changes',
+            cancelLabel: 'Keep editing',
+            tone: 'warning',
+            trigger: submitter,
+        });
+
+        if (editSaveConfirmed) {
+            form.requestSubmit(submitter && submitter.isConnected ? submitter : undefined);
+        }
+    }, true);
 
     function selectedValues(name) {
         return Array.from(form.querySelectorAll('input[type="hidden"][name="' + name + '"]')).map(i => i.value);
@@ -1683,6 +1771,7 @@
         if (!family.value) {
             type.innerHTML = '<option value="">Select family first...</option>';
             type.disabled = true;
+            refreshSubActivities();
             return;
         }
 
@@ -1697,7 +1786,7 @@
         }
 
         const visible = Array.from(section.querySelectorAll(
-            '[data-contact-family-logging-group], [data-activity-logging-group], [data-agreement-logging-group]'
+            '[data-contact-family-logging-group], [data-activity-logging-group], [data-sub-activity-logging-group], [data-agreement-logging-group]'
         )).some(function (group) {
             return !group.classList.contains('d-none');
         });
@@ -1793,8 +1882,10 @@
     function updateActivityLoggingGroups() {
         const activityTypeId = document.getElementById('activity_type_id')?.value;
 
-        document.querySelectorAll('[data-activity-logging-group]').forEach(function (group) {
-            const visible = group.dataset.activityLoggingGroup === activityTypeId;
+        document.querySelectorAll('[data-activity-logging-group], [data-sub-activity-logging-group]').forEach(function (group) {
+            const visible = group.dataset.subActivityLoggingGroup !== undefined
+                ? group.dataset.subActivityLoggingGroup === document.getElementById('sub_activity_id')?.value
+                : group.dataset.activityLoggingGroup === activityTypeId;
             group.classList.toggle('d-none', !visible);
 
             if (!visible) {
@@ -1852,11 +1943,14 @@
         let hours = null;
         let days = null;
 
-        if (forceSnapshot || (isEditMode && (initialAllottedDurationHours !== null || initialAllottedDurationDays !== null))) {
+        const subSelect = document.getElementById('sub_activity_id');
+        const subOption = subSelect?.value ? subSelect.options[subSelect.selectedIndex] : null;
+        const unchanged = isEditMode && typeSelect?.value === @json((string) ($activity?->activity_type_id ?? '')) && (subSelect?.value || '') === @json((string) ($activity?->sub_activity_id ?? ''));
+        if (forceSnapshot || unchanged) {
             hours = initialAllottedDurationHours;
             days = initialAllottedDurationDays;
         } else if (typeSelect && typeSelect.value) {
-            const duration = durationFromActivityTypeOption(typeSelect.options[typeSelect.selectedIndex]);
+            const duration = durationFromActivityTypeOption(subOption || typeSelect.options[typeSelect.selectedIndex]);
             hours = duration.hours;
             days = duration.days;
         }
@@ -1876,13 +1970,57 @@
             return;
         }
 
+        const effective = durationFromActivityTypeOption(subOption || selectedOption);
+        const effectiveLabel = formatDurationValue(effective.hours, effective.days) || 'no duration';
+        const oldLabel = formatDurationValue(@json($activity?->allotted_duration_hours), @json($activity?->allotted_duration_days)) || 'no duration';
+        const changed = isEditMode && (subSelect?.value || '') !== @json((string) ($activity?->sub_activity_id ?? ''));
+        const warning = document.getElementById('sub_activity_duration_warning');
+        if (warning) {
+            warning.textContent = 'The duration will change from ' + oldLabel + ' to ' + effectiveLabel + ', which updates deliverable progress.';
+            warning.parentElement.classList.toggle('d-none', !changed || effectiveLabel === oldLabel);
+        }
         displayInput.placeholder = formatted ? '' : 'No duration configured for this activity type';
         if (help) {
             help.textContent = formatted
                 ? 'Set by ' + typeName + '.'
                 : 'No duration configured for ' + typeName + '.';
+            if (subOption) {
+                const subName = subOption.text.trim();
+                const typeDuration = durationFromActivityTypeOption(selectedOption);
+                const typeLabel = formatDurationValue(typeDuration.hours, typeDuration.days);
+                help.textContent = subOption.dataset.durationSource === 'sub_activity'
+                    ? 'Set by sub-activity ' + subName + (typeLabel ? ', overriding ' + typeName + "'s " + typeLabel : '') + '.'
+                    : (typeLabel ? 'Inherited from type ' + typeName + '; ' + subName + ' has no duration of its own.' : 'No duration configured for ' + subName + ' or type ' + typeName + '.');
+            }
         }
     }
+
+    let previousSubActivityType = @json((string) $selectedActivityTypeId);
+    function refreshSubActivities() {
+        const type = document.getElementById('activity_type_id');
+        const sub = document.getElementById('sub_activity_id');
+        const selected = document.getElementById('sub_activity_selected');
+        if (type.value !== previousSubActivityType) {
+            selected.value = '';
+            sub.value = '';
+        }
+        previousSubActivityType = type.value;
+        htmx.trigger(sub, 'refresh-sub-activities');
+    }
+    document.getElementById('sub_activity_id')?.addEventListener('htmx:afterSwap', function () {
+        const sub = document.getElementById('sub_activity_id');
+        const visible = Array.from(sub.options).some(option => option.value !== '');
+        document.getElementById('sub_activity_field').classList.toggle('d-none', !visible);
+        sub.disabled = !visible;
+        const legacy = @json($legacySubActivityExemption) && document.getElementById('activity_type_id').value === @json((string) ($activity?->activity_type_id ?? ''));
+        sub.required = visible && !legacy;
+        document.querySelector('label[for="sub_activity_id"]')?.classList.toggle('required-label', sub.required);
+        sub.setAttribute('aria-required', String(sub.required));
+        sub.closest('[data-form-field]')?.toggleAttribute('data-field-required', sub.required);
+        document.getElementById('sub_activity_selected').value = sub.value;
+        updateSelectHelperText('sub_activity_id', 'sub_activity_helper_text');
+        updateActivityLoggingGroups();
+    });
 
     function updateActivityTypeState() {
         const family = document.getElementById('contact_family_id');
@@ -1987,11 +2125,14 @@
             updateAdditionalContactTimeFields();
             renderParticipantTimeRows();
         }
+        if (event.target && event.target.id === 'sub_activity_id') {
+            document.getElementById('sub_activity_selected').value = event.target.value;
+            updateSelectHelperText('sub_activity_id', 'sub_activity_helper_text');
+            updateActivityLoggingGroups();
+        }
         if (event.target && event.target.id === 'activity_type_id') {
-            if (event.isTrusted) {
-                initialAllottedDurationHours = null;
-                initialAllottedDurationDays = null;
-            }
+            document.getElementById('activity_type_selected').value = event.target.value;
+            refreshSubActivities();
             updateSelectHelperText('activity_type_id', 'activity_type_helper_text');
             updateActivityLoggingGroups();
         }

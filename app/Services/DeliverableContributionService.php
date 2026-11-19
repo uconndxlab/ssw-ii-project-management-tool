@@ -22,6 +22,7 @@ class DeliverableContributionService
             'agreementActivityHistories',
             'deliverables.program',
             'deliverables.activityType',
+            'deliverables.subActivity',
             'deliverables.users',
             'deliverables.teams',
         ]);
@@ -66,6 +67,7 @@ class DeliverableContributionService
             'agreements.teams.users',
             'agreements.deliverables.program',
             'agreements.deliverables.activityType',
+            'agreements.deliverables.subActivity',
             'agreements.deliverables.users',
             'agreements.deliverables.teams',
         ]);
@@ -319,6 +321,7 @@ class DeliverableContributionService
             'activity_id' => $activity->id,
             'contact_family_id' => $contactFamilyId,
             'activity_type_id' => $activity->activity_type_id,
+            'sub_activity_id' => $activity->sub_activity_id,
             'contributor_user_id' => $contributorUserId,
             'activity_date' => $activity->engagement_date,
             'contribution_kind' => $contributionKind,
@@ -365,6 +368,10 @@ class DeliverableContributionService
             }
 
             if ($deliverable->activity_type_id && (int) $history->activity_type_id !== (int) $deliverable->activity_type_id) {
+                return false;
+            }
+
+            if ($deliverable->sub_activity_id && (int) $history->sub_activity_id !== (int) $deliverable->sub_activity_id) {
                 return false;
             }
 

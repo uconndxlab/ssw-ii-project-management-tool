@@ -45,9 +45,9 @@ class AdminUserController extends Controller
         if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
-                $q->whereIlike('name', "%{$search}%")
-                    ->orWhereIlike('email', "%{$search}%")
-                    ->orWhereIlike('po_number', "%{$search}%");
+                $q->whereLike('name', "%{$search}%")
+                    ->orWhereLike('email', "%{$search}%")
+                    ->orWhereLike('po_number', "%{$search}%");
             });
         }
 
@@ -93,12 +93,12 @@ class AdminUserController extends Controller
 
         $users = $query->paginate(TablePagination::perPage($request))->withQueryString();
 
-        $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
-        $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
-
         if ($request->header('HX-Request')) {
             return view('admin.users.partials.table', compact('users', 'sort', 'direction'));
         }
+
+        $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
+        $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
 
         return view('admin.users.index', compact('users', 'sort', 'direction', 'filterProjects', 'filterPrograms'));
     }
@@ -178,9 +178,9 @@ class AdminUserController extends Controller
         if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
-                $q->whereIlike('name', "%{$search}%")
-                    ->orWhereIlike('email', "%{$search}%")
-                    ->orWhereIlike('po_number', "%{$search}%");
+                $q->whereLike('name', "%{$search}%")
+                    ->orWhereLike('email', "%{$search}%")
+                    ->orWhereLike('po_number', "%{$search}%");
             });
         }
 
@@ -189,13 +189,14 @@ class AdminUserController extends Controller
         $this->applyUserIndexSort($query, $sort, $direction);
 
         $users = $query->paginate(TablePagination::perPage($request))->withQueryString();
-        $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
-        $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
         $superviseesIndex = true;
 
         if ($request->header('HX-Request')) {
             return view('admin.users.partials.table', compact('users', 'sort', 'direction', 'superviseesIndex'));
         }
+
+        $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
+        $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
 
         return view('admin.users.index', compact('users', 'sort', 'direction', 'filterProjects', 'filterPrograms', 'superviseesIndex'));
     }
@@ -346,7 +347,7 @@ class AdminUserController extends Controller
             'teams' => $teams,
             'ledgerProjects' => $ledgerProjects->get(['id', 'name']),
             'ledgerPrograms' => $ledgerPrograms->get(['id', 'name']),
-            'canGrantCertificationDuties' => $access->isSystemAdmin() || $access->adminProgramIds() !== [],
+            'canGrantCertificationDuties' => ! $user->access()->isInput() && ($access->isSystemAdmin() || $access->adminProgramIds() !== []),
             'dutyProgramOptions' => $ledgerPrograms->get(['id', 'name']),
             'existingCoachSystem' => $user->exists && $user->certificationDuties()
                 ->where('duty', CertificationDuty::Coach)

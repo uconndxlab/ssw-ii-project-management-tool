@@ -20,6 +20,7 @@ use App\Models\Program;
 use App\Models\Project;
 use App\Models\ReportRequest;
 use App\Models\State;
+use App\Models\SubActivity;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\AgreementDuplicationService;
@@ -29,6 +30,7 @@ use App\Services\PrivateFileService;
 use App\Support\ActivityTypeDuration;
 use App\Support\AgreementDeliverableDisplay;
 use App\Support\AgreementOverview;
+use App\Support\Authorization\AccessReasons;
 use App\Support\Authorization\ScopeSync;
 use App\Support\CarbonDate;
 use App\Support\DeliverableActivityHistogram;
@@ -60,10 +62,6 @@ class AgreementController extends Controller
         $this->authorize('viewAny', Agreement::class);
 
         $user = $this->actor();
-        $states = State::query()->get(['id', 'name'])->sortBy('name')->values();
-        $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
-        $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
-
         $query = Agreement::query()
             ->visibleTo($user)
             ->with([
@@ -71,20 +69,19 @@ class AgreementController extends Controller
                 'programs.projects:id,name',
                 'principalInvestigators:id,name',
             ]);
+        $user->access()->applyAgreementIndexVisibility($query);
 
-        if (! $user->access()->hasView()) {
-            $query->active();
-        } elseif ($request->filled('active')) {
+        if ($request->filled('active')) {
             $query->where('agreements.active', $request->input('active') === '1');
         }
 
         $search = trim((string) $request->input('search', ''));
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
-                $q->whereIlike('name', "%{$search}%")
-                    ->orWhereHas('states', fn ($stateQuery) => $stateQuery->whereIlike('name', "%{$search}%"))
-                    ->orWhereHas('programs.projects', fn ($projectQuery) => $projectQuery->whereIlike('name', "%{$search}%"))
-                    ->orWhereHas('programs', fn ($programQuery) => $programQuery->whereIlike('name', "%{$search}%"));
+                $q->whereLike('name', "%{$search}%")
+                    ->orWhereHas('states', fn ($stateQuery) => $stateQuery->whereLike('name', "%{$search}%"))
+                    ->orWhereHas('programs.projects', fn ($projectQuery) => $projectQuery->whereLike('name', "%{$search}%"))
+                    ->orWhereHas('programs', fn ($programQuery) => $programQuery->whereLike('name', "%{$search}%"));
             });
         }
 
@@ -114,6 +111,15 @@ class AgreementController extends Controller
         $this->applyAgreementIndexSort($query, $sort, $direction);
 
         $agreements = $query->paginate(TablePagination::perPage($request))->withQueryString();
+        $roleReasons = AccessReasons::forPage($agreements->getCollection(), $this->actor());
+
+        if ($request->header('HX-Request') === 'true' && $request->input('partial') !== 'filters') {
+            return view('agreements.partials.table', compact('agreements', 'roleReasons', 'sort', 'direction'));
+        }
+
+        $states = State::query()->get(['id', 'name'])->sortBy('name')->values();
+        $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
+        $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
 
         if ($request->header('HX-Request') === 'true' && $request->input('partial') === 'filters') {
             return view('agreements.partials.filters', compact(
@@ -125,12 +131,8 @@ class AgreementController extends Controller
             ));
         }
 
-        if ($request->header('HX-Request') === 'true') {
-            return view('agreements.partials.table', compact('agreements', 'sort', 'direction'));
-        }
-
         return view('agreements.index', compact(
-            'agreements',
+            'agreements', 'roleReasons',
             'states',
             'filterProjects',
             'filterPrograms',
@@ -266,6 +268,7 @@ class AgreementController extends Controller
             'teams.users',
             'deliverables.contactFamily',
             'deliverables.activityType',
+            'deliverables.subActivity',
             'deliverables.program',
             'deliverables.users',
             'deliverables.teams',
@@ -279,7 +282,7 @@ class AgreementController extends Controller
 
         $recentActivities = $agreement->activities()
             ->visibleTo($this->actor())
-            ->with(['activityType.contactFamily', 'user', 'participants', 'agreements'])
+            ->with(['subActivity', 'activityType.contactFamily', 'user', 'participants', 'agreements'])
             ->orderByRecentDisplay()
             ->limit(5)
             ->get();
@@ -690,7 +693,7 @@ class AgreementController extends Controller
     {
         $agreement->loadMissing(['agreementActivityHistories', 'programs:id']);
         $selectedProgramIds = $agreement->programs->pluck('id')->map(fn ($id) => (int) $id)->all();
-        $scopedActivityTypes = ActivityType::query()->with('programs:id')->get();
+        $scopedActivityTypes = ActivityType::query()->with(['programs:id', 'subActivities.programs:id'])->get();
 
         $existingDeliverables = $agreement->deliverables()
             ->with(['users', 'teams', 'contributions'])
@@ -740,12 +743,14 @@ class AgreementController extends Controller
                     $contactFamilyId,
                     $activityTypeId,
                     $activityTypesInScope,
-                    $row['allotted_time_unit'] ?? null
+                    $row['allotted_time_unit'] ?? null,
+                    ! empty($row['sub_activity_id']) ? (int) $row['sub_activity_id'] : null
                 );
             }
 
             $data = [
                 'activity_type_id' => $row['activity_type_id'] ?? null,
+                'sub_activity_id' => $row['sub_activity_id'] ?? null,
                 'contact_family_id' => $row['contact_family_id'] ?? null,
                 'program_id' => $row['program_id'] ?? null,
                 'metric_type' => $row['metric_type'] ?? null,
@@ -773,6 +778,7 @@ class AgreementController extends Controller
                         $data = array_merge($data, [
                             'contact_family_id' => $deliverable->contact_family_id,
                             'activity_type_id' => $deliverable->activity_type_id,
+                            'sub_activity_id' => $deliverable->sub_activity_id,
                             'program_id' => $deliverable->program_id,
                             'metric_type' => $deliverable->metric_type,
                             'time_basis' => $deliverable->time_basis,
@@ -994,9 +1000,8 @@ class AgreementController extends Controller
             return null;
         }
 
-        $activityType = $deliverable->activityType;
         $contactFamily = $deliverable->contactFamily;
-        $label = ($activityType !== null ? $activityType->name : null)
+        $label = $deliverable->classificationLabel()
             ?? ($contactFamily !== null ? $contactFamily->name : null)
             ?? 'Deliverable';
 
@@ -1068,6 +1073,7 @@ class AgreementController extends Controller
     {
         $fields = [
             $row['activity_type_id'] ?? null,
+            $row['sub_activity_id'] ?? null,
             $row['contact_family_id'] ?? null,
             $row['program_id'] ?? null,
             $row['metric_type'] ?? null,
@@ -1134,10 +1140,15 @@ class AgreementController extends Controller
             ->values();
         $activityTypes = ActivityType::query()
             ->where('active', true)
-            ->with(['contactFamily', 'programs.projects'])
+            ->with(['contactFamily', 'programs.projects', 'subActivities.programs:id'])
             ->get()
             ->sortBy(fn ($item) => [$item->sort_order, $item->name])
             ->values();
+        $subActivities = SubActivity::query()
+            ->where(fn ($query) => $query->where('active', true)
+                ->orWhereIn('id', $agreement?->deliverables()->pluck('sub_activity_id')->filter() ?? []))
+            ->with('programs:id')
+            ->orderBy('sort_order')->orderBy('name')->get();
         $projects = ProjectProgramScope::assignableProjectsWithProgramsFor($this->actor(), $agreement)->sortBy('name')->values();
         $agreementLoggingFields = LoggingField::active()
             ->ordered()
@@ -1155,6 +1166,7 @@ class AgreementController extends Controller
                 'teams.users',
                 'teams.programs.projects',
                 'deliverables.activityType.contactFamily',
+                'deliverables.subActivity',
                 'deliverables.program',
                 'deliverables.users.programs',
                 'deliverables.teams.programs',
@@ -1234,6 +1246,7 @@ class AgreementController extends Controller
             'teams',
             'contactFamilies',
             'activityTypes',
+            'subActivities',
             'projects',
             'agreementLoggingFields',
             'eligibleCertificates',

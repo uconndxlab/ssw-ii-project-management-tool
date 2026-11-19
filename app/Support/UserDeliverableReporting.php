@@ -31,6 +31,7 @@ class UserDeliverableReporting
                 'users',
                 'deliverables.contactFamily',
                 'deliverables.activityType',
+                'deliverables.subActivity',
                 'deliverables.program',
                 'deliverables.users',
                 'deliverables.teams',

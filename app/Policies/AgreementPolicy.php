@@ -16,7 +16,7 @@ class AgreementPolicy
     // No programs/projects: system admin only.
 
     // View: you belong to it (you or your team) or you have view/admin privilege on a program/project assigned on it.
-    // Inactive agreements: members who belong can still open active ones; inactive requires view privilege.
+    // Inactive agreements: members who belong can still open active ones; inactive requires an overlapping view/admin privilege.
     public function view(User $user, Agreement $agreement): bool
     {
         if (! $user->access()->canViewRecord($agreement)) {
@@ -27,7 +27,7 @@ class AgreementPolicy
             return true;
         }
 
-        return $user->access()->hasView();
+        return $user->access()->canViewInactiveAgreement($agreement);
     }
 
     // Duplicate: same as edit, plus you can create agreements.

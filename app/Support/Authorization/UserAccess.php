@@ -11,7 +11,7 @@ use App\Models\ActivityType;
 use App\Models\Agreement;
 use App\Models\Certificate;
 use App\Models\CertificationCandidate;
-use App\Models\CertificationTool;
+use App\Models\CertificationInstrument;
 use App\Models\ContactFamily;
 use App\Models\Contracts\HasPrograms;
 use App\Models\LoggingField;
@@ -19,6 +19,7 @@ use App\Models\Organization;
 use App\Models\Program;
 use App\Models\Project;
 use App\Models\State;
+use App\Models\SubActivity;
 use App\Models\Team;
 use App\Models\User;
 use App\Models\UserPrivilege;
@@ -49,11 +50,23 @@ class UserAccess
     /** @var array<int, bool> */
     private array $certificationReviewerActivityIds = [];
 
+    /** @var array<int, bool> */
+    private array $visibleActivityIds = [];
+
+    /** @var array<int, bool> */
+    private array $visibleUserIds = [];
+
+    /** @var array<int, bool> */
+    private array $activityActionLogScopeIds = [];
+
     /** @var Collection<int, UserPrivilege>|null */
     private ?Collection $privileges = null;
 
-    /** @var array<string, bool> */
+    /** @var array<class-string<Model>, array<int, bool>> */
     private array $recordVisibilityCache = [];
+
+    /** @var array<int, bool> */
+    private array $privilegeVisibleAgreementIds = [];
 
     public function __construct(private User $user) {}
 
@@ -119,11 +132,6 @@ class UserAccess
     public function hasView(): bool
     {
         return $this->isAdminViewer() && $this->privileges()->isNotEmpty();
-    }
-
-    public function canAccessAdminSetup(): bool
-    {
-        return $this->hasAdmin();
     }
 
     public function canViewPrimaryNav(): bool
@@ -231,24 +239,6 @@ class UserAccess
         return in_array($projectId, $this->adminProjectIds(), true);
     }
 
-    public function viewsProgram(int $programId): bool
-    {
-        if ($this->hasSystemView()) {
-            return true;
-        }
-
-        return in_array($programId, $this->viewProgramIds(), true);
-    }
-
-    public function viewsProject(int $projectId): bool
-    {
-        if ($this->hasSystemView()) {
-            return true;
-        }
-
-        return in_array($projectId, $this->viewProjectIds(), true);
-    }
-
     public function canGrant(PrivilegeCapability $capability, PrivilegeScopeType $scopeType, ?int $scopeId): bool
     {
         if ($this->isInput() || ! $this->hasAdmin()) {
@@ -327,35 +317,6 @@ class UserAccess
                     ->where('scope_type', PrivilegeScopeType::System->value);
             })
             ->exists();
-    }
-
-    /**
-     * View-privilege overlap on assigned programs/projects. All-mode is system-wide, not every viewer.
-     *
-     * @param  list<int>  $programIds
-     * @param  list<int>  $projectIds
-     */
-    public function scopedRecordOverlapsView(?ProgramScopeMode $mode, array $programIds, array $projectIds = []): bool
-    {
-        if ($this->isInput()) {
-            return false;
-        }
-
-        if ($this->hasSystemView()) {
-            return true;
-        }
-
-        if ($this->hasView()) {
-            if ($mode === ProgramScopeMode::Specific && array_intersect($programIds, $this->viewProgramIds()) !== []) {
-                return true;
-            }
-
-            if ($projectIds !== [] && array_intersect($projectIds, $this->viewProjectIds()) !== []) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /**
@@ -487,6 +448,10 @@ class UserAccess
 
         // scope visibility query on programs access, or membership
         return $query->where(function (Builder $builder) use ($programsRelation, $model) {
+            // Certificates retain their original empty-group visibility for enrollment summaries and progress.
+            if (! $model instanceof Certificate) {
+                $builder->whereRaw('1 = 0');
+            }
             if ($this->hasView()) {
                 $programIds = $this->viewProgramIds();
 
@@ -540,11 +505,9 @@ class UserAccess
         }
 
         return $query->where(function (Builder $builder) {
-            $this->orPrivilegeScopedOverlap($builder);
-            $memberIds = $this->membershipVisibilityUserIds();
-            if ($memberIds !== []) {
-                $builder->orWhereHas('users', fn (Builder $relation) => $relation->whereIn('users.id', $memberIds))
-                    ->orWhereHas('teams.users', fn (Builder $relation) => $relation->whereIn('users.id', $memberIds));
+            $builder->whereRaw('1 = 0');
+            foreach ($this->agreementVisibilityPredicates() as $predicate) {
+                $builder->orWhere($predicate);
             }
         });
     }
@@ -603,18 +566,100 @@ class UserAccess
             return $query;
         }
 
-        // Visible if referenced, or the activity (or one of its agreements) is in your view/admin programs.
-        // Being staff on an out-of-scope agreement grants no extra view: there you see only your own, like a member.
         return $query->where(function (Builder $builder) {
-            $this->orActivityReferencedBy($builder, $this->activityReferenceUserIds());
-            $this->orCertificationReviewer($builder);
-
-            $programIds = $this->viewProgramIds();
-            if ($this->hasView() && $programIds !== []) {
-                $inScope = fn (Builder $relation) => $relation->whereIn('programs.id', $programIds);
-                $builder->orWhereHas('programs', $inScope)->orWhereHas('agreements.programs', $inScope);
+            $builder->whereRaw('1 = 0');
+            foreach ($this->activityVisibilityPredicates() as $predicate) {
+                $builder->orWhere($predicate);
             }
         });
+    }
+
+    /**
+     * Shared by list visibility and My role projections. Optional ids narrow a privilege to its named scope.
+     *
+     * @param  list<int>|null  $programIds
+     * @return array<string, \Closure(Builder<covariant Model>): mixed>
+     */
+    public function activityVisibilityPredicates(?array $programIds = null): array
+    {
+        $self = [(int) $this->user->id];
+        $reports = array_values($this->directReportIds());
+        $programIds ??= $this->viewProgramIds();
+        $predicates = [
+            'Logged' => fn (Builder $query) => $this->activityLoggedBy($query, $self),
+            'Delivered by' => fn (Builder $query) => $this->activityDeliveredBy($query, $self),
+        ];
+        if ($reports !== []) {
+            $predicates['Supervisor'] = function (Builder $query) use ($reports) {
+                $this->orActivityReferencedBy($query, $reports);
+                $this->orCertificationReviewerBy($query, $reports);
+            };
+        }
+        if (! $this->isInput()) {
+            $predicates['Reviewer'] = fn (Builder $query) => $this->orCertificationReviewerBy($query, $self);
+        }
+        if ($this->hasView() && $programIds !== []) {
+            $predicates['Privilege'] = function (Builder $query) use ($programIds) {
+                $inScope = $this->programOverlapPredicate($programIds);
+                $query->whereHas('programs', $inScope)->orWhereHas('agreements.programs', $inScope);
+            };
+        }
+
+        return $predicates;
+    }
+
+    /**
+     * @param  list<int>|null  $programIds
+     * @return array<string, \Closure(Builder<covariant Model>): mixed>
+     */
+    public function agreementVisibilityPredicates(?array $programIds = null): array
+    {
+        if ($this->isInput()) {
+            return [];
+        }
+
+        $members = $this->membershipVisibilityUserIds();
+        $self = array_values(array_intersect($members, [(int) $this->user->id]));
+        $reports = array_values(array_diff($members, $self));
+        $predicates = [
+            'Staff' => fn (Builder $query) => $this->agreementMembers($query, $self, 'users'),
+            'Team' => fn (Builder $query) => $this->agreementMembers($query, $self, 'teams.users'),
+        ];
+        if ($reports !== []) {
+            $predicates['Supervisor'] = function (Builder $query) use ($reports) {
+                $query->where(fn (Builder $staff) => $this->agreementMembers($staff, $reports, 'users'))
+                    ->orWhere(fn (Builder $team) => $this->agreementMembers($team, $reports, 'teams.users'));
+            };
+        }
+        if ($this->hasView()) {
+            $predicates['Privilege'] = fn (Builder $query) => $this->orPrivilegeScopedOverlap($query, $programIds);
+        }
+
+        return $predicates;
+    }
+
+    /** @param Builder<covariant Model> $query
+     * @param  list<int>  $userIds
+     */
+    private function activityLoggedBy(Builder $query, array $userIds): void
+    {
+        $query->whereIn('activities.user_id', $userIds);
+    }
+
+    /** @param Builder<covariant Model> $query
+     * @param  list<int>  $userIds
+     */
+    private function activityDeliveredBy(Builder $query, array $userIds): void
+    {
+        $query->whereHas('participants', fn (Builder $users) => $users->whereIn('users.id', $userIds));
+    }
+
+    /** @param Builder<covariant Model> $query
+     * @param  list<int>  $userIds
+     */
+    private function agreementMembers(Builder $query, array $userIds, string $relation): void
+    {
+        $query->whereHas($relation, fn (Builder $users) => $users->whereIn('users.id', $userIds));
     }
 
     /**
@@ -724,7 +769,13 @@ class UserAccess
             return false;
         }
 
-        return $this->applyUsersInViewMembership(User::query()->whereKey($target->id))->exists();
+        if (isset($this->visibleUserIds[$target->id])) {
+            return $this->visibleUserIds[$target->id];
+        }
+
+        $this->batchVisibility(User::class, [$target->id], $this->visibleUserIds, $this->applyUsersInViewMembership(User::query()));
+
+        return $this->visibleUserIds[$target->id];
     }
 
     /**
@@ -744,19 +795,13 @@ class UserAccess
     // Members/Input: logger or Delivered By (or a supervisee). Viewers: that, or the activity or its agreement is in their program scope.
     public function canViewActivity(Activity $activity): bool
     {
-        if ($this->isCertificationReviewerOnActivity($activity)) {
-            return true;
+        if (array_key_exists($activity->id, $this->visibleActivityIds)) {
+            return $this->visibleActivityIds[$activity->id];
         }
 
-        if ($this->isInput() || $this->isMember()) {
-            return $this->isReferencedOnActivity($activity);
-        }
+        $this->primeActivityVisibility([$activity->id]);
 
-        if ($this->isSupervisor() && $this->isReferencedOnActivity($activity)) {
-            return true;
-        }
-
-        return $this->applyActivityVisibility(Activity::query()->whereKey($activity->id))->exists();
+        return $this->visibleActivityIds[$activity->id];
     }
 
     // Edit access, or standing as a certification reviewer. Reviewers may edit only the activity's
@@ -770,16 +815,25 @@ class UserAccess
     // inherits the standing of their direct reports (documented in docs/access-rules.md).
     public function isCertificationReviewerOnActivity(Activity $activity): bool
     {
-        return $this->certificationReviewerActivityIds[$activity->id] ??= Activity::query()
-            ->whereKey($activity->id)
-            ->where(fn (Builder $builder) => $this->orCertificationReviewer($builder))
-            ->exists();
+        if ($this->isInput()) {
+            return false;
+        }
+
+        if (! array_key_exists($activity->id, $this->certificationReviewerActivityIds)) {
+            $this->primeCertificationReviewers([$activity->id]);
+        }
+
+        return $this->certificationReviewerActivityIds[$activity->id];
     }
 
     // A coach for this activity: a reviewer on it, or holding a coach duty in one of its programs.
     // Used to offer the focused certification editor; other editors get the whole form.
     public function isCertificationCoachOnActivity(Activity $activity): bool
     {
+        if ($this->isInput()) {
+            return false;
+        }
+
         $activity->loadMissing('programs:id');
 
         return $this->isCertificationReviewerOnActivity($activity)
@@ -794,16 +848,27 @@ class UserAccess
      */
     public function primeCertificationReviewers(array $activityIds): void
     {
-        $reviewing = Activity::query()->whereKey($activityIds)->where(fn (Builder $builder) => $this->orCertificationReviewer($builder))->pluck('id')->map(fn ($id) => (int) $id)->all();
-        foreach ($activityIds as $id) {
-            $this->certificationReviewerActivityIds[(int) $id] = in_array((int) $id, $reviewing, true);
-        }
+        $this->batchVisibility(Activity::class, $activityIds, $this->certificationReviewerActivityIds,
+            Activity::query()->where(fn (Builder $builder) => $this->orCertificationReviewer($builder)));
+    }
+
+    /** @param array<int> $activityIds */
+    public function primeActivityVisibility(array $activityIds): void
+    {
+        $this->batchVisibility(Activity::class, $activityIds, $this->visibleActivityIds,
+            $this->applyActivityVisibility(Activity::query()));
+        $this->batchVisibility(Activity::class, $activityIds, $this->activityActionLogScopeIds,
+            Activity::query()->whereHas('programs', fn (Builder $query) => $this->applyProgramVisibility($query)));
     }
 
     // Owner, supervisor of owner, or enhanced viewer/admin whose view scope covers the activity
     // (program visibility — not merely Delivered By).
     public function canViewActivityActionLog(Activity $activity): bool
     {
+        if (! $this->canViewActivity($activity)) {
+            return false;
+        }
+
         if ((int) $activity->user_id === (int) $this->user->id) {
             return true;
         }
@@ -820,12 +885,13 @@ class UserAccess
             return true;
         }
 
-        return Activity::query()
-            ->whereKey($activity->id)
-            ->whereHas('programs', function (Builder $programQuery) {
-                $this->applyProgramVisibility($programQuery);
-            })
-            ->exists();
+        if (array_key_exists($activity->id, $this->activityActionLogScopeIds)) {
+            return $this->activityActionLogScopeIds[$activity->id];
+        }
+
+        $this->primeActivityVisibility([$activity->id]);
+
+        return $this->activityActionLogScopeIds[$activity->id];
     }
 
     // Logged it, participant, or the activity's own programs/projects are in your admin scope.
@@ -909,47 +975,124 @@ class UserAccess
         return array_intersect($projectIds, $this->adminProjectIds()) !== [];
     }
 
-    /** @param array<int, mixed> $organizationIds */
-    public function primeOrganizationVisibility(array $organizationIds): void
+    /**
+     * VisibleToUser collects hydrated ids (including eager loads) without querying access.
+     * A cache miss checks all pending ids of that type, plus the requested ids, in chunks.
+     * The query uses the same apply*Visibility filter as lists, so link and list rules
+     * cannot drift; PHP gates and policy-specific exceptions remain at their callers.
+     * Answers, including denials, live only in this UserAccess instance for the request.
+     * Debug with the query log: one IN (...) per type/predicate/chunk, then cache hits.
+     * Models loaded later require another batch; ids are never consumed across users.
+     *
+     * @param  class-string<Model>  $class
+     * @param  array<int>  $ids
+     * @param  array<int, bool>  $answers
+     * @param  Builder<covariant Model>|null  $query  Null means the existing PHP gate denied access.
+     */
+    private function batchVisibility(string $class, array $ids, array &$answers, ?Builder $query): void
     {
-        if ($organizationIds === []) {
+        if ($ids === []) {
             return;
         }
 
-        $visibleIds = $this->applyOrganizationVisibility(Organization::query()->whereKey($organizationIds))
-            ->pluck('id')->all();
-        $visibleIds = array_fill_keys($visibleIds, true);
+        $pending = array_values(array_diff(array_unique([
+            ...app(HydratedRecordIds::class)->forType($class),
+            ...$ids,
+        ]), array_keys($answers)));
 
-        foreach ($organizationIds as $id) {
-            $this->recordVisibilityCache[Organization::class.':'.$id] = isset($visibleIds[$id]);
+        foreach (array_chunk($pending, 1000) as $chunk) {
+            $visible = $query === null ? [] : (clone $query)->whereKey($chunk)->pluck('id')->all();
+            $visible = array_fill_keys($visible, true);
+
+            foreach ($chunk as $id) {
+                $answers[$id] = isset($visible[$id]);
+            }
         }
+    }
+
+    public function canViewInactiveAgreement(Agreement $agreement): bool
+    {
+        if ($this->hasSystemView()) {
+            return true;
+        }
+
+        if (! $this->hasView()) {
+            return false;
+        }
+
+        if (! array_key_exists($agreement->id, $this->privilegeVisibleAgreementIds)) {
+            $this->batchVisibility(Agreement::class, [$agreement->id], $this->privilegeVisibleAgreementIds,
+                Agreement::query()->where(function (Builder $query) {
+                    $query->whereRaw('1 = 0');
+                    $this->orPrivilegeScopedOverlap($query);
+                }));
+        }
+
+        return $this->privilegeVisibleAgreementIds[$agreement->id];
+    }
+
+    /**
+     * @param  Builder<Agreement>  $query
+     * @return Builder<Agreement>
+     */
+    public function applyAgreementIndexVisibility(Builder $query): Builder
+    {
+        if ($this->hasSystemView()) {
+            return $query;
+        }
+
+        return $query->where(function (Builder $query) {
+            $this->applyActiveAgreement($query);
+            $this->orPrivilegeScopedOverlap($query);
+        });
+    }
+
+    /**
+     * @param  Builder<covariant Model>  $query
+     * @return Builder<covariant Model>
+     */
+    public function applyActiveAgreement(Builder $query): Builder
+    {
+        return $query->where('agreements.active', true);
     }
 
     public function canViewRecord(Model $record): bool
     {
-        // Views render the same record's visibility check repeatedly (badges, lists); avoid a query per occurrence.
-        $cacheKey = get_class($record).':'.$record->getKey();
-        if (array_key_exists($cacheKey, $this->recordVisibilityCache)) {
-            return $this->recordVisibilityCache[$cacheKey];
+        if ($record instanceof Activity) {
+            return $this->canViewActivity($record);
         }
 
-        return $this->recordVisibilityCache[$cacheKey] = match (true) {
-            $record instanceof Project => $this->applyProjectVisibility(Project::query()->whereKey($record->id))->exists(),
-            $record instanceof Program => $this->applyProgramVisibility(Program::query()->whereKey($record->id))->exists(),
-            $record instanceof Team => $this->applyTeamVisibility(Team::query()->whereKey($record->id))->exists(),
-            $record instanceof Agreement => $this->applyAgreementVisibility(Agreement::query()->whereKey($record->id))->exists(),
-            $record instanceof Organization => $this->applyOrganizationVisibility(Organization::query()->whereKey($record->id))->exists(),
-            $record instanceof State => $this->applyStateVisibility(State::query()->whereKey($record->id))->exists(),
-            $record instanceof ContactFamily => $this->hasAdmin() && $this->applyScopedEntityVisibility(ContactFamily::query()->whereKey($record->id))->exists(),
-            $record instanceof LoggingField => $this->hasAdmin() && $this->applyScopedEntityVisibility(LoggingField::query()->whereKey($record->id))->exists(),
-            $record instanceof ActivityType => $this->hasAdmin() && $this->applyScopedEntityVisibility(ActivityType::query()->whereKey($record->id))->exists(),
-            $record instanceof CertificationTool => $this->hasView() && $this->applyScopedEntityVisibility(CertificationTool::query()->whereKey($record->id))->exists(),
-            $record instanceof Certificate => $this->hasView() && $this->applyScopedEntityVisibility(Certificate::query()->whereKey($record->id))->exists(),
-            $record instanceof CertificationCandidate => $this->applyCertificationCandidateVisibility(CertificationCandidate::query()->whereKey($record->id))->exists(),
-            $record instanceof Activity => $this->canViewActivity($record),
-            $record instanceof User => $this->canViewUser($record),
-            default => false,
+        if ($record instanceof User) {
+            return $this->canViewUser($record);
+        }
+
+        $class = $record::class;
+        $id = (int) $record->getKey();
+        if (isset($this->recordVisibilityCache[$class][$id])) {
+            return $this->recordVisibilityCache[$class][$id];
+        }
+
+        $query = match (true) {
+            $record instanceof Project => $this->applyProjectVisibility(Project::query()),
+            $record instanceof Program => $this->applyProgramVisibility(Program::query()),
+            $record instanceof Team => $this->applyTeamVisibility(Team::query()),
+            $record instanceof Agreement => $this->applyAgreementVisibility(Agreement::query()),
+            $record instanceof Organization => $this->applyOrganizationVisibility(Organization::query()),
+            $record instanceof State => $this->applyStateVisibility(State::query()),
+            $record instanceof ContactFamily => $this->hasAdmin() ? $this->applyScopedEntityVisibility(ContactFamily::query()) : null,
+            $record instanceof LoggingField => $this->hasAdmin() ? $this->applyScopedEntityVisibility(LoggingField::query()) : null,
+            $record instanceof ActivityType => $this->hasAdmin() ? $this->applyScopedEntityVisibility(ActivityType::query()) : null,
+            $record instanceof SubActivity => $this->hasAdmin() ? $this->applyScopedEntityVisibility(SubActivity::query()) : null,
+            $record instanceof CertificationInstrument => $this->hasView() ? $this->applyScopedEntityVisibility(CertificationInstrument::query()) : null,
+            $record instanceof Certificate => $this->hasView() ? $this->applyScopedEntityVisibility(Certificate::query()) : null,
+            $record instanceof CertificationCandidate => $this->applyCertificationCandidateVisibility(CertificationCandidate::query()),
+            default => null,
         };
+
+        $this->recordVisibilityCache[$class] ??= [];
+        $this->batchVisibility($class, [$id], $this->recordVisibilityCache[$class], $query);
+
+        return $this->recordVisibilityCache[$class][$id];
     }
 
     public function canViewUser(User $target): bool
@@ -1171,18 +1314,27 @@ class UserAccess
      * Privilege overlap on assigned programs only. "All programs" is not an overlap for every viewer.
      *
      * @param  Builder<covariant Model>  $builder
+     * @param  list<int>|null  $programIds
      */
-    private function orPrivilegeScopedOverlap(Builder $builder): void
+    private function orPrivilegeScopedOverlap(Builder $builder, ?array $programIds = null): void
     {
         if (! $this->hasView()) {
             return;
         }
 
-        $programIds = $this->viewProgramIds();
+        $programIds ??= $this->viewProgramIds();
 
         if ($programIds !== []) {
-            $builder->orWhereHas('programs', fn (Builder $relation) => $relation->whereIn('programs.id', $programIds));
+            $builder->orWhereHas('programs', $this->programOverlapPredicate($programIds));
         }
+    }
+
+    /** @param list<int> $programIds
+     * @return \Closure(Builder<covariant Model>): Builder<covariant Model>
+     */
+    private function programOverlapPredicate(array $programIds): \Closure
+    {
+        return fn (Builder $query) => $query->whereIn('programs.id', $programIds);
     }
 
     /**
@@ -1260,7 +1412,20 @@ class UserAccess
     /** @param  Builder<covariant Model>  $builder */
     private function orCertificationReviewer(Builder $builder): void
     {
-        $userIds = $this->activityReferenceUserIds();
+        $this->orCertificationReviewerBy($builder, $this->activityReferenceUserIds());
+    }
+
+    /**
+     * @param  Builder<covariant Model>  $builder
+     * @param  list<int>  $userIds
+     */
+    private function orCertificationReviewerBy(Builder $builder, array $userIds): void
+    {
+        if ($this->isInput()) {
+            $builder->orWhereRaw('1 = 0');
+
+            return;
+        }
 
         $builder->orWhereHas('reviewRequests', fn (Builder $relation) => $relation->whereIn('coach_user_id', $userIds))
             ->orWhereHas('certificationCandidates.candidate.enrollments', fn (Builder $relation) => $relation->whereIn('supervising_coach_user_id', $userIds));
@@ -1278,7 +1443,7 @@ class UserAccess
             return;
         }
 
-        $builder->orWhereIn('activities.user_id', $userIds)
-            ->orWhereHas('participants', fn (Builder $relation) => $relation->whereIn('users.id', $userIds));
+        $builder->orWhere(fn (Builder $query) => $this->activityLoggedBy($query, $userIds))
+            ->orWhere(fn (Builder $query) => $this->activityDeliveredBy($query, $userIds));
     }
 }

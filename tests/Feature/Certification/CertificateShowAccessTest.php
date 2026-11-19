@@ -7,8 +7,8 @@ use App\Models\CertificateEnrollment;
 use App\Models\CertificateRequirement;
 use App\Models\CertificateRequirementGroup;
 use App\Models\CertificationCandidate;
+use App\Models\CertificationInstrument;
 use App\Models\CertificationRole;
-use App\Models\CertificationTool;
 use App\Models\User;
 use App\Models\UserCertificationDuty;
 
@@ -29,18 +29,18 @@ test('enhanced viewers can read scoped certificates and tools but cannot edit or
     $viewer = createProgramViewer($program);
     $certificate = Certificate::factory()->forProgram($program)->create();
     $otherCertificate = Certificate::factory()->forProgram($otherProgram)->create();
-    $tool = CertificationTool::factory()->forProgram($program)->create();
-    $otherTool = CertificationTool::factory()->forProgram($otherProgram)->create();
+    $tool = CertificationInstrument::factory()->forProgram($program)->create();
+    $otherTool = CertificationInstrument::factory()->forProgram($otherProgram)->create();
 
     $this->actingAs($viewer)->get(route('certificates.show', $certificate))
         ->assertOk()->assertDontSee(route('certificates.edit', $certificate), false);
     $this->get(route('certificates.index'))->assertOk()->assertSee($certificate->name)->assertDontSee($otherCertificate->name);
     $this->get(route('certificates.edit', $certificate))->assertForbidden();
     $this->get(route('certificates.show', $otherCertificate))->assertForbidden();
-    $this->get(route('certification-tools.index'))->assertOk()->assertSee($tool->name)->assertDontSee($otherTool->name)
-        ->assertDontSee(route('certification-tools.edit', $tool), false);
-    $this->get(route('certification-tools.create'))->assertForbidden();
-    $this->get(route('certification-tools.edit', $tool))->assertForbidden();
+    $this->get(route('certification-instruments.index'))->assertOk()->assertSee($tool->name)->assertDontSee($otherTool->name)
+        ->assertDontSee(route('certification-instruments.edit', $tool), false);
+    $this->get(route('certification-instruments.create'))->assertForbidden();
+    $this->get(route('certification-instruments.edit', $tool))->assertForbidden();
     expect($viewer->can('view', $tool))->toBeTrue();
     expect($viewer->can('view', $otherTool))->toBeFalse();
 });
@@ -63,7 +63,7 @@ test('duty holders see overlapping and all-program certificates read only', func
     $this->get(route('certificates.show', $other))->assertForbidden();
     $this->get(route('certificates.show', $none))->assertForbidden();
     $this->get(route('certificates.edit', $certificate))->assertForbidden();
-    $this->get(route('certification-tools.index'))->assertForbidden();
+    $this->get(route('certification-instruments.index'))->assertForbidden();
 })->with(['coach', 'manager']);
 
 test('members without duties and input users cannot open the certificate catalog', function (AccessProfile $profile) {
@@ -116,7 +116,7 @@ test('certificate details render grouped requirements roles and safe prerequisit
     $globalRole = CertificationRole::factory()->global()->create();
     $role = CertificationRole::factory()->for($certificate)->create();
     $group = CertificateRequirementGroup::factory()->for($certificate)->nOf(2)->create(['label' => 'Choose two']);
-    $tool = CertificationTool::factory()->forProgram($program)->create();
+    $tool = CertificationInstrument::factory()->forProgram($program)->create();
     CertificateRequirement::factory()->for($certificate)->toolSubmission($tool)->create([
         'certificate_requirement_group_id' => $group->id,
         'certification_role_id' => $role->id,

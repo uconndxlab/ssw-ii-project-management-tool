@@ -5,12 +5,12 @@ use App\Enums\CertificateRequirementPhase;
 use App\Enums\ProgramScopeMode;
 use App\Models\Certificate;
 use App\Models\CertificateRequirement;
-use App\Models\CertificationTool;
+use App\Models\CertificationInstrument;
 
 test('certificate edit form marks an in-scope tool selected', function () {
     $admin = createSystemAdmin();
     [, $program] = createProjectWithProgram();
-    $tool = CertificationTool::factory()->forProgram($program)->create(['name' => 'Shared Checklist']);
+    $tool = CertificationInstrument::factory()->forProgram($program)->create(['name' => 'Shared Checklist']);
     $certificate = Certificate::factory()->forProgram($program)->create();
     CertificateRequirement::factory()->for($certificate)->toolSubmission($tool)->create([
         'label' => 'Checklist reviews',
@@ -36,7 +36,7 @@ test('certificate store rejects tool scoped only to a different program', functi
     $admin = createSystemAdmin();
     [$projectA, $programA] = createProjectWithProgram();
     [$projectB, $programB] = createProjectWithProgram();
-    $focusTool = CertificationTool::factory()->forProgram($programB)->create(['name' => 'FOCUS Tool']);
+    $focusTool = CertificationInstrument::factory()->forProgram($programB)->create(['name' => 'FOCUS Tool']);
 
     $this->actingAs($admin)
         ->from(route('certificates.create'))
@@ -48,19 +48,19 @@ test('certificate store rejects tool scoped only to a different program', functi
                     'phase' => CertificateRequirementPhase::Initial->value,
                     'kind' => CertificateRequirementKind::ToolSubmission->value,
                     'label' => 'FOCUS reviews',
-                    'certification_tool_id' => $focusTool->id,
+                    'certification_instrument_id' => $focusTool->id,
                     'target_count' => 2,
                     'requires_passing' => '1',
                 ],
             ],
         ]))
-        ->assertSessionHasErrors('requirements.0.certification_tool_id');
+        ->assertSessionHasErrors('requirements.0.certification_instrument_id');
 });
 
 test('certificate store accepts tool that shares a program with the certificate', function () {
     $admin = createSystemAdmin();
     [$project, $program] = createProjectWithProgram();
-    $tool = CertificationTool::factory()->forProgram($program)->create();
+    $tool = CertificationInstrument::factory()->forProgram($program)->create();
 
     $response = $this->actingAs($admin)->post(route('certificates.store'), minimalCertificatePayload([
         'project_ids' => [$project->id],
@@ -70,7 +70,7 @@ test('certificate store accepts tool that shares a program with the certificate'
                 'phase' => CertificateRequirementPhase::Initial->value,
                 'kind' => CertificateRequirementKind::ToolSubmission->value,
                 'label' => 'Shared tool',
-                'certification_tool_id' => $tool->id,
+                'certification_instrument_id' => $tool->id,
                 'target_count' => 1,
                 'requires_passing' => '1',
             ],
@@ -87,7 +87,7 @@ test('certificate store accepts tool that shares a program with the certificate'
 test('certificate store accepts all-programs tool on specific certificate', function () {
     $admin = createSystemAdmin();
     [$project, $program] = createProjectWithProgram();
-    $tool = CertificationTool::factory()->create([
+    $tool = CertificationInstrument::factory()->create([
         'program_scope_mode' => ProgramScopeMode::All,
     ]);
 
@@ -99,7 +99,7 @@ test('certificate store accepts all-programs tool on specific certificate', func
                 'phase' => CertificateRequirementPhase::Initial->value,
                 'kind' => CertificateRequirementKind::ToolSubmission->value,
                 'label' => 'Global tool',
-                'certification_tool_id' => $tool->id,
+                'certification_instrument_id' => $tool->id,
                 'target_count' => 1,
                 'requires_passing' => '1',
             ],
@@ -110,7 +110,7 @@ test('certificate store accepts all-programs tool on specific certificate', func
 test('certificate store rejects tool with no program scope', function () {
     $admin = createSystemAdmin();
     [$project, $program] = createProjectWithProgram();
-    $tool = CertificationTool::factory()->create([
+    $tool = CertificationInstrument::factory()->create([
         'program_scope_mode' => ProgramScopeMode::None,
     ]);
 
@@ -124,19 +124,19 @@ test('certificate store rejects tool with no program scope', function () {
                     'phase' => CertificateRequirementPhase::Initial->value,
                     'kind' => CertificateRequirementKind::ToolSubmission->value,
                     'label' => 'Unscoped tool',
-                    'certification_tool_id' => $tool->id,
+                    'certification_instrument_id' => $tool->id,
                     'target_count' => 1,
                     'requires_passing' => '1',
                 ],
             ],
         ]))
-        ->assertSessionHasErrors('requirements.0.certification_tool_id');
+        ->assertSessionHasErrors('requirements.0.certification_instrument_id');
 });
 
 test('renewal matches initial flag drops stored renewal requirements', function () {
     $admin = createSystemAdmin();
     [$project, $program] = createProjectWithProgram();
-    $tool = CertificationTool::factory()->forProgram($program)->create();
+    $tool = CertificationInstrument::factory()->forProgram($program)->create();
 
     $this->actingAs($admin)->post(route('certificates.store'), minimalCertificatePayload([
         'project_ids' => [$project->id],
@@ -152,7 +152,7 @@ test('renewal matches initial flag drops stored renewal requirements', function 
                 'phase' => CertificateRequirementPhase::Renewal->value,
                 'kind' => CertificateRequirementKind::ToolSubmission->value,
                 'label' => 'Renewal tool',
-                'certification_tool_id' => $tool->id,
+                'certification_instrument_id' => $tool->id,
                 'target_count' => 1,
                 'requires_passing' => '1',
             ],

@@ -1,4 +1,11 @@
 @php
+    $subActivityDurationMap = $activityTypes->flatMap(fn ($type) => $type->subActivities)->unique('id')->mapWithKeys(fn ($sub) => [(string) $sub->id => [
+            'typeId' => (string) $sub->activity_type_id,
+            'hours' => (float) $sub->duration_hours > 0 ? (float) $sub->duration_hours : null,
+            'days' => (float) $sub->duration_days > 0 ? (float) $sub->duration_days : null,
+            'programIds' => $sub->programs->pluck('id')->map(fn ($id) => (string) $id)->all(),
+            'scopeMode' => $sub->program_scope_mode?->value ?? 'all',
+        ]]);
     $rawDeliverableRows = old('deliverables');
     $deliverableRows = [];
     $hasDeliverableRows = false;
@@ -9,7 +16,7 @@
         ->unique('id')
         ->keyBy('id');
 
-    $buildRulesSummary = function (array $row): string {
+    $buildRulesSummary = function (array $row) use ($activityTypes, $subActivities): string {
         $parts = [];
         if (!empty($row['metric_type'])) {
             if ($row['metric_type'] === 'time') {
@@ -31,9 +38,10 @@
                 $unit = $row['allotted_time_unit'] ?? null;
                 if (!$unit && $isAllotted) {
                     $activityType = collect($activityTypes ?? [])->firstWhere('id', $row['activity_type_id'] ?? null);
-                    if ((float) ($activityType?->duration_days ?? 0) > 0) {
+                    $duration = \App\Support\ActivityTypeDuration::effective($activityType, $subActivities->firstWhere('id', $row['sub_activity_id'] ?? null));
+                    if ($duration->unit() === 'days') {
                         $unit = 'days';
-                    } elseif ((float) ($activityType?->duration_hours ?? 0) > 0) {
+                    } elseif ($duration->unit() === 'hours') {
                         $unit = 'hours';
                     }
                 }
@@ -103,11 +111,11 @@
         return $groups;
     };
 
-    $enrichRow = function (array $row, string $rowKey) use ($contactFamilies, $activityTypes, $programLookup, $buildRulesSummary, $buildAssignmentGroups): array {
+    $enrichRow = function (array $row, string $rowKey) use ($contactFamilies, $activityTypes, $subActivities, $programLookup, $buildRulesSummary, $buildAssignmentGroups): array {
         return array_merge($row, [
             'row_key' => $rowKey,
             'contact_family_label' => $contactFamilies->firstWhere('id', $row['contact_family_id'] ?? null)?->name,
-            'activity_type_label' => $activityTypes->firstWhere('id', $row['activity_type_id'] ?? null)?->name,
+            'activity_type_label' => ($activityTypes->firstWhere('id', $row['activity_type_id'] ?? null)?->name ?? '').(($sub = $subActivities->firstWhere('id', $row['sub_activity_id'] ?? null)) ? ' › '.$sub->name : ''),
             'program_label' => $programLookup->get((int) ($row['program_id'] ?? 0))?->name,
             'rules_summary' => $buildRulesSummary($row),
             'assignment_groups' => $buildAssignmentGroups($row),
@@ -124,6 +132,10 @@
                 if ($deliverable->activity_type_id && (int) $history->activity_type_id !== (int) $deliverable->activity_type_id) {
                     return false;
                 }
+                if ($deliverable->sub_activity_id && (int) $history->sub_activity_id !== (int) $deliverable->sub_activity_id) {
+                    return false;
+                }
+
                 if ($deliverable->program_id) {
                     return collect($history->program_ids_snapshot ?? [])
                         ->map(fn ($id) => (int) $id)
@@ -143,6 +155,7 @@
             '_delete' => !empty($row['_delete']) ? '1' : '0',
             'contact_family_id' => $row['contact_family_id'] ?? '',
             'activity_type_id' => $row['activity_type_id'] ?? '',
+            'sub_activity_id' => $row['sub_activity_id'] ?? '',
             'program_id' => $row['program_id'] ?? '',
             'metric_type' => $row['metric_type'] ?? '',
             'time_basis' => $row['time_basis'] ?? 'observed',
@@ -191,6 +204,7 @@
                 'id' => $deliverable->id,
                 'contact_family_id' => $deliverable->contact_family_id,
                 'activity_type_id' => $deliverable->activity_type_id,
+                'sub_activity_id' => $deliverable->sub_activity_id,
                 'program_id' => $deliverable->program_id,
                 'metric_type' => $deliverable->metric_type,
                 'time_basis' => $deliverable->time_basis ?? 'observed',
@@ -231,6 +245,7 @@
         '_delete' => '0',
         'contact_family_id' => '',
         'activity_type_id' => '',
+        'sub_activity_id' => '',
         'program_id' => '',
         'metric_type' => '',
         'time_basis' => 'observed',
@@ -314,6 +329,7 @@
                     <input type="hidden" name="deliverables[{{ $rowKey }}][_delete]" value="{{ $row['_delete'] ?? '0' }}">
                     <input type="hidden" name="deliverables[{{ $rowKey }}][contact_family_id]" value="{{ $row['contact_family_id'] ?? '' }}">
                     <input type="hidden" name="deliverables[{{ $rowKey }}][activity_type_id]" value="{{ $row['activity_type_id'] ?? '' }}">
+                    <input type="hidden" name="deliverables[{{ $rowKey }}][sub_activity_id]" value="{{ $row['sub_activity_id'] ?? '' }}">
                     <input type="hidden" name="deliverables[{{ $rowKey }}][program_id]" value="{{ $row['program_id'] ?? '' }}">
                     <input type="hidden" name="deliverables[{{ $rowKey }}][metric_type]" value="{{ $row['metric_type'] ?? '' }}">
                     <input type="hidden" name="deliverables[{{ $rowKey }}][time_basis]" value="{{ $row['time_basis'] ?? 'observed' }}">
@@ -392,6 +408,11 @@
         ]);
         const teamLookup = @json($teams->pluck('name', 'id'));
         const contactFamilyLookup = @json($contactFamilies->pluck('name', 'id'));
+        const subActivityLookup = @json($subActivities->pluck('name', 'id'));
+        const subActivityMap = @json($subActivityDurationMap);
+        function classificationLabel(rowData) {
+            return (activityTypeLookup[rowData.activity_type_id] || '') + (subActivityLookup[rowData.sub_activity_id] ? ' › ' + subActivityLookup[rowData.sub_activity_id] : '');
+        }
         const activityTypeLookup = @json($activityTypes->pluck('name', 'id'));
         const activityTypeDurationMap = @json($activityTypes->mapWithKeys(fn ($type) => [(string) $type->id => [
             'hours' => (float) $type->duration_hours > 0 ? (float) $type->duration_hours : null,
@@ -471,6 +492,8 @@
                 if (familySelect) familySelect.value = '';
                 const typeSelect = editorFieldset.querySelector('[data-deliverable-activity-type]');
                 if (typeSelect) typeSelect.value = '';
+                const subSelect = editorFieldset.querySelector('[data-deliverable-sub-activity]');
+                if (subSelect) subSelect.value = '';
                 const programSelect = editorFieldset.querySelector('[data-deliverable-program]');
                 if (programSelect) programSelect.value = '';
             }
@@ -581,33 +604,26 @@
             return true;
         }
 
-        function resolveAllottedUnitsForSelection(contactFamilyId, activityTypeId) {
+        function resolveAllottedUnitsForSelection(contactFamilyId, activityTypeId, subActivityId) {
             if (!contactFamilyId) {
                 return { hasDays: false, hasHours: false, isMixed: false, allowedUnits: [] };
             }
 
-            if (activityTypeId) {
-                const duration = activityTypeDurationMap[String(activityTypeId)] || {};
-
-                return {
-                    hasDays: !!duration.days,
-                    hasHours: !!duration.hours,
-                    isMixed: false,
-                    allowedUnits: [duration.days ? 'days' : null, duration.hours ? 'hours' : null].filter(Boolean),
-                };
-            }
-
             let hasDays = false;
             let hasHours = false;
-
             Object.keys(activityTypeDurationMap).forEach(function (typeId) {
-                if (!activityTypeIsInScope(typeId, contactFamilyId)) {
-                    return;
-                }
-
+                if ((activityTypeId && String(activityTypeId) !== typeId) || !activityTypeIsInScope(typeId, contactFamilyId)) return;
                 const duration = activityTypeDurationMap[typeId] || {};
-                if (duration.days) hasDays = true;
-                if (duration.hours) hasHours = true;
+                const subs = Object.entries(subActivityMap).filter(([id, sub]) => sub.typeId === typeId
+                    && (!subActivityId || String(subActivityId) === id)
+                    && isAllowedByPrograms(sub.programIds, sub.scopeMode, true, selectedProgramIds()));
+                const durations = subActivityId
+                    ? subs.map(([, sub]) => sub.days || sub.hours ? sub : duration)
+                    : [duration, ...subs.map(([, sub]) => sub)];
+                durations.forEach(function (value) {
+                    if (value.days) hasDays = true;
+                    else if (value.hours) hasHours = true;
+                });
             });
 
             return {
@@ -628,13 +644,13 @@
                 return false;
             }
 
-            const units = resolveAllottedUnitsForSelection(contactFamilyId, activityTypeId);
+            const units = resolveAllottedUnitsForSelection(contactFamilyId, activityTypeId, editorFieldset.querySelector('[data-deliverable-sub-activity]')?.value || '');
 
             return units.allowedUnits.length > 0;
         }
 
         function resolveDefaultAllottedTimeUnit(rowData) {
-            const units = resolveAllottedUnitsForSelection(rowData.contact_family_id || '', rowData.activity_type_id || '');
+            const units = resolveAllottedUnitsForSelection(rowData.contact_family_id || '', rowData.activity_type_id || '', rowData.sub_activity_id || '');
             if (units.allowedUnits.length === 1) {
                 return units.allowedUnits[0];
             }
@@ -648,6 +664,9 @@
 
         function selectedActivityTypeDuration() {
             const typeSelect = editorFieldset.querySelector('[data-deliverable-activity-type]');
+            const subId = editorFieldset.querySelector('[data-deliverable-sub-activity]')?.value || '';
+            const sub = subActivityMap[subId];
+            if (sub && (sub.days || sub.hours)) return sub;
             const selectedOption = typeSelect?.options[typeSelect.selectedIndex];
             const typeId = typeSelect?.value || '';
 
@@ -760,7 +779,7 @@
         function enrichRowData(rowData) {
             return Object.assign({}, rowData, {
                 contact_family_label: contactFamilyLookup[rowData.contact_family_id] || '',
-                activity_type_label: activityTypeLookup[rowData.activity_type_id] || '',
+                activity_type_label: classificationLabel(rowData),
                 program_label: programLookup[rowData.program_id] || '',
                 rules_summary: buildRulesSummary(rowData),
                 assignment_groups: buildAssignmentGroups(rowData),
@@ -1196,6 +1215,21 @@
                 if (!selectedOption || selectedOption.hidden) activityTypeSelect.value = '';
             }
 
+            const subSelect = editorFieldset.querySelector('[data-deliverable-sub-activity]');
+            if (subSelect) {
+                const savedSubId = rowStore[currentKey]?.sub_activity_id || subSelect.value;
+                Array.from(subSelect.options).forEach(function (option) {
+                    if (!option.value) return;
+                    const matches = !!activityTypeSelect.value && option.dataset.activityTypeId === activityTypeSelect.value
+                        && (option.dataset.active === '1' || option.value === String(savedSubId))
+                        && isAllowedByPrograms(JSON.parse(option.dataset.programIds || '[]'), option.dataset.scopeMode || 'all', true, activeProgramIds);
+                    option.hidden = !matches;
+                    option.disabled = !matches;
+                });
+                if (subSelect.selectedOptions[0]?.disabled) subSelect.value = '';
+                subSelect.disabled = !activityTypeSelect.value || !Array.from(subSelect.options).some(option => option.value && !option.disabled);
+                if (subSelect.disabled) subSelect.value = '';
+            }
             syncProgramFilterOptions();
             syncEditorVisibility();
         }
@@ -1237,7 +1271,7 @@
                 return;
             }
 
-            const units = resolveAllottedUnitsForSelection(contactFamilyId, activityTypeId);
+            const units = resolveAllottedUnitsForSelection(contactFamilyId, activityTypeId, editorFieldset.querySelector('[data-deliverable-sub-activity]')?.value || '');
             let daysEnabled = false;
             let hoursEnabled = false;
 
@@ -1385,7 +1419,8 @@
             const familyName = familySelect?.value
                 ? (familySelect.selectedOptions[0]?.textContent?.trim() || contactFamilyLookup[familySelect.value] || '')
                 : '';
-            const typeName = typeSelect?.value
+            const subSelect = editorFieldset.querySelector('[data-deliverable-sub-activity]');
+            let typeName = typeSelect?.value
                 ? (typeSelect.selectedOptions[0]?.textContent?.trim() || activityTypeLookup[typeSelect.value] || '')
                 : '';
             const metric = editorFieldset.querySelector('[data-deliverable-metric]:checked')?.value || '';
@@ -1400,6 +1435,7 @@
             if (familyName) {
                 parts.push(familyName);
             }
+            if (typeName && subSelect?.value) typeName += ' › ' + subActivityLookup[subSelect.value];
             if (typeName) {
                 parts.push(typeName);
             }
@@ -1440,7 +1476,7 @@
 
             if (classificationLocked) {
                 editorFieldset.querySelector('[data-readonly-contact-family]').textContent = contactFamilyLookup[rowData.contact_family_id] || '—';
-                editorFieldset.querySelector('[data-readonly-activity-type]').textContent = activityTypeLookup[rowData.activity_type_id] || 'Any activity type';
+                editorFieldset.querySelector('[data-readonly-activity-type]').textContent = classificationLabel(rowData) || 'Any activity type';
                 editorFieldset.querySelector('[data-readonly-program]').textContent = programLookup[rowData.program_id] || 'Any selected agreement program';
             }
 
@@ -1500,6 +1536,7 @@
                 _delete: '0',
                 contact_family_id: fieldValue('[data-deliverable-contact-family]', ''),
                 activity_type_id: fieldValue('[data-deliverable-activity-type]', ''),
+                sub_activity_id: fieldValue('[data-deliverable-sub-activity]', ''),
                 program_id: fieldValue('[data-deliverable-program]', ''),
                 metric_type: editorFieldset.querySelector('[data-deliverable-metric]:checked')?.value || '',
                 time_basis: editorFieldset.querySelector('[data-deliverable-time-basis]:checked')?.value || 'observed',
@@ -1527,6 +1564,7 @@
             if (rowData.classification_locked && rowStore[currentKey]) {
                 rowData.contact_family_id = rowStore[currentKey].contact_family_id;
                 rowData.activity_type_id = rowStore[currentKey].activity_type_id;
+                rowData.sub_activity_id = rowStore[currentKey].sub_activity_id;
                 rowData.program_id = rowStore[currentKey].program_id;
             }
             if (rowData.semantic_locked && rowStore[currentKey]) {
@@ -1550,6 +1588,8 @@
             if (familySelect) familySelect.value = rowData.contact_family_id || '';
             const typeSelect = editorFieldset.querySelector('[data-deliverable-activity-type]');
             if (typeSelect) typeSelect.value = rowData.activity_type_id || '';
+            const subSelect = editorFieldset.querySelector('[data-deliverable-sub-activity]');
+            if (subSelect) subSelect.value = rowData.sub_activity_id || '';
 
             syncActivityTypeOptions();
             const programSelect = editorFieldset.querySelector('[data-deliverable-program]');
@@ -1646,6 +1686,7 @@
                 _delete: findValue('_delete') || '0',
                 contact_family_id: findValue('contact_family_id'),
                 activity_type_id: findValue('activity_type_id'),
+                sub_activity_id: findValue('sub_activity_id'),
                 program_id: findValue('program_id'),
                 metric_type: findValue('metric_type'),
                 time_basis: findValue('time_basis') || 'observed',
@@ -1692,10 +1733,12 @@
                 if (!rowKey || rowData._delete === '1') return;
 
                 const familyAllowed = !rowData.contact_family_id || isAllowedByPrograms(contactFamilyProgramMap[String(rowData.contact_family_id)] || [], contactFamilyProgramScopeModeMap[String(rowData.contact_family_id)] || 'all', true, activeProgramIds);
+                const sub = subActivityMap[rowData.sub_activity_id];
+                const subAllowed = !sub || isAllowedByPrograms(sub.programIds, sub.scopeMode, true, activeProgramIds);
                 const typeAllowed = !rowData.activity_type_id || isAllowedByPrograms(activityTypeProgramMap[String(rowData.activity_type_id)] || [], activityTypeProgramScopeModeMap[String(rowData.activity_type_id)] || 'all', true, activeProgramIds);
                 const programAllowed = !rowData.program_id || activeProgramIds.includes(String(rowData.program_id));
 
-                if (!familyAllowed || !typeAllowed || !programAllowed) {
+                if (!familyAllowed || !typeAllowed || !subAllowed || !programAllowed) {
                     if (rowData.id) markRowDeleted(rowKey);
                     else deleteRow(rowKey);
                     delete rowStore[rowKey];
@@ -1802,6 +1845,7 @@
                 '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][_delete]" value="' + escapeHtml(rowData._delete || '0') + '">' +
                 '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][contact_family_id]" value="' + escapeHtml(rowData.contact_family_id || '') + '">' +
                 '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][activity_type_id]" value="' + escapeHtml(rowData.activity_type_id || '') + '">' +
+                '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][sub_activity_id]" value="' + escapeHtml(rowData.sub_activity_id || '') + '">' +
                 '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][program_id]" value="' + escapeHtml(rowData.program_id || '') + '">' +
                 '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][metric_type]" value="' + escapeHtml(rowData.metric_type || '') + '">' +
                 '<input type="hidden" name="deliverables[' + escapeHtml(rowKey) + '][time_basis]" value="' + escapeHtml(rowData.time_basis || 'observed') + '">' +
@@ -1949,7 +1993,7 @@
             syncActivityTypeOptions();
             syncEditorVisibility();
         });
-        editorFieldset.querySelectorAll('[data-deliverable-metric], [data-deliverable-time-basis], [data-deliverable-basis], [data-deliverable-grouping], [data-deliverable-target-unit]').forEach(function (input) {
+        editorFieldset.querySelectorAll('[data-deliverable-sub-activity], [data-deliverable-metric], [data-deliverable-time-basis], [data-deliverable-basis], [data-deliverable-grouping], [data-deliverable-target-unit]').forEach(function (input) {
             input.addEventListener('change', syncEditorVisibility);
         });
 

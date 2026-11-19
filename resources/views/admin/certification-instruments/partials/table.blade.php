@@ -1,0 +1,103 @@
+@php
+    $s = $sort ?? 'name';
+    $d = $direction ?? 'asc';
+    $flip = fn ($col) => ($s === $col && $d === 'asc') ? 'desc' : 'asc';
+    $url = fn ($col) => route('certification-instruments.index', array_merge(request()->query(), ['sort' => $col, 'direction' => $flip($col), 'page' => 1]));
+    $scopeEmptyLabel = fn ($mode, string $allLabel, string $noneLabel) => ($mode?->value ?? $mode) === 'none' ? $noneLabel : $allLabel;
+@endphp
+
+<div class="card shadow-sm app-index-table-card">
+    <x-table-scroll>
+        <table class="table table-hover align-middle mb-0 app-cards">
+            <thead>
+                <tr>
+                    <th><x-table-sort-link column="name" label="Name" :sort="$s" :direction="$d" :url="$url('name')" target="#certification-instruments-table" /></th>
+                    <th>Type</th>
+                    <th>Dimensions</th>
+                    <th>Score Fields</th>
+                    <th>Projects</th>
+                    <th>Programs</th>
+                    <th><x-table-sort-link column="active" label="Status" :sort="$s" :direction="$d" :url="$url('active')" target="#certification-instruments-table" /></th>
+                    <th class="app-col-actions"><span class="visually-hidden">Actions</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($certificationInstruments as $tool)
+                <tr>
+                    <td class="app-card-lead fw-semibold">
+                        {{ $tool->name }}
+                        @if($tool->retired_at)
+                            <span class="app-tag ms-1">Retired</span>
+                        @endif
+                    </td>
+                    <td data-label="Type">{{ $tool->type->label() }}</td>
+                    <td data-label="Dimensions">{{ $tool->isTraining() ? '—' : $tool->dimensions_count }}</td>
+                    <td data-label="Score fields">{{ $tool->score_fields_count }}</td>
+                    <td data-label="Projects">
+                        <x-table-badge-list
+                            kind="project"
+                            :items="$tool->projects"
+                            route-name="projects.show"
+                            :empty-label="$scopeEmptyLabel($tool->program_scope_mode, 'All projects', 'No projects')"
+                        />
+                    </td>
+                    <td data-label="Programs">
+                        <x-table-badge-list
+                            kind="program"
+                            :items="$tool->programs"
+                            route-name="programs.show"
+                            :empty-label="$scopeEmptyLabel($tool->program_scope_mode, 'All programs', 'No programs')"
+                        />
+                    </td>
+                    <td class="app-card-status">
+                        <x-status-badge :active="$tool->active" />
+                    </td>
+                    <td class="app-col-actions">
+                        @php
+                            $actionKey = 'certification-instrument-actions-' . $tool->id;
+                            $typeLabel = strtolower($tool->type->label());
+                        @endphp
+                        @if(auth()->user()->can('update', $tool) || auth()->user()->can('delete', $tool))
+                        <div class="dropdown app-row-actions d-inline-block">
+                            <button type="button" class="btn btn-sm btn-link app-row-actions-toggle" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" aria-label="{{ $tool->type->label() }} actions for {{ $tool->name }}"><i class="bi bi-three-dots" aria-hidden="true"></i></button>
+                            <div class="dropdown-menu dropdown-menu-end">
+                            @can('update', $tool)
+                            <a href="{{ route('certification-instruments.edit', $tool) }}" class="dropdown-item"><i class="bi bi-pencil-square me-2" aria-hidden="true"></i>Edit {{ $typeLabel }}</a>
+                            @endcan
+                            @can('delete', $tool)
+                            <hr class="dropdown-divider">
+                            <button type="submit" form="{{ $actionKey }}-delete"
+                                    data-confirm
+                                    data-confirm-title="Delete {{ $typeLabel }}?"
+                                    data-confirm-record="{{ $tool->name }}"
+                                    data-confirm-message="This action cannot be undone."
+                                    data-confirm-action="Delete {{ $typeLabel }}" class="dropdown-item text-danger"><i class="bi bi-trash me-2" aria-hidden="true"></i>Delete {{ $typeLabel }}</button>
+                            @endcan
+                            </div>
+                        </div>
+                        @endif
+                        @can('delete', $tool)
+                        <form id="{{ $actionKey }}-delete" method="POST" action="{{ route('certification-instruments.destroy', $tool) }}" class="d-none">
+                            @csrf
+                            @method('DELETE')
+                        </form>
+                        @endcan
+                    </td>
+                </tr>
+                @empty
+                <tr>
+                    <td colspan="8" class="text-center py-5">
+                        <p class="text-muted mb-2">No tools or trainings found.</p>
+                        @can('create', App\Models\CertificationInstrument::class)
+                        <a href="{{ route('certification-instruments.create') }}" class="btn btn-sm btn-primary">Create Tool or Training</a>
+                        @endcan
+                    </td>
+                </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </x-table-scroll>
+    <div class="card-footer">
+        <x-htmx-pagination :paginator="$certificationInstruments" target="#certification-instruments-table" />
+    </div>
+</div>

@@ -35,9 +35,9 @@ class SearchController extends Controller
             ->visibleTo($user)
             ->with(['organizations', 'states'])
             ->where(function ($q) use ($like) {
-                $q->whereIlike('name', $like)
-                    ->orWhereHas('organizations', fn ($o) => $o->whereIlike('name', $like))
-                    ->orWhereHas('states', fn ($s) => $s->whereIlike('name', $like));
+                $q->whereLike('name', $like)
+                    ->orWhereHas('organizations', fn ($o) => $o->whereLike('name', $like))
+                    ->orWhereHas('states', fn ($s) => $s->whereLike('name', $like));
             })
             ->active()
             ->orderBy('name')
@@ -47,7 +47,7 @@ class SearchController extends Controller
         $organizations = Organization::query()
             ->visibleTo($user)
             ->with('states')
-            ->whereIlike('name', $like)
+            ->whereLike('name', $like)
             ->orderBy('name')
             ->limit(10)
             ->get();
@@ -62,8 +62,8 @@ class SearchController extends Controller
 
             $users = $usersQuery
                 ->where(function ($q) use ($like) {
-                    $q->whereIlike('name', $like)
-                        ->orWhereIlike('email', $like);
+                    $q->whereLike('name', $like)
+                        ->orWhereLike('email', $like);
                 })
                 ->orderBy('name')
                 ->limit(10)

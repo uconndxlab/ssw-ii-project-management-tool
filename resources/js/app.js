@@ -8,6 +8,7 @@ import './record-bar.js';
 import './relationship-filter.js';
 import './agreement-overview.js';
 import './certificate-editor.js';
+import './certification-instrument-form.js';
 import './certification-capture.js';
 import './table-filters.js';
 import './relationship-scroll.js';

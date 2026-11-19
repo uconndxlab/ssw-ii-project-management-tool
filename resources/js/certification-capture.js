@@ -28,15 +28,41 @@ function initCertificationCapture() {
     const coach = (tool, person) => person ? coachFor(tool, person) : coachFor(tool) || rows.some(row => !Number(row._delete) && coachFor(tool, personFor(row)));
     const assigned = person => person.active && person.enrollments.length > 0 && person.agreements.some(a => agreementIds().includes(Number(a.id)));
     const personFor = row => people.find(p => Number(p.id) === Number(row.certification_candidate_id));
-    const matching = person => (person?.enrollments || []).filter(overlap).flatMap(enrollment => enrollment.requirements.filter(req => (!req.type_id || Number(req.type_id) === Number(form.querySelector('#activity_type_id')?.value)) && (!req.family_id || Number(req.family_id) === Number(form.querySelector('#contact_family_id')?.value))));
+    const matching = person => (person?.enrollments || []).filter(overlap).flatMap(enrollment => enrollment.requirements.filter(req => (!req.type_id || Number(req.type_id) === Number(form.querySelector('#activity_type_id')?.value)) && (!req.family_id || Number(req.family_id) === Number(form.querySelector('#contact_family_id')?.value)) && (!req.sub_id || Number(req.sub_id) === Number(form.querySelector('#sub_activity_id')?.value))));
     const roles = row => [...new Map(matching(personFor(row)).filter(req => req.role_id).map(req => [String(req.role_id), { id: req.role_id, name: req.role_name }])).values()];
-    const field = (label, name, control, required = false, help = '') => {
-        const messages = config.errors[name.replaceAll('[', '.').replaceAll(']', '')] || [];
-        return `<div class="mb-3" data-form-field${required ? ' data-field-required' : ''}><label for="${esc(name)}" class="form-label${required ? ' required-label' : ''}">${esc(label)}</label>${control}${help ? `<div class="form-text" id="${esc(name)}-help" data-field-help>${esc(help)}</div>` : ''}${messages.map((message, index) => `<div class="text-danger small" id="${esc(name)}-error-${index}" data-field-error role="alert">${esc(message)}</div>`).join('')}</div>`;
-    };
+    const errors = name => (config.errors[name.replaceAll('[', '.').replaceAll(']', '')] || []).map((message, index) => `<div class="text-danger small" id="${esc(name)}-error-${index}" data-field-error role="alert">${esc(message)}</div>`).join('');
+    const field = (label, name, control, required = false, help = '') => `<div class="mb-3" data-form-field${required ? ' data-field-required' : ''}><label for="${esc(name)}" class="form-label${required ? ' required-label' : ''}">${esc(label)}</label>${control}${help ? `<div class="form-text" id="${esc(name)}-help" data-field-help>${esc(help)}</div>` : ''}${errors(name)}</div>`;
     const hidden = (name, value) => `<input type="hidden" name="${esc(name)}" value="${esc(value)}">`;
     const text = (name, value) => `<textarea class="form-control" id="${esc(name)}" name="${esc(name)}" rows="2">${esc(value)}</textarea>`;
     const select = (name, options, value, prompt, required = false) => `<select class="form-select" id="${esc(name)}" name="${esc(name)}"${required ? ' required aria-required="true"' : ''}><option value="">${esc(prompt)}</option>${options.map(option => `<option value="${esc(option.id)}"${String(option.id) === String(value) ? ' selected' : ''}>${esc(option.name ?? option.label)}</option>`).join('')}</select>`;
+    const instrumentSelect = (name, items, value) => `<select class="form-select" id="${esc(name)}" name="${esc(name)}" required aria-required="true"><option value="">Choose a tool or training…</option>${[['tool', 'Tools'], ['training', 'Trainings']].map(([type, label]) => {
+        const group = items.filter(item => item.type === type);
+        return group.length ? `<optgroup label="${label}">${group.map(item => `<option value="${esc(item.id)}"${String(item.id) === String(value) ? ' selected' : ''}>${esc(item.name)}</option>`).join('')}</optgroup>` : '';
+    }).join('')}</select>`;
+    const scoreValue = value => value === undefined || value === null || value === '' ? '' : String(Number(value));
+    const scoreText = (score, value) => scoreValue(value) === '' ? '—' : score.unit === 'pass_fail' ? (Number(value) === 1 ? 'Pass' : 'Fail') : scoreValue(value) + (score.max_points ? ` / ${score.max_points}` : '');
+    // e.g. "5 sections (4 passed, 1 failed)"; unscored sections are only counted.
+    const sectionSummary = sub => {
+        const ticked = (sub.sections || []).length;
+        const tickedIds = (sub.sections || []).map(String);
+        const results = Object.entries(sub.section_results || {}).filter(([id]) => tickedIds.includes(String(id))).map(([, result]) => result);
+        const parts = [['passed', 'passed'], ['failed', 'failed']].map(([result, word]) => results.filter(item => item === result).length ? `${results.filter(item => item === result).length} ${word}` : '').filter(Boolean);
+        return `${ticked} ${ticked === 1 ? 'section' : 'sections'}${parts.length ? ` (${parts.join(', ')})` : ''}`;
+    };
+    const sectionList = (tool, sub, name) => {
+        const ticked = (sub.sections || []).map(Number);
+        const rowsHtml = tool.sections.map(section => {
+            const id = `${name}[sections][${section.id}]`;
+            const on = ticked.includes(Number(section.id));
+            const result = sub.section_results?.[section.id] ?? '';
+            const resultName = `${name}[section_results][${section.id}]`;
+            const radios = section.scored && on
+                ? `<div class="d-flex gap-3" role="radiogroup" aria-label="Result for ${esc(section.label)}">${[['passed', 'Pass'], ['failed', 'Fail']].map(([option, label]) => `<div class="form-check mb-0"><input type="radio" class="form-check-input" id="${esc(resultName)}-${option}" name="${esc(resultName)}" value="${option}" required${result === option ? ' checked' : ''}><label class="form-check-label" for="${esc(resultName)}-${option}">${label}</label></div>`).join('')}</div>`
+                : '';
+            return `<div class="d-flex flex-wrap align-items-center column-gap-3 py-1 border-bottom"><div class="form-check mb-0 flex-grow-1"><input type="checkbox" class="form-check-input" id="${esc(id)}" name="${esc(name)}[sections][]" value="${esc(section.id)}"${on ? ' checked' : ''}><label class="form-check-label" for="${esc(id)}">${esc(section.label)}${section.scored && !on ? ' <span class="small text-muted">· Pass/Fail</span>' : ''}</label></div>${radios}${errors(resultName)}</div>`;
+        }).join('');
+        return `<fieldset class="mb-3" data-form-field data-field-required><legend class="form-label required-label fs-6 mb-1">Sections covered</legend><div class="form-text mt-0 mb-2" id="${esc(name)}-sections-help">Tick every section covered in this submission. Scored sections need a Pass or Fail.</div>${errors(`${name}[sections]`)}<div class="app-ledger-body is-scrollable border rounded ps-2" style="--app-ledger-height: 20rem" data-section-scroll="${esc(name)}" aria-describedby="${esc(name)}-sections-help">${rowsHtml || '<p class="small text-muted mb-0">This training has no sections yet.</p>'}</div></fieldset>`;
+    };
     const progressUrl = (enrollment, row) => {
         const url = new URL(enrollment.url);
         if (row.agreement_id) url.searchParams.set('agreement_id', row.agreement_id);
@@ -106,11 +132,14 @@ function initCertificationCapture() {
             for (const sub of row.submissions) {
                 if (sub.editable === false) continue;
                 const name = `${prefix}[submissions][${sub.key}]`;
-                if (!form.elements.namedItem(`${name}[certification_tool_id]`) || Number(sub._delete)) continue;
-                for (const key of ['certification_tool_id', 'outcome', 'notes']) {
+                if (!form.elements.namedItem(`${name}[certification_instrument_id]`) || Number(sub._delete)) continue;
+                for (const key of ['certification_instrument_id', 'outcome', 'notes']) {
                     const input = form.elements.namedItem(`${name}[${key}]`);
                     if (input) sub[key] = input.value;
                 }
+                sub.sections = [...form.elements].filter(input => input.name === `${name}[sections][]` && input.checked).map(input => Number(input.value));
+                sub.section_results = { ...sub.section_results };
+                [...form.elements].filter(input => input.name?.startsWith(`${name}[section_results]`) && input.checked).forEach(input => { sub.section_results[input.name.match(/\[(\d+)\]$/)[1]] = input.value; });
                 for (const key of ['dimensions', 'scores']) {
                     sub[key] = {};
                     [...form.elements].filter(input => input.name?.startsWith(`${name}[${key}]`)).forEach(input => {
@@ -123,34 +152,44 @@ function initCertificationCapture() {
     }
     function submission(row, sub) {
         const name = `certification_candidates[${row.key}][submissions][${sub.key}]`;
-        const tool = tools.find(t => Number(t.id) === Number(sub.certification_tool_id));
+        const tool = tools.find(t => Number(t.id) === Number(sub.certification_instrument_id));
         const editable = sub.editable !== false && coach(tool, personFor(row));
         const deleted = Boolean(Number(sub._delete));
-        const outcome = { passed: 'Passed', not_passed: 'Did not pass', not_scored: 'Not scored' }[sub.outcome] || 'Choose outcome';
-        const allowed = tools.filter(t => t.active && overlap(t) && coach(t, personFor(row))).sort((a, b) => {
+        const training = tool?.type === 'training';
+        const outcome = { passed: 'Passed', not_passed: 'Did not pass', not_scored: 'Not scored' }[sub.outcome] || (training ? 'Not scored' : 'Choose outcome');
+        // A training is only offered on its own activity type; tools go on any activity.
+        const allowed = tools.filter(t => t.active && overlap(t) && coach(t, personFor(row)) && (t.type !== 'training' || Number(t.activity_type_id) === Number(form.querySelector('#activity_type_id')?.value))).sort((a, b) => {
             const matches = matching(personFor(row)).map(req => Number(req.tool_id));
             return Number(matches.includes(b.id)) - Number(matches.includes(a.id));
         });
-        let html = `<div class="border rounded mt-2${deleted ? ' opacity-75' : ''}" data-submission="${esc(sub.key)}"${editable ? '' : ' data-submission-locked'}><div class="d-flex flex-wrap align-items-center gap-2 p-2 bg-light"><strong class="small${deleted ? ' text-decoration-line-through' : ''}">${esc(tool?.name || 'New submission')}</strong><span class="badge text-bg-${sub.outcome === 'passed' ? 'success' : 'secondary'}">${esc(outcome)}</span><span class="small text-muted">${(tool?.dimensions || []).map(dim => esc(dim.options.find(option => Number(option.id) === Number(sub.dimensions?.[dim.id]))?.label || '')).filter(Boolean).join(' · ')}</span>${editable && !deleted ? `<button type="button" class="btn btn-sm btn-outline-secondary ms-auto" data-sub-action="edit" aria-expanded="${row.openSubmission === sub.key}">${row.openSubmission === sub.key ? 'Done editing' : 'Edit submission'}</button>` : ''}${editable ? `<button type="button" class="btn btn-sm btn-outline-${deleted ? 'secondary' : 'danger'} ms-auto" data-sub-action="${deleted ? 'undo' : 'remove'}">${deleted ? 'Undo removal' : 'Remove submission'}</button>` : '<span class="small text-muted ms-auto">Coach in scope required to edit</span>'}</div>`;
+        // Keep the chosen one selectable while scope fields are still loading, or capture() would blank it.
+        if (tool && !allowed.includes(tool)) allowed.unshift(tool);
+        let html = `<div class="border rounded mt-2${deleted ? ' opacity-75' : ''}" data-submission="${esc(sub.key)}"${editable ? '' : ' data-submission-locked'}><div class="d-flex flex-wrap align-items-center gap-2 p-2 bg-light"><strong class="small${deleted ? ' text-decoration-line-through' : ''}">${esc(tool?.name || 'New submission')}</strong>${training && ['', 'not_scored', undefined].includes(sub.outcome) ? '' : `<span class="badge text-bg-${sub.outcome === 'passed' ? 'success' : 'secondary'}">${esc(outcome)}</span>`}<span class="small text-muted">${training ? esc(sectionSummary(sub)) : (tool?.dimensions || []).map(dim => esc(dim.options.find(option => Number(option.id) === Number(sub.dimensions?.[dim.id]))?.label || '')).filter(Boolean).join(' · ')}</span>${editable && !deleted ? `<button type="button" class="btn btn-sm btn-outline-secondary ms-auto" data-sub-action="edit" aria-expanded="${row.openSubmission === sub.key}">${row.openSubmission === sub.key ? 'Done editing' : 'Edit submission'}</button>` : ''}${editable ? `<button type="button" class="btn btn-sm btn-outline-${deleted ? 'secondary' : 'danger'} ms-auto" data-sub-action="${deleted ? 'undo' : 'remove'}">${deleted ? 'Undo removal' : 'Remove submission'}</button>` : '<span class="small text-muted ms-auto">Coach in scope required to edit</span>'}</div>`;
         if (!editable) {
-            return html + `<div class="p-3 small">${tool?.dimensions.map(dim => `${esc(dim.name)}: ${esc(dim.options.find(option => Number(option.id) === Number(sub.dimensions?.[dim.id]))?.label || '—')}`).join(' · ') || ''}<div>${tool?.score_fields.map(score => `${esc(score.name)}: ${esc(sub.scores?.[score.id] ?? '—')}`).join(' · ') || ''}</div><div>${esc(sub.notes)}</div></div></div>`;
+            const sectionsText = training ? tool.sections.filter(section => (sub.sections || []).map(Number).includes(Number(section.id))).map(section => `${esc(section.label)}${sub.section_results?.[section.id] ? ` (${sub.section_results[section.id] === 'passed' ? 'Pass' : 'Fail'})` : ''}`).join(' · ') : '';
+            return html + `<div class="p-3 small">${sectionsText}${tool?.dimensions.map(dim => `${esc(dim.name)}: ${esc(dim.options.find(option => Number(option.id) === Number(sub.dimensions?.[dim.id]))?.label || '—')}`).join(' · ') || ''}<div>${tool?.score_fields.map(score => `${esc(score.name)}: ${esc(scoreText(score, sub.scores?.[score.id]))}`).join(' · ') || ''}</div><div>${esc(sub.notes)}</div></div></div>`;
         }
         if (deleted && !sub.id) return html + '</div>';
         html += hidden(`${name}[id]`, sub.id || '') + hidden(`${name}[_delete]`, deleted ? 1 : 0);
-        if (deleted) return html + hidden(`${name}[certification_tool_id]`, sub.certification_tool_id) + '</div>';
+        if (deleted) return html + hidden(`${name}[certification_instrument_id]`, sub.certification_instrument_id) + '</div>';
         html += `<div class="p-3"${row.openSubmission === sub.key ? '' : ' hidden'}>`;
-        html += sub.id ? hidden(`${name}[certification_tool_id]`, sub.certification_tool_id) : field('Tool', `${name}[certification_tool_id]`, select(`${name}[certification_tool_id]`, allowed, sub.certification_tool_id, 'Choose a tool…', true), true, 'Tools used by this candidate’s certificates appear first.');
+        html += sub.id ? hidden(`${name}[certification_instrument_id]`, sub.certification_instrument_id) : field('Tool or training', `${name}[certification_instrument_id]`, instrumentSelect(`${name}[certification_instrument_id]`, allowed, sub.certification_instrument_id), true, 'Those used by this candidate’s certificates appear first.');
         if (tool) {
             if (!tool.active || !overlap(tool)) html += '<p class="text-warning-emphasis small">This saved tool is unavailable for new submissions. Its evidence is preserved.</p>';
             if (tool.description) html += `<p class="small text-muted">${esc(tool.description)}</p>`;
+            if (training) html += sectionList(tool, sub, name);
             html += '<div class="row g-3">' + tool.dimensions.map(dim => `<div class="col-sm-6">${field(dim.name, `${name}[dimensions][${dim.id}]`, select(`${name}[dimensions][${dim.id}]`, dim.options, sub.dimensions?.[dim.id], `Choose ${dim.name.toLowerCase()}…`, true), true)}</div>`).join('') + '</div>';
             if (tool.score_fields.length) html += '<h4 class="h6">Recorded scores <span class="text-muted fw-normal small">· optional</span></h4><div class="row g-3">' + tool.score_fields.map(score => {
                 const key = `${name}[scores][${score.id}]`;
+                if (score.unit === 'pass_fail') return `<div class="col-sm-6">${field(score.name, key, select(key, [{ id: 1, name: 'Pass' }, { id: 0, name: 'Fail' }], scoreValue(sub.scores?.[score.id]), 'No score'), false, 'Pass/Fail')}</div>`;
+                if (score.max_points) return `<div class="col-sm-6">${field(score.name, key, `<input type="number" step="1" min="0" max="${esc(score.max_points)}" class="form-control" id="${esc(key)}" name="${esc(key)}" value="${esc(scoreValue(sub.scores?.[score.id]))}">`, false, `Points · whole number, 0 to ${score.max_points}`)}</div>`;
                 return `<div class="col-sm-6">${field(score.name, key, `<input type="number" step="any" min="-99999999" max="99999999" class="form-control" id="${esc(key)}" name="${esc(key)}" value="${esc(sub.scores?.[score.id])}">`, false, score.unit === 'percent' ? 'Percent' : score.unit === 'points' ? 'Points' : '')}</div>`;
             }).join('') + '</div>';
             const guidance = matching(personFor(row)).filter(req => Number(req.tool_id) === tool.id).map(req => req.guidance).filter(Boolean);
             if (guidance.length) html += `<p class="small bg-light border rounded p-2">Guidance: ${esc([...new Set(guidance)].join(' · '))}</p>`;
-            html += field('Coach-judged outcome', `${name}[outcome]`, select(`${name}[outcome]`, [{id:'passed',name:'Passed'},{id:'not_passed',name:'Did not pass'},{id:'not_scored',name:'Not scored'}], sub.outcome, 'Choose outcome…', true), true, 'Scores are recorded only. The coach decides the outcome.');
+            html += training
+                ? field('Overall outcome', `${name}[outcome]`, select(`${name}[outcome]`, [{ id: 'passed', name: 'Passed' }, { id: 'not_passed', name: 'Did not pass' }], sub.outcome === 'not_scored' ? '' : sub.outcome, 'Not scored'), false, 'Optional. Training requirements use the section results, not this outcome.')
+                : field('Coach-judged outcome', `${name}[outcome]`, select(`${name}[outcome]`, [{id:'passed',name:'Passed'},{id:'not_passed',name:'Did not pass'},{id:'not_scored',name:'Not scored'}], sub.outcome, 'Choose outcome…', true), true, 'Scores are recorded only. The coach decides the outcome.');
             html += field('Submission notes', `${name}[notes]`, text(`${name}[notes]`, sub.notes));
         }
         return html + '</div></div>';
@@ -164,7 +203,7 @@ function initCertificationCapture() {
         if (row.certification_role_id && !roleOptions.some(role => String(role.id) === String(row.certification_role_id))) roleOptions.push({ id: row.certification_role_id, name: `${row.role_name || 'Saved role'} (unavailable)` });
         const savedCount = Number(row.submission_count || 0);
         const count = row.submissions.length ? row.submissions.filter(sub => !Number(sub._delete)).length : savedCount;
-        const removable = !savedCount || (row.submissions.length === savedCount && row.submissions.every(sub => sub.editable !== false && coach(tools.find(tool => Number(tool.id) === Number(sub.certification_tool_id)), personFor(row))));
+        const removable = !savedCount || (row.submissions.length === savedCount && row.submissions.every(sub => sub.editable !== false && coach(tools.find(tool => Number(tool.id) === Number(sub.certification_instrument_id)), personFor(row))));
         let html = `<div class="border rounded mb-2 bg-white${deleted ? ' opacity-75' : ''}" data-candidate="${esc(row.key)}">`;
         html += hidden(`${name}[id]`, row.id || '') + hidden(`${name}[certification_candidate_id]`, row.certification_candidate_id) + hidden(`${name}[agreement_id]`, row.agreement_id) + hidden(`${name}[_delete]`, deleted ? 1 : 0);
         html += `<div class="d-flex align-items-center flex-wrap gap-2 p-2"><strong class="${deleted ? 'text-decoration-line-through' : ''}">${esc(person?.name || 'Saved candidate')}</strong><span class="small text-muted">${esc(roleOptions.find(role => String(role.id) === String(row.certification_role_id))?.name || 'No role')} · ${esc(row.completion_units)} unit(s) · ${count} submission(s)</span><div class="d-flex gap-2 ms-auto">${!deleted ? `<button type="button" class="btn btn-sm btn-outline-secondary" data-candidate-action="edit" aria-expanded="${open === row.key}">${open === row.key ? 'Done editing' : 'Edit'}</button>` : ''}${removable ? `<button type="button" class="btn btn-sm btn-outline-${deleted ? 'secondary' : 'danger'}" data-candidate-action="${deleted ? 'undo' : 'remove'}">${deleted ? 'Undo removal' : 'Remove'}</button>` : ''}</div></div>`;
@@ -180,7 +219,7 @@ function initCertificationCapture() {
             let reasons;
             const applicable = enrollment.requirements.filter(req => req.kind !== 'attestation'
                 && (!req.type_id || Number(req.type_id) === Number(form.querySelector('#activity_type_id')?.value))
-                && (!req.family_id || Number(req.family_id) === Number(form.querySelector('#contact_family_id')?.value)));
+                && (!req.family_id || Number(req.family_id) === Number(form.querySelector('#contact_family_id')?.value)) && (!req.sub_id || Number(req.sub_id) === Number(form.querySelector('#sub_activity_id')?.value)));
             if (form.querySelector('[name="cancelled"][type="checkbox"]')?.checked) reasons = 'Not counted: activity is cancelled.';
             else if (form.querySelector('[name="not_yet_complete"][type="checkbox"]')?.checked) reasons = 'Work can count after the activity is complete.';
             else if (!overlap(enrollment)) reasons = 'Not counted: activity programs do not overlap.';
@@ -192,16 +231,19 @@ function initCertificationCapture() {
             }).join('; ') + '. Final credit depends on the requirement’s dates and conditions.';
             return `<div class="mt-1">${enrollment.url ? `<a href="${esc(progressUrl(enrollment, row))}">${esc(enrollment.name)}</a>` : esc(enrollment.name)} · ${esc(reasons)}</div>`;
         }).join('') || '<div>No certificates assigned. The activity tag is still recorded.</div>';
-        html += '</div><div class="d-flex flex-wrap justify-content-between gap-2 align-items-center mt-3"><h3 class="h6 mb-0">Tool submissions</h3>' + (coach(null, person) ? '<button type="button" class="btn btn-sm btn-outline-primary" data-candidate-action="add-submission">Add submission</button>' : `<button type="button" class="btn btn-sm btn-outline-primary" disabled aria-disabled="true" aria-describedby="certification-callout" title="${esc(coach() ? 'Your coach duty does not cover this candidate’s certificates.' : 'A coach records submissions.')}">Add submission</button>`) + '</div>';
-        if (!row.submissions.length) html += `<p class="small text-muted mt-2">${savedCount ? `${savedCount} recorded submission(s). Detailed evidence is limited to admins, coaches, and managers in scope.` : 'No submissions. Trainings can be tagged without recording a tool.'}</p>`;
+        html += '</div><div class="d-flex flex-wrap justify-content-between gap-2 align-items-center mt-3"><h3 class="h6 mb-0">Tool and training submissions</h3>' + (coach(null, person) ? '<button type="button" class="btn btn-sm btn-outline-primary" data-candidate-action="add-submission">Add submission</button>' : `<button type="button" class="btn btn-sm btn-outline-primary" disabled aria-disabled="true" aria-describedby="certification-callout" title="${esc(coach() ? 'Your coach duty does not cover this candidate’s certificates.' : 'A coach records submissions.')}">Add submission</button>`) + '</div>';
+        if (!row.submissions.length) html += `<p class="small text-muted mt-2">${savedCount ? `${savedCount} recorded submission(s). Detailed evidence is limited to admins, coaches, and managers in scope.` : 'No submissions. A candidate can be tagged without recording one.'}</p>`;
         html += row.submissions.map(sub => submission(row, sub)).join('');
         return html + '</div></div>';
     }
     function render() {
         const active = document.activeElement;
-        const focus = root.contains(active) ? { name: active.name, candidate: active.closest('[data-candidate]')?.dataset.candidate, submission: active.closest('[data-submission]')?.dataset.submission, candidateAction: active.dataset.candidateAction, subAction: active.dataset.subAction } : null;
+        const focus = root.contains(active) ? { id: active.id, name: active.name, candidate: active.closest('[data-candidate]')?.dataset.candidate, submission: active.closest('[data-submission]')?.dataset.submission, candidateAction: active.dataset.candidateAction, subAction: active.dataset.subAction } : null;
         root.hidden = !config.review_requested && !rows.length && !people.some(assigned);
+        // Re-rendering replaces the section lists, so keep each one's scroll position.
+        const scrolled = new Map([...rowsRoot.querySelectorAll('[data-section-scroll]')].map(list => [list.dataset.sectionScroll, list.scrollTop]));
         rowsRoot.innerHTML = rows.map(renderRow).join('');
+        rowsRoot.querySelectorAll('[data-section-scroll]').forEach(list => { list.scrollTop = scrolled.get(list.dataset.sectionScroll) ?? 0; });
         const roleOptions = [...new Map(rows.filter(row => !Number(row._delete)).flatMap(roles).map(role => [role.id, role])).values()];
         const bulk = root.querySelector('[data-certification-bulk]');
         bulk.hidden = rows.length < 2 || !roleOptions.length;
@@ -226,9 +268,9 @@ function initCertificationCapture() {
             if (input.closest('[hidden]')) input.required = false;
         }
         if (focus) {
-            let control;
-            if (focus.name) control = form.elements.namedItem(focus.name);
-            else if (focus.candidate !== undefined) {
+            // Section checkboxes share one name, so restore by id first.
+            let control = (focus.id && document.getElementById(focus.id)) || (focus.name ? form.elements.namedItem(focus.name) : null);
+            if (!control && focus.candidate !== undefined) {
                 const candidate = [...rowsRoot.querySelectorAll('[data-candidate]')].find(el => el.dataset.candidate === focus.candidate);
                 const container = focus.submission !== undefined ? [...(candidate?.querySelectorAll('[data-submission]') || [])].find(el => el.dataset.submission === focus.submission) : candidate;
                 control = container?.querySelector(focus.subAction ? `[data-sub-action="${focus.subAction}"]` : `[data-candidate-action="${focus.candidateAction}"]`)
@@ -293,7 +335,7 @@ function initCertificationCapture() {
             if (action === 'add-submission') {
                 open = row.key;
                 row.openSubmission = String(Math.max(0, ...row.submissions.map(sub => Number(sub.key) + 1)));
-                row.submissions.push({ key: row.openSubmission, certification_tool_id: '', outcome: '', dimensions: {}, scores: {} });
+                row.submissions.push({ key: row.openSubmission, certification_instrument_id: '', outcome: '', dimensions: {}, sections: [], section_results: {}, scores: {} });
             }
         }
         const subEl = button.closest('[data-submission]');
@@ -343,12 +385,13 @@ function initCertificationCapture() {
             }
             return;
         }
-        if (event.target.name?.endsWith('[certification_tool_id]')) { capture(); render(); }
+        if (event.target.name?.endsWith('[certification_instrument_id]') || event.target.name?.endsWith('[sections][]') || event.target.name?.includes('[section_results]')) { capture(); render(); }
     });
     function scopeChanged() { capture(); render(); restrictPicker(); }
     form.addEventListener('project-program-scope:change', scopeChanged);
     form.querySelector('#activity-agreements-picker')?.addEventListener('token-picker:change', scopeChanged);
-    form.addEventListener('change', event => { if (['activity_type_id', 'contact_family_id', 'cancelled', 'not_yet_complete'].includes(event.target.id)) scopeChanged(); });
+    form.addEventListener('change', event => { if (['activity_type_id', 'sub_activity_id', 'contact_family_id', 'cancelled', 'not_yet_complete'].includes(event.target.id)) scopeChanged(); });
+    form.addEventListener('htmx:afterSwap', event => { if (event.detail.target?.id === 'sub_activity_id') scopeChanged(); });
     render();
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initCertificationCapture);

@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\Activity;
 use App\Models\ActivityType;
 use App\Models\AgreementDeliverable;
+use App\Models\SubActivity;
 use Illuminate\Support\Collection;
 
 class ActivityTypeDuration
@@ -54,6 +55,16 @@ class ActivityTypeDuration
             }
 
             return $typeProgramIds->intersect($selectedProgramIdSet)->isNotEmpty();
+        })->map(function (ActivityType $type) use ($selectedProgramIdSet) {
+            $type = clone $type;
+            $type->loadMissing('subActivities.programs');
+            $type->setRelation('subActivities', $type->subActivities->filter(function (SubActivity $subActivity) use ($selectedProgramIdSet) {
+                $programIds = $subActivity->programs->pluck('id')->map(fn ($id) => (int) $id);
+
+                return $programIds->isEmpty() || $programIds->intersect($selectedProgramIdSet)->isNotEmpty();
+            })->values());
+
+            return $type;
         })->values();
     }
 
@@ -63,21 +74,10 @@ class ActivityTypeDuration
     public static function selectionSupportsAllottedTime(
         ?int $contactFamilyId,
         ?int $activityTypeId,
-        Collection $activityTypesInScope
+        Collection $activityTypesInScope,
+        ?int $subActivityId = null
     ): bool {
-        if (! $contactFamilyId) {
-            return false;
-        }
-
-        if ($activityTypeId) {
-            $activityType = $activityTypesInScope->firstWhere('id', (int) $activityTypeId);
-
-            return $activityType && self::fromActivityType($activityType)->hasDuration();
-        }
-
-        return $activityTypesInScope->contains(function (ActivityType $type) {
-            return self::fromActivityType($type)->hasDuration();
-        });
+        return self::resolveAllottedUnitsForSelection($contactFamilyId, $activityTypeId, $activityTypesInScope, $subActivityId)['allowed_units'] !== [];
     }
 
     /**
@@ -87,7 +87,8 @@ class ActivityTypeDuration
     public static function resolveAllottedUnitsForSelection(
         ?int $contactFamilyId,
         ?int $activityTypeId,
-        Collection $activityTypesInScope
+        Collection $activityTypesInScope,
+        ?int $subActivityId = null
     ): array {
         if (! $contactFamilyId) {
             return [
@@ -98,33 +99,26 @@ class ActivityTypeDuration
             ];
         }
 
-        if ($activityTypeId) {
-            $activityType = $activityTypesInScope->firstWhere('id', (int) $activityTypeId);
-            $duration = self::fromActivityType($activityType);
-            $hasDays = $duration->unit() === self::UNIT_DAYS;
-            $hasHours = $duration->unit() === self::UNIT_HOURS;
-
-            return [
-                'has_days' => $hasDays,
-                'has_hours' => $hasHours,
-                'is_mixed' => false,
-                'allowed_units' => array_values(array_filter([
-                    $hasDays ? self::UNIT_DAYS : null,
-                    $hasHours ? self::UNIT_HOURS : null,
-                ])),
-            ];
-        }
-
         $hasDays = false;
         $hasHours = false;
 
         foreach ($activityTypesInScope as $type) {
-            $duration = self::fromActivityType($type);
-            if ($duration->unit() === self::UNIT_DAYS) {
-                $hasDays = true;
+            if ($activityTypeId && (int) $type->id !== $activityTypeId) {
+                continue;
             }
-            if ($duration->unit() === self::UNIT_HOURS) {
-                $hasHours = true;
+            $type->loadMissing('subActivities');
+            if ($subActivityId) {
+                $subActivity = $type->subActivities->firstWhere('id', $subActivityId);
+                $durations = $subActivity ? [self::effective($type, $subActivity)] : [];
+            } else {
+                $durations = [self::fromActivityType($type)];
+                foreach ($type->subActivities as $subActivity) {
+                    $durations[] = self::fromSubActivity($subActivity);
+                }
+            }
+            foreach ($durations as $duration) {
+                $hasDays = $hasDays || $duration->unit() === self::UNIT_DAYS;
+                $hasHours = $hasHours || $duration->unit() === self::UNIT_HOURS;
             }
         }
 
@@ -146,9 +140,10 @@ class ActivityTypeDuration
         ?int $contactFamilyId,
         ?int $activityTypeId,
         Collection $activityTypesInScope,
-        ?string $requestedUnit
+        ?string $requestedUnit,
+        ?int $subActivityId = null
     ): ?string {
-        $units = self::resolveAllottedUnitsForSelection($contactFamilyId, $activityTypeId, $activityTypesInScope);
+        $units = self::resolveAllottedUnitsForSelection($contactFamilyId, $activityTypeId, $activityTypesInScope, $subActivityId);
         $allowed = $units['allowed_units'];
 
         if (empty($allowed)) {
@@ -176,7 +171,7 @@ class ActivityTypeDuration
             return $deliverable->allotted_time_unit;
         }
 
-        $duration = self::fromActivityType($deliverable->activityType);
+        $duration = self::effective($deliverable->activityType, $deliverable->subActivity);
         if ($duration->unit() === self::UNIT_DAYS) {
             return self::UNIT_DAYS;
         }
@@ -209,6 +204,49 @@ class ActivityTypeDuration
         return new self(self::UNIT_NONE, null);
     }
 
+    public static function fromSubActivity(?SubActivity $subActivity): self
+    {
+        if ($subActivity === null) {
+            return new self(self::UNIT_NONE, null);
+        }
+
+        if ((float) $subActivity->duration_days > 0) {
+            return new self(self::UNIT_DAYS, (float) $subActivity->duration_days);
+        }
+        if ((float) $subActivity->duration_hours > 0) {
+            return new self(self::UNIT_HOURS, (float) $subActivity->duration_hours);
+        }
+
+        return new self(self::UNIT_NONE, null);
+    }
+
+    public static function effective(?ActivityType $activityType, ?SubActivity $subActivity): self
+    {
+        $duration = self::fromSubActivity($subActivity);
+
+        return $duration->hasDuration() ? $duration : self::fromActivityType($activityType);
+    }
+
+    public static function effectiveSource(?ActivityType $activityType, ?SubActivity $subActivity): ?string
+    {
+        if (self::fromSubActivity($subActivity)->hasDuration()) {
+            return 'sub_activity';
+        }
+
+        return self::fromActivityType($activityType)->hasDuration() ? 'activity_type' : null;
+    }
+
+    /** @return array{allotted_duration_hours: float|null, allotted_duration_days: float|null} */
+    public static function snapshotForSelection(ActivityType $activityType, ?SubActivity $subActivity): array
+    {
+        $duration = self::effective($activityType, $subActivity);
+
+        return [
+            'allotted_duration_hours' => $duration->unit() === self::UNIT_HOURS ? $duration->value() : null,
+            'allotted_duration_days' => $duration->unit() === self::UNIT_DAYS ? $duration->value() : null,
+        ];
+    }
+
     public static function fromActivity(Activity $activity): self
     {
         if ((float) ($activity->allotted_duration_days ?? 0) > 0) {
@@ -220,19 +258,6 @@ class ActivityTypeDuration
         }
 
         return new self(self::UNIT_NONE, null);
-    }
-
-    /**
-     * @return array{allotted_duration_hours: float|null, allotted_duration_days: float|null}
-     */
-    public static function snapshotFromActivityType(ActivityType $activityType): array
-    {
-        $duration = self::fromActivityType($activityType);
-
-        return [
-            'allotted_duration_hours' => $duration->unit() === self::UNIT_HOURS ? $duration->value() : null,
-            'allotted_duration_days' => $duration->unit() === self::UNIT_DAYS ? $duration->value() : null,
-        ];
     }
 
     public function __construct(

@@ -6,6 +6,10 @@
 
     $contactFamilyLabel = $contactFamilies->firstWhere('id', $row['contact_family_id'] ?? null)?->name ?? '—';
     $activityTypeLabel = $activityTypes->firstWhere('id', $row['activity_type_id'] ?? null)?->name ?? 'Any activity type';
+    $subActivityLabel = $subActivities->firstWhere('id', $row['sub_activity_id'] ?? null)?->name;
+    if ($subActivityLabel) {
+        $activityTypeLabel .= ' › '.$subActivityLabel;
+    }
     $programLabel = collect($projects ?? [])->flatMap(fn ($p) => $p->programs ?? collect())
         ->merge($agreement?->programs ?? collect())
         ->firstWhere('id', $row['program_id'] ?? null)?->name ?? 'Any selected agreement program';
@@ -58,12 +62,14 @@
     $selectionSupportsAllotted = \App\Support\ActivityTypeDuration::selectionSupportsAllottedTime(
         !empty($row['contact_family_id']) ? (int) $row['contact_family_id'] : null,
         !empty($row['activity_type_id']) ? (int) $row['activity_type_id'] : null,
-        $activityTypesInScope
+        $activityTypesInScope,
+        !empty($row['sub_activity_id']) ? (int) $row['sub_activity_id'] : null
     );
     $allottedUnits = \App\Support\ActivityTypeDuration::resolveAllottedUnitsForSelection(
         !empty($row['contact_family_id']) ? (int) $row['contact_family_id'] : null,
         !empty($row['activity_type_id']) ? (int) $row['activity_type_id'] : null,
-        $activityTypesInScope
+        $activityTypesInScope,
+        !empty($row['sub_activity_id']) ? (int) $row['sub_activity_id'] : null
     );
     $currentAllottedTimeUnit = $row['allotted_time_unit'] ?? null;
     if (($row['metric_type'] ?? '') === 'time' && $currentTimeBasis === 'allotted' && !$currentAllottedTimeUnit && count($allottedUnits['allowed_units']) === 1) {
@@ -125,6 +131,25 @@
                                 data-duration-days="{{ (float) $type->duration_days > 0 ? $type->duration_days : '' }}"
                                 @selected((string) ($row['activity_type_id'] ?? '') === (string) $type->id)>
                             {{ $type->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </x-form-field>
+
+            <x-form-field label="Sub-activity">
+                <select class="form-select" name="{{ $fieldPrefix }}[sub_activity_id]" data-deliverable-sub-activity>
+                    <option value="">Any sub-activity</option>
+                    @foreach($subActivities as $subActivity)
+                        @php
+                            $subActivityProgramIds = $subActivity->programs->pluck('id')->map(fn ($id) => (string) $id)->all();
+                        @endphp
+                        <option value="{{ $subActivity->id }}"
+                                data-activity-type-id="{{ $subActivity->activity_type_id }}"
+                                data-program-ids='@json($subActivityProgramIds)'
+                                data-scope-mode="{{ $subActivity->program_scope_mode?->value ?? 'all' }}"
+                                data-active="{{ $subActivity->active ? '1' : '0' }}"
+                                @selected((string) ($row['sub_activity_id'] ?? '') === (string) $subActivity->id)>
+                            {{ $subActivity->name }}
                         </option>
                     @endforeach
                 </select>

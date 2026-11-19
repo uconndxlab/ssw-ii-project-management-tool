@@ -8,6 +8,13 @@ const icons = {
     danger: 'bi-x-circle-fill',
 };
 
+// Used when a toast has no title of its own; info toasts stay untitled.
+const defaultTitles = {
+    success: 'Success!',
+    warning: 'Warning',
+    danger: 'Error',
+};
+
 function dismiss(toast) {
     if (toast.classList.contains('is-leaving')) {
         return;
@@ -28,9 +35,10 @@ function showToast(content, { tone = 'success', title = '', timeout } = {}) {
     }
 
     const sticky = tone === 'warning' || tone === 'danger';
+    title = title || defaultTitles[tone] || '';
 
     const toast = document.createElement('div');
-    toast.className = `app-toast app-toast--${icons[tone] ? tone : 'info'}`;
+    toast.className = `app-callout app-callout--${icons[tone] ? tone : 'info'} app-toast`;
     if (tone === 'danger') {
         toast.setAttribute('role', 'alert');
     }
@@ -41,14 +49,14 @@ function showToast(content, { tone = 'success', title = '', timeout } = {}) {
     });
 
     const icon = document.createElement('i');
-    icon.className = `bi ${icons[tone] || icons.info} app-toast-icon`;
+    icon.className = `bi ${icons[tone] || icons.info} app-callout-icon`;
     icon.setAttribute('aria-hidden', 'true');
 
     const body = document.createElement('div');
-    body.className = 'app-toast-body';
+    body.className = 'app-callout-body';
     if (title) {
         const heading = document.createElement('div');
-        heading.className = 'app-toast-title';
+        heading.className = 'app-callout-title';
         heading.textContent = title;
         body.append(heading);
     }

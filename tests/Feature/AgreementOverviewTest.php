@@ -10,6 +10,7 @@ use App\Models\Certificate;
 use App\Models\CertificateEnrollment;
 use App\Models\ContactFamily;
 use App\Models\Organization;
+use App\Models\SubActivity;
 use App\Models\Team;
 use App\Models\User;
 use App\Support\AgreementDeliverableDisplay;
@@ -60,6 +61,7 @@ it('selects attention round robin but displays severity groups with most behind 
         ]);
         $deliverable->setRelation('activityType', $name ? ActivityType::factory()->make(['name' => $name]) : null);
         $deliverable->activity_type_id = $name ? 1 : null;
+        $deliverable->setRelation('subActivity', $name === 'Alpha' ? SubActivity::factory()->make(['name' => 'Kickoff']) : null);
         $deliverable->setRelation('contactFamily', $family);
 
         return ['deliverable' => $deliverable, 'status' => $status, 'percent' => $percent, 'has_target' => true, 'target' => 10, 'is_individual' => true, 'rollup_on_track' => ['total' => 0], 'allocation_notices' => ['unassigned_remainder' => $name === 'Assigned null' ? 5 : 10], 'unit_label' => 'Hours', 'metric_summary' => 'Time', 'counted_completed_value' => 1.5];
@@ -68,7 +70,7 @@ it('selects attention round robin but displays severity groups with most behind 
 
     $summary = (new AgreementOverview($agreement, User::factory()->create()))->deliverableSummary($groups);
 
-    expect(array_column($summary['attention'], 'title'))->toBe(['Alpha', 'Zulu', 'Warning', 'Any Training activity']);
+    expect(array_column($summary['attention'], 'title'))->toBe(['Alpha › Kickoff', 'Zulu', 'Warning', 'Any Training activity']);
     expect(array_column($summary['attention'], 'bucket'))->toBe(['off_track', 'off_track', 'needs_attention', 'no_assignees']);
     expect($summary['attention'][0]['meta'])->toBe('Training · Time · 1.5 of 10 hours');
     expect($summary['attention'][3]['meta'])->toBe('Training · Time · 10 hours unassigned');

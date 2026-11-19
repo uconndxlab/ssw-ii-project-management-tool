@@ -26,7 +26,7 @@ class ActivityCertificationController extends Controller
     {
         $this->authorize('reviewCertification', $activity);
 
-        $activity->load(['activityType', 'agreements', 'programs']);
+        $activity->load(['subActivity', 'activityType', 'agreements', 'programs']);
         $certificationForm = $this->certificationEvidence->formData($this->actor(), $activity->agreements, $activity);
 
         return view('activities.certification', compact('activity', 'certificationForm'));

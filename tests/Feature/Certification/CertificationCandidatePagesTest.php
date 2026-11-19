@@ -172,7 +172,7 @@ test('candidate activity list includes only visible tagged activities', function
         ->assertSee('data-label="Agreement"', false);
 
     // The global index has no candidate filter: the parameter is ignored outside the embed.
-    $this->get(route('ac    tivities.index', ['certification_candidate_id' => $f['candidate']->id]))->assertOk()
+    $this->get(route('activities.index', ['certification_candidate_id' => $f['candidate']->id]))->assertOk()
         ->assertViewHas('activities', fn ($activities) => $activities->total() === 2);
 });
 

@@ -29,8 +29,6 @@ class OrganizationController extends Controller
     {
         $this->authorize('viewAny', Organization::class);
 
-        $states = State::orderBy('name', 'asc')->get(['id', 'name']);
-
         $query = Organization::query()
             ->visibleTo($this->actor())
             ->with([
@@ -43,10 +41,10 @@ class OrganizationController extends Controller
         $search = trim((string) $request->input('search', ''));
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
-                $q->whereIlike('name', "%{$search}%")
-                    ->orWhereIlike('po_number', "%{$search}%")
+                $q->whereLike('name', "%{$search}%")
+                    ->orWhereLike('po_number', "%{$search}%")
                     ->orWhereHas('states', function ($stateQuery) use ($search) {
-                        $stateQuery->whereIlike('name', "%{$search}%");
+                        $stateQuery->whereLike('name', "%{$search}%");
                     });
             });
         }
@@ -86,17 +84,17 @@ class OrganizationController extends Controller
 
         $organizations = $query->paginate(TablePagination::perPage($request))->withQueryString();
 
+        if ($request->header('HX-Request') === 'true' && $request->input('partial') !== 'filters') {
+            return view('organizations.partials.table', compact('organizations', 'sort', 'direction'));
+        }
+
+        $states = State::orderBy('name', 'asc')->get(['id', 'name']);
         $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
         $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
 
         // HTMX: filters only
         if ($request->header('HX-Request') === 'true' && $request->input('partial') === 'filters') {
             return view('organizations.partials.filters', compact('states', 'filterProjects', 'filterPrograms', 'sort', 'direction'));
-        }
-
-        // HTMX: table only
-        if ($request->header('HX-Request') === 'true') {
-            return view('organizations.partials.table', compact('organizations', 'sort', 'direction'));
         }
 
         return view('organizations.index', compact(
@@ -121,14 +119,14 @@ class OrganizationController extends Controller
         $allActivities = Activity::whereHas('agreements', function ($query) use ($agreements) {
             $query->whereIn('agreements.id', $agreements->pluck('id'));
         })
-            ->with(['activityType.contactFamily', 'user', 'agreements'])
+            ->with(['subActivity', 'activityType.contactFamily', 'user', 'agreements'])
             ->orderByRecentDisplay()
             ->get();
 
         $recentActivities = Activity::query()
             ->visibleTo($this->actor())
             ->whereHas('agreements', fn ($query) => $query->whereIn('agreements.id', $agreements->modelKeys()))
-            ->with(['activityType.contactFamily', 'user', 'agreements'])
+            ->with(['subActivity', 'activityType.contactFamily', 'user', 'agreements'])
             ->orderByRecentDisplay()
             ->limit(5)
             ->get();
@@ -219,7 +217,7 @@ class OrganizationController extends Controller
     public function edit(Organization $organization): View
     {
         $this->authorize('update', $organization);
-        $organization->load(['states', 'programs.projects', 'users', 'contacts']);
+        $organization->load(['states', 'programs.projects', 'users', 'contacts'])->loadCount('agreements');
         $states = State::orderBy('name', 'asc')->get();
         $projects = ProjectProgramScope::assignableProjectsWithProgramsFor($this->actor(), $organization);
         $users = User::query()->active()->orderBy('name', 'asc')->get();

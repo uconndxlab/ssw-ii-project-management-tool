@@ -13,6 +13,7 @@ class AgreementActivityHistory extends Model
         'activity_id',
         'contact_family_id',
         'activity_type_id',
+        'sub_activity_id',
         'contributor_user_id',
         'activity_date',
         'contribution_kind',
@@ -61,6 +62,12 @@ class AgreementActivityHistory extends Model
     public function contactFamily(): BelongsTo
     {
         return $this->belongsTo(ContactFamily::class);
+    }
+
+    /** @return BelongsTo<SubActivity, $this> */
+    public function subActivity(): BelongsTo
+    {
+        return $this->belongsTo(SubActivity::class);
     }
 
     /** @return BelongsTo<ActivityType, $this> */

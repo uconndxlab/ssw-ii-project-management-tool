@@ -10,6 +10,7 @@ use App\Models\Contracts\HasPrograms;
 use App\Models\LoggingField;
 use App\Models\Program;
 use App\Models\Project;
+use App\Models\SubActivity;
 use App\Models\User;
 use App\Support\Authorization\ScopeSync;
 use App\Support\Authorization\UserAccess;
@@ -24,7 +25,7 @@ class ProjectProgramScope
         return match ($modelClass) {
             LoggingField::class,
             ContactFamily::class,
-            ActivityType::class => ProgramScopeMode::All,
+            ActivityType::class, SubActivity::class => ProgramScopeMode::All,
             default => ProgramScopeMode::Specific,
         };
     }
@@ -65,22 +66,6 @@ class ProjectProgramScope
         }
 
         return self::matchesSelectedPrograms($field->programs->pluck('id'), $record->programs->modelKeys(), false);
-    }
-
-    /**
-     * @return Collection<int, Project>
-     */
-    public static function activeProjectsWithPrograms(): Collection
-    {
-        return Project::query()
-            ->where('active', true)
-            ->with([
-                'programs' => fn ($query) => $query
-                    ->where('active', true)
-                    ->orderBy('name'),
-            ])
-            ->orderBy('name')
-            ->get();
     }
 
     /**
@@ -445,14 +430,15 @@ class ProjectProgramScope
             ->where(fn ($query) => $query->whereHas('programs', $withProgram)
                 ->orWhereHas('agreements.programs', $withProgram)
                 ->orWhereHas('contactFamilies.programs', $withProgram)
-                ->orWhereHas('activityTypes.programs', $withProgram))
-            ->with(['programs', 'agreements.programs', 'contactFamilies.programs', 'activityTypes.programs'])
+                ->orWhereHas('activityTypes.programs', $withProgram)
+                ->orWhereHas('subActivities.programs', $withProgram))
+            ->with(['programs', 'agreements.programs', 'contactFamilies.programs', 'activityTypes.programs', 'subActivities.programs'])
             ->get();
 
         foreach ($fields as $field) {
             $fieldAfter = (clone $field)->setRelation('programs', $field->programs->except([$program->id]));
 
-            foreach ([$field->agreements, $field->contactFamilies, $field->activityTypes] as $records) {
+            foreach ([$field->agreements, $field->contactFamilies, $field->activityTypes, $field->subActivities] as $records) {
                 foreach ($records as $record) {
                     $recordAfter = (clone $record)->setRelation('programs', $record->programs->except([$program->id]));
 

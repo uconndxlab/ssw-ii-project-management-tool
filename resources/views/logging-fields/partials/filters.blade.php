@@ -108,6 +108,7 @@
                 <option value="available_in_agreements" @selected(request('availability') === 'available_in_agreements')>Agreements</option>
                 <option value="available_in_contact_families" @selected(request('availability') === 'available_in_contact_families')>Activity Families</option>
                 <option value="available_in_activities" @selected(request('availability') === 'available_in_activities')>Activity Types</option>
+                <option value="available_in_sub_activities" @selected(request('availability') === 'available_in_sub_activities')>Sub-activities</option>
             </select>
         </div>
         <x-table-filter-clear

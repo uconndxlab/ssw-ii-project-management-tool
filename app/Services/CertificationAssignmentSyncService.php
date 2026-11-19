@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\AccessProfile;
 use App\Enums\CertificateAction;
 use App\Enums\CertificateEnrollmentStatus;
 use App\Enums\CertificateRequirementPhase;
@@ -138,6 +139,10 @@ class CertificationAssignmentSyncService
             : AgreementCertificationCandidate::query()->whereIn('certification_candidate_id', $candidates->modelKeys())
                 ->whereHas('agreement', fn ($query) => $query->visibleTo($actor))
                 ->pluck('certification_candidate_id')->all();
+
+        $submittedCoachIds = collect($rows)->pluck('assignments')->flatten(1)
+            ->pluck('coach_user_id')->filter()->unique()->all();
+        $inputCoachIds = User::query()->whereKey($submittedCoachIds)->where('access_profile', AccessProfile::Input)->pluck('id')->all();
 
         $seenNewEmails = [];
         $seenCandidateIds = [];
@@ -305,6 +310,12 @@ class CertificationAssignmentSyncService
                 $coachUserId = isset($assignmentRow['coach_user_id']) && $assignmentRow['coach_user_id'] !== ''
                     ? (int) $assignmentRow['coach_user_id']
                     : null;
+
+                if ($coachUserId !== null && in_array($coachUserId, $inputCoachIds, true)) {
+                    $validator->errors()->add("{$fieldPrefix}.coach_user_id", 'Input users cannot be supervising coaches.');
+
+                    continue;
+                }
 
                 $coachChanged = $enrollmentId !== null
                     && array_key_exists('coach_user_id', $assignmentRow)

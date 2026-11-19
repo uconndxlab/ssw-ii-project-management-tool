@@ -7,20 +7,36 @@ use App\Models\ActivityType;
 use App\Models\Agreement;
 use App\Models\Certificate;
 use App\Models\CertificationCandidate;
-use App\Models\CertificationTool;
+use App\Models\CertificationInstrument;
 use App\Models\ContactFamily;
 use App\Models\LoggingField;
 use App\Models\Organization;
 use App\Models\Program;
 use App\Models\Project;
 use App\Models\State;
+use App\Models\SubActivity;
 use App\Models\Team;
 use App\Models\User;
+use App\Support\Authorization\HydratedRecordIds;
 use App\Support\Authorization\UserAccess;
 use Illuminate\Database\Eloquent\Builder;
 
 trait VisibleToUser
 {
+    /**
+     * Collects the id of every model of this type Eloquent loads, so UserAccess can answer all of a page's
+     * isLinkable()/view checks for one type in a single query. Collecting is free of access logic; see
+     * UserAccess::batchVisibility() and "How link checks are batched" in docs/access-rules.md.
+     */
+    public static function bootVisibleToUser(): void
+    {
+        static::retrieved(function (self $record): void {
+            if ($record->getKey() !== null) {
+                app(HydratedRecordIds::class)->add($record::class, (int) $record->getKey());
+            }
+        });
+    }
+
     /**
      * @param  Builder<covariant \Illuminate\Database\Eloquent\Model>  $query
      * @return Builder<covariant \Illuminate\Database\Eloquent\Model>
@@ -43,7 +59,8 @@ trait VisibleToUser
             ContactFamily::class,
             LoggingField::class,
             ActivityType::class,
-            CertificationTool::class,
+            SubActivity::class,
+            CertificationInstrument::class,
             Certificate::class => $access->applyScopedEntityVisibility($query),
             default => $query,
         };

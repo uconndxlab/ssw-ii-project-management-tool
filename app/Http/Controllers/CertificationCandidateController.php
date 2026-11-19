@@ -29,7 +29,7 @@ class CertificationCandidateController extends Controller
             $query->active();
         }
         if ($request->filled('search')) {
-            $query->where(fn (Builder $search) => $search->whereIlike('name', '%'.$request->string('search').'%')->orWhereIlike('email', '%'.$request->string('search').'%'));
+            $query->where(fn (Builder $search) => $search->whereLike('name', '%'.$request->string('search').'%')->orWhereLike('email', '%'.$request->string('search').'%'));
         }
         if ($request->filled('program_id') || $request->filled('project_id')) {
             $query->whereHas('rosterLinks.agreement', function (Builder $agreements) use ($request, $actor) {
@@ -81,7 +81,7 @@ class CertificationCandidateController extends Controller
         $row = $this->rowData(collect([$candidate]), $this->actor())[$candidate->id];
         $tagged = fn () => Activity::query()->whereHas('certificationCandidates', fn (Builder $tags) => $tags->where('certification_candidate_id', $candidate->id));
         $recentActivities = $tagged()->visibleTo($this->actor())
-            ->with(['activityType.contactFamily', 'user', 'agreements'])->orderByRecentDisplay()->limit(10)->get();
+            ->with(['subActivity', 'activityType.contactFamily', 'user', 'agreements'])->orderByRecentDisplay()->limit(10)->get();
         $activityTotal = $tagged()->count();
         $hiddenActivityCount = $activityTotal - $tagged()->visibleTo($this->actor())->count();
 

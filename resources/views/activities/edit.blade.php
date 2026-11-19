@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Edit Activity')
+@section("title", ($asCopy ?? false) ? "Log Activity" : "Edit Activity")
 
 @section('content')
 
@@ -19,6 +19,8 @@
             ->values()
             ->toArray()
     );
+    $selectedSubActivityId = old('sub_activity_id', $activity->sub_activity_id);
+    $subActivityLoggingData = \App\Models\Activity::mergePreservedLoggingValues(old('sub_activity_logging_values', $activity->sub_activity_logging_values), $activity->sub_activity_logging_values);
     $selectedActivityTypeId = old('activity_type_id', $activity->activity_type_id);
     $agreementLoggingData = \App\Models\Activity::mergePreservedLoggingValues(
         old('agreement_logging_values', $activity->agreement_logging_values ?? []),
@@ -64,7 +66,7 @@
 
 <x-activity-form
     :certification-form="$certificationForm"
-    form-mode="edit"
+    :form-mode="($asCopy ?? false) ? 'create' : 'edit'"
     :agreements="$agreements"
     :organizations="$organizations"
     :states="$states"
@@ -76,6 +78,8 @@
     :selected-project-ids="$selectedProjectIds"
     :selected-program-ids="$selectedProgramIds"
     :selected-participant-user-ids="$selectedParticipantUserIds"
+    :selected-sub-activity-id="$selectedSubActivityId"
+    :sub-activity-logging-data="$subActivityLoggingData"
     :selected-activity-type-id="$selectedActivityTypeId"
     :agreement-logging-data="$agreementLoggingData"
     :contact-family-logging-data="$contactFamilyLoggingData"
@@ -90,7 +94,7 @@
     :completion-count-value="$completionCountValue"
     :allotted-duration-hours="$allottedDurationHours"
     :allotted-duration-days="$allottedDurationDays"
-    :activity="$activity"
+    :activity="($asCopy ?? false) ? null : $activity"
 />
 
 @endsection

@@ -14,7 +14,7 @@
 @endphp
 
 @if($items->isNotEmpty())
-    <nav aria-label="Breadcrumb" class="mb-2">
+    <nav aria-label="Breadcrumb" class="mb-2 app-breadcrumbs">
         <ol class="breadcrumb small mb-0 flex-wrap">
             @foreach($items as $item)
                 <li class="breadcrumb-item {{ !empty($item['current']) ? 'active' : '' }}">

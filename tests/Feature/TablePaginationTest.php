@@ -23,7 +23,7 @@ test('every listing applies the selected page size', function (string $route, st
     ['supervisees.index', 'users'],
     ['activity-types.index', 'activityTypes'],
     ['contact-families.index', 'contactFamilies'],
-    ['certification-tools.index', 'certificationTools'],
+    ['certification-instruments.index', 'certificationInstruments'],
     ['certificates.index', 'certificates'],
 ]);
 

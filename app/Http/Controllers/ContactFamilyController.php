@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ProgramScopeMode;
+use App\Models\AgreementDeliverable;
+use App\Models\CertificateRequirement;
 use App\Models\ContactFamily;
 use App\Models\LoggingField;
 use App\Models\Program;
@@ -28,7 +30,7 @@ class ContactFamilyController extends Controller
             ->with(['programs.projects']);
 
         if ($request->filled('search')) {
-            $query->whereIlike('name', '%'.$request->input('search').'%');
+            $query->whereLike('name', '%'.$request->input('search').'%');
         }
 
         if ($request->filled('project_id')) {
@@ -54,12 +56,12 @@ class ContactFamilyController extends Controller
 
         $contactFamilies = $query->paginate(TablePagination::perPage($request))->withQueryString();
 
-        $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
-        $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
-
         if ($request->header('HX-Request')) {
             return view('admin.contact-families.partials.table', compact('contactFamilies', 'sort', 'direction'));
         }
+
+        $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
+        $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
 
         return view('admin.contact-families.index', compact(
             'contactFamilies',
@@ -287,10 +289,10 @@ class ContactFamilyController extends Controller
     public function destroy(ContactFamily $contactFamily): RedirectResponse
     {
         $this->authorize('delete', $contactFamily);
-        if ($contactFamily->activityTypes()->count() > 0) {
+        if ($contactFamily->activityTypes()->exists() || AgreementDeliverable::query()->where('contact_family_id', $contactFamily->id)->exists() || CertificateRequirement::query()->where('contact_family_id', $contactFamily->id)->exists()) {
             return redirect()
                 ->route('contact-families.index')
-                ->with('error', 'Cannot delete activity family with existing activity types.');
+                ->with('error', 'Cannot delete activity family with existing activity types, agreement deliverables or certificate requirements.');
         }
 
         ContactFamily::destroy($contactFamily->id);

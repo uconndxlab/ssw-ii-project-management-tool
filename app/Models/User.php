@@ -176,13 +176,6 @@ class User extends Authenticatable implements HasPrograms
         return Agreement::query()->accessibleBy($this);
     }
 
-    public function hasAccessToAgreement(Agreement|int $agreement): bool
-    {
-        $agreementId = $agreement instanceof Agreement ? (int) $agreement->id : (int) $agreement;
-
-        return $this->accessibleAgreementsQuery()->whereKey($agreementId)->exists();
-    }
-
     /** @return BelongsToMany<Agreement, $this> */
     public function principalInvestigatorAgreements(): BelongsToMany
     {

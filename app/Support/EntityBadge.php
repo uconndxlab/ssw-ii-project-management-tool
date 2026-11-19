@@ -25,14 +25,6 @@ class EntityBadge
     }
 
     /**
-     * Counts are plain text; this keeps callers that still ask for a class string working.
-     */
-    public static function countClasses(string $kind): string
-    {
-        return 'app-tag';
-    }
-
-    /**
      * Small metadata labels: roles, flags, taxonomy. Not clickable, so no border.
      */
     public static function categoryClasses(string $kind): string

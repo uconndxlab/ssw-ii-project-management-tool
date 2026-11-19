@@ -65,7 +65,7 @@
     </x-slot:actions>
 
     @if($contactFamilyLoggingFields->isEmpty())
-        <div class="alert alert-light border mb-0">No activity family logging fields have been defined yet.</div>
+        <p class="text-muted small mb-0">No activity family logging fields have been defined yet.</p>
     @else
         <x-logging-field-assignment-picker
             :fields="$contactFamilyLoggingFields"

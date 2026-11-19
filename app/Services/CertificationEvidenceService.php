@@ -2,8 +2,12 @@
 
 namespace App\Services;
 
+use App\Enums\AccessProfile;
 use App\Enums\CertificateRequirementPhase;
 use App\Enums\CertificateTagOutcome;
+use App\Enums\CertificationInstrumentDimensionType;
+use App\Enums\CertificationInstrumentScoreUnit;
+use App\Enums\CertificationSectionResult;
 use App\Enums\ProgramScopeMode;
 use App\Models\Activity;
 use App\Models\ActivityCertificationCandidate;
@@ -14,8 +18,9 @@ use App\Models\Certificate;
 use App\Models\CertificateEnrollment;
 use App\Models\CertificateRequirement;
 use App\Models\CertificationCandidate;
-use App\Models\CertificationTool;
-use App\Models\CertificationToolSubmission;
+use App\Models\CertificationInstrument;
+use App\Models\CertificationInstrumentDimension;
+use App\Models\CertificationInstrumentSubmission;
 use App\Models\User;
 use App\Notifications\ActivityReviewRequested;
 use App\Support\Authorization\CertificateProgressAccess;
@@ -27,7 +32,7 @@ use Illuminate\Validation\ValidationException;
 class CertificationEvidenceService
 {
     /** @param array<int> $programIds */
-    public function canRecord(User $actor, array $programIds, ?CertificationTool $tool = null, ?CertificationCandidate $candidate = null): bool
+    public function canRecord(User $actor, array $programIds, ?CertificationInstrument $tool = null, ?CertificationCandidate $candidate = null): bool
     {
         $coachProgramIds = $actor->certification()->coachProgramIds();
         if ($candidate !== null) {
@@ -61,7 +66,7 @@ class CertificationEvidenceService
     }
 
     /** @param array<int> $programIds */
-    public function overlaps(Certificate|CertificationTool $catalog, array $programIds): bool
+    public function overlaps(Certificate|CertificationInstrument $catalog, array $programIds): bool
     {
         return $catalog->program_scope_mode === ProgramScopeMode::All
             || ($catalog->program_scope_mode === ProgramScopeMode::Specific && array_intersect($catalog->programs->modelKeys(), $programIds) !== []);
@@ -70,9 +75,9 @@ class CertificationEvidenceService
     /** @param array<int> $programIds
      * @return Collection<int, CertificateRequirement>
      */
-    public function matchingRequirements(CertificationCandidate $candidate, int $typeId, int $familyId, array $programIds): Collection
+    public function matchingRequirements(CertificationCandidate $candidate, int $typeId, int $familyId, array $programIds, ?int $subActivityId = null): Collection
     {
-        return $candidate->enrollments->flatMap(function (CertificateEnrollment $enrollment) use ($typeId, $familyId, $programIds) {
+        return $candidate->enrollments->flatMap(function (CertificateEnrollment $enrollment) use ($typeId, $familyId, $programIds, $subActivityId) {
             $certificate = $enrollment->certificate;
             if ($certificate === null) {
                 throw new \LogicException('Enrollment certificate is missing.');
@@ -82,7 +87,8 @@ class CertificationEvidenceService
             return $this->overlaps($certificate, $programIds)
                 ? $certificate->requirements->filter(fn (CertificateRequirement $requirement) => $requirement->phase === $phase
                     && ($requirement->activity_type_id === null || $requirement->activity_type_id === $typeId)
-                    && ($requirement->contact_family_id === null || $requirement->contact_family_id === $familyId))
+                    && ($requirement->contact_family_id === null || $requirement->contact_family_id === $familyId)
+                    && ($requirement->sub_activity_id === null || $requirement->sub_activity_id === $subActivityId))
                 : collect();
         });
     }
@@ -110,14 +116,18 @@ class CertificationEvidenceService
             'certification_candidates.*.notes' => ['nullable', 'string', 'max:10000'],
             'certification_candidates.*._delete' => ['nullable', 'boolean'],
             'certification_candidates.*.submissions' => ['sometimes', 'array', 'max:100'],
-            'certification_candidates.*.submissions.*' => ['array:id,certification_tool_id,outcome,notes,_delete,dimensions,scores'],
+            'certification_candidates.*.submissions.*' => ['array:id,certification_instrument_id,outcome,notes,_delete,dimensions,sections,section_results,scores'],
             'certification_candidates.*.submissions.*.id' => ['nullable', 'integer', 'distinct'],
-            'certification_candidates.*.submissions.*.certification_tool_id' => ['required', 'integer'],
+            'certification_candidates.*.submissions.*.certification_instrument_id' => ['required', 'integer'],
             'certification_candidates.*.submissions.*.outcome' => ['nullable', Rule::enum(CertificateTagOutcome::class)],
             'certification_candidates.*.submissions.*.notes' => ['nullable', 'string', 'max:10000'],
             'certification_candidates.*.submissions.*._delete' => ['nullable', 'boolean'],
             'certification_candidates.*.submissions.*.dimensions' => ['sometimes', 'array'],
             'certification_candidates.*.submissions.*.dimensions.*' => ['nullable', 'integer'],
+            'certification_candidates.*.submissions.*.sections' => ['sometimes', 'array', 'max:500'],
+            'certification_candidates.*.submissions.*.sections.*' => ['integer'],
+            'certification_candidates.*.submissions.*.section_results' => ['sometimes', 'array'],
+            'certification_candidates.*.submissions.*.section_results.*' => ['nullable', Rule::enum(CertificationSectionResult::class)],
             'certification_candidates.*.submissions.*.scores' => ['sometimes', 'array'],
             'certification_candidates.*.submissions.*.scores.*' => ['nullable', 'numeric', 'between:-99999999,99999999'],
             'needs_certification_review' => ['sometimes', 'boolean'],
@@ -126,7 +136,7 @@ class CertificationEvidenceService
         ])->validate();
         $activity->load(['programs', 'activityType']);
         $programIds = $activity->programs->pluck('id')->map(fn ($id) => (int) $id)->values()->all();
-        $existing = $activity->certificationCandidates()->with(['submissions.tool.programs', 'submissions.dimensionValues', 'submissions.scores'])->get()->keyBy('id');
+        $existing = $activity->certificationCandidates()->with(['submissions.instrument.programs', 'submissions.dimensionValues', 'submissions.scores'])->get()->keyBy('id');
         foreach ($data['certification_candidates'] ?? [] as $index => $row) {
             $key = "certification_candidates.{$index}";
             $tag = ! empty($row['id']) ? $existing->get((int) $row['id']) : null;
@@ -142,7 +152,7 @@ class CertificationEvidenceService
             if (! empty($row['_delete'])) {
                 if ($tag !== null) {
                     foreach ($tag->submissions as $submission) {
-                        if (! $this->canRecord($actor, $programIds, $submission->tool, $tag->candidate)) {
+                        if (! $this->canRecord($actor, $programIds, $submission->instrument, $tag->candidate)) {
                             $this->invalid($key.'._delete', 'A coach in scope must remove a candidate with recorded submissions.');
                         }
                     }
@@ -161,7 +171,7 @@ class CertificationEvidenceService
                 $this->invalid($key.'.certification_candidate_id', 'Select an active candidate from a selected agreement roster.');
             }
             $roleId = ! empty($row['certification_role_id']) ? (int) $row['certification_role_id'] : null;
-            $roleIds = $this->matchingRequirements($candidate, $activity->activity_type_id, (int) $activity->activityType?->contact_family_id, $programIds)
+            $roleIds = $this->matchingRequirements($candidate, $activity->activity_type_id, (int) $activity->activityType?->contact_family_id, $programIds, $activity->sub_activity_id)
                 ->pluck('certification_role_id')->filter()->unique()->all();
             if ($roleId !== null && $roleId !== $tag?->certification_role_id && ! in_array($roleId, $roleIds, true)) {
                 $this->invalid($key.'.certification_role_id', 'Choose a role used by this candidate’s certificate requirements for this activity.');
@@ -170,7 +180,7 @@ class CertificationEvidenceService
             $tag->fill(['certification_role_id' => $roleId, 'completion_units' => $row['completion_units'], 'notes' => $row['notes'] ?? null])->save();
             $savedSubmissions = $tag->submissions()->with(['dimensionValues', 'scores'])->get()->keyBy('id');
             foreach ($row['submissions'] ?? [] as $submissionIndex => $submissionRow) {
-                $this->saveSubmission($tag, $actor, $programIds, $submissionRow, $savedSubmissions, $key.'.submissions.'.$submissionIndex);
+                $this->saveSubmission($tag, $actor, $programIds, $submissionRow, $savedSubmissions, $key.'.submissions.'.$submissionIndex, $activity->activity_type_id);
             }
         }
         $coachIds = array_key_exists('review_coach_user_ids', $data) ? array_map('intval', $data['review_coach_user_ids']) : null;
@@ -202,6 +212,9 @@ class CertificationEvidenceService
     {
         $rows = $activity->reviewRequests()->get()->keyBy('coach_user_id');
         $allowed = array_merge($rows->keys()->map(fn ($id) => (int) $id)->all(), $this->reviewCoachOptions($activity, $programIds)->keys()->map(fn ($id) => (int) $id)->all());
+        if (User::query()->whereKey($coachIds)->where('access_profile', AccessProfile::Input)->exists()) {
+            $this->invalid('review_coach_user_ids', 'Input users cannot be asked to review activities.');
+        }
         if (array_diff($coachIds, $allowed) !== []) {
             $this->invalid('review_coach_user_ids', 'Choose coaches who supervise a tagged candidate or coach on the selected agreements.');
         }
@@ -236,25 +249,25 @@ class CertificationEvidenceService
             ->flatMap(fn (Agreement $agreement) => $agreement->allUsers())
             ->filter(fn (User $user) => array_intersect($user->certification()->coachProgramIds(), $programIds) !== []);
 
-        return $staff->merge(User::query()->whereKey($supervisingIds)->get())->where('active', true)->unique('id')->keyBy('id');
+        return $staff->merge(User::query()->whereKey($supervisingIds)->get())->where('active', true)->reject(fn (User $user) => $user->access()->isInput())->unique('id')->keyBy('id');
     }
 
     /** @param array<int> $programIds
      * @param  array<string, mixed>  $row
-     * @param  Collection<int, CertificationToolSubmission>  $existing
+     * @param  Collection<int, CertificationInstrumentSubmission>  $existing
      */
-    private function saveSubmission(ActivityCertificationCandidate $tag, User $actor, array $programIds, array $row, Collection $existing, string $key): void
+    private function saveSubmission(ActivityCertificationCandidate $tag, User $actor, array $programIds, array $row, Collection $existing, string $key, ?int $activityTypeId): void
     {
         $submission = ! empty($row['id']) ? $existing->get((int) $row['id']) : null;
         if (! empty($row['id']) && $submission === null) {
             $this->invalid($key.'.id', 'Select a submission belonging to this candidate tag.');
         }
-        $tool = CertificationTool::query()->with(['programs', 'dimensions.options', 'scoreFields'])->whereKey($row['certification_tool_id'])->first();
+        $tool = CertificationInstrument::query()->with(['programs', 'dimensions.options', 'scoreFields', 'activityType'])->whereKey($row['certification_instrument_id'])->first();
         if ($tool === null || ! $this->canRecord($actor, $programIds, $tool, $tag->candidate)) {
             $this->invalid($key, 'A certification coach in a program shared by the activity, tool, and candidate’s certificate must record submissions.');
         }
-        if ($submission !== null && $submission->certification_tool_id !== $tool->id) {
-            $this->invalid($key.'.certification_tool_id', 'A saved submission keeps its tool. Remove it and add a new submission.');
+        if ($submission !== null && $submission->certification_instrument_id !== $tool->id) {
+            $this->invalid($key.'.certification_instrument_id', 'A saved submission keeps its tool. Remove it and add a new submission.');
         }
         if (! empty($row['_delete'])) {
             $submission?->delete();
@@ -262,43 +275,108 @@ class CertificationEvidenceService
             return;
         }
         if ($submission === null && (! $tool->active || $tool->retired_at !== null || ! $this->overlaps($tool, $programIds))) {
-            $this->invalid($key.'.certification_tool_id', 'Choose an active tool available for the activity programs.');
+            $this->invalid($key.'.certification_instrument_id', 'Choose an active tool available for the activity programs.');
         }
-        if (empty($row['outcome'])) {
+        if ($submission === null && $tool->isTraining() && $tool->activity_type_id !== $activityTypeId) {
+            $this->invalid($key.'.certification_instrument_id', 'This training is recorded on '.($tool->activityType->name ?? 'another activity type').' activities only.');
+        }
+        if (empty($row['outcome']) && ! $tool->isTraining()) {
             $this->invalid($key.'.outcome', 'Choose the coach-judged outcome. Scores never decide it.');
         }
-        $dimensions = $row['dimensions'] ?? [];
-        if (array_diff(array_keys($dimensions), $tool->dimensions->modelKeys()) !== []) {
-            $this->invalid($key.'.dimensions', 'Choose dimensions belonging to this tool.');
-        }
-        foreach ($tool->dimensions as $dimension) {
-            if (! in_array((int) ($dimensions[$dimension->id] ?? 0), $dimension->options->modelKeys(), true)) {
-                $this->invalid($key.'.dimensions.'.$dimension->id, 'Choose '.$dimension->name.' for this submission.');
-            }
-        }
+        $values = $tool->isTraining() ? $this->sectionValues($tool, $row, $key) : $this->chooseOneValues($tool, $row, $key);
         if (array_diff(array_keys($row['scores'] ?? []), $tool->scoreFields->modelKeys()) !== []) {
             $this->invalid($key.'.scores', 'Use score fields belonging to this tool.');
         }
-        $submission ??= new CertificationToolSubmission(['activity_certification_candidate_id' => $tag->id, 'certification_tool_id' => $tool->id]);
-        $submission->fill(['outcome' => $row['outcome'], 'notes' => $row['notes'] ?? null]);
         $scores = array_filter($row['scores'] ?? [], fn ($value) => $value !== null && $value !== '');
+        foreach ($tool->scoreFields->where('unit', CertificationInstrumentScoreUnit::PassFail) as $field) {
+            if (isset($scores[$field->id]) && ! in_array((float) $scores[$field->id], [0.0, 1.0], true)) {
+                $this->invalid($key.'.scores.'.$field->id, 'Choose Pass or Fail for '.$field->name.', or leave it blank.');
+            }
+        }
+        foreach ($tool->scoreFields->whereNotNull('max_points') as $field) {
+            $value = isset($scores[$field->id]) ? (float) $scores[$field->id] : null;
+            if ($value !== null && ($value < 0 || $value > $field->max_points || floor($value) !== $value)) {
+                $this->invalid($key.'.scores.'.$field->id, "Enter a whole number from 0 to {$field->max_points} for {$field->name}, or leave it blank.");
+            }
+        }
+        $submission ??= new CertificationInstrumentSubmission(['activity_certification_candidate_id' => $tag->id, 'certification_instrument_id' => $tool->id]);
+        // A training's overall outcome is optional: blank is recorded as Not scored.
+        $submission->fill(['outcome' => ($row['outcome'] ?? null) ?: CertificateTagOutcome::NotScored->value, 'notes' => $row['notes'] ?? null]);
+        $savedValues = $submission->dimensionValues->map(fn ($value) => [(int) $value->certification_instrument_dimension_id, (int) $value->certification_instrument_dimension_option_id, $value->result?->value])->sortBy(fn ($value) => $value[1])->values()->all();
         if ($submission->exists && ! $submission->isDirty()
-            && $submission->dimensionValues->pluck('certification_tool_dimension_option_id', 'certification_tool_dimension_id')->all() == $dimensions
-            && $submission->scores->pluck('value', 'certification_tool_score_field_id')->all() == $scores) {
+            && $savedValues === collect($values)->sortBy(fn ($value) => $value[1])->values()->all()
+            && $submission->scores->pluck('value', 'certification_instrument_score_field_id')->all() == $scores) {
             return;
         }
         $submission->recorded_by_user_id = $actor->id;
         $submission->save();
         $submission->dimensionValues()->delete();
-        foreach ($dimensions as $dimensionId => $optionId) {
-            $submission->dimensionValues()->create(['certification_tool_dimension_id' => $dimensionId, 'certification_tool_dimension_option_id' => $optionId]);
+        foreach ($values as [$dimensionId, $optionId, $result]) {
+            $submission->dimensionValues()->create(['certification_instrument_dimension_id' => $dimensionId, 'certification_instrument_dimension_option_id' => $optionId, 'result' => $result]);
         }
         $submission->scores()->delete();
-        foreach ($row['scores'] ?? [] as $fieldId => $value) {
-            if ($value !== null && $value !== '') {
-                $submission->scores()->create(['certification_tool_score_field_id' => $fieldId, 'value' => $value]);
-            }
+        foreach ($scores as $fieldId => $value) {
+            $submission->scores()->create(['certification_instrument_score_field_id' => $fieldId, 'value' => $value]);
         }
+    }
+
+    /**
+     * One option for every choose-one dimension of a tool.
+     *
+     * @param  array<string, mixed>  $row
+     * @return list<array{0: int, 1: int, 2: null}>
+     */
+    private function chooseOneValues(CertificationInstrument $tool, array $row, string $key): array
+    {
+        $dimensions = $row['dimensions'] ?? [];
+        if (array_diff(array_keys($dimensions), $tool->dimensions->modelKeys()) !== []) {
+            $this->invalid($key.'.dimensions', 'Choose dimensions belonging to this tool.');
+        }
+        $values = [];
+        foreach ($tool->dimensions as $dimension) {
+            if (! in_array((int) ($dimensions[$dimension->id] ?? 0), $dimension->options->modelKeys(), true)) {
+                $this->invalid($key.'.dimensions.'.$dimension->id, 'Choose '.$dimension->name.' for this submission.');
+            }
+            $values[] = [$dimension->id, (int) $dimensions[$dimension->id], null];
+        }
+
+        return $values;
+    }
+
+    /**
+     * The ticked sections of a training. Scored sections need a Pass or Fail; unscored ones take no result.
+     *
+     * @param  array<string, mixed>  $row
+     * @return list<array{0: int, 1: int, 2: string|null}>
+     */
+    private function sectionValues(CertificationInstrument $tool, array $row, string $key): array
+    {
+        $dimension = $tool->sectionsDimension();
+        $ticked = array_values(array_unique(array_map('intval', $row['sections'] ?? [])));
+        $results = array_filter($row['section_results'] ?? [], fn ($result) => filled($result));
+        if (! empty($row['dimensions'])) {
+            $this->invalid($key.'.dimensions', 'Trainings record sections, not dimensions.');
+        }
+        if (! $dimension instanceof CertificationInstrumentDimension || $ticked === []) {
+            $this->invalid($key.'.sections', 'Tick at least one section covered in this submission.');
+        }
+        if (array_diff($ticked, $dimension->options->modelKeys()) !== [] || array_diff(array_map('intval', array_keys($results)), $ticked) !== []) {
+            $this->invalid($key.'.sections', 'Choose sections belonging to this training.');
+        }
+        $values = [];
+        foreach ($dimension->options->whereIn('id', $ticked) as $option) {
+            $optionId = $option->id;
+            $result = $results[$optionId] ?? null;
+            if ($option->scored && $result === null) {
+                $this->invalid($key.'.section_results.'.$optionId, 'Choose Pass or Fail for '.$option->label.'.');
+            }
+            if (! $option->scored && $result !== null) {
+                $this->invalid($key.'.section_results.'.$optionId, $option->label.' is not scored. Leave its result blank.');
+            }
+            $values[] = [$dimension->id, $optionId, $result];
+        }
+
+        return $values;
     }
 
     /**
@@ -308,7 +386,7 @@ class CertificationEvidenceService
     public function formData(User $actor, Collection $agreements, ?Activity $activity = null): array
     {
         $agreements->loadMissing(['certificationCandidates.candidate.enrollments.certificate.programs', 'certificationCandidates.candidate.enrollments.certificate.requirements.certificationRole', 'certificationCandidates.candidate.enrollments.supervisingCoach', 'users.certificationDuties', 'teams.users.certificationDuties']);
-        $tags = $activity?->certificationCandidates()->with(['candidate.enrollments.supervisingCoach', 'candidate.enrollments.certificate.programs', 'candidate.enrollments.certificate.requirements.certificationRole', 'role', 'submissions.tool.programs', 'submissions.dimensionValues', 'submissions.scores'])->get() ?? new \Illuminate\Database\Eloquent\Collection;
+        $tags = $activity?->certificationCandidates()->with(['candidate.enrollments.supervisingCoach', 'candidate.enrollments.certificate.programs', 'candidate.enrollments.certificate.requirements.certificationRole', 'role', 'submissions.instrument.programs', 'submissions.dimensionValues', 'submissions.scores'])->get() ?? new \Illuminate\Database\Eloquent\Collection;
         $people = $agreements->flatMap(fn ($agreement) => $agreement->certificationCandidates->pluck('candidate'))->merge($tags->pluck('candidate'))->filter()->unique('id');
         if ($people->isEmpty()) {
             return ['candidates' => [], 'saved' => [], 'tools' => [], 'agreement_coaches' => [], 'reviewers' => [], 'coach_program_ids' => $actor->certification()->coachProgramIds()];
@@ -319,7 +397,7 @@ class CertificationEvidenceService
             return [
                 'id' => $candidate->id, 'name' => $candidate->name, 'email' => $candidate->email, 'active' => $candidate->active,
                 'coach_program_ids' => array_values(array_unique(array_merge($actor->certification()->coachProgramIds(), $actor->certification()->coachProgramIdsViaSuperviseesFor($candidate)))),
-                'supervising_coaches' => $candidate->enrollments->pluck('supervisingCoach')->filter()->where('active', true)->unique('id')->map(fn (User $coach) => ['id' => $coach->id, 'name' => $coach->name])->values()->all(),
+                'supervising_coaches' => $candidate->enrollments->pluck('supervisingCoach')->filter()->where('active', true)->reject(fn (User $coach) => $coach->access()->isInput())->unique('id')->map(fn (User $coach) => ['id' => $coach->id, 'name' => $coach->name])->values()->all(),
                 'agreements' => $agreements->filter(fn ($agreement) => $agreement->certificationCandidates->contains('certification_candidate_id', $candidate->id))->map(fn ($agreement) => ['id' => $agreement->id, 'name' => $agreement->name])->values()->all(),
                 'enrollments' => $candidate->enrollments->filter(fn ($enrollment) => in_array($enrollment->certificate_id, $visibleCertificateIds, true))->map(function (CertificateEnrollment $enrollment) use ($access, $actor): array {
                     $certificate = $enrollment->certificate;
@@ -334,9 +412,9 @@ class CertificationEvidenceService
                         'program_ids' => $certificate->programs->modelKeys(),
                         'url' => $access->canView($actor, $enrollment) ? route('certificate-enrollments.show', $enrollment) : null,
                         'requirements' => $certificate->requirements->where('phase', $phase)->map(fn ($requirement) => [
-                            'type_id' => $requirement->activity_type_id, 'family_id' => $requirement->contact_family_id,
+                            'type_id' => $requirement->activity_type_id, 'family_id' => $requirement->contact_family_id, 'sub_id' => $requirement->sub_activity_id,
                             'role_id' => $requirement->certification_role_id, 'role_name' => $requirement->certificationRole?->name,
-                            'tool_id' => $requirement->certification_tool_id, 'kind' => $requirement->kind->value,
+                            'tool_id' => $requirement->certification_instrument_id, 'kind' => $requirement->kind->value,
                             'label' => $details ? $requirement->label : null,
                             'guidance' => $details ? $requirement->threshold_note : null,
                         ])->values()->all(),
@@ -355,17 +433,21 @@ class CertificationEvidenceService
                 'agreement_id' => $tag->agreement_id, 'certification_role_id' => $tag->certification_role_id,
                 'role_name' => $tag->role?->name, 'completion_units' => $tag->completion_units, 'notes' => $tag->notes,
                 'submission_count' => $tag->submissions->count(),
-                'submissions' => $details ? $tag->submissions->filter(fn ($submission) => $actor->isSystemAdmin() || $this->overlaps($submission->tool, array_values(array_intersect($programIds, $detailedProgramIds))))->map(fn ($submission) => [
-                    'id' => $submission->id, 'certification_tool_id' => $submission->certification_tool_id,
+                'submissions' => $details ? $tag->submissions->filter(fn ($submission) => $actor->isSystemAdmin() || $this->overlaps($submission->instrument, array_values(array_intersect($programIds, $detailedProgramIds))))->map(fn ($submission) => [
+                    'id' => $submission->id, 'certification_instrument_id' => $submission->certification_instrument_id,
                     'outcome' => $submission->outcome->value, 'notes' => $submission->notes,
-                    'editable' => $this->canRecord($actor, $programIds, $submission->tool, $tag->candidate),
-                    'dimensions' => $submission->dimensionValues->pluck('certification_tool_dimension_option_id', 'certification_tool_dimension_id')->all(),
-                    'scores' => $submission->scores->pluck('value', 'certification_tool_score_field_id')->all(),
+                    'editable' => $this->canRecord($actor, $programIds, $submission->instrument, $tag->candidate),
+                    'dimensions' => $submission->instrument->isTraining() ? [] : $submission->dimensionValues->pluck('certification_instrument_dimension_option_id', 'certification_instrument_dimension_id')->all(),
+                    'sections' => $submission->instrument->isTraining() ? $submission->dimensionValues->pluck('certification_instrument_dimension_option_id')->all() : [],
+                    'section_results' => $submission->instrument->isTraining() ? $submission->dimensionValues->filter(fn ($value) => $value->result !== null)->mapWithKeys(fn ($value) => [$value->certification_instrument_dimension_option_id => $value->result?->value])->all() : [],
+                    'scores' => $submission->scores->pluck('value', 'certification_instrument_score_field_id')->all(),
                 ])->values()->all() : [],
             ];
         })->values()->all();
-        $tools = CertificationTool::query()->visibleTo($actor)->with(['programs', 'dimensions.options', 'scoreFields'])->get()
-            ->merge($tags->flatMap(fn ($tag) => $tag->submissions->pluck('tool')))->unique('id');
+        // Logging-form choices are independent of setup-list access for members.
+        $tools = CertificationInstrument::query()
+            ->when($actor->access()->hasView() || $actor->access()->isInput(), fn ($query) => $query->visibleTo($actor))->with(['programs', 'dimensions.options', 'scoreFields'])->get()
+            ->merge($tags->flatMap(fn ($tag) => $tag->submissions->pluck('instrument')))->unique('id');
         $tools->loadMissing(['dimensions.options', 'scoreFields']);
 
         return [
@@ -373,13 +455,14 @@ class CertificationEvidenceService
             'coach_program_ids' => $actor->certification()->coachProgramIds(),
             'agreement_coaches' => $agreements->flatMap(fn (Agreement $agreement) => $agreement->allUsers()->where('active', true)->map(fn (User $user) => ['id' => $user->id, 'name' => $user->name, 'program_ids' => $user->certification()->coachProgramIds(), 'agreement_id' => $agreement->id]))
                 ->filter(fn (array $coach) => $coach['program_ids'] !== [])->unique(fn (array $coach) => $coach['id'].'-'.$coach['agreement_id'])->values()->all(),
-            'reviewers' => $activity?->reviewRequests()->whereNull('cleared_at')->with('coach:id,name')->get()->map(fn (ActivityReviewRequest $request) => ['id' => $request->coach_user_id, 'name' => $request->coach->name])->values()->all() ?? [],
+            'reviewers' => $activity?->reviewRequests()->whereNull('cleared_at')->whereHas('coach', fn ($query) => $query->where('access_profile', '!=', AccessProfile::Input))->with('coach:id,name')->get()->map(fn (ActivityReviewRequest $request) => ['id' => $request->coach_user_id, 'name' => $request->coach->name])->values()->all() ?? [],
             'tools' => $tools->map(fn ($tool) => [
-                'id' => $tool->id, 'name' => $tool->name, 'description' => $tool->description,
+                'id' => $tool->id, 'name' => $tool->name, 'description' => $tool->description, 'type' => $tool->type->value, 'activity_type_id' => $tool->activity_type_id,
                 'active' => $tool->active && $tool->retired_at === null, 'mode' => $tool->program_scope_mode->value,
                 'program_ids' => $tool->programs->modelKeys(),
-                'dimensions' => $tool->dimensions->map(fn ($dimension) => ['id' => $dimension->id, 'name' => $dimension->name, 'options' => $dimension->options->map(fn ($option) => ['id' => $option->id, 'label' => $option->label])->all()])->all(),
-                'score_fields' => $tool->scoreFields->map(fn ($field) => ['id' => $field->id, 'name' => $field->name, 'unit' => $field->unit->value])->all(),
+                'dimensions' => $tool->dimensions->where('type', CertificationInstrumentDimensionType::ChooseOne)->map(fn ($dimension) => ['id' => $dimension->id, 'name' => $dimension->name, 'options' => $dimension->options->map(fn ($option) => ['id' => $option->id, 'label' => $option->label])->all()])->values()->all(),
+                'sections' => $tool->sectionsDimension()?->options->map(fn ($option) => ['id' => $option->id, 'label' => $option->label, 'scored' => $option->scored])->values()->all() ?? [],
+                'score_fields' => $tool->scoreFields->map(fn ($field) => ['id' => $field->id, 'name' => $field->name, 'unit' => $field->unit->value, 'max_points' => $field->max_points])->all(),
             ])->values()->all(),
         ];
     }

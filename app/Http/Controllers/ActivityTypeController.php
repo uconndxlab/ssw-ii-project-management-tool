@@ -6,6 +6,7 @@ use App\Enums\ProgramScopeMode;
 use App\Models\Activity;
 use App\Models\ActivityType;
 use App\Models\AgreementDeliverable;
+use App\Models\CertificateRequirement;
 use App\Models\ContactFamily;
 use App\Models\LoggingField;
 use App\Models\Program;
@@ -25,10 +26,6 @@ class ActivityTypeController extends Controller
     public function index(Request $request): View
     {
         $this->authorize('viewAny', ActivityType::class);
-        $contactFamilies = ContactFamily::query()->orderBy('sort_order', 'asc')
-            ->orderBy('name', 'asc')
-            ->get(['id', 'name']);
-
         $query = ActivityType::query()
             ->visibleTo($this->actor())
             ->with(['contactFamily', 'programs.projects']);
@@ -37,9 +34,9 @@ class ActivityTypeController extends Controller
         $search = trim((string) $request->input('search', ''));
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
-                $q->whereIlike('activity_types.name', "%{$search}%")
+                $q->whereLike('activity_types.name', "%{$search}%")
                     ->orWhereHas('contactFamily', function ($familyQuery) use ($search) {
-                        $familyQuery->whereIlike('name', "%{$search}%");
+                        $familyQuery->whereLike('name', "%{$search}%");
                     });
             });
         }
@@ -77,6 +74,13 @@ class ActivityTypeController extends Controller
 
         $activityTypes = $query->paginate(TablePagination::perPage($request))->withQueryString();
 
+        if ($request->header('HX-Request') === 'true' && $request->input('partial') !== 'filters') {
+            return view('admin.activity-types.partials.table', compact('activityTypes', 'sort', 'direction'));
+        }
+
+        $contactFamilies = ContactFamily::query()->orderBy('sort_order', 'asc')
+            ->orderBy('name', 'asc')
+            ->get(['id', 'name']);
         $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
         $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
 
@@ -88,10 +92,6 @@ class ActivityTypeController extends Controller
                 'filterProjects',
                 'filterPrograms',
             ));
-        }
-
-        if ($request->header('HX-Request') === 'true') {
-            return view('admin.activity-types.partials.table', compact('activityTypes', 'sort', 'direction'));
         }
 
         return view('admin.activity-types.index', compact(
@@ -308,10 +308,10 @@ class ActivityTypeController extends Controller
             ->where('activity_type_id', $activityType->getKey())
             ->exists();
 
-        if ($isUsedInActivities) {
+        if ($isUsedInActivities || AgreementDeliverable::query()->where('activity_type_id', $activityType->id)->exists() || CertificateRequirement::query()->where('activity_type_id', $activityType->id)->exists() || $activityType->subActivities()->exists()) {
             return redirect()
                 ->route('activity-types.index')
-                ->with('error', 'Cannot delete activity type that is used in activities.');
+                ->with('error', 'Cannot delete activity type that is used in activities, agreement deliverables or certificate requirements, or has sub-activities.');
         }
 
         ActivityType::query()->whereKey($activityType->getKey())->delete();

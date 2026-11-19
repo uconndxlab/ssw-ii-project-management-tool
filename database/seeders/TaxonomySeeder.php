@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\ActivityType;
 use App\Models\ContactFamily;
+use App\Models\SubActivity;
 use Illuminate\Database\Seeder;
 
 class TaxonomySeeder extends Seeder
@@ -52,12 +53,17 @@ class TaxonomySeeder extends Seeder
 
             $typeSortOrder = 0;
             foreach ($typeNames as $typeName) {
-                ActivityType::factory()->create([
+                $type = ActivityType::factory()->create([
                     'contact_family_id' => $family->id,
                     'name' => $typeName,
                     'active' => true,
                     'sort_order' => $typeSortOrder++,
                 ]);
+                if ($familyName === 'Training' && $typeSortOrder <= 2) {
+                    foreach (['Introduction', 'Practice', 'Review'] as $order => $name) {
+                        SubActivity::factory()->create(['activity_type_id' => $type->id, 'name' => $name, 'sort_order' => $order]);
+                    }
+                }
             }
         }
     }

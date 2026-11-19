@@ -140,9 +140,8 @@ final class AgreementOverview
     {
         $deliverable = $item['deliverable'];
 
-        return $deliverable->activity_type_id !== null
-            ? $deliverable->activityType->name
-            : 'Any '.($deliverable->contact_family_id !== null ? $deliverable->contactFamily->name : 'Unspecified Activity Family').' activity';
+        return $deliverable->classificationLabel()
+            ?? 'Any '.($deliverable->contact_family_id !== null ? $deliverable->contactFamily->name : 'Unspecified Activity Family').' activity';
     }
 
     /**
