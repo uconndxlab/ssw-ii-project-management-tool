@@ -78,6 +78,11 @@ test('activity scope filters combine with existing filters sorting and paginatio
         ->assertSee('value="'.$program->id.'" selected', false);
 
     $this->actingAs($admin)->withHeader('HX-Request', 'true')
+        ->get(route('activities.index', $filters))
+        ->assertOk()->assertViewIs('activities.partials.table')
+        ->assertViewHas('activities', fn ($page) => $page->modelKeys() === $activities->modelKeys());
+
+    $this->actingAs($admin)->withHeader('HX-Request', 'true')
         ->get(route('activities.index', [...$filters, 'partial' => 'filters']))
         ->assertOk()->assertSee('name="project_id"', false)->assertSee('name="program_id"', false)
         ->assertSee('id="activities-table"', false);

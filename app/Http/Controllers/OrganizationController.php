@@ -29,8 +29,6 @@ class OrganizationController extends Controller
     {
         $this->authorize('viewAny', Organization::class);
 
-        $states = State::orderBy('name', 'asc')->get(['id', 'name']);
-
         $query = Organization::query()
             ->visibleTo($this->actor())
             ->with([
@@ -86,17 +84,17 @@ class OrganizationController extends Controller
 
         $organizations = $query->paginate(TablePagination::perPage($request))->withQueryString();
 
+        if ($request->header('HX-Request') === 'true' && $request->input('partial') !== 'filters') {
+            return view('organizations.partials.table', compact('organizations', 'sort', 'direction'));
+        }
+
+        $states = State::orderBy('name', 'asc')->get(['id', 'name']);
         $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
         $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
 
         // HTMX: filters only
         if ($request->header('HX-Request') === 'true' && $request->input('partial') === 'filters') {
             return view('organizations.partials.filters', compact('states', 'filterProjects', 'filterPrograms', 'sort', 'direction'));
-        }
-
-        // HTMX: table only
-        if ($request->header('HX-Request') === 'true') {
-            return view('organizations.partials.table', compact('organizations', 'sort', 'direction'));
         }
 
         return view('organizations.index', compact(

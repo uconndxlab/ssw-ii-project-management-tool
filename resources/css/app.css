@@ -3861,3 +3861,38 @@ a.app-row-link:focus-visible::after {
 .app-auth-brand .app-record-icon {
     margin-bottom: 0.75rem;
 }
+
+/* Keep explanations above the stretched row link so hovering a tag shows its title. */
+.app-access-reasons > .app-tag {
+    position: relative;
+    z-index: 2;
+    cursor: default;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.app-access-reasons .app-more-menu {
+    width: min(26rem, calc(100vw - 2rem));
+}
+
+/* A row has at most a handful of reasons; show them all rather than scrolling a short list. */
+.app-access-reasons .app-more-list {
+    max-height: none;
+}
+
+.app-access-reasons .app-more-menu .app-tag {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 767.98px) {
+    .app-access-reasons {
+        flex-wrap: wrap;
+    }
+
+    .app-access-reasons > .app-tag {
+        max-width: 100%;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+}

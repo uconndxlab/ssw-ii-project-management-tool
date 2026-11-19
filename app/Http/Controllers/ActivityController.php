@@ -23,6 +23,7 @@ use App\Services\DeliverableContributionService;
 use App\Services\PrivateFileService;
 use App\Support\ActivityFundingSourceTokens;
 use App\Support\ActivityTypeDuration;
+use App\Support\Authorization\AccessReasons;
 use App\Support\ProgramParticipantDirectory;
 use App\Support\ProjectProgramScope;
 use App\Support\SubActivityOptions;
@@ -64,9 +65,6 @@ class ActivityController extends Controller
         } elseif ($embedded) {
             $this->authorize('view', Agreement::query()->findOrFail($request->integer('agreement_id')));
         }
-
-        $visibleAgreements = $this->getVisibleAgreements()->load(['organizations', 'states']);
-        $visibleAgreementIds = $visibleAgreements->pluck('id');
 
         $query = Activity::query()
             ->visibleTo($this->actor())
@@ -149,6 +147,69 @@ class ActivityController extends Controller
             $query->whereHas('certificationCandidates', fn ($relation) => $relation->where('certification_candidate_id', $embeddedCandidateId));
         }
 
+        // Sorting
+        $sort = $request->input('sort', 'date');
+        $direction = $request->input('direction', 'desc') === 'asc' ? 'asc' : 'desc';
+
+        switch ($sort) {
+            case 'organization':
+                $query->orderByRaw("COALESCE((SELECT MIN(organizations.name) FROM organizations
+                    INNER JOIN activity_organization ON activity_organization.organization_id = organizations.id
+                    WHERE activity_organization.activity_id = activities.id), '') {$direction}");
+                break;
+
+            case 'program':
+                $query->orderByRaw("COALESCE((SELECT MIN(programs.name) FROM programs
+                    INNER JOIN activity_program ON activity_program.program_id = programs.id
+                    WHERE activity_program.activity_id = activities.id), '') {$direction}");
+                break;
+
+            case 'project':
+                $query->orderByRaw("COALESCE((SELECT MIN(projects.name) FROM projects
+                    INNER JOIN program_project ON program_project.project_id = projects.id
+                    INNER JOIN activity_program ON activity_program.program_id = program_project.program_id
+                    WHERE activity_program.activity_id = activities.id), '') {$direction}");
+                break;
+
+            case 'agreement':
+                $query->orderByRaw($this->minActivityAgreementNameSql().($direction === 'desc' ? ' DESC' : ' ASC'));
+                break;
+
+            case 'activity_type':
+                $query->join('activity_types', 'activities.activity_type_id', '=', 'activity_types.id')
+                    ->select('activities.*')
+                    ->orderBy('activity_types.name', $direction);
+                break;
+
+            case 'logged_by':
+                $query->join('users', 'activities.user_id', '=', 'users.id')
+                    ->select('activities.*')
+                    ->orderBy('users.name', $direction);
+                break;
+
+            case 'date':
+            default:
+                $query->orderBy('engagement_date', $direction);
+                break;
+        }
+
+        $query->orderBy('activities.id', $direction);
+
+        $activities = $query->withCount('certificationCandidates')->paginate(TablePagination::perPage($request))->withQueryString();
+        $roleReasons = AccessReasons::forPage($activities->getCollection(), $this->actor());
+
+        // HTMX: table only
+        if ($request->header('HX-Request') === 'true' && $request->input('partial') !== 'filters' && ! $embedded) {
+            return view('activities.partials.table', compact(
+                'activities', 'roleReasons',
+                'sort',
+                'direction'
+            ));
+        }
+
+        $visibleAgreements = $this->getVisibleAgreements()->load(['organizations', 'states']);
+        $visibleAgreementIds = $visibleAgreements->pluck('id');
+
         $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
         $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
 
@@ -212,62 +273,9 @@ class ActivityController extends Controller
 
         $subActivities = SubActivity::with('activityType')->orderBy('name')->get()->groupBy('activity_type_id');
 
-        // Sorting
-        $sort = $request->input('sort', 'date');
-        $direction = $request->input('direction', 'desc') === 'asc' ? 'asc' : 'desc';
-
-        switch ($sort) {
-            case 'organization':
-                $query->orderByRaw("COALESCE((SELECT MIN(organizations.name) FROM organizations
-                    INNER JOIN activity_organization ON activity_organization.organization_id = organizations.id
-                    WHERE activity_organization.activity_id = activities.id), '') {$direction}");
-                break;
-
-            case 'program':
-                $query->orderByRaw("COALESCE((SELECT MIN(programs.name) FROM programs
-                    INNER JOIN activity_program ON activity_program.program_id = programs.id
-                    WHERE activity_program.activity_id = activities.id), '') {$direction}");
-                break;
-
-            case 'project':
-                $query->orderByRaw("COALESCE((SELECT MIN(projects.name) FROM projects
-                    INNER JOIN program_project ON program_project.project_id = projects.id
-                    INNER JOIN activity_program ON activity_program.program_id = program_project.program_id
-                    WHERE activity_program.activity_id = activities.id), '') {$direction}");
-                break;
-
-            case 'agreement':
-                $query->orderByRaw($this->minActivityAgreementNameSql().($direction === 'desc' ? ' DESC' : ' ASC'));
-                break;
-
-            case 'activity_type':
-                $query->join('activity_types', 'activities.activity_type_id', '=', 'activity_types.id')
-                    ->select('activities.*')
-                    ->orderBy('activity_types.name', $direction);
-                break;
-
-            case 'logged_by':
-                $query->join('users', 'activities.user_id', '=', 'users.id')
-                    ->select('activities.*')
-                    ->orderBy('users.name', $direction);
-                break;
-
-            case 'date':
-            default:
-                $query->orderBy('engagement_date', $direction);
-                break;
-        }
-
-        $query->orderBy('activities.id', $direction);
-
-        $activities = $query->withCount('certificationCandidates')->paginate(TablePagination::perPage($request))->withQueryString();
-        $activityIds = $activities->getCollection()->pluck('id')->map(fn ($id) => (int) $id)->all();
-        $this->actor()->access()->primeCertificationReviewers($activityIds);
-        $this->actor()->access()->primeActivityVisibility($activityIds);
-
         if ($embedded) {
             return view('agreements.partials.activity-tab', compact(
-                'activities', 'states', 'organizations', 'agreements', 'activityTypes', 'subActivities',
+                'activities', 'roleReasons', 'states', 'organizations', 'agreements', 'activityTypes', 'subActivities',
                 'filterProjects', 'filterPrograms', 'sort', 'direction', 'embedded',
             ));
         }
@@ -275,7 +283,7 @@ class ActivityController extends Controller
         // HTMX: refresh cascading filters and table together
         if ($request->header('HX-Request') === 'true' && $request->input('partial') === 'filters') {
             return view('activities.partials.filters-response', compact(
-                'activities',
+                'activities', 'roleReasons',
                 'states',
                 'organizations',
                 'agreements',
@@ -287,17 +295,8 @@ class ActivityController extends Controller
             ));
         }
 
-        // HTMX: table only
-        if ($request->header('HX-Request') === 'true') {
-            return view('activities.partials.table', compact(
-                'activities',
-                'sort',
-                'direction'
-            ));
-        }
-
         return view('activities.index', compact(
-            'activities',
+            'activities', 'roleReasons',
             'states',
             'organizations',
             'agreements',

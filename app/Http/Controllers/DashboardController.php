@@ -10,7 +10,6 @@ use App\Models\State;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
-use Illuminate\Support\Collection;
 
 class DashboardController extends Controller
 {
@@ -70,7 +69,6 @@ class DashboardController extends Controller
 
         // Admins get their own personal work shown alongside the system-wide stats
         ['agreements' => $myAgreements, 'activities' => $myActivities, 'deliverables' => $myAssignedDeliverables] = $this->personalWorkData($user);
-        $this->primeOrganizationLinks($user, $myActivities->concat($recentActivities));
 
         return view('home', compact('ytdTotals', 'recentActivities', 'agreements', 'stats', 'user', 'myActivities', 'myAgreements', 'myAssignedDeliverables'));
     }
@@ -101,21 +99,8 @@ class DashboardController extends Controller
         ];
 
         $recentActivities = collect();
-        $this->primeOrganizationLinks($user, $myActivities);
 
         return view('home', compact('myAgreements', 'myActivities', 'stats', 'user', 'myActivities', 'myAgreements', 'myAssignedDeliverables', 'recentActivities'));
-    }
-
-    /**
-     * Check visibility of every covered organization in one query, so the rows' org links don't query per badge.
-     *
-     * @param  Collection<int, Activity>  $activities
-     */
-    protected function primeOrganizationLinks(User $user, Collection $activities): void
-    {
-        $user->access()->primeOrganizationVisibility(
-            $activities->flatMap(fn (Activity $activity) => $activity->organizations)->pluck('id')->unique()->all()
-        );
     }
 
     /**

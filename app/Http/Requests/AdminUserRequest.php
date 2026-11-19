@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\AccessProfile;
+use App\Enums\CertificationDuty;
 use App\Enums\ProgramScopeMode;
 use App\Models\User;
 use App\Support\Authorization\ScopeSync;
@@ -118,6 +119,19 @@ class AdminUserRequest extends FormRequest
             }
 
             $profile = $this->isEditingSelf() ? null : AccessProfile::tryFrom((string) $this->input('access_profile'));
+
+            $effectiveProfile = $this->isEditingSelf() ? $actor->access_profile : $profile;
+            if ($effectiveProfile === AccessProfile::Input) {
+                if ($user instanceof User && $user->certificationDuties()->whereNull('revoked_at')
+                    ->whereIn('duty', [CertificationDuty::Coach, CertificationDuty::Manager])->exists()) {
+                    $validator->errors()->add('access_profile', 'Revoke this user’s active coach and manager duties before changing their profile to Input.');
+                }
+                foreach (['coach', 'manager'] as $duty) {
+                    if ($this->boolean("duty_{$duty}_system") || $this->filled("duty_{$duty}_program_ids")) {
+                        $validator->errors()->add("duty_{$duty}_program_ids", 'Input users cannot be certification coaches or managers.');
+                    }
+                }
+            }
 
             if ($profile === AccessProfile::AdminViewer) {
                 $coverage = $this->input('privilege_coverage', 'specific');

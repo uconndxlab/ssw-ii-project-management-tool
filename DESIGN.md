@@ -331,7 +331,11 @@ When a row has a permitted record-view link, stretch that native anchor across t
 
 Table stacking is explicit: row targets use layer 1, secondary links and dropdown wrappers use 2, open dropdown wrappers use 5, and the opaque sticky header uses 6. Apply dropdown layers to every table, including lists without stretched links. Do not isolate the table body into its own stacking context: fixed dropdown menus must remain usable beyond a short table's edge.
 
-A table being replaced by htmx is dimmed (`is-loading`) and marked `aria-busy`, and the polite live region (`#app-live`) announces the new result summary. Every sortable column shows outline up/down carets at rest; the active direction uses one filled caret and exposes `aria-sort`. Pagination arrows and the current page are named. An agreement's embedded activity table drops the Agreements column.
+A table being replaced by htmx is dimmed (`is-loading`) and marked `aria-busy`, and the polite live region (`#app-live`) announces the new result summary. Every sortable column shows outline up/down carets at rest; the active direction uses one filled caret and exposes `aria-sort`. Pagination arrows and the current page are named. An agreement's embedded activity table retains the Agreements column because an activity can cover several agreements.
+
+Activities and Agreements tables place a non-sortable My role column immediately before row actions, including embedded activity tables.
+Like other related-record cells, show the first non-clickable `.app-tag` label, then the house +N menu listing every reason with a one-line explanation, in personal, supervision/review, privilege, then system order.
+The first tag's explanation is also its hover title; scope names identify program or project privileges without additional colors or icons.
 
 Every listing has a pagination footer, including empty and single-page results. It combines a Show selector (10, 25, 50 or 100 rows, default 25), the current result range and page navigation when needed. Page-size changes return to page 1 and preserve search, filters and sorting. The chosen size stays in the URL, survives htmx swaps and filter clearing, and is bounded on the server. Activity Families uses this same pagination rather than loading every record.
 

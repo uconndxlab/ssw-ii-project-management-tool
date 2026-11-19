@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\AccessProfile;
 use App\Enums\CertificateRequirementPhase;
 use App\Enums\CertificateTagOutcome;
 use App\Enums\CertificationInstrumentDimensionType;
@@ -211,6 +212,9 @@ class CertificationEvidenceService
     {
         $rows = $activity->reviewRequests()->get()->keyBy('coach_user_id');
         $allowed = array_merge($rows->keys()->map(fn ($id) => (int) $id)->all(), $this->reviewCoachOptions($activity, $programIds)->keys()->map(fn ($id) => (int) $id)->all());
+        if (User::query()->whereKey($coachIds)->where('access_profile', AccessProfile::Input)->exists()) {
+            $this->invalid('review_coach_user_ids', 'Input users cannot be asked to review activities.');
+        }
         if (array_diff($coachIds, $allowed) !== []) {
             $this->invalid('review_coach_user_ids', 'Choose coaches who supervise a tagged candidate or coach on the selected agreements.');
         }
@@ -245,7 +249,7 @@ class CertificationEvidenceService
             ->flatMap(fn (Agreement $agreement) => $agreement->allUsers())
             ->filter(fn (User $user) => array_intersect($user->certification()->coachProgramIds(), $programIds) !== []);
 
-        return $staff->merge(User::query()->whereKey($supervisingIds)->get())->where('active', true)->unique('id')->keyBy('id');
+        return $staff->merge(User::query()->whereKey($supervisingIds)->get())->where('active', true)->reject(fn (User $user) => $user->access()->isInput())->unique('id')->keyBy('id');
     }
 
     /** @param array<int> $programIds
@@ -387,7 +391,7 @@ class CertificationEvidenceService
             return [
                 'id' => $candidate->id, 'name' => $candidate->name, 'email' => $candidate->email, 'active' => $candidate->active,
                 'coach_program_ids' => array_values(array_unique(array_merge($actor->certification()->coachProgramIds(), $actor->certification()->coachProgramIdsViaSuperviseesFor($candidate)))),
-                'supervising_coaches' => $candidate->enrollments->pluck('supervisingCoach')->filter()->where('active', true)->unique('id')->map(fn (User $coach) => ['id' => $coach->id, 'name' => $coach->name])->values()->all(),
+                'supervising_coaches' => $candidate->enrollments->pluck('supervisingCoach')->filter()->where('active', true)->reject(fn (User $coach) => $coach->access()->isInput())->unique('id')->map(fn (User $coach) => ['id' => $coach->id, 'name' => $coach->name])->values()->all(),
                 'agreements' => $agreements->filter(fn ($agreement) => $agreement->certificationCandidates->contains('certification_candidate_id', $candidate->id))->map(fn ($agreement) => ['id' => $agreement->id, 'name' => $agreement->name])->values()->all(),
                 'enrollments' => $candidate->enrollments->filter(fn ($enrollment) => in_array($enrollment->certificate_id, $visibleCertificateIds, true))->map(function (CertificateEnrollment $enrollment) use ($access, $actor): array {
                     $certificate = $enrollment->certificate;
@@ -434,7 +438,9 @@ class CertificationEvidenceService
                 ])->values()->all() : [],
             ];
         })->values()->all();
-        $tools = CertificationInstrument::query()->visibleTo($actor)->with(['programs', 'dimensions.options', 'scoreFields'])->get()
+        // Logging-form choices are independent of setup-list access for members.
+        $tools = CertificationInstrument::query()
+            ->when($actor->access()->hasView() || $actor->access()->isInput(), fn ($query) => $query->visibleTo($actor))->with(['programs', 'dimensions.options', 'scoreFields'])->get()
             ->merge($tags->flatMap(fn ($tag) => $tag->submissions->pluck('instrument')))->unique('id');
         $tools->loadMissing(['dimensions.options', 'scoreFields']);
 
@@ -443,7 +449,7 @@ class CertificationEvidenceService
             'coach_program_ids' => $actor->certification()->coachProgramIds(),
             'agreement_coaches' => $agreements->flatMap(fn (Agreement $agreement) => $agreement->allUsers()->where('active', true)->map(fn (User $user) => ['id' => $user->id, 'name' => $user->name, 'program_ids' => $user->certification()->coachProgramIds(), 'agreement_id' => $agreement->id]))
                 ->filter(fn (array $coach) => $coach['program_ids'] !== [])->unique(fn (array $coach) => $coach['id'].'-'.$coach['agreement_id'])->values()->all(),
-            'reviewers' => $activity?->reviewRequests()->whereNull('cleared_at')->with('coach:id,name')->get()->map(fn (ActivityReviewRequest $request) => ['id' => $request->coach_user_id, 'name' => $request->coach->name])->values()->all() ?? [],
+            'reviewers' => $activity?->reviewRequests()->whereNull('cleared_at')->whereHas('coach', fn ($query) => $query->where('access_profile', '!=', AccessProfile::Input))->with('coach:id,name')->get()->map(fn (ActivityReviewRequest $request) => ['id' => $request->coach_user_id, 'name' => $request->coach->name])->values()->all() ?? [],
             'tools' => $tools->map(fn ($tool) => [
                 'id' => $tool->id, 'name' => $tool->name, 'description' => $tool->description, 'type' => $tool->type->value, 'activity_type_id' => $tool->activity_type_id,
                 'active' => $tool->active && $tool->retired_at === null, 'mode' => $tool->program_scope_mode->value,

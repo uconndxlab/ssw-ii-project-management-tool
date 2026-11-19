@@ -26,10 +26,6 @@ class ActivityTypeController extends Controller
     public function index(Request $request): View
     {
         $this->authorize('viewAny', ActivityType::class);
-        $contactFamilies = ContactFamily::query()->orderBy('sort_order', 'asc')
-            ->orderBy('name', 'asc')
-            ->get(['id', 'name']);
-
         $query = ActivityType::query()
             ->visibleTo($this->actor())
             ->with(['contactFamily', 'programs.projects']);
@@ -78,6 +74,13 @@ class ActivityTypeController extends Controller
 
         $activityTypes = $query->paginate(TablePagination::perPage($request))->withQueryString();
 
+        if ($request->header('HX-Request') === 'true' && $request->input('partial') !== 'filters') {
+            return view('admin.activity-types.partials.table', compact('activityTypes', 'sort', 'direction'));
+        }
+
+        $contactFamilies = ContactFamily::query()->orderBy('sort_order', 'asc')
+            ->orderBy('name', 'asc')
+            ->get(['id', 'name']);
         $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
         $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
 
@@ -89,10 +92,6 @@ class ActivityTypeController extends Controller
                 'filterProjects',
                 'filterPrograms',
             ));
-        }
-
-        if ($request->header('HX-Request') === 'true') {
-            return view('admin.activity-types.partials.table', compact('activityTypes', 'sort', 'direction'));
         }
 
         return view('admin.activity-types.index', compact(

@@ -60,7 +60,7 @@ it('filters sorts and pages the embedded list within its agreement', function ()
         ->assertSee('data-table-filter-ignore="embedded,agreement_id"', false)
         ->assertDontSee('hx-push-url="true"', false)
         ->assertDontSee('Filter by agreement')
-        ->assertDontSee('data-label="Agreement"', false);
+        ->assertSee('data-label="Agreement"', false);
 
     $this->get(route('activities.index', $parameters + ['page' => 2]), ['HX-Request' => 'true'])
         ->assertOk()
@@ -97,7 +97,7 @@ it('links viewable organizations and shows restricted organization names in embe
     $response->assertOk()
         ->assertSee('sort=organization', false)
         ->assertSee('data-label="Organizations"', false)
-        ->assertDontSee('data-label="Agreement"', false)
+        ->assertSee('data-label="Agreement"', false)
         ->assertSee($visible->name)
         ->assertSee('href="'.route('organizations.show', $visible).'"', false)
         ->assertSee($restricted->name)

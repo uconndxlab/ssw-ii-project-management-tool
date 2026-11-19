@@ -29,10 +29,6 @@ class SubActivityController extends Controller
     public function index(Request $request): View
     {
         $this->authorize('viewAny', SubActivity::class);
-        $activityTypes = ActivityType::query()->with('contactFamily')->orderBy('sort_order', 'asc')
-            ->orderBy('name', 'asc')
-            ->get();
-
         $query = SubActivity::query()
             ->visibleTo($this->actor())
             ->with(['activityType.contactFamily', 'programs.projects']);
@@ -81,6 +77,13 @@ class SubActivityController extends Controller
 
         $subActivities = $query->paginate(TablePagination::perPage($request))->withQueryString();
 
+        if ($request->header('HX-Request') === 'true' && $request->input('partial') !== 'filters') {
+            return view('admin.sub-activities.partials.table', compact('subActivities', 'sort', 'direction'));
+        }
+
+        $activityTypes = ActivityType::query()->with('contactFamily')->orderBy('sort_order', 'asc')
+            ->orderBy('name', 'asc')
+            ->get();
         $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
         $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
 
@@ -92,10 +95,6 @@ class SubActivityController extends Controller
                 'filterProjects',
                 'filterPrograms',
             ));
-        }
-
-        if ($request->header('HX-Request') === 'true') {
-            return view('admin.sub-activities.partials.table', compact('subActivities', 'sort', 'direction'));
         }
 
         return view('admin.sub-activities.index', compact(

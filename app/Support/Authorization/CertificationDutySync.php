@@ -6,6 +6,7 @@ use App\Enums\CertificationDuty;
 use App\Enums\PrivilegeScopeType;
 use App\Models\User;
 use App\Models\UserCertificationDuty;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Smallest grant/revoke control for coach/manager duties (spine decision 4: duties live outside
@@ -20,6 +21,14 @@ class CertificationDutySync
      */
     public static function apply(User $actor, User $target, array $submitted): void
     {
+        if ($target->access()->isInput()) {
+            foreach (['coach', 'manager'] as $duty) {
+                if (($submitted["{$duty}_system"] ?? false) || ($submitted["{$duty}_program_ids"] ?? []) !== []) {
+                    throw ValidationException::withMessages(["duty_{$duty}_program_ids" => 'Input users cannot be certification coaches or managers.']);
+                }
+            }
+        }
+
         if (array_key_exists('coach_system', $submitted) || array_key_exists('coach_program_ids', $submitted)) {
             self::applyForDuty($actor, $target, CertificationDuty::Coach, $submitted['coach_system'] ?? false, $submitted['coach_program_ids'] ?? []);
         }

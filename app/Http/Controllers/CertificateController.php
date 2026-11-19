@@ -82,12 +82,12 @@ class CertificateController extends Controller
 
         $certificates = $query->paginate(TablePagination::perPage($request))->withQueryString();
 
-        $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
-        $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
-
         if ($request->header('HX-Request')) {
             return view('admin.certificates.partials.table', compact('certificates', 'sort', 'direction'));
         }
+
+        $filterProjects = Project::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
+        $filterPrograms = Program::query()->where('active', true)->orderBy('name')->get(['id', 'name']);
 
         return view('admin.certificates.index', compact(
             'certificates',
