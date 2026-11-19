@@ -303,7 +303,7 @@ test('an at least N rule counts distinct sections and still needs the minimum su
         ->and($after['satisfied'])->toBeTrue();
 });
 
-test('the progress page names the missing sections and shows pass fail scores', function () {
+test('the progress page lists every section by state and shows pass fail scores', function () {
     $this->travelTo(now()->setDate(2026, 10, 27)->startOfDay());
     $f = trainingFixture();
     trainingRequirement($f, [$f['s1']->id, $f['s2']->id, $f['s3']->id], ['requires_passing' => true, 'label' => 'W101 observer sections']);
@@ -313,7 +313,12 @@ test('the progress page names the missing sections and shows pass fail scores', 
     $this->actingAs($f['actor'])->get(route('certificate-enrollments.show', $f['enrollment']))
         ->assertOk()
         ->assertSee('2 of 3 sections recorded · 1 passed')
-        ->assertSee('Still missing: Section 2 (needs a Pass), Section 3')
+        ->assertSeeInOrder([
+            'app-status--success">', '✓ Section 1',
+            'app-status--warning">', 'Section 2 · needs a Pass',
+            'app-status--neutral">', 'Section 3', ': not attempted',
+        ], false)
+        ->assertDontSee('Still missing')
         ->assertSee('Sections: Section 1 · Pass, Section 2 · Fail')
         ->assertSee('Overall: Pass');
 });

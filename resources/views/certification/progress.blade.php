@@ -56,18 +56,21 @@
                                 <li class="d-flex justify-content-between gap-2"><span>{{ match ($requirement->kind) { \App\Enums\CertificateRequirementKind::ToolSubmission => $requirement->requires_passing ? 'Total passing submissions' : 'Total submissions', \App\Enums\CertificateRequirementKind::TrainingSections => 'Submissions', default => 'Completion units' } }}</span><strong>{{ $row['count'] }} / {{ $row['target'] }}</strong></li>
                                 @foreach($row['rules'] as $ruleRow)
                                     @if(isset($ruleRow['sections']))
-                                        @php
-                                            $sections = $ruleRow['sections'];
-                                            $missing = $sections->where('counted', false);
-                                        @endphp
+                                        @php $sections = $ruleRow['sections']; @endphp
                                         <li class="d-flex justify-content-between gap-2 mt-1">
                                             <span>Sections · {{ $ruleRow['rule']->mode->value === 'coverage' ? 'every checked section' : 'at least '.$ruleRow['target'].' of '.$sections->count() }}{{ $requirement->requires_passing ? ' · scored sections need a Pass' : '' }}</span>
                                             <strong class="text-nowrap">{{ $ruleRow['count'] }} / {{ $ruleRow['target'] }} · {{ $ruleRow['satisfied'] ? 'Met' : 'Not met' }}</strong>
                                         </li>
                                         <li class="text-muted mt-1">{{ $sections->where('done', true)->count() }} of {{ $sections->count() }} sections recorded · {{ $sections->where('passed', true)->count() }} passed</li>
-                                        @if($missing->isNotEmpty())
-                                            <li class="mt-1">Still missing: {{ $missing->map(fn ($section) => $section['option']->label.($section['done'] ? ' (needs a Pass)' : ''))->join(', ') }}</li>
-                                        @endif
+                                        <li class="mt-2">
+                                            <ul class="list-unstyled d-flex flex-wrap gap-2 mb-0" aria-label="Section progress">
+                                                @foreach($sections as $section)
+                                                    <li class="app-status {{ $section['counted'] ? 'app-status--success' : ($section['done'] ? 'app-status--warning' : 'app-status--neutral') }}">
+                                                        {{ $section['counted'] ? '✓ ' : '' }}{{ $section['option']->label }}{{ $section['counted'] ? '' : ($section['done'] ? ' · needs a Pass' : '') }}<span class="visually-hidden">{{ $section['counted'] ? ': done' : ($section['done'] ? '' : ': not attempted') }}</span>
+                                                    </li>
+                                                @endforeach
+                                            </ul>
+                                        </li>
                                         @continue
                                     @endif
                                     <li class="d-flex justify-content-between gap-2 mt-1">
