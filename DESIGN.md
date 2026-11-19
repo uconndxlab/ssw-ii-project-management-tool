@@ -309,7 +309,7 @@ Four distinct things, each with one treatment:
 - **Tag** (`.app-tag`): a non-clickable label (role, flag, record kind). Tinted, no border.
 - **Status chip** (`.app-status`): tinted fill, dark ink, a dot and text. Tones: success, neutral, warning, danger. `x-status-badge` takes `active` and an optional `tone`. Meaning never rests on color alone.
 
-Counts are plain numbers (`.app-count`). In tables a related-record cell shows the first record as a linked chip and a visible "+N" button (`x-table-badge-list`); the button opens a menu listing every record, each a deep link or plain text. Primary agreement chips in activity tables wrap their full name so similarly named agreements remain distinguishable. `EntityBadge` returns these class strings, so there are no per-kind hues.
+Counts are plain numbers (`.app-count`). In tables a related-record cell shows the first record as a linked chip and a visible "+N" button (`x-table-badge-list`); the button opens a menu listing every record, each a deep link or plain text. Primary agreement chips in activity tables show their full name on one line on desktop (wrapping on phones) so similarly named agreements remain distinguishable without tall rows. `EntityBadge` returns these class strings, so there are no per-kind hues.
 
 ### Navigation
 

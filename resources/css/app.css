@@ -2597,6 +2597,14 @@ a.badge.app-chip:focus-visible {
     overflow-wrap: break-word;
 }
 
+/* Desktop tables: full agreement name on one line, so rows stay one line tall. */
+@media (min-width: 768px) {
+    .app-chip-list--primary .app-chip {
+        max-width: none;
+        white-space: nowrap;
+    }
+}
+
 .app-more-btn {
     min-height: 1.5rem;
     padding: 0 0.4375rem;
