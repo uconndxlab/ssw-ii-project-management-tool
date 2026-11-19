@@ -975,14 +975,6 @@ class UserAccess
         return array_intersect($projectIds, $this->adminProjectIds()) !== [];
     }
 
-    /** @param array<int, mixed> $organizationIds */
-    public function primeOrganizationVisibility(array $organizationIds): void
-    {
-        $this->recordVisibilityCache[Organization::class] ??= [];
-        $this->batchVisibility(Organization::class, array_map(intval(...), $organizationIds),
-            $this->recordVisibilityCache[Organization::class], $this->applyOrganizationVisibility(Organization::query()));
-    }
-
     /**
      * VisibleToUser collects hydrated ids (including eager loads) without querying access.
      * A cache miss checks all pending ids of that type, plus the requested ids, in chunks.

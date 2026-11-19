@@ -36,8 +36,6 @@ test('organization priming preserves visible and hidden answers for each source 
     assertRecordAccess($actor, $hidden, $expectedHidden);
     $freshActor = User::findOrFail($actor->id);
     $access = $freshActor->access();
-    $access->primeOrganizationVisibility([]);
-    $access->primeOrganizationVisibility([$visible->id, $hidden->id]);
     foreach ([[$visible, $expectedVisible], [$hidden, $expectedHidden]] as [$record, $answer]) {
         expect($access->canViewRecord($record))->toBe($answer);
         expect($freshActor->can('view', $record))->toBe($answer);
