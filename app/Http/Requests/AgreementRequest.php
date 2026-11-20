@@ -97,6 +97,7 @@ class AgreementRequest extends FormRequest
             'certification_candidates.*.assignments.*' => ['array'],
             'certification_candidates.*.assignments.*.enrollment_id' => ['nullable', 'integer'],
             'certification_candidates.*.assignments.*.certificate_id' => ['nullable', 'integer'],
+            'certification_candidates.*.assignments.*.enrolled_at' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:today'],
             'certification_candidates.*.assignments.*.coach_user_id' => ['nullable', 'integer'],
             'certification_candidates.*.assignments.*._delete' => ['nullable', 'boolean'],
             'deleted_attachment_ids' => ['nullable', 'array'],

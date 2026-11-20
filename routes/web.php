@@ -97,6 +97,8 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::resource('certification-candidates', CertificationCandidateController::class)
         ->only(['index', 'show', 'edit', 'update'])
         ->parameters(['certification-candidates' => 'certificationCandidate']);
+    Route::get('/certificate-enrollments/{certificateEnrollment}/history', [CertificateLifecycleController::class, 'editHistory'])->name('certificate-enrollments.history.edit');
+    Route::put('/certificate-enrollments/{certificateEnrollment}/history', [CertificateLifecycleController::class, 'updateHistory'])->name('certificate-enrollments.history.update');
     Route::get('/certificate-enrollments/{certificateEnrollment}', [CertificateProgressController::class, 'show'])->name('certificate-enrollments.show');
     Route::put('/certificate-enrollments/{certificateEnrollment}/confirmations/{requirement}', [CertificateProgressController::class, 'attest'])->name('certificate-enrollments.attest');
     Route::post('/certificate-enrollments/{certificateEnrollment}/endorsement', [CertificateLifecycleController::class, 'endorse'])->name('certificate-enrollments.endorse');

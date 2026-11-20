@@ -20,6 +20,7 @@ use App\Support\CarbonDate;
 use App\Support\ProjectProgramScope;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator as ValidatorFacade;
@@ -307,6 +308,13 @@ class CertificationAssignmentSyncService
                     $validator->errors()->add("{$fieldPrefix}.certificate_id", 'That certificate is not available for this agreement.');
                 }
 
+                if ($existingEnrollment !== null && $this->enrollmentDateChanged($assignmentRow, $existingEnrollment) && $this->canManageEnrollment($actor, $existingEnrollment)) {
+                    $dateValidator = $this->enrollmentDateValidator($assignmentRow, $existingEnrollment);
+                    if ($dateValidator->fails()) {
+                        $validator->errors()->add("{$fieldPrefix}.enrolled_at", $dateValidator->errors()->first('enrolled_at'));
+                    }
+                }
+
                 $coachUserId = isset($assignmentRow['coach_user_id']) && $assignmentRow['coach_user_id'] !== ''
                     ? (int) $assignmentRow['coach_user_id']
                     : null;
@@ -456,7 +464,7 @@ class CertificationAssignmentSyncService
                 $existingEnrollment = CertificateEnrollment::query()
                     ->where('certification_candidate_id', $candidate->id)
                     ->where('certificate_id', $certificateId)
-                    ->first();
+                    ->lockForUpdate()->first();
 
                 if (filter_var($assignmentRow['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
                     if ($existingEnrollment !== null && $existingEnrollment->isUnstarted()) {
@@ -467,6 +475,10 @@ class CertificationAssignmentSyncService
                 }
 
                 if ($existingEnrollment !== null) {
+                    if ($this->enrollmentDateChanged($assignmentRow, $existingEnrollment) && $this->canManageEnrollment($actor, $existingEnrollment)) {
+                        $date = $this->enrollmentDateValidator($assignmentRow, $existingEnrollment)->validate();
+                        $existingEnrollment->update(['enrolled_at' => $date['enrolled_at']]);
+                    }
                     $coachUserId = filled($assignmentRow['coach_user_id'] ?? null) ? (int) $assignmentRow['coach_user_id'] : null;
                     if (filled($assignmentRow['enrollment_id'] ?? null)
                         && array_key_exists('coach_user_id', $assignmentRow)
@@ -585,6 +597,29 @@ class CertificationAssignmentSyncService
         }
 
         return $agreements->every(fn (Agreement $agreement) => $actor->can('update', $agreement));
+    }
+
+    /**
+     * The form always posts the current date, so only a different one is validated and saved.
+     *
+     * @param  array<string, mixed>  $assignmentRow
+     */
+    private function enrollmentDateChanged(array $assignmentRow, CertificateEnrollment $enrollment): bool
+    {
+        return filled($assignmentRow['enrolled_at'] ?? null) && $assignmentRow['enrolled_at'] !== $enrollment->enrolled_at?->toDateString();
+    }
+
+    /** @param  array<string, mixed>  $assignmentRow */
+    private function enrollmentDateValidator(array $assignmentRow, CertificateEnrollment $enrollment): Validator
+    {
+        $firstAward = $enrollment->awards()->issued()->reorder('awarded_at')->first()?->awarded_at?->toDateString();
+
+        return ValidatorFacade::make($assignmentRow, [
+            'enrolled_at' => array_filter(['required', 'date_format:Y-m-d', 'before_or_equal:today', $firstAward ? 'before_or_equal:'.$firstAward : null]),
+        ], [
+            'enrolled_at.date_format' => 'Enter a valid enrollment date.',
+            'enrolled_at.before_or_equal' => $firstAward ? 'Enrollment must be on or before the first award date ('.Carbon::parse($firstAward)->format('M j, Y').').' : 'Enter an enrollment date that is not in the future.',
+        ]);
     }
 
     public function canManageEnrollment(User $actor, CertificateEnrollment $enrollment): bool
