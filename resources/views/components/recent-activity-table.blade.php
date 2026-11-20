@@ -8,6 +8,7 @@
     'logActivityDisabledReason' => null,
     'hideAgreements' => false,
     'emptyMessage' => null,
+    'toolbar' => true,
 ])
 
 @php
@@ -17,6 +18,7 @@
     $disabledReasonId = 'log-activity-reason-' . \Illuminate\Support\Str::random(6);
 @endphp
 
+@if($toolbar)
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
     @if($logActivityUrl)
         <div class="d-flex align-items-center gap-2 flex-wrap">
@@ -33,6 +35,7 @@
 
     <a href="{{ $viewAllUrl }}" @if($viewAllSection) data-section-goto="{{ $viewAllSection }}" @endif class="btn btn-sm btn-outline-secondary {{ $logActivityUrl ? '' : 'ms-auto' }}">{{ $viewAllLabel }}</a>
 </div>
+@endif
 
 @if($activities->isNotEmpty())
     <div class="table-responsive app-embedded-table">

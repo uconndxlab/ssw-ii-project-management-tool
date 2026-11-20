@@ -1,7 +1,7 @@
 <div class="card shadow-sm app-index-table-card">
     <div class="card-header py-2 px-3 d-flex align-items-center gap-2">
         <h2 class="h5 mb-0">Candidates</h2>
-        @include('certification-candidates.partials.heading-count', ['total' => $visibleEnrollments->total() + $hiddenEnrollmentCount, 'hidden' => $hiddenEnrollmentCount])
+        @include('certification-candidates.partials.heading-count', ['total' => $visibleEnrollments->total() + $hiddenEnrollmentCount, 'hidden' => $hiddenEnrollmentCount, 'kind' => 'enrollments'])
     </div>
     <x-table-scroll>
         <table class="table table-hover align-middle mb-0 app-cards">

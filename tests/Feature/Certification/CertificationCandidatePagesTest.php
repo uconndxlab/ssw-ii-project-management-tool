@@ -63,15 +63,15 @@ test('candidate pages reveal hidden counts without hidden names', function () {
     AgreementCertificationCandidate::factory()->create(['agreement_id' => $hiddenAgreement->id, 'certification_candidate_id' => $f['candidate']->id]);
     $hiddenCertificate = Certificate::factory()->create(['name' => 'Secret Certificate Name', 'program_scope_mode' => 'none']);
     CertificateEnrollment::factory()->create(['certificate_id' => $hiddenCertificate->id, 'certification_candidate_id' => $f['candidate']->id]);
-    // Index: "+N" counts the hidden agreement, and the menu ends with a hidden row; certificates get a hidden note.
+    // Index: "+N" counts the hidden agreement, and the menu includes a restricted badge; certificates get a restricted badge.
     $this->actingAs($f['actor'])->get(route('certification-candidates.index'))->assertOk()
-        ->assertSee('Show all 2 agreements, 1 hidden', false)->assertSee('access to 1 agreement', false)
+        ->assertSee('Show all 2 agreements, 1 restricted', false)->assertSee('access to 1 agreement', false)
         ->assertSee('access to 1 certificate', false)
         ->assertDontSee($hiddenCertificate->name)->assertDontSee($hiddenAgreement->name);
 
-    // Show: panel headers count everything and end with a hidden row.
+    // Show: panel headers count everything and include a restricted badge.
     $this->get(route('certification-candidates.show', $f['candidate']))->assertOk()
-        ->assertSee('1 agreement hidden')->assertSee('1 enrollment hidden')
+        ->assertSee('1 restricted')->assertSee('access to 1 agreement', false)->assertSee('access to 1 enrollment', false)
         ->assertDontSee($hiddenCertificate->name)->assertDontSee($hiddenAgreement->name);
 });
 

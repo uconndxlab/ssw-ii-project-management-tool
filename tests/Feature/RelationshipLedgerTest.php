@@ -50,7 +50,47 @@ test('read-only records retain their metadata without gaining a link', function 
         ->assertSee('Restricted agreement')
         ->assertSee('Recipient')
         ->assertSee('2026-0042')
-        ->assertDontSee('<a ', false);
+        ->assertDontSee('<a ', false)
+        ->assertDontSee('app-ledger-row--link', false)
+        ->assertDontSee('bi-chevron-right', false);
+});
+
+test('restricted records appear only in the ledger heading with a lock', function (bool $collapsible) {
+    $html = $this->blade('<x-relationship-scroll-panel title="Agreements" :count="3" :hidden-count="2" :collapsible="$collapsible">Visible agreement</x-relationship-scroll-panel>', compact('collapsible'));
+
+    $html->assertSeeInOrder(['app-count--restricted', 'bi-lock-fill', '2 restricted', 'Visible agreement'], false)
+        ->assertSee("You don't have access to 2 agreements", false)
+        ->assertDontSee('app-ledger-hidden-row', false)
+        ->assertDontSee('eye-slash', false);
+
+    expect(substr_count((string) $html, '2 restricted'))->toBe(1);
+})->with([true, false]);
+
+test('restricted counts pluralize their kind and retain extra classes', function (int $count, string $kind, string $noun) {
+    $this->blade('<x-restricted-count :count="$count" :kind="$kind" class="extra" />', compact('count', 'kind'))
+        ->assertSee('app-count app-count--restricted extra', false)
+        ->assertSee("You don't have access to {$count} {$noun}", false)
+        ->assertSee($count.' restricted');
+})->with([[1, 'Certificates', 'certificate'], [2, 'certificate', 'certificates'], [2, 'activities', 'activities']]);
+
+test('nonpositive restricted counts render no badge', function (int $count) {
+    $this->blade('<x-restricted-count :count="$count" kind="records" />', compact('count'))
+        ->assertDontSee('<span', false);
+})->with([0, -1]);
+
+test('linked ledger rows expose a row target and decorative chevron', function () {
+    $this->blade('<x-relationship-ledger-row title="Agreement" href="/agreements/1" title-as-badge />')
+        ->assertSee('app-ledger-row--link', false)
+        ->assertSee('href="/agreements/1" class="app-ledger-name"', false)
+        ->assertSee('bi-chevron-right app-ledger-chevron" aria-hidden="true"', false);
+});
+
+test('multi-link ledger rows retain separate destinations without a row target', function () {
+    $this->blade('<x-relationship-ledger-row title="Candidate" href="/candidates/1" multi-link><x-slot:footer><a href="/certificates/1">Certificate</a></x-slot:footer></x-relationship-ledger-row>')
+        ->assertSee('href="/candidates/1"', false)
+        ->assertSee('href="/certificates/1"', false)
+        ->assertDontSee('app-ledger-row--link', false)
+        ->assertDontSee('bi-chevron-right', false);
 });
 
 test('organization quick facts lead with YTD totals and related summaries start closed', function () {

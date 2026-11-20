@@ -60,13 +60,12 @@
 
 @php
     $resolvedListLabel = $listLabel ?? \Illuminate\Support\Str::plural(\Illuminate\Support\Str::headline($kind));
-    $hiddenTitle = "You don't have access to {$hiddenCount} ".\Illuminate\Support\Str::lower(\Illuminate\Support\Str::plural(\Illuminate\Support\Str::headline($kind), $hiddenCount));
 @endphp
 
 {{-- First item as a chip, the rest behind a visible "+N" button that lists every item as a deep link (or plain text when the user cannot open it). --}}
 <div class="{{ $containerClass }}">
     @if($visibleItems->isEmpty() && $hiddenCount > 0)
-        <span class="app-hidden-pill" title="{{ $hiddenTitle }}"><i class="bi bi-eye-slash" aria-hidden="true"></i>{{ $hiddenCount }} hidden</span>
+        <x-restricted-count :count="$hiddenCount" :kind="$kind" />
     @elseif($visibleItems->isEmpty())
         <span class="{{ $emptyClass }}">{{ $emptyLabel }}</span>
     @else
@@ -83,7 +82,7 @@
                         data-bs-toggle="dropdown"
                         data-bs-popper-config='{"strategy":"fixed"}'
                         aria-expanded="false"
-                        aria-label="Show all {{ $totalCount }} {{ \Illuminate\Support\Str::lower($resolvedListLabel) }}{{ $hiddenCount > 0 ? ', '.$hiddenCount.' hidden' : '' }}">+{{ $moreCount }}</button>
+                        aria-label="Show all {{ $totalCount }} {{ \Illuminate\Support\Str::lower($resolvedListLabel) }}{{ $hiddenCount > 0 ? ', '.$hiddenCount.' restricted' : '' }}">+{{ $moreCount }}</button>
                 <div class="dropdown-menu app-more-menu">
                     <div class="app-more-head"><span>{{ $resolvedListLabel }}</span><span>{{ $totalCount }}</span></div>
                     <ul class="app-more-list">
@@ -98,7 +97,7 @@
                         @endforeach
                     </ul>
                     @if($hiddenCount > 0)
-                        <div class="app-more-hidden" title="{{ $hiddenTitle }}"><i class="bi bi-eye-slash" aria-hidden="true"></i>{{ $hiddenCount }} hidden</div>
+                        <div class="px-3 py-2 border-top"><x-restricted-count :count="$hiddenCount" :kind="$kind" /></div>
                     @endif
                 </div>
             </div>
