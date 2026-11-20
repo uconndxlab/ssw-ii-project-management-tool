@@ -904,7 +904,11 @@
             ],
             "support": {
                 "issues": "https://github.com/guzzle/guzzle/issues",
+<<<<<<< HEAD
                 "source": "https://github.com/guzzle/guzzle/tree/8.5.3"
+=======
+                "source": "https://github.com/guzzle/guzzle/tree/8.5.2"
+>>>>>>> 2042c0a (Bump the minor-and-patch group with 2 updates)
             },
             "funding": [
                 {
@@ -920,7 +924,11 @@
                     "type": "tidelift"
                 }
             ],
+<<<<<<< HEAD
             "time": "2026-11-20T18:11:51+00:00"
+=======
+            "time": "2026-11-17T16:24:00+00:00"
+>>>>>>> 2042c0a (Bump the minor-and-patch group with 2 updates)
         },
         {
             "name": "guzzlehttp/promises",
