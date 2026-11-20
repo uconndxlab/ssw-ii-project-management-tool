@@ -149,3 +149,18 @@ matching program/project privilege. Admin replaces Viewer for the same scope.
 System access uses `hasSystemView()` and `isSystemAdmin()`. Input users gain no
 reviewer standing; membership tags do not explain inactive agreements, whose access
 still requires privilege overlap. The column explains visibility and grants no access.
+
+## Manual award history
+
+System admins can record a candidate’s past award history. Other admins must administer every
+program on every agreement the candidate is rostered on, and the sponsoring agreement, and be
+able to update the certificate (All-program certificates are exempt from that catalog check).
+Project admins inherit their projects’ programs. All-program and no-program agreements require
+a system admin. Input users, coach duty and manager duty do not grant this permission.
+
+History can be recorded only before any award or endorsement exists, and edited only while every
+award is manual and no in-app endorsement exists. Revoked enrollments are closed. Saved awards
+cannot be removed or reordered; new awards append at the end. Non-expiring certificates allow
+one award. Saving expiring history opens renewal cycle N+1 after N awards; only activity after the
+last award date counts. Existing confirmations stay with their original cycles. Missing prerequisites
+warn but do not block this migration tool. Every save records the admin, reason and changed values.

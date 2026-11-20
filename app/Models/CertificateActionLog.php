@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * @property CertificateAction $action
+ * @property array<string, mixed>|null $context
  */
 class CertificateActionLog extends Model
 {

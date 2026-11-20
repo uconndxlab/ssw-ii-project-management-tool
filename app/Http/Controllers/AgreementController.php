@@ -1209,6 +1209,7 @@ class AgreementController extends Controller
 
                     return [
                         'enrollment_id' => $enrollment->id, 'certificate_id' => $enrollment->certificate_id,
+                        'enrolled_at' => $enrollment->enrolled_at?->toDateString(),
                         'certificate_name' => $enrollment->certificate?->name,
                         'certificate_scope' => $enrollment->certificate?->program_scope_mode->value,
                         'certificate_program_ids' => $enrollment->certificate?->programs->modelKeys() ?? [],

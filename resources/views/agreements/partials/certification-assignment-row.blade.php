@@ -45,6 +45,9 @@
         </x-form-field>
         </div>
     @endif
+    <div data-enrollment-date @if(! $isExisting) hidden @endif>
+        <x-date-override-field :name="'certification_candidates['.$candidateIndex.'][assignments]['.$assignmentIndex.'][enrolled_at]'" :id="$fieldId.'-enrolled-at'" label="Enrollment date" :value="$row['enrolled_at'] ?? ''" :calculated="$row['enrolled_at'] ?? ''" :disabled="! $canManage || ! $isExisting" revert-label="Undo change" />
+    </div>
     <div data-coach-field>
     <x-form-field label="Supervising coach" :for="$fieldId.'-coach'" :name="$prefix.'.coach_user_id'" class="mb-0"
                   :help="! $canManage ? 'Locked. '.($row['locked_reason'] ?? 'You can’t manage this shared assignment.') : ($isExisting ? 'Changing the coach updates this person’s shared assignment.' : 'Optional. Choosing a coach who isn’t on this agreement adds them to its staff.')">

@@ -16,6 +16,9 @@ use Illuminate\Support\Carbon;
  *
  * @property int $id
  * @property int $certificate_enrollment_id
+ * @property bool $manual_award
+ * @property bool $expiry_overridden
+ * @property string|null $originally_awarded_by
  * @property int $cycle
  * @property CertificateRequirementPhase $phase
  * @property Carbon $endorsed_at
@@ -43,11 +46,13 @@ class CertificateAward extends Model
         'certificate_enrollment_id', 'cycle', 'phase', 'endorsed_at', 'endorsed_by_user_id', 'endorsement_note',
         'requirements_snapshot', 'awarded_at', 'awarded_by_user_id', 'award_note', 'expires_at',
         'revoked_at', 'revoked_by_user_id', 'revoke_reason',
+        'manual_award', 'originally_awarded_by', 'expiry_overridden',
     ];
 
     protected function casts(): array
     {
         return [
+            'manual_award' => 'boolean', 'expiry_overridden' => 'boolean',
             'cycle' => 'integer', 'phase' => CertificateRequirementPhase::class, 'requirements_snapshot' => 'array',
             'endorsed_at' => 'datetime', 'awarded_at' => 'datetime', 'expires_at' => 'date', 'revoked_at' => 'datetime',
         ];

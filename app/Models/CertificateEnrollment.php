@@ -12,12 +12,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Carbon;
 
 /**
  * One (candidate, certificate) assignment, global regardless of how many agreements the candidate
  * appears on. Sponsorship is provenance/display only, never a progress-scoping boundary (spine
  * decision 2). Requirements met is computed live; endorsements and awards live in certificate_awards.
  *
+ * @property Carbon|null $enrolled_at
  * @property CertificateEnrollmentStatus $status
  * @property CertificateRequirementPhase $phase
  */

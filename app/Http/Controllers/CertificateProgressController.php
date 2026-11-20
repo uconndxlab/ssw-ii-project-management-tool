@@ -50,6 +50,7 @@ class CertificateProgressController extends Controller
                 'coachCanEndorse' => $coach !== null && $this->access->canEndorse($coach, $certificateEnrollment),
                 'canEndorse' => $this->access->canEndorse($actor, $certificateEnrollment),
                 'canManage' => $canManage,
+                'canRecordHistory' => $this->access->canRecordHistory($actor, $certificateEnrollment) && $this->lifecycle->historyStateBlocker($certificateEnrollment) === null,
                 'canChangeCoach' => $canChangeCoach,
                 'coaches' => $canChangeCoach ? $this->lifecycle->eligibleCoaches($actor, $certificateEnrollment) : collect(),
                 'history' => $details ? $certificateEnrollment->actionLogs()->with('user')->get() : collect(),

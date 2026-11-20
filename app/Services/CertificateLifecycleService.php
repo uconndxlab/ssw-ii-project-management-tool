@@ -19,6 +19,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -167,6 +168,138 @@ class CertificateLifecycleService
         });
     }
 
+    public function historyStateBlocker(CertificateEnrollment $enrollment): ?string
+    {
+        if ($enrollment->status === CertificateEnrollmentStatus::Revoked) {
+            return 'This enrollment was revoked. Award history cannot be changed.';
+        }
+        if ($enrollment->awards()->where(fn ($query) => $query->where('manual_award', false)->orWhereNull('awarded_at'))->exists()) {
+            return 'Award history is final once an in-app endorsement or award exists.';
+        }
+
+        return null;
+    }
+
+    /** @param array<string, mixed> $data */
+    public function saveHistory(User $actor, CertificateEnrollment $enrollment, array $data): void
+    {
+        DB::transaction(function () use ($actor, $enrollment, $data): void {
+            $enrollment = $this->lock($enrollment, (int) ($data['cycle'] ?? $enrollment->cycle));
+            if (! $this->access->canRecordHistory($actor, $enrollment)) {
+                throw new AuthorizationException;
+            }
+            if ($blocker = $this->historyStateBlocker($enrollment)) {
+                throw new CertificateLifecycleConflict($blocker);
+            }
+            if (is_array($data['rows'] ?? null)) {
+                $data['rows'] = array_values($data['rows']);
+            }
+            // The form always posts the current date; only a changed one is checked and saved.
+            if (($data['enrolled_at'] ?? null) === $enrollment->enrolled_at?->toDateString()) {
+                unset($data['enrolled_at']);
+            }
+            $existing = $enrollment->awards()->reorder('cycle')->get();
+            $rules = [
+                'rows' => ['required', 'array', 'min:1'],
+                'rows.*.id' => ['nullable', 'integer', 'distinct'],
+                'rows.*.awarded_at' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
+                'rows.*.expiry_overridden' => ['required', 'boolean'],
+                'rows.*.expires_at' => ['nullable', 'date_format:Y-m-d'],
+                'rows.*.originally_awarded_by' => ['nullable', 'string', 'max:255'],
+                'reason' => ['required', 'string', 'max:10000'],
+                'enrolled_at' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:today'],
+            ];
+            $validator = Validator::make($data, $rules, [
+                'reason.required' => 'Explain why you are recording or editing this award history.',
+                'rows.*.awarded_at.required' => 'Enter an award date.',
+                'rows.*.awarded_at.before_or_equal' => 'Award dates cannot be in the future.',
+            ]);
+            $validator->after(function ($validator) use ($data, $existing, $enrollment): void {
+                if ($validator->errors()->isNotEmpty()) {
+                    return;
+                }
+                $rows = $data['rows'];
+                if ($enrollment->certificate?->validity_months === null && count($rows) !== 1) {
+                    $validator->errors()->add('rows', 'A certificate that never expires can have only one award.');
+                }
+                if (count($rows) < $existing->count()) {
+                    $validator->errors()->add('rows', 'Saved awards cannot be removed.');
+                }
+                foreach ($rows as $index => $row) {
+                    $expectedId = $existing->get($index)?->id;
+                    if (($expectedId !== null && (int) ($row['id'] ?? 0) !== $expectedId) || ($expectedId === null && filled($row['id'] ?? null))) {
+                        $validator->errors()->add("rows.$index.id", 'Keep every saved award in its original order. Add new awards at the end.');
+                    }
+                    if ($index > 0 && $row['awarded_at'] <= $rows[$index - 1]['awarded_at']) {
+                        $validator->errors()->add("rows.$index.awarded_at", 'Each award date must be after the previous award date.');
+                    }
+                    if ($row['expiry_overridden'] && (blank($row['expires_at'] ?? null) || $row['expires_at'] <= $row['awarded_at'] || $enrollment->certificate?->validity_months === null)) {
+                        $validator->errors()->add("rows.$index.expires_at", 'Enter an expiry after this award date for a certificate that expires.');
+                    }
+                }
+                if (filled($data['enrolled_at'] ?? null) && $data['enrolled_at'] > $rows[0]['awarded_at']) {
+                    $validator->errors()->add('enrolled_at', 'Enrollment must be on or before the first award date.');
+                }
+            });
+            $validated = $validator->validate();
+            $before = $existing->map(fn (CertificateAward $award) => $this->historyRow($award))->all();
+            $oldEnrollmentDate = $enrollment->enrolled_at?->toDateString();
+            $previous = null;
+            $saved = [];
+            foreach ($validated['rows'] as $index => $row) {
+                $date = Carbon::parse($row['awarded_at'])->startOfDay();
+                $expiry = $row['expiry_overridden'] ? Carbon::parse($row['expires_at']) : $this->expiryFromPrevious($enrollment, $date, $previous);
+                $award = $existing->get($index) ?? new CertificateAward;
+                $award->fill([
+                    'certificate_enrollment_id' => $enrollment->id, 'cycle' => $index + 1,
+                    'phase' => $index === 0 ? CertificateRequirementPhase::Initial : CertificateRequirementPhase::Renewal,
+                    'awarded_at' => $date, 'endorsed_at' => $date, 'endorsed_by_user_id' => null,
+                    'manual_award' => true, 'expires_at' => $expiry, 'expiry_overridden' => (bool) $row['expiry_overridden'],
+                    'originally_awarded_by' => $row['originally_awarded_by'] ?? null,
+                ]);
+                if (! $award->exists) {
+                    $award->awarded_by_user_id = $actor->id;
+                    $award->requirements_snapshot = [
+                        'manual' => true, 'evidence' => [],
+                        'certificate' => $enrollment->certificate?->only(['id', 'name', 'validity_months', 'prerequisite_mode']),
+                    ];
+                }
+                $award->save();
+                $saved[] = $this->historyRow($award);
+                $previous = $expiry;
+            }
+            $renewal = $enrollment->certificate?->validity_months !== null;
+            $enrollment->fill([
+                'cycle' => $renewal ? count($saved) + 1 : 1,
+                'phase' => $renewal ? CertificateRequirementPhase::Renewal : CertificateRequirementPhase::Initial,
+                'status' => $renewal ? CertificateEnrollmentStatus::InProgress : CertificateEnrollmentStatus::Awarded,
+            ]);
+            if (filled($validated['enrolled_at'] ?? null)) {
+                $enrollment->enrolled_at = $validated['enrolled_at'];
+            }
+            $enrollment->save();
+            $changes = [];
+            foreach ($before as $index => $old) {
+                foreach ($old as $field => $value) {
+                    if ($value !== $saved[$index][$field]) {
+                        $changes[$index + 1][$field] = ['from' => $value, 'to' => $saved[$index][$field]];
+                    }
+                }
+            }
+            $context = ['rows' => $saved, 'changes' => $changes];
+            if ($oldEnrollmentDate !== $enrollment->enrolled_at?->toDateString()) {
+                $context['enrolled_at'] = ['from' => $oldEnrollmentDate, 'to' => $enrollment->enrolled_at?->toDateString()];
+            }
+            $this->log($enrollment, $actor, $existing->isEmpty() ? CertificateAction::HistoryRecorded : CertificateAction::HistoryEdited, null, $validated['reason'], $context);
+        });
+    }
+
+    /** @return array{cycle: int, awarded_at: ?string, expires_at: ?string, overridden: bool, originally_awarded_by: ?string} */
+    private function historyRow(CertificateAward $award): array
+    {
+        return ['cycle' => $award->cycle, 'awarded_at' => $award->awarded_at?->toDateString(), 'expires_at' => $award->expires_at?->toDateString(), 'overridden' => $award->expiry_overridden, 'originally_awarded_by' => $award->originally_awarded_by];
+    }
+
     public function revoke(User $actor, CertificateEnrollment $enrollment, CertificateAward $award, string $reason): void
     {
         DB::transaction(function () use ($actor, $enrollment, $award, $reason): void {
@@ -225,14 +358,20 @@ class CertificateLifecycleService
     /** On-time renewal extends the previous expiry; a first or late award runs from its own date. */
     public function expiresAt(CertificateEnrollment $enrollment, CarbonInterface $awardedAt): ?Carbon
     {
+        $previous = $enrollment->cycle > 1 ? $enrollment->awards()->issued()->where('cycle', $enrollment->cycle - 1)->first()?->expires_at : null;
+
+        return $this->expiryFromPrevious($enrollment, $awardedAt, $previous);
+    }
+
+    private function expiryFromPrevious(CertificateEnrollment $enrollment, CarbonInterface $awardedAt, ?CarbonInterface $previous): ?Carbon
+    {
         $months = $enrollment->certificate?->validity_months;
         if ($months === null) {
             return null;
         }
-        $previous = $enrollment->cycle > 1 ? $enrollment->awards()->issued()->where('cycle', $enrollment->cycle - 1)->first()?->expires_at : null;
         $base = $previous !== null && $previous->isAfter($awardedAt->copy()->startOfDay()) ? $previous : Carbon::parse($awardedAt)->startOfDay();
 
-        return $base->copy()->addMonthsNoOverflow($months);
+        return Carbon::parse($base)->addMonthsNoOverflow($months);
     }
 
     private function lock(CertificateEnrollment $enrollment, int $cycle): CertificateEnrollment

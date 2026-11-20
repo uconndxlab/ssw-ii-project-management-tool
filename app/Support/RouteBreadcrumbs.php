@@ -26,7 +26,7 @@ class RouteBreadcrumbs
         $indexRoute = $resource.'.index';
         $items = [];
 
-        if (in_array($routeName, ['certificate-enrollments.show', 'certificate-enrollments.awards.show'], true)) {
+        if (in_array($routeName, ['certificate-enrollments.show', 'certificate-enrollments.awards.show', 'certificate-enrollments.history.edit'], true)) {
             $enrollment = $route->parameter('certificateEnrollment');
             $actor = $request->user();
             if ($enrollment instanceof CertificateEnrollment && $actor instanceof User) {
@@ -40,7 +40,7 @@ class RouteBreadcrumbs
                     $items[] = ['label' => 'Agreements', 'url' => route('agreements.index'), 'current' => false];
                     $items[] = ['label' => $agreement->name, 'url' => route('agreements.show', $agreement), 'current' => false];
                 }
-                if ($routeName === 'certificate-enrollments.awards.show') {
+                if ($routeName !== 'certificate-enrollments.show') {
                     $items[] = ['label' => $enrollment->candidate->name ?? 'Candidate', 'url' => route('certificate-enrollments.show', ['certificateEnrollment' => $enrollment, 'agreement_id' => $agreement?->id]), 'current' => false];
                 }
             }
