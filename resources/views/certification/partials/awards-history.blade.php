@@ -5,6 +5,9 @@
 @endphp
 @if($details || $awards->isNotEmpty())
     <x-section-card :title="$details ? 'Awards and history' : 'Awards'">
+        @if($lifecycle['canRecordHistory'])
+            <a class="btn btn-sm btn-outline-primary mb-3" href="{{ route('certificate-enrollments.history.edit', ['certificateEnrollment' => $enrollment, 'agreement_id' => $agreementId]) }}">{{ $awards->isEmpty() ? 'Record award history' : 'Edit award history' }}</a>
+        @endif
         @if($awards->isEmpty())
             <p class="small text-muted">No awards yet.</p>
         @else
@@ -16,7 +19,7 @@
                             <tr>
                                 <td>{{ $award->cycle }}</td>
                                 <td>{{ $award->phase->label() }}</td>
-                                <td>{{ $award->awarded_at->format('M j, Y') }} · {{ $award->awardedBy?->name ?? 'Former staff member' }}</td>
+                                <td>@include('certification.partials.award-attribution')</td>
                                 <td>{{ $award->expires_at?->format('M j, Y') ?? 'Never' }}</td>
                                 <td>{{ match (true) {
                                     $award->revoked_at !== null => 'Revoked '.$award->revoked_at->format('M j, Y'),
@@ -37,7 +40,7 @@
                 <div class="border rounded px-3 py-2 mb-2 small d-flex justify-content-between gap-3">
                     <div class="min-w-0">
                         <div class="fw-semibold">{{ $log->user?->name ?? ($log->user_id ? 'Former staff member' : 'System') }}</div>
-                        <div class="text-muted">{{ $log->action->label() }} · cycle {{ $log->cycle }}@if($log->action === \App\Enums\CertificateAction::CoachChanged) · {{ $log->context['from'] ?? 'none' }} → {{ $log->context['to'] ?? 'none' }}@elseif($log->action === \App\Enums\CertificateAction::Awarded && ($log->context['expires_at'] ?? null)) · expires {{ \Illuminate\Support\Carbon::parse($log->context['expires_at'])->format('M j, Y') }}@endif</div>
+                        <div class="text-muted">{{ $log->action->label() }} · {{ in_array($log->action, [\App\Enums\CertificateAction::HistoryRecorded, \App\Enums\CertificateAction::HistoryEdited], true) ? 'cycles 1–'.count($log->context['rows'] ?? []) : 'cycle '.$log->cycle }}@if($log->action === \App\Enums\CertificateAction::CoachChanged) · {{ $log->context['from'] ?? 'none' }} → {{ $log->context['to'] ?? 'none' }}@elseif($log->action === \App\Enums\CertificateAction::Awarded && ($log->context['expires_at'] ?? null)) · expires {{ \Illuminate\Support\Carbon::parse($log->context['expires_at'])->format('M j, Y') }}@endif</div>
                         @if($log->reason)<div class="mt-1 text-break">{{ in_array($log->action, [\App\Enums\CertificateAction::Endorsed, \App\Enums\CertificateAction::Awarded], true) ? 'Note' : 'Reason' }}: “{{ $log->reason }}”</div>@endif
                     </div>
                     <div class="text-muted text-nowrap">{{ $log->created_at?->format('M j, Y g:i A') }}</div>

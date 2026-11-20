@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\CertificateAction;
 use App\Exceptions\CertificateLifecycleConflict;
 use App\Models\Activity;
+use App\Models\CertificateActionLog;
 use App\Models\CertificateAward;
 use App\Models\CertificateEnrollment;
 use App\Services\CertificateLifecycleService;
@@ -14,10 +16,32 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
 
 class CertificateLifecycleController extends Controller
 {
     public function __construct(private CertificateLifecycleService $lifecycle, private CertificateProgressAccess $access) {}
+
+    public function editHistory(CertificateEnrollment $certificateEnrollment): View
+    {
+        abort_unless($this->access->canRecordHistory($this->actor(), $certificateEnrollment), 403);
+
+        return view('certification.history', [
+            'enrollment' => $certificateEnrollment,
+            'awards' => $certificateEnrollment->awards()->reorder('cycle')->get(),
+            'blocker' => $this->lifecycle->historyStateBlocker($certificateEnrollment),
+            'prerequisites' => $this->lifecycle->prerequisites($certificateEnrollment),
+        ]);
+    }
+
+    public function updateHistory(Request $request, CertificateEnrollment $certificateEnrollment): RedirectResponse
+    {
+        abort_unless($this->access->canRecordHistory($this->actor(), $certificateEnrollment), 403);
+        $request->validate(['cycle' => ['required', 'integer']]);
+
+        return $this->run($request, $certificateEnrollment, 'Award history saved.',
+            fn () => $this->lifecycle->saveHistory($this->actor(), $certificateEnrollment, $request->all()));
+    }
 
     public function endorse(Request $request, CertificateEnrollment $certificateEnrollment): RedirectResponse
     {
@@ -67,10 +91,32 @@ class CertificateLifecycleController extends Controller
 
         return view('certification.award', [
             'enrollment' => $certificateEnrollment, 'award' => $award,
+            'historyLogs' => $this->historyLogsFor($certificateEnrollment, $award),
             'activities' => Activity::query()->whereKey(Arr::flatten((array) data_get($award->requirements_snapshot, 'requirements.*.counted.*.activity_id', [])))->get()->keyBy('id'),
             'superseded' => $certificateEnrollment->awards()->issued()->where('cycle', '>', $award->cycle)->exists(),
             'canManage' => $this->access->canManage($this->actor(), $certificateEnrollment),
         ]);
+    }
+
+    /**
+     * History saves that created or changed this award, oldest first.
+     *
+     * @return Collection<int, CertificateActionLog>
+     */
+    private function historyLogsFor(CertificateEnrollment $enrollment, CertificateAward $award): Collection
+    {
+        $created = false;
+
+        return $enrollment->actionLogs()->reorder('id')->with('user')
+            ->whereIn('action', [CertificateAction::HistoryRecorded, CertificateAction::HistoryEdited])->get()
+            ->filter(function (CertificateActionLog $log) use ($award, &$created): bool {
+                $rows = $log->context['rows'] ?? [];
+                $inRows = is_array($rows) && in_array($award->cycle, array_column($rows, 'cycle'), true);
+                $relevant = $inRows && (! $created || isset($log->context['changes'][$award->cycle]));
+                $created = $created || $inRows;
+
+                return $relevant;
+            })->values();
     }
 
     private function run(Request $request, CertificateEnrollment $enrollment, string $success, Closure $action): RedirectResponse

@@ -60,6 +60,7 @@
                 $assignments[] = [
                     'enrollment_id' => $enrollment->id,
                     'certificate_id' => $enrollment->certificate_id,
+                    'enrolled_at' => $enrollment->enrolled_at?->toDateString(),
                     'certificate_name' => $enrollment->certificate?->name,
                     'certificate_scope' => $enrollment->certificate?->program_scope_mode->value,
                     'certificate_program_ids' => $enrollment->certificate?->programs->modelKeys() ?? [],
@@ -89,7 +90,7 @@
             $knownAssignment = $knownAssignments->firstWhere('certificate_id', (int) ($assignmentRow['certificate_id'] ?? 0));
             if ($knownAssignment) {
                 $coach = array_key_exists('coach_user_id', $assignmentRow) ? $assignmentRow['coach_user_id'] : $knownAssignment['coach_user_id'];
-                $assignmentRow = array_merge($assignmentRow, $knownAssignment, ['coach_user_id' => $coach]);
+                $assignmentRow = array_merge($assignmentRow, $knownAssignment, ['coach_user_id' => $coach, 'enrolled_at' => $assignmentRow['enrolled_at'] ?? $knownAssignment['enrolled_at'] ?? '']);
             }
         }
         unset($assignmentRow);
@@ -638,6 +639,15 @@ function initializeCertificationAssignments() {
             input.value = value;
             item.appendChild(input);
         }
+        const dateField = item.querySelector('[data-enrollment-date]');
+        dateField.hidden = false;
+        const dateOverride = dateField.querySelector('[data-date-override]');
+        dateOverride.dataset.calculated = assignment.enrolled_at || '';
+        dateOverride.querySelector('[data-date-display]').textContent = assignment.enrolled_at ? new Date(assignment.enrolled_at + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No date';
+        const dateInput = dateOverride.querySelector('[data-date-input]');
+        dateInput.value = assignment.enrolled_at || '';
+        dateInput.disabled = !assignment.can_manage;
+        dateField.querySelectorAll('button').forEach(button => button.hidden = !assignment.can_manage || button.hasAttribute('data-date-revert'));
         const coach = item.querySelector('[data-coach-select]');
         const coachId = String(assignment.coach_user_id || '');
         if (coachId && !Array.from(coach.options).some(option => option.value === coachId)) {

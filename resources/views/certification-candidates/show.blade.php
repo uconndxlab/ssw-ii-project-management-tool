@@ -33,7 +33,7 @@
             <table class="table table-sm"><thead><tr><th>Certificate</th><th>Cycle</th><th>Awarded</th><th>Expires</th><th>Revoked</th></tr></thead><tbody>
                 @forelse($row['enrollments']->flatMap(fn ($enrollment) => $enrollment->awards->map(fn ($award) => ['certificate' => $enrollment->certificate, 'award' => $award])) as $entry)
                     @php $award = $entry['award']; @endphp
-                    <tr><td>{{ $entry['certificate']->name }}</td><td>{{ $award->cycle }}</td><td>{{ $award->awarded_at?->format('M j, Y') ?? 'Pending award' }}</td><td>{{ $award->expires_at?->format('M j, Y') ?? 'No expiry' }}</td><td>{{ $award->revoked_at?->format('M j, Y') ?? '—' }}</td></tr>
+                    <tr><td>{{ $entry['certificate']->name }}</td><td>{{ $award->cycle }}</td><td>@if($award->manual_award)@include('certification.partials.award-attribution')@else{{ $award->awarded_at?->format('M j, Y') ?? 'Pending award' }}@endif</td><td>{{ $award->expires_at?->format('M j, Y') ?? 'No expiry' }}</td><td>{{ $award->revoked_at?->format('M j, Y') ?? '—' }}</td></tr>
                 @empty<tr><td colspan="5" class="text-muted">No award history.</td></tr>@endforelse
             </tbody></table>
         </div>

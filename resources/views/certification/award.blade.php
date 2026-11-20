@@ -17,8 +17,9 @@
     <x-section-card title="Award">
         <dl class="row small mb-0">
             <dt class="col-sm-3 text-muted fw-normal">Stage</dt><dd class="col-sm-9">{{ $award->phase->label() }} · cycle {{ $award->cycle }}</dd>
-            <dt class="col-sm-3 text-muted fw-normal">Endorsed</dt><dd class="col-sm-9">{{ $award->endorsed_at->format('M j, Y') }} by {{ $award->endorsedBy?->name ?? 'a former staff member' }}@if($award->endorsement_note) — “{{ $award->endorsement_note }}”@endif</dd>
-            <dt class="col-sm-3 text-muted fw-normal">Awarded</dt><dd class="col-sm-9">{{ $award->awarded_at->format('M j, Y') }} by {{ $award->awardedBy?->name ?? 'a former staff member' }}@if($award->award_note) — “{{ $award->award_note }}”@endif</dd>
+            @if(! $award->manual_award)<dt class="col-sm-3 text-muted fw-normal">Endorsed</dt><dd class="col-sm-9">{{ $award->endorsed_at->format('M j, Y') }} by {{ $award->endorsedBy?->name ?? 'a former staff member' }}@if($award->endorsement_note) — “{{ $award->endorsement_note }}”@endif</dd>
+            @endif
+            <dt class="col-sm-3 text-muted fw-normal">Awarded</dt><dd class="col-sm-9">@include('certification.partials.award-attribution')@if($award->award_note) — “{{ $award->award_note }}”@endif</dd>
             <dt class="col-sm-3 text-muted fw-normal">Valid</dt><dd class="col-sm-9">{{ $award->awarded_at->format('M j, Y') }} – {{ $award->expires_at?->format('M j, Y') ?? 'no expiry' }}</dd>
             <dt class="col-sm-3 text-muted fw-normal">Prerequisites</dt><dd class="col-sm-9">{{ collect($snapshot['prerequisites'] ?? [])->map(fn ($row) => $row['certificate'].' (cycle '.$row['cycle'].')')->join(', ') ?: 'None' }}</dd>
             @if($award->revoked_at)
@@ -29,6 +30,14 @@
             @include('certification.partials.revoke-form')
         @endif
     </x-section-card>
+    @if($award->manual_award)
+        <x-section-card title="Manual award">
+            <p>Recorded manually — no evidence on file</p>
+            @foreach($historyLogs as $log)
+                <p class="mb-1 text-break"><span class="text-muted">{{ $log->action === \App\Enums\CertificateAction::HistoryRecorded ? 'Recorded' : 'Edited' }} {{ $log->created_at?->format('M j, Y') }} by {{ $log->user?->name ?? 'a former staff member' }}:</span> “{{ $log->reason }}”</p>
+            @endforeach
+        </x-section-card>
+    @else
     <x-section-card title="Requirements at endorsement" :subtitle="'Recorded '.$award->endorsed_at->format('M j, Y').'. Later catalog or evidence changes don’t alter this record. '.($snapshot['met'] ?? 0).' of '.($snapshot['total'] ?? 0).' met.'">
         @foreach($snapshot['requirements'] ?? [] as $row)
             <section class="border-bottom pb-3 mb-3" aria-labelledby="snapshot-requirement-{{ $row['id'] }}">
@@ -79,5 +88,6 @@
             </section>
         @endforeach
     </x-section-card>
+    @endif
 </x-form-shell>
 @endsection

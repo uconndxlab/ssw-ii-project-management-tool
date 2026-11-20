@@ -41,12 +41,13 @@
     @if($current)
         @php
             $by = $current->awardedBy?->name ?? 'a former staff member';
+            $attribution = $current->manual_award ? 'Awarded '.$current->awarded_at->format('M j, Y').' · recorded by '.$by.($current->originally_awarded_by ? ' · originally awarded by '.$current->originally_awarded_by : '') : 'Awarded '.$current->awarded_at->format('M j, Y').' by '.$by;
             [$icon, $iconClass, $title, $line] = match (true) {
                 $current->revoked_at !== null => ['bi-x-circle-fill', 'text-danger', 'Cycle '.$current->cycle.' award revoked '.$current->revoked_at->format('M j, Y'),
-                    $details ? 'Revoked by '.($current->revokedBy?->name ?? 'a former staff member').' · Reason: “'.$current->revoke_reason.'”' : 'Awarded '.$current->awarded_at->format('M j, Y').' by '.$by],
-                $current->isExpired() => ['bi-clock-history', 'text-secondary', 'Cycle '.$current->cycle.' credential expired '.$current->expires_at?->format('M j, Y'), 'Awarded '.$current->awarded_at->format('M j, Y').' by '.$by],
+                    $details ? 'Revoked by '.($current->revokedBy?->name ?? 'a former staff member').' · Reason: “'.$current->revoke_reason.'”' : $attribution],
+                $current->isExpired() => ['bi-clock-history', 'text-secondary', 'Cycle '.$current->cycle.' credential expired '.$current->expires_at?->format('M j, Y'), $attribution],
                 default => ['bi-award-fill', 'text-success', 'Certified · cycle '.$current->cycle.($current->phase === \App\Enums\CertificateRequirementPhase::Renewal ? ' (renewal)' : ''),
-                    'Awarded '.$current->awarded_at->format('M j, Y').' by '.$by.' · '.($current->expires_at ? 'valid until '.$current->expires_at->format('M j, Y') : 'does not expire')],
+                    $attribution.' · '.($current->expires_at ? 'valid until '.$current->expires_at->format('M j, Y') : 'does not expire')],
             };
         @endphp
         <div class="border rounded p-3 d-flex flex-wrap align-items-center gap-3 mb-3">

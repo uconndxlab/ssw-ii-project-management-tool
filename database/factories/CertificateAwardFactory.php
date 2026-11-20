@@ -17,6 +17,11 @@ class CertificateAwardFactory extends Factory
         ];
     }
 
+    public function manual(): static
+    {
+        return $this->state(['manual_award' => true, 'endorsed_by_user_id' => null, 'requirements_snapshot' => ['manual' => true, 'evidence' => []]]);
+    }
+
     public function pending(): static
     {
         return $this->state(['awarded_at' => null, 'expires_at' => null]);
