@@ -1,13 +1,13 @@
 @if($myActivities?->count() > 0 || $myAgreements?->count() > 0 || $myAssignedDeliverables?->count() > 0)
 <div class="card shadow-sm mb-4">
     <div class="card-header">
-        <h5 class="mb-0">My Work</h5>
+        <h2 class="h5 mb-0">My Work</h2>
     </div>
     <div class="card-body">
         <div class="row g-4">
             @if($myAgreements && $myAgreements->count() > 0)
                 <div class="col-md-6">
-                    <h6 class="mb-3">My Agreements</h6>
+                    <h3 class="h6 mb-3">My Agreements</h3>
                     <div class="list-group list-group-sm">
                         @foreach($myAgreements->take(5) as $agreement)
                             @if($agreement->isLinkable())
@@ -43,7 +43,7 @@
 
             @if($myActivities && $myActivities->count() > 0)
                 <div class="col-md-6">
-                    <h6 class="mb-3">Recent Activity</h6>
+                    <h3 class="h6 mb-3">Recent Activity</h3>
                     <div class="list-group list-group-sm">
                         @foreach($myActivities->take(5) as $activity)
                             @php $canManage = auth()->user()->can('update', $activity); @endphp
@@ -94,7 +94,7 @@
         {{-- My Assigned Deliverables --}}
         @if($myAssignedDeliverables && $myAssignedDeliverables->count() > 0)
         <hr>
-        <h6 class="mb-3">My Assigned Deliverables</h6>
+        <h3 class="h6 mb-3">My Assigned Deliverables</h3>
         <div class="table-responsive">
             <table class="table table-sm table-hover align-middle mb-0">
                 <thead class="table-light">

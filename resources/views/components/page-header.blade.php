@@ -1,7 +1,6 @@
 @props([
     'context' => 'default',
     'title' => null,
-    'eyebrow' => null,
     'breadcrumbLabel' => null,
     'description' => null,
     'descriptionClass' => null,
@@ -244,9 +243,6 @@
             <span class="app-record-icon" aria-hidden="true"><i class="bi {{ $recordIcon }}"></i></span>
         @endif
         <div class="page-header-heading min-w-0">
-            @if(filled($eyebrow))
-                <div class="form-subsection-title mb-1">{{ $eyebrow }}</div>
-            @endif
             <h1 class="{{ $resolvedTitleClass }} {{ $resolvedTitleMarginClass }} {{ $resolvedTitleWeightClass }}">{{ $resolvedTitle }}</h1>
 
             @if(filled($description) && ! $inlineDescription)

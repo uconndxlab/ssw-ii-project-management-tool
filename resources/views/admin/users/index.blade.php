@@ -11,7 +11,6 @@
 <x-page-header
     context="index"
     :title="$superviseesIndex ? 'Supervisees' : 'Users'"
-    :description="$users->total() . ' total'"
     :action-url="(! $superviseesIndex && auth()->user()->can('create', App\Models\User::class)) ? route('admin.users.create') : null"
 />
 

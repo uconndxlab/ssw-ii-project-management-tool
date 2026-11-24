@@ -79,14 +79,12 @@
                     </td>
                 </tr>
                 @empty
-                <tr>
-                    <td colspan="7" class="text-center py-5">
-                        <p class="text-muted mb-2">No certificates found.</p>
-                        @can('create', App\Models\Certificate::class)
-                        <a href="{{ route('certificates.create') }}" class="btn btn-sm btn-primary">Add Certificate</a>
-                        @endcan
-                    </td>
-                </tr>
+                <x-table-empty colspan="7" plural="certificates" index-route="certificates.index">
+                    <p class="text-muted mb-2">No certificates found.</p>
+                    @can('create', App\Models\Certificate::class)
+                    <a href="{{ route('certificates.create') }}" class="btn btn-sm btn-primary">Add Certificate</a>
+                    @endcan
+                </x-table-empty>
                 @endforelse
             </tbody>
         </table>

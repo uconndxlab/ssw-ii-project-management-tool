@@ -30,6 +30,6 @@ class ProfileController extends Controller
 
         return redirect()
             ->route('profile.edit')
-            ->with('success', 'Password updated successfully.');
+            ->with('success', 'Password updated');
     }
 }

@@ -192,7 +192,7 @@ class CertificateController extends Controller
 
         return redirect()
             ->route('certificates.edit', $certificate)
-            ->with('success', 'Certificate created successfully.');
+            ->with('success', 'Certificate created');
     }
 
     public function edit(Certificate $certificate): View|RedirectResponse
@@ -247,7 +247,7 @@ class CertificateController extends Controller
             $this->syncRequirements($certificate, $requirementRows, $groupIndexToId, $roleIndexToId);
         });
 
-        return $this->redirectAfterSave($certificate, 'Certificate updated successfully.');
+        return $this->redirectAfterSave($certificate, 'Certificate updated');
     }
 
     public function destroy(Certificate $certificate): View|RedirectResponse
@@ -264,7 +264,7 @@ class CertificateController extends Controller
 
         return redirect()
             ->route('certificates.index')
-            ->with('success', 'Certificate deleted successfully.');
+            ->with('success', 'Certificate deleted');
     }
 
     /**

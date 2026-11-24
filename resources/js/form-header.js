@@ -77,7 +77,19 @@ if (header) {
 
         saveButtons.forEach((button) => button.addEventListener('click', save));
 
-        const markDirty = () => {
+        // Forms sync themselves on load with synthetic input/change events; those only count once the person
+        // has pointed or typed somewhere on the page (editors also fire them to report real edits).
+        let interacted = false;
+        const noteInteraction = () => {
+            interacted = true;
+        };
+        document.addEventListener('pointerdown', noteInteraction, { capture: true, once: true });
+        document.addEventListener('keydown', noteInteraction, { capture: true, once: true });
+
+        const markDirty = (event) => {
+            if (event?.isTrusted === false && !interacted) {
+                return;
+            }
             if (!dirty) {
                 dirty = true;
                 setState('dirty');

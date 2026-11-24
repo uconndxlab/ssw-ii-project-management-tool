@@ -1,3 +1,15 @@
+import './htmx-csrf.js';
+import './inline-record-list.js';
+import './inline-string-list.js';
+import './token-picker.js';
+import './project-program-scope-picker.js';
+import './logging-field-assignment-picker.js';
+import './team-none-scope-warning.js';
+import './duration-field.js';
+import './logging-document-field.js';
+import './activity-action-log-modal.js';
+import './repeater-rows.js';
+import './date-override-field.js';
 import './app-shell.js';
 import './form-header.js';
 import './form-fields.js';

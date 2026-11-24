@@ -129,7 +129,7 @@ class CertificationInstrumentController extends Controller
 
         return redirect()
             ->route('certification-instruments.edit', $tool)
-            ->with('success', $tool->type->label().' created successfully.');
+            ->with('success', $tool->type->label().' created');
     }
 
     public function edit(CertificationInstrument $certificationInstrument): View|RedirectResponse
@@ -172,7 +172,7 @@ class CertificationInstrumentController extends Controller
             $this->syncScoreFields($certificationInstrument, $validated['score_fields'] ?? []);
         });
 
-        return $this->redirectAfterSave($certificationInstrument, $certificationInstrument->type->label().' updated successfully.');
+        return $this->redirectAfterSave($certificationInstrument, $certificationInstrument->type->label().' updated');
     }
 
     public function destroy(CertificationInstrument $certificationInstrument): View|RedirectResponse
@@ -190,7 +190,7 @@ class CertificationInstrumentController extends Controller
 
         return redirect()
             ->route('certification-instruments.index')
-            ->with('success', ucfirst($label).' deleted successfully.');
+            ->with('success', ucfirst($label).' deleted');
     }
 
     /** @return array<int> options chosen on recorded submissions; they can't be removed or rescored */

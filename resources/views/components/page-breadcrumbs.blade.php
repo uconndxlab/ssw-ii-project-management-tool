@@ -8,7 +8,7 @@
     if ($items->count() > 4) {
         $items = collect([
             $items->first(),
-            ['label' => '...', 'url' => null, 'current' => false, 'ellipsis' => true],
+            ['label' => '…', 'url' => null, 'current' => false, 'ellipsis' => true],
         ])->concat($items->slice(-2))->values();
     }
 @endphp

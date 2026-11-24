@@ -1,3 +1,5 @@
+import { initTooltips } from './tooltips.js';
+
 // Collapses index filter forms behind a "Filters (n)" button below the md breakpoint.
 // The first column of each form's row is the search box and stays visible; every other column is a filter.
 const ignoredNames = new Set(['sort', 'direction', 'page', 'per_page', 'partial', 'search']);
@@ -92,6 +94,111 @@ function initTableFilters(scope = document) {
         sync();
     });
 }
+
+const defaultIgnoredNames = ['sort', 'direction', 'page', 'per_page', 'partial'];
+
+function ignoredNamesForForm(form) {
+    const ignored = new Set(defaultIgnoredNames);
+    (form.dataset.tableFilterIgnore || '')
+        .split(',')
+        .map(function (name) { return name.trim(); })
+        .filter(Boolean)
+        .forEach(function (name) { ignored.add(name); });
+
+    return ignored;
+}
+
+function formHasActiveFilters(form) {
+    const ignored = ignoredNamesForForm(form);
+    let hasFilter = false;
+
+    form.querySelectorAll('input, select, textarea').forEach(function (element) {
+        if (!element.name || element.disabled) {
+            return;
+        }
+
+        if (ignored.has(element.name)) {
+            return;
+        }
+
+        if (element.type === 'checkbox' || element.type === 'radio') {
+            if (element.checked && String(element.value || '').trim() !== '') {
+                hasFilter = true;
+            }
+
+            return;
+        }
+
+        if (String(element.value || '').trim() !== '') {
+            hasFilter = true;
+        }
+    });
+
+    return hasFilter;
+}
+
+function syncTableFilterClearButtons(scope) {
+    const root = scope || document;
+    const forms = root.matches?.('[data-table-filter-form]') ? [root] : root.querySelectorAll('[data-table-filter-form]');
+    forms.forEach(function (form) {
+        const wrap = form.querySelector('[data-table-filter-clear-wrap]');
+        if (!wrap) {
+            return;
+        }
+
+        wrap.classList.toggle('d-none', !formHasActiveFilters(form));
+    });
+
+    initTooltips(root);
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    syncTableFilterClearButtons();
+    initTooltips();
+});
+
+document.body.addEventListener('input', function (event) {
+    const form = event.target && event.target.closest
+        ? event.target.closest('[data-table-filter-form]')
+        : null;
+    if (form) {
+        syncTableFilterClearButtons(form);
+    }
+});
+
+document.body.addEventListener('change', function (event) {
+    const form = event.target && event.target.closest
+        ? event.target.closest('[data-table-filter-form]')
+        : null;
+    if (form) {
+        syncTableFilterClearButtons(form);
+    }
+});
+
+document.body.addEventListener('htmx:afterSettle', function () {
+    syncTableFilterClearButtons();
+    initTooltips();
+});
+
+document.body.addEventListener('htmx:afterSwap', (event) => {
+    const table = event.target;
+    if (!table.id || !table.querySelector(':scope > [data-table-sort-sync]')) {
+        return;
+    }
+
+    const form = document.querySelector(`form[data-table-filter-form][hx-target="#${CSS.escape(table.id)}"]`);
+    if (!form) {
+        return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    for (const name of ['sort', 'direction']) {
+        const input = form.querySelector(`[name="${name}"]`);
+        if (input && params.has(name)) {
+            input.value = params.get(name);
+        }
+    }
+});
 
 document.addEventListener('DOMContentLoaded', () => initTableFilters());
 document.body.addEventListener('htmx:afterSettle', () => initTableFilters());

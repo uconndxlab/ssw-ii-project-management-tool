@@ -39,7 +39,7 @@
                         hx-get="{{ route('activities.action-logs', ['activity' => $activity, 'current' => 1]) }}"
                         hx-target="#activity-action-log-modal-body"
                         hx-swap="innerHTML"
-                        onclick="window.showActivityActionLogModal()">
+                        data-activity-action-log>
                     <i class="bi bi-journal-text me-2" aria-hidden="true"></i>View log
                 </button>
             </li>

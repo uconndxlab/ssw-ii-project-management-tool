@@ -42,6 +42,6 @@ class ActivityCertificationController extends Controller
             $this->activityActionLogService->record($activity, ActivityAction::Update);
         });
 
-        return $this->redirectAfterSave($activity, 'Certification review saved.');
+        return $this->redirectAfterSave($activity, 'Certification review saved');
     }
 }

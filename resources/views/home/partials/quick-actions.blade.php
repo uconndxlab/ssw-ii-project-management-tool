@@ -1,6 +1,6 @@
 <div class="card shadow-sm mb-4">
     <div class="card-header">
-        <h5 class="mb-0">Quick Actions</h5>
+        <h2 class="h5 mb-0">Quick Actions</h2>
     </div>
     <div class="card-body">
         <div class="d-grid gap-2 d-sm-flex flex-wrap">

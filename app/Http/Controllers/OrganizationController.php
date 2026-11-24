@@ -211,7 +211,7 @@ class OrganizationController extends Controller
 
         return redirect()
             ->route('organizations.index')
-            ->with('success', 'Organization created successfully.');
+            ->with('success', 'Organization created');
     }
 
     public function edit(Organization $organization): View
@@ -246,7 +246,7 @@ class OrganizationController extends Controller
         $organization->users()->sync($validated['user_ids'] ?? []);
         $this->syncOrganizationContacts($organization, $validated['contacts'] ?? []);
 
-        return $this->redirectAfterSave($organization, 'Organization updated successfully.');
+        return $this->redirectAfterSave($organization, 'Organization updated');
     }
 
     public function destroy(Organization $organization): RedirectResponse
@@ -256,7 +256,7 @@ class OrganizationController extends Controller
 
         return redirect()
             ->route('organizations.index')
-            ->with('success', 'Organization deleted successfully.');
+            ->with('success', 'Organization deleted');
     }
 
     /**

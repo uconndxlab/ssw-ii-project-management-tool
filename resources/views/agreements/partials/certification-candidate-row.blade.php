@@ -16,7 +16,6 @@
     $editing = ! $isExisting || $errors->has($prefix.'.*');
     $personMode = filled($candidateId) ? 'existing' : ((filled($name) || filled($email)) ? 'new' : 'search');
     $assignmentRows = $row['assignments'] ?? [];
-    $nextAssignmentIndex = $assignmentRows === [] ? 0 : max(array_map('intval', array_keys($assignmentRows))) + 1;
     $assignedCount = collect($assignmentRows)->filter(fn ($a) => filled($a['certificate_id'] ?? null) && ! filter_var($a['_delete'] ?? false, FILTER_VALIDATE_BOOLEAN))->count();
     $pickerOptions = $certificationCandidateOptions->where('active', true)->map(fn ($option) => [
         'id' => $option->id,
@@ -62,7 +61,7 @@
                     <x-token-picker :picker-id="$fieldId.'-picker'" :name="'candidate_lookup['.$candidateIndex.']'"
                         :options="$pickerOptions" search-key="search" :single="true"
                         :selected-ids="filled($candidateId) ? [$candidateId] : []"
-                        placeholder="Search name or email..." empty-message="No candidate found. Add a new person below."
+                        placeholder="Search name or email…" empty-message="No candidate found. Add a new person below."
                         height="220px" />
                 </x-form-field>
             </div>
@@ -112,7 +111,7 @@
         <fieldset class="mt-4">
             <legend class="form-label float-none w-auto fs-6">Certificate assignments</legend>
             <x-repeater-rows name="certification_candidates[{{ $candidateIndex }}][assignments]"
-                :rows="$assignmentRows" :next-index="$nextAssignmentIndex" index-token="__ASSIGN_INDEX__"
+                :rows="$assignmentRows" index-token="__ASSIGN_INDEX__"
                 add-label="Add certificate" variant="nested" :sortable="false" :scroll="false"
                 :template="view('agreements.partials.certification-assignment-row', [
                     'row' => [], 'candidateIndex' => $candidateIndex, 'assignmentIndex' => '__ASSIGN_INDEX__',

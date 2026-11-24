@@ -34,7 +34,7 @@
                     name="project_ids[]"
                     :items="$projects"
                     :selected-ids="old('project_ids', [])"
-                    placeholder="Search projects..."
+                    placeholder="Search projects…"
                     height="220px"
                     entity="project"
                 />

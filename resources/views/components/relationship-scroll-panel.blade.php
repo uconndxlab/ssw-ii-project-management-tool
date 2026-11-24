@@ -34,12 +34,12 @@
                             data-bs-target="#{{ $bodyId }}"
                             aria-expanded="{{ $isCollapsed ? 'false' : 'true' }}"
                             aria-controls="{{ $bodyId }}">
-                        <span class="app-ledger-label">{{ $title }} @if(! is_null($count))<span class="app-count">{{ $count }}</span>@endif <x-restricted-count :count="$hiddenCount" :kind="$title" /></span>
+                        <span class="app-ledger-label">{{ $title }} @if($count)<span class="app-count">{{ $count }}</span>@endif <x-restricted-count :count="$hiddenCount" :kind="$title" /></span>
                         <span class="app-ledger-preview" data-ledger-preview aria-hidden="true" hidden></span>
                         <i class="bi bi-chevron-right" aria-hidden="true"></i>
                     </button>
                 @else
-                    <span class="app-ledger-label">{{ $title }} @if(! is_null($count))<span class="app-count">{{ $count }}</span>@endif <x-restricted-count :count="$hiddenCount" :kind="$title" /></span>
+                    <span class="app-ledger-label">{{ $title }} @if($count)<span class="app-count">{{ $count }}</span>@endif <x-restricted-count :count="$hiddenCount" :kind="$title" /></span>
                 @endif
             </h3>
             @if($headerMetaFilled)

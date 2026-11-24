@@ -100,7 +100,7 @@
                 name="team_ids[]"
                 :options="($teams ?? collect())->map(fn ($team) => ['value' => $team->id, 'label' => $team->name, 'search' => $team->name])"
                 :selected-ids="old('team_ids', [])"
-                placeholder="Search teams..."
+                placeholder="Search teams…"
                 entity="team"
             />
         </x-form-field>
@@ -176,21 +176,6 @@
     </x-section-card>
 @endif
 
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const cards = document.querySelectorAll('input[name="access_profile"]');
-        const supervisor = document.querySelector('[data-supervisor-switch]');
-        const panel = document.querySelector('[data-privilege-panel]');
-        const supervisorInput = supervisor?.querySelector('input[type="checkbox"]');
-
-        function sync() {
-            const selected = document.querySelector('input[name="access_profile"]:checked')?.value;
-            if (panel) panel.classList.toggle('d-none', selected !== 'admin_viewer');
-            if (supervisor) supervisor.classList.toggle('d-none', selected === 'input');
-            if (selected === 'input' && supervisorInput) supervisorInput.checked = false;
-        }
-
-        cards.forEach((input) => input.addEventListener('change', sync));
-        sync();
-    });
-</script>
+@push('scripts')
+    @vite('resources/js/user-form.js')
+@endpush

@@ -314,7 +314,7 @@ test('the progress page lists every section by state and shows pass fail scores'
         ->assertOk()
         ->assertSee('2 of 3 sections recorded · 1 passed')
         ->assertSeeInOrder([
-            'app-status--success">', '✓ Section 1',
+            'app-status--success">', 'bi-check-lg', 'Section 1', ': done',
             'app-status--warning">', 'Section 2 · needs a Pass',
             'app-status--neutral">', 'Section 3', ': not attempted',
         ], false)

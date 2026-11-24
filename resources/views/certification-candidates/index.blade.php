@@ -4,7 +4,7 @@
 
 @section('content')
 
-<x-page-header context="index" title="Candidates" description="{{ $candidates->total() }} total" />
+<x-page-header context="index" title="Candidates" />
 
 <div class="card shadow-sm mb-3">
     <div class="card-body py-2">

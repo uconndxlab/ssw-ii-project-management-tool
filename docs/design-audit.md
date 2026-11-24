@@ -13,6 +13,8 @@ The original audit was documentation only. Resolution statuses below track subse
 
 **Update (2026-10-27, merged-app follow-up).** The remaining implementation fixes are complete: phone cards now cover every index listing (including Certificates, Certification Tools and Supervisees); Home activity actions fit phone widths; reduced motion removes the drawer slide; charts use current design tokens; and validation summaries link to their fields, including nested certificate editors. Table headers now have a distinct darker fill. Sidebar, Recent, scrollbar locks and immediate active-state reset were checked in Chromium during the integration work. This is a targeted completion update, not a new audit or health score. Cross-browser, screen-reader and physical-touch checks remain open.
 
+**Update (2026-11-24, audit and AI-smell sweep).** A new audit (14/20) and a sweep for AI-generated design habits are in sections 9 and 10, as checklists. Section 9 marks the items that reverse an earlier approved choice.
+
 ## Severity
 
 | Level | Meaning | Count |
@@ -237,6 +239,92 @@ Sortable-column discoverability was also restored: inactive columns always show 
 - Breadcrumb links are accent blue while every other link is ink with a grey underline. Pick one link treatment for breadcrumbs.
 - [x] Phone cards now cover all index listings, including reference/admin lists, Certificates, Certification Tools and Supervisees.
 - [x] Recent, the sidebar peek and the drawer have been rechecked in Chromium; integration follow-ups fixed transition timing, active-state delay, icon alignment and scrollbar-induced page shifts. Assistive-technology and other-browser checks remain open.
+
+## 9. AI design smells (2026-11-24)
+
+**What this is.** A sweep for the visual and copy habits that AI-generated interfaces fall into by default, measured against impeccable's slop catalog (`impeccable detect --list-rules`) and its craft floor. Agents wrote most of this app, so these habits have built up. Items marked *(approved earlier)* came from a choice you made in a past review; they need your call before they change.
+
+**Decisions (2026-11-24).** Remove the form subsection rule and the sidebar bar; keep the ledger group guide rule and the deliverable group border. Fix Profile now; Home waits for its own design session (Trello: "Dashboard that shows what needs attention"). Remove the status dot, zero count pills, hatching and the record icon tile. Help text: remove the restating lines, keep "Set by…" once a type is picked, keep the Projects label as is; no new picker behavior.
+
+**Method.** Detector over `resources/views`, `resources/css` and `resources/js`; Playwright at 1440 and 390px on 13 pages and every create form; a read of the CSS and the Blade behind them.
+
+### Side stripes (colored or ruled left edge)
+
+- [x] **Form subsections have a 2px left rule.** `.form-subsection` (`app.css:712`), on every long form. The labelled subsection title already groups the fields.
+- [x] **Kept by decision.** **Grouped ledger rows hang off a 2px guide rule.** `.app-ledger-group > .app-ledger-row` (`app.css:4132`): Staff grouped by team, and each candidate's certificates on the agreement Overview ("No certificate assigned" sits behind a stripe). *(approved earlier, agreement redesign)*
+- [x] **Kept by decision.** **Deliverable activity groups use Bootstrap's 3px `border-start`.** `agreements/partials/show-deliverables.blade.php:115` and `admin/users/partials/deliverable-report-section.blade.php:9`.
+- [x] **The current sidebar section has a 3px accent bar.** `.app-rail-link.is-section` (`app.css:1122`). Common in real navigation too, so this is the weakest case. *(approved earlier)*
+- False positive: the detector's 18px side borders in `vendor/mail/html/themes/default.css:243–262` are Laravel's stock email-button padding, not stripes.
+
+### Help text under fields that don't need it
+
+- [x] **Log Activity has 11 help lines for 14 labels.** Four say "Limited to the selected agreements…" while the disabled field already says "Select at least one agreement first…". "Set by the selected activity type." restates what the field shows. Keep "How many completions this log represents. Observed time is not multiplied.", which adds a real rule. `components/activity-form.blade.php:396–438`. Now 5: the restating lines are gone, and the duration line appears only once a type is picked ("Set by Training.", or which sub-activity overrides it).
+- [x] **The program scope picker explains its own implementation.** "All programs, only selected programs, or none." (restates the radio options), "Filters the program list. Not saved." and "Saved when Specific is selected." Repeated on Agreements, Organizations, Users, Teams and Logging fields. `components/project-program-scope-picker.blade.php`. All three removed. Projects keeps its "Projects" label: to people it is a project select, even though programs carry the access.
+- [x] **The agreement form explains staging.** "Rows are staged locally and saved only when the agreement form is submitted." Every field on the form saves that way; the header Save already says so.
+- Keep: "Exactly 6 digits.", the inactive-record consequences on Organizations, Users and Agreements, "Use a full row when this field is shown on an activity form."
+
+### Dashboard and card templates
+
+- [ ] **Home is the hero-metric template.** Trello: https://trello.com/c/YpHJdm9U. "Stats Snapshot" is four big numbers with small labels, including "59 States" (a reference-data count). Labels are made from array keys (`str_replace('_', ' ', ucfirst($key))`, `home/partials/stats.blade.php`).
+- [ ] **Home opens with "Welcome back, {name}"** Trello: https://trello.com/c/YpHJdm9U. (`home.blade.php:11`) and a "Quick Actions" card of icon buttons that repeat the sidebar (Log Activity is in the sidebar and phone top bar already).
+- [x] **Profile repeats its own numbers.** Summary shows "2 Projects / 2 Programs / 0 Teams" as big figures, then the same counts again in the disclosure rows below.
+- [ ] **Boxes inside cards.** Trello: https://trello.com/c/7wL34T31. Home's My Agreements and Recent Activity are bordered list boxes inside the My Work card; Profile's Projects/Programs/Teams disclosures are bordered boxes inside the Summary card.
+- [x] **Record-kind icon in a tinted square beside every show-page title.** `.app-record-icon` (`app.css:161`), 40px Steel Mist tile. The icon-tile is the stock generated-card shape. *(approved earlier, Hierarchy C)* Now a plain muted icon; the forgot-password envelope tile went with it.
+
+### Chips, counts and icons
+
+- [x] **A count pill beside every heading, including zero.** "Deliverables 0", "Projects 0", "Teams 0 … None yet." The zero pill and the empty sentence say the same thing.
+- [x] **Status chips use three signals for one state:** tint, dot and text. *(DESIGN.md rule)*
+- [x] **Search gives each record kind its own color.** Column titles are green, steel and grey (`search/results.blade.php:42, 72, 97`). Breaks the One Accent Rule.
+- [x] **Decorative hatching.** "Setup gap" deliverable statuses use a `repeating-linear-gradient` stripe (`app.css:4228`). Also contradicts DESIGN.md's "No hatching or texture" for status bars. Removed. The stripes existed to keep setup gaps apart from progress, so that job moved to layout: No assignees and No target now form a labeled **Setup** group beside a labeled **Progress** group, each with its own bar and its chips underneath; No assignees keeps amber plus a warning icon. (A hollow-outline version was tried and rejected.)
+
+### Copy
+
+- [x] **"Success!" title on every success toast** (`resources/js/toasts.js:13`). The message already says what succeeded. Fixed: see "Success!" in the second sweep below.
+- [x] **A muted line under every page title**, whether or not it says anything: "14 total", "Results for a", "Welcome back…". Removed from the 14 lists and Search; Home's greeting goes with the Home card (https://trello.com/c/YpHJdm9U).
+- [x] **An eyebrow label above the page title.** `x-page-header`'s `eyebrow` slot ("Certificate enrollment" over the candidate's name). Removed; the breadcrumb already says it.
+- [x] **"NEXT STEP" as a tracked uppercase label** in the enrollment alert (`certification/partials/lifecycle-status.blade.php`). Now sentence case, in the alert's own ink.
+- [x] **Log Activity had a "current page" look.** On the Log Activity form the sidebar and phone-bar buttons turned into outlines. It's an action, not a place, so it stays the primary button everywhere (`aria-current` remains for screen readers).
+- [x] **Menus floated flat on the page.** Bootstrap 5.3 only applies its dropdown shadow when built with shadows on, so the row ⋯ menus, +N menus and record-bar menu had no depth, and token picker lists used Bootstrap's faint `shadow-sm`. All now use the popover shadow.
+- [x] **The current item in the account menu looked like a hover.** Profile used the neutral hover fill; it now uses Steel Mist and steel ink like the current sidebar section.
+- [x] **Emoji and Unicode glyphs as icons.** "💡 Tip:" on Home's search card (removed with its repeated sentence), "✓" on training sections and "‹ ›" in pagination (now Bootstrap Icons).
+- [ ] **HTML comments that repeat the heading below them** Trello: https://trello.com/c/YpHJdm9U. (`<!-- Quick Actions -->`, `<!-- Stats Snapshot -->`, `<!-- My Work -->` in `home.blade.php`).
+
+### Second sweep, from the research (2026-11-24)
+
+Checked against [`ai-design-smells-research.md`](ai-design-smells-research.md) (39 smells, 44 sources; two of the less familiar sources spot-checked and confirmed).
+
+- [x] **One empty message for different causes.** All 13 index tables say "No organizations found." plus the create button even when a search or filter hid every record; Agreements tells staff "You are not assigned to any agreements." with a filter on. Candidates has the reverse bug: "No candidates match these filters." with no filters. Each cause needs its own next step (Clear filters vs Create). Fixed with a shared `x-table-empty` in all 15 lists: filtered → "No {records} match your search or filters." + Clear filters; unfiltered keeps each list's message and create button. The message is centered in the results area with no row divider or hover.
+- [x] **"N total" under every list title** repeats the footer's "Showing 1–14 of 14" (14 lists), and Search's "Results for a" repeats its own search box. The certification award and history pages use the same line for real context (the candidate's name) and should keep it. Removed from the 14 lists and Search.
+- [x] **"Success!" above "… created successfully."** Every success toast states success twice and cheers about a routine save (44 flash messages use "successfully"). Now the specific outcome is the toast's title, no period ("Team created"), with a body only for a real next step ("Review the copy and save any changes."); "Success!" is the fallback for toasts without one. 56 messages rewritten.
+- [ ] **Deliverable charts have no text equivalent.** Trello: https://trello.com/c/Och7R6T1 (the whole Deliverables tab gets redone). The Deliverables tab's histogram and each deliverable's burn-up chart are bare `<canvas>` elements with no accessible name or table, unlike the Overview chart. *WCAG 1.1.1.*
+- Checked and fine: row actions (the record opens from the row; the ⋯ menu holds secondary actions), filter state (filters stay visible on desktop; phones show an active count), bulk selection (none in tables), validation (summaries link to fields and keep input), tooltips (icon-button names only; disabled reasons are written out), loading (tables dim in place; two small spinners).
+
+## 10. Technical audit (2026-11-24)
+
+Scores: accessibility 3, performance 3, theming 3, responsive 3, implementation integrity 2: **14/20, Good**. No contrast failures, no console errors and no sideways scrolling at 390px on the 13 pages checked.
+
+### SHOULD-FIX
+
+- [x] **Log Activity says "Unsaved changes" before anyone types.** On load, `components/activity-form.blade.php:2157` fires a bubbling synthetic `change` on the activity type, and `resources/js/form-header.js:86–87` counts it as an edit. Leaving the untouched form then asks to discard changes. Most-used form in the app. **Fixed in `form-header.js`:** synthetic events count as edits only after the person has pointed or typed on the page, so load-time syncing no longer marks forms dirty while editors that report real edits still do.
+- [x] **Two search fields have no label**, only a placeholder: `home/partials/search.blade.php:7` and `search/results.blade.php:18`. *WCAG 3.3.2.*
+- [x] **Search results list every related state and organization**, up to eight lines per agreement. Clamp to one line.
+- [x] **About 7,700 lines of JavaScript live inside Blade `<script>` blocks** Trello: https://trello.com/c/B9u6HbkO. (37 files; `activity-form.blade.php` is 2,183 lines, `deliverables-section.blade.php` 2,084). It can't be cached, linted or reused, and caused the dirty-state bug above. **Resolved:** shared components are modules imported from `resources/js/app.js`; the activity, agreement, user, logging-field and award-history forms each load their own Vite entry only on their page. Server data travels in `<script type="application/json">` blocks. Only the pre-paint rail script stays inline, and `tests/Feature/InlineScriptTest.php` keeps it that way.
+
+### NIT
+
+- [x] **18 font sizes** in `app.css`, including 8px (`:1763`) and 10px (`:2505`, `:3094`, and inline in `token-picker.blade.php:347`, `kfs-section.blade.php:107`); both `0.6875rem` and `.6875rem` notations. Text sizes now sit on the ramp; the 0.5–0.625rem values left are icon glyphs.
+- [x] **Shadows use the pre-brand ink** `rgba(21,26,35,…)` (`app.css:26–30`), not navy `#000e2f`. All 14 now use one `--app-shadow-rgb` token in the brand navy.
+- [x] **Six durations (120–250ms) and three easing curves** for UI transitions. Now two tokens (150ms fast, 200ms move) and one ease-out curve; see DESIGN.md Motion.
+- [x] **Placeholder ellipses are mixed**: 34 use "...", 18 use "…". All "…" now; statements that ended in "..." ("No states are available…") end in a period.
+- [x] **Heading levels follow size, not structure**: `h5`/`h6` card titles straight after the page `h1` on Home, Search and Profile.
+- [x] **`x-entity-count-badge` is documented in DESIGN.md but never rendered.** Removed from both.
+- [x] **Token remove buttons are 13×13px** (`token-picker.blade.php:347`, `kfs-section.blade.php:107`); they pass WCAG 2.5.8 only on spacing. Now 24×24px.
+- [x] **Page side margins differ**: Home and Search start about 12px further right than lists and record pages. Their extra `container-fluid py-4` wrapper is gone.
+- [x] **`class="mb-0"` on `x-form-field` never worked.** The component always added `mb-3`, which Bootstrap defines later, so 26 fields kept a 16px gap their layout didn't want (uneven rows in Log Activity's Coverage). A caller's own bottom margin now replaces the default.
+- [x] **Radio-card radios sit on the card's left border** (Edit User → Role). `form-radio-card` adds `px-3`, which overrides the padding Bootstrap leaves for the radio. The selected card also uses a grey fill, not the Steel Mist DESIGN.md describes, and Bootstrap's `.border` utility hid its steel border. All fixed: hanging indent, Steel Mist fill, steel border.
+
+- [ ] **Small leftovers** (help text on other forms, the "Not yet complete" wording, a typed "+" on Add Deliverable, the progress-green hex, sidebar heading order, a slow-network dirty-state edge case, the stale `.impeccable/design.json`): Trello https://trello.com/c/QCfBFWvk.
 
 ## Roadmap (updated 2026-10-27, after integration fixes)
 

@@ -6,7 +6,7 @@
         </button>
         <a class="navbar-brand" href="{{ route('dashboard') }}">{{ config('app.name') }}</a>
         <a href="{{ route('activities.create') }}"
-           @class(['btn btn-primary btn-sm app-navbar-cta', 'is-active' => request()->routeIs('activities.create')])
+           class="btn btn-primary btn-sm app-navbar-cta"
            @if(request()->routeIs('activities.create')) aria-current="page" @endif>
             Log Activity
         </a>

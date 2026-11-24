@@ -81,6 +81,6 @@ class CertificateProgressController extends Controller
         return redirect()->route('certificate-enrollments.show', [
             'certificateEnrollment' => $certificateEnrollment,
             'agreement_id' => $request->integer('agreement_id') ?: null,
-        ])->with('success', 'Coach confirmation saved.');
+        ])->with('success', 'Coach confirmation saved');
     }
 }

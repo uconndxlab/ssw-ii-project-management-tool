@@ -108,7 +108,7 @@
             name="state_ids[]"
             :items="$states"
             :selected-ids="old('state_ids', $organization?->states?->pluck('id')->toArray() ?? [])"
-            placeholder="Search states..."
+            placeholder="Search states…"
             :height="'220px'"
             entity="state"
         />
@@ -137,7 +137,7 @@
             label-key="label"
             value-key="value"
             search-key="search"
-            placeholder="Search to add users..."
+            placeholder="Search to add users…"
             :height="'220px'"
             entity="user"
         />

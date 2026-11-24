@@ -6,7 +6,7 @@
     $scopeEmptyLabel = fn ($mode, string $allLabel, string $noneLabel) => ($mode?->value ?? $mode) === 'none' ? $noneLabel : $allLabel;
 @endphp
 
-<div class="card shadow-sm app-index-table-card">
+<div class="card shadow-sm app-index-table-card" data-table-sort-sync>
     <x-table-scroll>
         <table class="table table-hover align-middle mb-0 app-cards">
             <thead>
@@ -95,14 +95,12 @@
                     </td>
                 </tr>
                 @empty
-                <tr>
-                    <td colspan="8" class="text-center py-5">
-                        <p class="text-muted mb-2">No sub-activities found.</p>
-                        @can('create', App\Models\SubActivity::class)
-                        <a href="{{ route('sub-activities.create') }}" class="btn btn-sm btn-primary">Add Sub-activity</a>
-                        @endcan
-                    </td>
-                </tr>
+                <x-table-empty colspan="8" plural="sub-activities" index-route="sub-activities.index">
+                    <p class="text-muted mb-2">No sub-activities found.</p>
+                    @can('create', App\Models\SubActivity::class)
+                    <a href="{{ route('sub-activities.create') }}" class="btn btn-sm btn-primary">Add Sub-activity</a>
+                    @endcan
+                </x-table-empty>
                 @endforelse
             </tbody>
         </table>
@@ -111,30 +109,3 @@
         <x-htmx-pagination :paginator="$subActivities" target="#sub-activities-table" />
     </div>
 </div>
-
-@once
-    <script>
-    (function () {
-        document.body.addEventListener('htmx:afterSwap', function (event) {
-            if (event.target && event.target.id === 'sub-activities-table') {
-                var params = new URLSearchParams(window.location.search);
-                var form = document.getElementById('sub-activity-filters');
-                if (form) {
-                    if (params.has('sort')) {
-                        var sortInput = form.querySelector('[name=sort]');
-                        if (sortInput) {
-                            sortInput.value = params.get('sort');
-                        }
-                    }
-                    if (params.has('direction')) {
-                        var directionInput = form.querySelector('[name=direction]');
-                        if (directionInput) {
-                            directionInput.value = params.get('direction');
-                        }
-                    }
-                }
-            }
-        });
-    })();
-    </script>
-@endonce

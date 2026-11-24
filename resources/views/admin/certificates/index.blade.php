@@ -4,7 +4,7 @@
 
 @section('content')
 
-<x-page-header context="index" title="Certificates" description="{{ $certificates->total() }} total" :action-url="auth()->user()->can('create', App\Models\Certificate::class) ? route('certificates.create') : null" />
+<x-page-header context="index" title="Certificates" :action-url="auth()->user()->can('create', App\Models\Certificate::class) ? route('certificates.create') : null" />
 
 <div class="card shadow-sm mb-3">
     <div class="card-body py-2">

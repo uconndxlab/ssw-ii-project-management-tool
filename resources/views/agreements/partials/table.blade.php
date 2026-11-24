@@ -134,18 +134,16 @@
                     </td>
                 </tr>
                 @empty
-                <tr>
-                    <td colspan="10" class="text-center py-5">
-                        <p class="text-muted mb-2">
-                            @can('create', App\Models\Agreement::class) No agreements found.
-                            @else You are not assigned to any agreements.
-                            @endcan
-                        </p>
-                        @can('create', App\Models\Agreement::class)
-                            <a href="{{ route('agreements.create') }}" class="btn btn-sm btn-primary">Create Agreement</a>
+                <x-table-empty colspan="10" plural="agreements" index-route="agreements.index">
+                    <p class="text-muted mb-2">
+                        @can('create', App\Models\Agreement::class) No agreements found.
+                        @else You are not assigned to any agreements.
                         @endcan
-                    </td>
-                </tr>
+                    </p>
+                    @can('create', App\Models\Agreement::class)
+                        <a href="{{ route('agreements.create') }}" class="btn btn-sm btn-primary">Create Agreement</a>
+                    @endcan
+                </x-table-empty>
                 @endforelse
             </tbody>
         </table>

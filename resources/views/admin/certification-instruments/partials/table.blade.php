@@ -85,14 +85,12 @@
                     </td>
                 </tr>
                 @empty
-                <tr>
-                    <td colspan="8" class="text-center py-5">
-                        <p class="text-muted mb-2">No tools or trainings found.</p>
-                        @can('create', App\Models\CertificationInstrument::class)
-                        <a href="{{ route('certification-instruments.create') }}" class="btn btn-sm btn-primary">Create Tool or Training</a>
-                        @endcan
-                    </td>
-                </tr>
+                <x-table-empty colspan="8" plural="tools or trainings" index-route="certification-instruments.index">
+                    <p class="text-muted mb-2">No tools or trainings found.</p>
+                    @can('create', App\Models\CertificationInstrument::class)
+                    <a href="{{ route('certification-instruments.create') }}" class="btn btn-sm btn-primary">Create Tool or Training</a>
+                    @endcan
+                </x-table-empty>
                 @endforelse
             </tbody>
         </table>

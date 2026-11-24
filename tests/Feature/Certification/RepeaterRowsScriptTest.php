@@ -6,18 +6,18 @@ use App\Models\CertificationInstrument;
 use App\Models\CertificationInstrumentDimension;
 use App\Models\CertificationInstrumentDimensionOption;
 
-test('certification tool create page loads repeater script outside row templates', function () {
+test('certification tool create page keeps scripts out of row templates', function () {
     $admin = createSystemAdmin();
     $html = $this->actingAs($admin)->get(route('certification-instruments.create'))->getContent();
 
     expect($html)->toContain('data-repeater-add');
-    expect($html)->toContain("addBtn = e.target.closest('[data-repeater-add]')");
 
     $templateStart = strpos($html, '<template data-repeater-template>');
     $templateEnd = strpos($html, '</template>', $templateStart);
     $firstTemplate = substr($html, $templateStart, $templateEnd - $templateStart);
 
-    expect($firstTemplate)->not->toContain("addBtn = e.target.closest('[data-repeater-add]')");
+    // The repeater behaviour ships in resources/js/repeater-rows.js; cloned rows must not carry a script.
+    expect($firstTemplate)->not->toContain('<script');
 
     // Repeater styles ship in app.css; neither the page nor its row templates may carry a <style> block.
     expect($html)->not->toContain('.repeater-row-card');
@@ -78,3 +78,13 @@ test('certificate edit page renders requirement rows with dimension options', fu
     expect($html)->toContain('data-cert-options="'.$dimension->id.'"');
     expect($html)->toContain('Partial');
 });
+
+test('repeater numbers new rows past the highest kept row', function (iterable $rows, string $expected) {
+    // Rows removed before a failed save leave gaps; counting them would reuse a kept row's number.
+    $this->blade('<x-repeater-rows name="rows" :rows="$rows" />', ['rows' => $rows])
+        ->assertSee('data-next-index="'.$expected.'"', false);
+})->with([
+    'no rows' => [[], '0'],
+    'gap after removals' => [[0 => [], 2 => []], '3'],
+    'collection' => [fn () => collect([1 => []]), '2'],
+]);

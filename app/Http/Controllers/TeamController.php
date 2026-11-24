@@ -181,7 +181,7 @@ class TeamController extends Controller
 
         return redirect()
             ->route('teams.index')
-            ->with('success', 'Team created successfully.');
+            ->with('success', 'Team created');
     }
 
     public function show(Team $team): View
@@ -298,7 +298,7 @@ class TeamController extends Controller
             $validated['program_ids'] ?? [],
         );
 
-        return $this->redirectAfterSave($team, 'Team updated successfully.');
+        return $this->redirectAfterSave($team, 'Team updated');
     }
 
     public function destroy(Team $team): RedirectResponse
@@ -310,6 +310,6 @@ class TeamController extends Controller
 
         return redirect()
             ->route('teams.index')
-            ->with('success', 'Team deleted successfully.');
+            ->with('success', 'Team deleted');
     }
 }

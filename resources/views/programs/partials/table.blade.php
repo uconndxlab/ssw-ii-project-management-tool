@@ -5,7 +5,7 @@
     $url = fn ($col) => route('programs.index', array_merge(request()->query(), ['sort' => $col, 'direction' => $flip($col), 'page' => 1]));
 @endphp
 
-<div class="card shadow-sm app-index-table-card">
+<div class="card shadow-sm app-index-table-card" data-table-sort-sync>
     <x-table-scroll>
         <table class="table table-hover align-middle mb-0 app-cards">
             <thead>
@@ -72,14 +72,12 @@
                     </td>
                 </tr>
                 @empty
-                <tr>
-                    <td colspan="5" class="text-center py-5">
-                        <p class="text-muted mb-2">No programs found.</p>
-                        @can('create', App\Models\Program::class)
-                        <a href="{{ route('programs.create') }}" class="btn btn-sm btn-primary">Create Program</a>
-                        @endcan
-                    </td>
-                </tr>
+                <x-table-empty colspan="5" plural="programs" index-route="programs.index">
+                    <p class="text-muted mb-2">No programs found.</p>
+                    @can('create', App\Models\Program::class)
+                    <a href="{{ route('programs.create') }}" class="btn btn-sm btn-primary">Create Program</a>
+                    @endcan
+                </x-table-empty>
                 @endforelse
             </tbody>
         </table>
@@ -88,30 +86,3 @@
         <x-htmx-pagination :paginator="$programs" target="#programs-table" />
     </div>
 </div>
-
-@once
-    <script>
-    (function () {
-        document.body.addEventListener('htmx:afterSwap', function (event) {
-            if (event.target && event.target.id === 'programs-table') {
-                var params = new URLSearchParams(window.location.search);
-                var form = document.getElementById('program-filters');
-                if (form) {
-                    if (params.has('sort')) {
-                        var sortInput = form.querySelector('[name=sort]');
-                        if (sortInput) {
-                            sortInput.value = params.get('sort');
-                        }
-                    }
-                    if (params.has('direction')) {
-                        var directionInput = form.querySelector('[name=direction]');
-                        if (directionInput) {
-                            directionInput.value = params.get('direction');
-                        }
-                    }
-                }
-            }
-        });
-    })();
-    </script>
-@endonce

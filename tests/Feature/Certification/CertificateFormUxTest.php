@@ -21,7 +21,7 @@ test('certificate edit form marks an in-scope tool selected', function () {
     expect($html)->toContain('value="'.$tool->id.'"');
     expect($html)->toMatch('/value="'.$tool->id.'"[^>]*selected/s');
     expect($html)->toContain('data-program-ids="'.$program->id.'"');
-    expect($html)->toContain('tokenPickerInitialized');
+    expect($html)->toContain('data-token-picker');
     expect($html)->toContain('data-selected=\'["'.$program->id.'"]\'');
 });
 

@@ -12,6 +12,10 @@
     /* Control outlines at 3:1 on white (WCAG 1.4.11). Controls always sit on white surfaces. */
     --app-control-border: #8c959f;
     --app-ink: #000e2f;
+    --app-shadow-rgb: 0 14 47;
+    --app-duration-fast: 150ms;
+    --app-duration-move: 200ms;
+    --app-ease: cubic-bezier(0.16, 1, 0.3, 1);
     --app-muted: #5d6675;
     --app-accent: #116e88;
     --app-accent-hover: #01495e;
@@ -23,12 +27,12 @@
     /* A crisp 1px teal edge (3.4:1 on white) inside a soft teal glow. */
     --app-ring: 0 0 0 1px #0a9aa8, 0 0 0 0.25rem rgba(10, 154, 168, 0.3);
     --app-ring-inset: inset 0 0 0 2px #0a9aa8;
-    --app-shadow-bar: 0 0.25rem 1rem rgba(21, 26, 35, 0.1);
-    --app-shadow-pop: 0 0.5rem 1.5rem rgba(21, 26, 35, 0.12), 0 0.125rem 0.375rem rgba(21, 26, 35, 0.06);
-    --app-shadow-button: 0 1px 2px rgba(21, 26, 35, 0.08);
+    --app-shadow-bar: 0 0.25rem 1rem rgb(var(--app-shadow-rgb) / 0.1);
+    --app-shadow-pop: 0 0.5rem 1.5rem rgb(var(--app-shadow-rgb) / 0.12), 0 0.125rem 0.375rem rgb(var(--app-shadow-rgb) / 0.06);
+    --app-shadow-button: 0 1px 2px rgb(var(--app-shadow-rgb) / 0.08);
     /* Soft elevation separates white working surfaces from the canvas. */
-    --app-card-shadow: 0 1px 3px rgba(21, 26, 35, 0.1), 0 5px 12px rgba(21, 26, 35, 0.05);
-    --app-scroll-shadow-color: rgba(21, 26, 35, 0.32);
+    --app-card-shadow: 0 1px 3px rgb(var(--app-shadow-rgb) / 0.1), 0 5px 12px rgb(var(--app-shadow-rgb) / 0.05);
+    --app-scroll-shadow-color: rgb(var(--app-shadow-rgb) / 0.32);
 
     --bs-body-font-size: 0.875rem;
     --bs-body-color: #232a36;
@@ -41,7 +45,7 @@
     --bs-secondary-bg: #f0f2f5;
     --bs-tertiary-bg: #f0f2f5;
     --bs-border-color: #d4dbe3;
-    --bs-border-color-translucent: rgba(21, 26, 35, 0.08);
+    --bs-border-color-translucent: rgb(var(--app-shadow-rgb) / 0.08);
     --bs-border-radius: 0.375rem;
     --bs-border-radius-sm: 0.25rem;
     --bs-border-radius-lg: 0.5rem;
@@ -159,15 +163,10 @@ main {
 }
 
 .app-record-icon {
-    display: inline-grid;
     flex: 0 0 auto;
-    place-items: center;
-    width: 2.5rem;
-    height: 2.5rem;
-    color: var(--app-accent-ink);
-    background-color: var(--app-accent-subtle);
-    border-radius: var(--bs-border-radius);
-    font-size: 1.25rem;
+    color: var(--app-muted);
+    font-size: 1.5rem;
+    line-height: 1.2;
 }
 
 .app-record-facts {
@@ -278,6 +277,22 @@ main {
 
 .app-index-table-card > .card-footer {
     position: relative;
+}
+
+/* An empty result is a message centered in the results area, not a table row: no divider, no hover, and on
+   desktop listings it fills the space between the headings and the footer. */
+.table > tbody > tr.app-table-empty > td {
+    --bs-table-bg-state: transparent;
+    border-bottom: 0;
+    vertical-align: middle;
+}
+
+.table-responsive:has(.app-table-empty) > .table {
+    height: 100%;
+}
+
+.table-responsive:has(.app-table-empty) > .table > thead > tr {
+    height: 1px;
 }
 
 .app-table-scroll-frame {
@@ -484,11 +499,11 @@ main {
 .app-confirm-dialog[open] {
     display: flex;
     flex-direction: column;
-    animation: app-confirm-in 140ms cubic-bezier(0.16, 1, 0.3, 1);
+    animation: app-confirm-in var(--app-duration-move) var(--app-ease);
 }
 
 .app-confirm-dialog::backdrop {
-    background: rgba(21, 26, 35, 0.35);
+    background: rgb(var(--app-shadow-rgb) / 0.35);
 }
 
 .app-confirm-body {
@@ -507,7 +522,7 @@ main {
 
 .app-confirm-heading h2 {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: 1.125rem;
     font-weight: 600;
     line-height: 1.3;
 }
@@ -605,12 +620,14 @@ main {
 }
 
 .form-radio-card {
+    padding-left: calc(1rem + 1.5em);
+    border: var(--bs-border-width) solid var(--bs-border-color);
     cursor: pointer;
 }
 
 .form-radio-card:has(input:checked) {
     border-color: var(--bs-primary);
-    background-color: var(--bs-light);
+    background-color: var(--bs-primary-bg-subtle);
 }
 
 .form-radio-row {
@@ -621,7 +638,7 @@ main {
 
 .form-radio-row .form-radio-card {
     min-width: 0;
-    padding: 0.5rem 0.75rem;
+    padding: 0.5rem 0.75rem 0.5rem calc(0.75rem + 1.5em);
 }
 
 .form-drawer {
@@ -640,9 +657,9 @@ main {
 .form-drawer-backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(21, 26, 35, 0.35);
+    background: rgb(var(--app-shadow-rgb) / 0.35);
     opacity: 0;
-    transition: opacity 0.2s ease;
+    transition: opacity var(--app-duration-move) var(--app-ease);
 }
 
 .form-drawer.is-open .form-drawer-backdrop {
@@ -658,9 +675,9 @@ main {
     flex-direction: column;
     width: min(52rem, 100%);
     background: #fff;
-    box-shadow: -0.5rem 0 1.5rem rgba(21, 26, 35, 0.12);
+    box-shadow: -0.5rem 0 1.5rem rgb(var(--app-shadow-rgb) / 0.12);
     transform: translateX(100%);
-    transition: transform 0.2s ease;
+    transition: transform var(--app-duration-move) var(--app-ease);
 }
 
 .form-drawer.is-open .form-drawer-panel {
@@ -707,11 +724,6 @@ main {
 
 body.form-drawer-open {
     overflow: hidden;
-}
-
-.form-subsection {
-    border-left: 2px solid var(--app-line-strong);
-    padding-left: 1rem;
 }
 
 .form-subsection + .form-subsection {
@@ -839,16 +851,15 @@ html[data-rail="unpinned"] {
     white-space: nowrap;
 }
 
-.app-navbar-cta.is-active {
-    color: var(--bs-primary);
-    background-color: transparent;
-    border-color: var(--bs-primary);
+/* The current page in a menu looks like the current sidebar section: Steel Mist fill, steel ink, steel icon. */
+.dropdown-item.is-current {
+    background-color: var(--bs-primary-bg-subtle);
+    color: var(--bs-primary-text-emphasis);
+    font-weight: 600;
 }
 
-.dropdown-item.is-current {
-    background-color: var(--app-surface-inset);
-    color: var(--bs-emphasis-color);
-    font-weight: 600;
+.dropdown-item.is-current .bi {
+    color: var(--bs-primary);
 }
 
 .app-body {
@@ -860,6 +871,32 @@ html[data-rail="unpinned"] {
 .app-main {
     flex: 1 1 0;
     min-width: 0;
+}
+
+/* Desktop app shell: only the main column scrolls, so it can bounce while the sidebar stays put. */
+@media screen and (min-width: 992px) {
+    html:has(> body > .app-body) {
+        scrollbar-gutter: auto;
+    }
+
+    body:has(> .app-body) {
+        height: 100dvh;
+        overflow: hidden;
+    }
+
+    .app-body {
+        flex: 1 1 0;
+        min-height: 0;
+    }
+
+    .app-main {
+        overflow-y: auto;
+        scrollbar-gutter: stable;
+    }
+
+    body.form-drawer-open .app-main {
+        overflow: hidden;
+    }
 }
 
 .app-main > .container {
@@ -1009,7 +1046,7 @@ html[data-rail="unpinned"] .app-rail-pin-on {
     flex: none;
     padding: 0 0.375rem;
     font-family: inherit;
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
     color: var(--bs-secondary-color);
     background-color: var(--bs-light);
     border: 1px solid var(--bs-border-color);
@@ -1038,12 +1075,6 @@ html[data-rail="unpinned"] .app-rail-pin-on {
 .app-rail-log:hover {
     color: var(--bs-white);
     background-color: var(--bs-link-hover-color);
-}
-
-.app-rail-log.is-active {
-    color: var(--bs-primary);
-    background-color: transparent;
-    box-shadow: inset 0 0 0 1px var(--bs-primary);
 }
 
 .app-rail-nav {
@@ -1123,7 +1154,6 @@ html[data-rail="unpinned"] .app-rail-pin-on {
     font-weight: 600;
     color: var(--bs-primary-text-emphasis);
     background-color: var(--bs-primary-bg-subtle);
-    box-shadow: inset 0.1875rem 0 0 var(--app-accent);
 }
 
 .app-rail-link.is-section .bi {
@@ -1154,7 +1184,7 @@ html[data-rail="unpinned"] .app-rail-pin-on {
     .app-rail-account,
     .app-rail-pin,
     .app-recent-link {
-        transition: background-color 0.12s ease-out, color 0.12s ease-out, box-shadow 0.12s ease-out;
+        transition: background-color var(--app-duration-fast) var(--app-ease), color var(--app-duration-fast) var(--app-ease), box-shadow var(--app-duration-fast) var(--app-ease);
     }
 }
 
@@ -1236,7 +1266,6 @@ html[data-rail="unpinned"] .app-rail-pin-on {
     --bs-dropdown-divider-margin-y: 0.25rem;
     --bs-dropdown-item-padding-y: 0.5rem;
     min-width: 12rem;
-    box-shadow: var(--app-shadow-pop);
 }
 
 .app-rail-menu .dropdown-item {
@@ -1393,25 +1422,25 @@ html[data-rail="unpinned"] .app-rail-pin-on {
 @media (prefers-reduced-motion: no-preference) {
     @media (min-width: 992px) {
         .app-rail-slot {
-            transition: flex-basis 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: flex-basis var(--app-duration-move) var(--app-ease);
         }
 
         .offcanvas-lg.app-rail {
-            transition: width 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s;
+            transition: width var(--app-duration-move) var(--app-ease), box-shadow var(--app-duration-move) var(--app-ease);
         }
 
         .app-rail-label,
         .app-rail-search-input,
         .app-rail-kbd {
-            transition: opacity 0.12s ease-out 0.06s;
+            transition: opacity var(--app-duration-fast) var(--app-ease) 0.06s;
         }
 
         .app-rail-heading {
-            transition: color 0.12s ease-out 0.06s;
+            transition: color var(--app-duration-fast) var(--app-ease) 0.06s;
         }
 
         .app-rail-heading::after {
-            transition: opacity 0.12s ease-out;
+            transition: opacity var(--app-duration-fast) var(--app-ease);
         }
 
         html[data-rail="unpinned"] .app-rail:not(.is-peek) :is(.app-rail-label, .app-rail-search-input, .app-rail-kbd, .app-rail-heading) {
@@ -1557,7 +1586,7 @@ html[data-rail="unpinned"] .app-rail-pin-on {
 .app-recent-status {
     margin: 0;
     padding: 1.5rem 1.25rem;
-    font-size: 0.9375rem;
+    font-size: 0.875rem;
     color: var(--bs-secondary-color);
 }
 
@@ -1597,7 +1626,7 @@ html[data-rail="unpinned"] .app-rail-pin-on {
 
 @media (prefers-reduced-motion: no-preference) and (min-width: 992px) {
     .offcanvas.app-recent {
-        transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        transition: transform var(--app-duration-move) var(--app-ease), opacity var(--app-duration-move) var(--app-ease);
     }
 }
 
@@ -1816,7 +1845,7 @@ html[data-rail="unpinned"] .app-rail-pin-on {
 
 @media (prefers-reduced-motion: no-preference) {
     .app-header-bar {
-        transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        transition: transform var(--app-duration-move) var(--app-ease), opacity var(--app-duration-move) var(--app-ease);
     }
 }
 
@@ -2013,6 +2042,16 @@ textarea.form-control {
     --bs-dropdown-link-hover-bg: var(--app-surface-inset);
     --bs-dropdown-link-active-bg: var(--app-accent);
     --bs-dropdown-box-shadow: var(--app-shadow-pop);
+    /* Bootstrap only applies its dropdown shadow when built with shadows on, so menus would sit flat on the page. */
+    box-shadow: var(--bs-dropdown-box-shadow);
+}
+
+/* A token picker's option list floats like a menu. */
+.app-picker-menu {
+    background-color: var(--bs-body-bg);
+    border: var(--bs-border-width) solid var(--app-line);
+    border-radius: var(--bs-border-radius-lg);
+    box-shadow: var(--app-shadow-pop);
 }
 
 .dropdown-item {
@@ -2148,7 +2187,7 @@ textarea.form-control {
 }
 
 .app-review-banner__title {
-    font-size: 0.9375rem;
+    font-size: 0.875rem;
     line-height: 1.4;
     color: var(--app-muted);
 }
@@ -2284,8 +2323,8 @@ textarea.form-control {
 
 @media (prefers-reduced-motion: no-preference) {
     .app-toast {
-        animation: app-toast-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-        transition: opacity 0.15s ease-out, transform 0.15s ease-out;
+        animation: app-toast-in var(--app-duration-move) var(--app-ease);
+        transition: opacity var(--app-duration-fast) var(--app-ease), transform var(--app-duration-fast) var(--app-ease);
     }
 
     .app-toast.is-leaving {
@@ -2359,7 +2398,7 @@ textarea.form-control {
 
 @media (prefers-reduced-motion: no-preference) {
     .nav-pills .nav-link {
-        transition: color 0.12s ease-out, border-color 0.12s ease-out;
+        transition: color var(--app-duration-fast) var(--app-ease), border-color var(--app-duration-fast) var(--app-ease);
     }
 }
 
@@ -2402,7 +2441,7 @@ textarea.form-control {
 
 @media (prefers-reduced-motion: no-preference) {
     .is-loading {
-        transition: opacity 0.15s;
+        transition: opacity var(--app-duration-fast) var(--app-ease);
     }
 }
 
@@ -2410,7 +2449,7 @@ textarea.form-control {
    - .app-chip: a linked related record (or a selected token in a picker)
    - .app-plain: a related record the user cannot open
    - .app-tag: a non-clickable label (role, flag, record kind)
-   - .app-status: a tinted status chip with a dot and text
+   - .app-status: a tinted status chip with text
    - .app-count: a neutral count pill next to a title (lock and text for restricted records) */
 .app-chip,
 .badge.app-chip {
@@ -2456,6 +2495,14 @@ a.badge.app-chip:focus-visible {
     margin-left: 0.125rem;
 }
 
+:is([data-token-selected], [data-kfs-list]) .badge > .btn-close {
+    flex: none;
+    width: 0.625rem;
+    height: 0.625rem;
+    padding: 0.4375rem;
+    background-size: 0.625rem auto;
+}
+
 .app-plain {
     color: var(--bs-body-color);
 }
@@ -2490,7 +2537,7 @@ a.badge.app-chip:focus-visible {
     border-radius: 50rem;
     background-color: var(--bs-secondary-bg-subtle);
     color: var(--bs-secondary-text-emphasis);
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     line-height: 1;
@@ -2518,22 +2565,9 @@ a.badge.app-chip:focus-visible {
     border-radius: var(--bs-border-radius-sm);
 }
 
-.app-status::before {
-    flex: none;
-    width: 0.375rem;
-    height: 0.375rem;
-    content: "";
-    background-color: currentColor;
-    border-radius: 50%;
-}
-
 .app-status--success {
     color: var(--bs-success-text-emphasis);
     background-color: var(--bs-success-bg-subtle);
-}
-
-.app-status--success::before {
-    background-color: var(--bs-success);
 }
 
 .app-status--neutral {
@@ -2546,17 +2580,9 @@ a.badge.app-chip:focus-visible {
     background-color: var(--bs-warning-bg-subtle);
 }
 
-.app-status--warning::before {
-    background-color: var(--bs-warning);
-}
-
 .app-status--danger {
     color: var(--bs-danger-text-emphasis);
     background-color: var(--bs-danger-bg-subtle);
-}
-
-.app-status--danger::before {
-    background-color: var(--bs-danger);
 }
 
 /* One link style for records and people inside tables, ledgers and cards: ink with a grey underline at rest,
@@ -2868,7 +2894,7 @@ a.badge.app-chip:focus-visible {
 
 @media (prefers-reduced-motion: no-preference) {
     .app-ledger-toggle > .bi-chevron-right {
-        transition: transform 0.15s ease;
+        transition: transform var(--app-duration-fast) var(--app-ease);
     }
 }
 
@@ -2919,7 +2945,7 @@ a.badge.app-chip:focus-visible {
     bottom: 0;
     left: 0;
     height: 0.375rem;
-    box-shadow: 0 -4px 6px -4px rgba(21, 26, 35, 0.35);
+    box-shadow: 0 -4px 6px -4px rgb(var(--app-shadow-rgb) / 0.35);
     pointer-events: none;
 }
 
@@ -3300,7 +3326,7 @@ a.app-row-link:focus-visible::after {
         min-width: 1.125rem;
         height: 1.125rem;
         padding: 0 0.25rem;
-        font-size: 0.6875rem;
+        font-size: 0.75rem;
         font-weight: 600;
         color: var(--bs-white);
         background-color: var(--app-accent);
@@ -3480,7 +3506,7 @@ a.app-row-link:focus-visible::after {
     border-radius: var(--bs-border-radius-sm);
     background: var(--repeater-body);
     color: var(--repeater-muted);
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
     font-weight: 600;
     letter-spacing: 0.01em;
     line-height: 1.4;
@@ -3656,7 +3682,7 @@ a.app-row-link:focus-visible::after {
     border-style: dashed !important;
     border-color: var(--bs-primary) !important;
     border-radius: var(--bs-border-radius);
-    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+    transition: background-color var(--app-duration-fast) var(--app-ease), border-color var(--app-duration-fast) var(--app-ease), color var(--app-duration-fast) var(--app-ease), box-shadow var(--app-duration-fast) var(--app-ease);
 }
 
 .attachment-dropzone:hover,
@@ -3884,7 +3910,7 @@ a.app-row-link:focus-visible::after {
 
 @media (prefers-reduced-motion: no-preference) {
     .app-details > summary::after {
-        transition: transform 0.15s;
+        transition: transform var(--app-duration-fast) var(--app-ease);
     }
 }
 
@@ -3930,7 +3956,7 @@ a.app-row-link:focus-visible::after {
 
 .app-record-bar-wrap.is-stuck .app-record-bar {
     border-color: var(--app-line);
-    box-shadow: 0 0.75rem 2rem rgba(21, 26, 35, 0.2), 0 0.125rem 0.5rem rgba(21, 26, 35, 0.12);
+    box-shadow: 0 0.75rem 2rem rgb(var(--app-shadow-rgb) / 0.2), 0 0.125rem 0.5rem rgb(var(--app-shadow-rgb) / 0.12);
 }
 
 .app-record-bar-title {
@@ -4090,7 +4116,7 @@ a.app-row-link:focus-visible::after {
     align-items: center;
     gap: .375rem;
     padding: .75rem .75rem .375rem;
-    font-size: .8125rem;
+    font-size: 0.8125rem;
     font-weight: 600;
     color: var(--app-muted);
 }
@@ -4199,7 +4225,6 @@ a.app-row-link:focus-visible::after {
     height: 8px;
     border-radius: 999px;
     overflow: hidden;
-    margin-bottom: .75rem;
 }
 
 .app-status-block--danger {
@@ -4222,19 +4247,35 @@ a.app-row-link:focus-visible::after {
     background: var(--app-line-strong);
 }
 
-/* Setup gaps (no assignees, no target): striped so they read as flags, not steps on the progress scale. */
-.app-status-block--striped,
-.app-status--striped {
-    background-image: repeating-linear-gradient(-45deg, transparent 0 3px, rgb(255 255 255 / .55) 3px 5px);
+/* Progress and setup gaps (no assignees, no target) are separate groups: each has a label, its own bar sized by its
+   share of deliverables, and its chips underneath. Setup is a configuration problem, not a step on the progress scale. */
+.app-deliverable-status {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.app-deliverable-status-segment {
+    min-width: min(100%, 13rem);
+}
+
+.app-deliverable-status-segment > .app-deliverable-status-bar {
+    margin-bottom: 0.5rem;
+}
+
+.app-deliverable-status-label {
+    display: block;
+    margin-bottom: 0.375rem;
+    color: var(--app-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.2;
 }
 
 .app-status--progress {
     background: var(--bs-success-bg-subtle);
     color: var(--bs-success-text-emphasis);
-}
-
-.app-status--progress::before {
-    background: #7fbf99;
 }
 
 .app-abstract {
@@ -4255,7 +4296,7 @@ a.app-row-link:focus-visible::after {
 
 .app-activity-chart-caption {
     margin-bottom: 1.25rem;
-    font-size: .8125rem;
+    font-size: 0.8125rem;
     color: var(--app-muted);
 }
 
@@ -4316,7 +4357,7 @@ a.app-row-link:focus-visible::after {
     z-index: 3;
     display: none;
     padding: .3125rem .5rem;
-    font-size: .75rem;
+    font-size: 0.75rem;
     color: var(--bs-body-color);
     white-space: nowrap;
     pointer-events: none;
@@ -4371,7 +4412,7 @@ a.app-row-link:focus-visible::after {
     position: absolute;
     bottom: calc(100% + 2px);
     left: 50%;
-    font-size: .6875rem;
+    font-size: 0.75rem;
     font-weight: 600;
     color: var(--app-ink);
     white-space: nowrap;
@@ -4381,7 +4422,7 @@ a.app-row-link:focus-visible::after {
 .app-activity-axis {
     display: flex;
     margin-top: .25rem;
-    font-size: .6875rem;
+    font-size: 0.75rem;
     color: var(--app-muted);
     text-align: center;
 }
@@ -4394,7 +4435,7 @@ a.app-row-link:focus-visible::after {
 
 @media (prefers-reduced-motion: no-preference) {
     .app-record-bar-title {
-        transition: max-width 150ms ease-out, opacity 150ms ease-out;
+        transition: max-width var(--app-duration-fast) var(--app-ease), opacity var(--app-duration-fast) var(--app-ease);
     }
 }
 
@@ -4413,7 +4454,7 @@ a.app-row-link:focus-visible::after {
 
     .app-record-bar-actions #agreement-inactive-reason {
         max-width: 9rem;
-        font-size: .6875rem;
+        font-size: 0.75rem;
     }
 }
 

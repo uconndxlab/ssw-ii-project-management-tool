@@ -130,7 +130,7 @@
             name="prerequisite_certificate_ids[]"
             :items="$otherCertificates"
             :selected-ids="$selectedPrerequisiteIds"
-            placeholder="Search certificates..."
+            placeholder="Search certificates…"
         />
     </x-form-field>
 

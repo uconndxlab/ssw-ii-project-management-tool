@@ -82,7 +82,7 @@ class ProjectController extends Controller
 
         return redirect()
             ->route('projects.index')
-            ->with('success', 'Project created successfully.');
+            ->with('success', 'Project created');
     }
 
     public function show(Project $project): View
@@ -141,7 +141,7 @@ class ProjectController extends Controller
 
         $project->update($validated);
 
-        return $this->redirectAfterSave($project, 'Project updated successfully.');
+        return $this->redirectAfterSave($project, 'Project updated');
     }
 
     public function destroy(Project $project): RedirectResponse
@@ -162,6 +162,6 @@ class ProjectController extends Controller
 
         return redirect()
             ->route('projects.index')
-            ->with('success', 'Project deleted successfully.');
+            ->with('success', 'Project deleted');
     }
 }

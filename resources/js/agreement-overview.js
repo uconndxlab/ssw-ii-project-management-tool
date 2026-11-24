@@ -8,7 +8,7 @@ function animateHeight(element, change) {
     if (reducedMotion.matches) return;
     const to = element.offsetHeight;
     element.style.overflow = 'hidden';
-    element.animate({ height: [`${from}px`, `${to}px`] }, { duration: 200, easing: 'ease-out' })
+    element.animate({ height: [`${from}px`, `${to}px`] }, { duration: 200, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' })
         .finished.then(() => element.style.removeProperty('overflow'), () => {});
 }
 

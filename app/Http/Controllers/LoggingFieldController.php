@@ -282,7 +282,7 @@ class LoggingFieldController extends Controller
         );
 
         return redirect()->route('logging-fields.index')
-            ->with('success', 'Logging field created successfully.');
+            ->with('success', 'Logging field created');
     }
 
     /**
@@ -449,7 +449,7 @@ class LoggingFieldController extends Controller
             }
         });
 
-        return $this->redirectAfterSave($loggingField, 'Logging field updated successfully.');
+        return $this->redirectAfterSave($loggingField, 'Logging field updated');
     }
 
     /** @return array<string, array{label: string, count: int, hidden: int, scope_records: list<array{id: int, scope_mode: string, program_ids: list<int>}>, records: list<array{id: int, scope_mode: string, program_ids: list<int>, name: string, url: string, required: bool}>}> */
@@ -592,6 +592,6 @@ class LoggingFieldController extends Controller
         LoggingField::destroy($loggingField->id);
 
         return redirect()->route('logging-fields.index')
-            ->with('success', 'Logging field deleted successfully.');
+            ->with('success', 'Logging field deleted');
     }
 }

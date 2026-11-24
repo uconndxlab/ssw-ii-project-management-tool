@@ -25,7 +25,7 @@
         hx-get="{{ $actionLogsUrl }}"
         hx-target="#activity-action-log-modal-body"
         hx-swap="innerHTML"
-        onclick="window.showActivityActionLogModal()"
+        data-activity-action-log
         aria-label="View log"
     >
         <i class="bi bi-journal-text{{ ($labeled || $menu) ? ' me-2' : '' }}" aria-hidden="true"></i>{{ ($labeled || $menu) ? 'View log' : '' }}

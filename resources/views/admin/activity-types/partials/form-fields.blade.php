@@ -34,7 +34,7 @@
                 id="contact_family_id"
                 name="contact_family_id"
                 required>
-            <option value="">Select activity family...</option>
+            <option value="">Select activity family…</option>
             @foreach($contactFamilies as $family)
                 <option value="{{ $family->id }}" {{ old('contact_family_id', $activityType->contact_family_id ?? null) == $family->id ? 'selected' : '' }}>
                     {{ $family->name }}
@@ -127,26 +127,3 @@
         />
     @endif
 </x-section-card>
-
-@once
-<script>
-(function () {
-    function refreshDurationField() {
-        const select = document.getElementById('duration_unit');
-        const input = document.getElementById('duration_value');
-
-        if (!select || !input) {
-            return;
-        }
-
-        input.disabled = select.value === 'none';
-    }
-
-    const durationUnitSelect = document.querySelector('[data-duration-unit-select]');
-    if (durationUnitSelect) {
-        durationUnitSelect.addEventListener('change', refreshDurationField);
-        refreshDurationField();
-    }
-})();
-</script>
-@endonce

@@ -3,7 +3,7 @@
 @section('content')
 <x-form-shell>
     @php $badge = $enrollment->lifecycleBadge(); @endphp
-    <x-page-header context="show" :title="$enrollment->candidate->name" eyebrow="Certificate enrollment" entity-type="Certificate enrollment" />
+    <x-page-header context="show" :title="$enrollment->candidate->name" entity-type="Certificate enrollment" />
     <x-form-errors />
     @include('certification.partials.lifecycle-status')
     @if($progress)
@@ -66,7 +66,7 @@
                                             <ul class="list-unstyled d-flex flex-wrap gap-2 mb-0" aria-label="Section progress">
                                                 @foreach($sections as $section)
                                                     <li class="app-status {{ $section['counted'] ? 'app-status--success' : ($section['done'] ? 'app-status--warning' : 'app-status--neutral') }}">
-                                                        {{ $section['counted'] ? '✓ ' : '' }}{{ $section['option']->label }}{{ $section['counted'] ? '' : ($section['done'] ? ' · needs a Pass' : '') }}<span class="visually-hidden">{{ $section['counted'] ? ': done' : ($section['done'] ? '' : ': not attempted') }}</span>
+                                                        @if($section['counted'])<i class="bi bi-check-lg" aria-hidden="true"></i> @endif{{ $section['option']->label }}{{ $section['counted'] ? '' : ($section['done'] ? ' · needs a Pass' : '') }}<span class="visually-hidden">{{ $section['counted'] ? ': done' : ($section['done'] ? '' : ': not attempted') }}</span>
                                                     </li>
                                                 @endforeach
                                             </ul>

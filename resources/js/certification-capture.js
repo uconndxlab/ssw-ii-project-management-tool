@@ -299,7 +299,10 @@ function initCertificationCapture() {
             const phoneHeight = phoneBar?.offsetParent !== null ? phoneBar?.offsetHeight || 0 : 0;
             const headerHeight = document.querySelector('[data-header-sticky] .app-header-bar')?.offsetHeight || 0;
             const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth';
-            window.scrollTo({ top: window.scrollY + target.getBoundingClientRect().top - phoneHeight - headerHeight - 16, behavior });
+            // On desktop the main column is the scroller; on phones the page is.
+            const main = document.querySelector('.app-main');
+            const scroller = main && getComputedStyle(main).overflowY === 'auto' ? main : window;
+            scroller.scrollBy({ top: target.getBoundingClientRect().top - phoneHeight - headerHeight - 16, behavior });
         });
     }
     root.addEventListener('click', async event => {
