@@ -1,10 +1,15 @@
-function escapeHtml(value) {
-    return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
+function element(tag, attributes = {}, children = []) {
+    const node = document.createElement(tag);
+
+    Object.entries(attributes).forEach(function ([key, value]) {
+        if (value !== null && value !== undefined && value !== false) {
+            node.setAttribute(key, value === true ? '' : String(value));
+        }
+    });
+
+    node.append(...children.filter(Boolean));
+
+    return node;
 }
 
 function initializeInlineStringList(list) {
@@ -36,30 +41,31 @@ function initializeInlineStringList(list) {
         emptyState?.classList.toggle('d-none', visibleRows().length > 0);
     }
 
-    function rowMarkup(rowKey) {
-        const listAttr = datalistId ? ` list="${escapeHtml(datalistId)}"` : '';
+    function buildRow(rowKey) {
+        const fieldName = name + '[' + rowKey + ']';
 
-        return `
-            <div data-inline-string-row="${escapeHtml(rowKey)}">
-                <input type="hidden" name="${escapeHtml(name)}[${escapeHtml(rowKey)}][_delete]" value="0" data-inline-string-delete>
-                <div class="d-flex align-items-center gap-2">
-                    <input type="text"
-                           class="form-control"
-                           name="${escapeHtml(name)}[${escapeHtml(rowKey)}][${escapeHtml(valueField)}]"
-                           value=""
-                           placeholder="${escapeHtml(inputPlaceholder)}"
-                           ${listAttr}
-                           data-inline-string-input>
-                    <button type="button" class="btn btn-outline-danger flex-shrink-0" aria-label="Remove" data-inline-string-remove>-</button>
-                </div>
-            </div>
-        `;
+        return element('div', { 'data-inline-string-row': rowKey }, [
+            element('input', { type: 'hidden', name: fieldName + '[_delete]', value: '0', 'data-inline-string-delete': true }),
+            element('div', { class: 'd-flex align-items-center gap-2' }, [
+                element('input', {
+                    type: 'text',
+                    class: 'form-control',
+                    name: fieldName + '[' + valueField + ']',
+                    value: '',
+                    placeholder: inputPlaceholder,
+                    list: datalistId || null,
+                    'data-inline-string-input': true,
+                }),
+                element('button', { type: 'button', class: 'btn btn-outline-danger flex-shrink-0', 'aria-label': 'Remove', 'data-inline-string-remove': true }, ['-']),
+            ]),
+        ]);
     }
 
     function addRow() {
         const rowKey = 'row-new-' + Date.now() + '-' + (nextIndex++);
-        rowsContainer.insertAdjacentHTML('beforeend', rowMarkup(rowKey));
-        const input = rowsContainer.querySelector('[data-inline-string-row="' + CSS.escape(rowKey) + '"] [data-inline-string-input]');
+        const row = buildRow(rowKey);
+        rowsContainer.append(row);
+        const input = row.querySelector('[data-inline-string-input]');
         input?.focus();
         syncEmptyState();
 
