@@ -238,7 +238,7 @@ class AdminUserController extends Controller
 
         return redirect()
             ->route('admin.users.index')
-            ->with('success', 'User created successfully.');
+            ->with('success', 'User created');
     }
 
     public function edit(User $user): View
@@ -282,7 +282,7 @@ class AdminUserController extends Controller
 
         $this->syncCertificationDuties($user, $request);
 
-        return $this->redirectAfterSave($user, 'User updated successfully.');
+        return $this->redirectAfterSave($user, 'User updated');
     }
 
     public function show(User $user): View
@@ -304,7 +304,7 @@ class AdminUserController extends Controller
 
         return redirect()
             ->route('admin.users.index')
-            ->with('success', 'User deleted successfully.');
+            ->with('success', 'User deleted');
     }
 
     /**

@@ -488,12 +488,12 @@ class ActivityController extends Controller
         });
 
         if ($request->boolean('save_and_duplicate')) {
-            return $this->redirectToPrefilledCopy($request, 'Activity logged. Review the copy below and save it to log another.');
+            return $this->redirectToPrefilledCopy($request, 'Activity logged');
         }
 
         return redirect()
             ->route('activities.index')
-            ->with('success', 'Activity logged successfully.');
+            ->with('success', 'Activity logged');
     }
 
     public function show(Activity $activity): View
@@ -769,10 +769,10 @@ class ActivityController extends Controller
         });
 
         if ($request->boolean('save_and_duplicate')) {
-            return $this->redirectToPrefilledCopy($request, 'Activity updated. Review the copy below and save it to log another.');
+            return $this->redirectToPrefilledCopy($request, 'Activity updated');
         }
 
-        return $this->redirectAfterSave($activity, 'Activity updated successfully.');
+        return $this->redirectAfterSave($activity, 'Activity updated');
     }
 
     /**
@@ -824,7 +824,8 @@ class ActivityController extends Controller
 
         return redirect()
             ->route('activities.edit', $copy)
-            ->with('success', 'Activity duplicated. Review the copy and save any changes.');
+            ->with('success', 'Activity duplicated')
+            ->with('success_detail', 'Review the copy and save any changes.');
     }
 
     public function destroy(Activity $activity): RedirectResponse
@@ -838,7 +839,7 @@ class ActivityController extends Controller
 
         return redirect()
             ->route('activities.index')
-            ->with('success', 'Activity deleted successfully.');
+            ->with('success', 'Activity deleted');
     }
 
     public function actionLogs(Request $request, Activity $activity): View

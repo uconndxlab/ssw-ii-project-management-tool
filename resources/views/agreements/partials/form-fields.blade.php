@@ -227,7 +227,7 @@
             name="state_ids[]"
             :items="$states"
             :selected-ids="$selectedStateIds"
-            placeholder="Search states..."
+            placeholder="Search states…"
             :height="'220px'"
             entity="state"
         />
@@ -497,10 +497,10 @@
             const hasSelectedStates = selectedStateIds.length > 0;
             const canSelectOrganizations = hasSelectedPrograms && hasSelectedStates;
             const organizationDisabledPlaceholder = !hasSelectedPrograms && !hasSelectedStates
-                ? 'Select at least one program and state first...'
+                ? 'Select at least one program and state first…'
                 : (!hasSelectedPrograms
-                    ? 'Select at least one program first...'
-                    : 'Select at least one state first...');
+                    ? 'Select at least one program first…'
+                    : 'Select at least one state first…');
 
             setPickerRestriction(
                 organizationPicker,
@@ -522,14 +522,14 @@
                 teamPicker,
                 allowedIds(teamProgramMap, teamProgramScopeModeMap, selectedProgramIds, selectedScopeMode, false),
                 !hasSelectedPrograms,
-                'Select at least one program first...'
+                'Select at least one program first…'
             );
 
             setPickerRestriction(
                 userPicker,
                 allowedIds(userProgramMap, userProgramScopeModeMap, selectedProgramIds, selectedScopeMode, false),
                 !hasSelectedPrograms,
-                'Select at least one program first...'
+                'Select at least one program first…'
             );
 
             if (organizationsSection) {

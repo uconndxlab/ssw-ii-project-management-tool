@@ -65,7 +65,7 @@
                     label-key="label"
                     value-key="value"
                     search-key="search"
-                    placeholder="Search to add members..."
+                    placeholder="Search to add members…"
                     :height="'220px'"
                     entity="user"
                 />

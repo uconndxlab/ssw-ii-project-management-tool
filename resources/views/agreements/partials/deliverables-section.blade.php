@@ -312,8 +312,7 @@
             </table>
         </div>
 
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <div class="form-text mb-0">Rows are staged locally and saved only when the agreement form is submitted.</div>
+        <div class="d-flex justify-content-end align-items-center mb-3">
             <button type="button" class="btn btn-sm btn-outline-primary" id="deliverable-add-button-bottom">
                 + Add Deliverable
             </button>

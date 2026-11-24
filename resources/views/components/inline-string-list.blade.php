@@ -7,7 +7,7 @@
     'addButtonText' => 'Add Item',
     'emptyMessage' => 'None added yet.',
     'suggestions' => [],
-    'inputPlaceholder' => 'Enter a value...',
+    'inputPlaceholder' => 'Enter a value…',
     'valueField' => 'value',
 ])
 
@@ -128,7 +128,7 @@
         const emptyState = list.querySelector('[data-inline-string-empty]');
         const name = list.dataset.name;
         const valueField = list.dataset.valueField || 'value';
-        const inputPlaceholder = list.dataset.inputPlaceholder || 'Enter a value...';
+        const inputPlaceholder = list.dataset.inputPlaceholder || 'Enter a value…';
         const datalistId = list.dataset.datalistId || '';
 
         if (!rowsContainer || !addButton || !name) {

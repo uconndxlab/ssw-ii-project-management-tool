@@ -34,7 +34,7 @@
                 id="activity_type_id"
                 name="activity_type_id"
                 required>
-            <option value="">Select activity type...</option>
+            <option value="">Select activity type…</option>
             @foreach($activityTypes->groupBy('contactFamily.name') as $familyName => $types)
                 <optgroup label="{{ $familyName }}">
                     @foreach($types as $type)

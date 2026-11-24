@@ -238,7 +238,7 @@ class SubActivityController extends Controller
 
         return redirect()
             ->route('sub-activities.index')
-            ->with('success', 'Sub-activity created successfully.');
+            ->with('success', 'Sub-activity created');
     }
 
     public function edit(SubActivity $subActivity): View
@@ -310,7 +310,7 @@ class SubActivityController extends Controller
         }
         $subActivity->subActivityLoggingFields()->sync($syncData);
 
-        return $this->redirectAfterSave($subActivity, 'Sub-activity updated successfully.');
+        return $this->redirectAfterSave($subActivity, 'Sub-activity updated');
     }
 
     public function destroy(SubActivity $subActivity): RedirectResponse
@@ -327,7 +327,7 @@ class SubActivityController extends Controller
 
         return redirect()
             ->route('sub-activities.index')
-            ->with('success', 'Sub-activity deleted successfully.');
+            ->with('success', 'Sub-activity deleted');
     }
 
     private function isUsed(SubActivity $subActivity): bool
@@ -348,7 +348,7 @@ class SubActivityController extends Controller
         ]);
         $selectedId = (int) ($validated['sub_activity_id'] ?? 0);
         $options = SubActivityOptions::availableFor((int) ($validated['activity_type_id'] ?? 0), array_map('intval', $validated['agreement_ids'] ?? []), $selectedId ?: null);
-        $html = '<option value="">Select sub-activity...</option>';
+        $html = '<option value="">Select sub-activity…</option>';
         foreach ($options as $subActivity) {
             $duration = ActivityTypeDuration::effective($subActivity->activityType, $subActivity);
             $html .= '<option value="'.$subActivity->id.'"'

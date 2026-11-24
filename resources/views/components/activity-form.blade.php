@@ -378,13 +378,13 @@
             />
 
                     <x-section-card title="Coverage">
-                        <x-form-field label="Agreements" name="agreement_ids" :required="true" help="Remaining coverage options are limited to these agreements.">
+                        <x-form-field label="Agreements" name="agreement_ids" :required="true">
                             <x-token-picker
                                 picker-id="activity-agreements-picker"
                                 name="agreement_ids[]"
                                 :items="$agreements"
                                 :selected-ids="$selectedAgreementIds"
-                                placeholder="Search agreements..."
+                                placeholder="Search agreements…"
                                 empty-message="No agreements are available."
                                 :open-on-focus="false"
                                 entity="agreement"
@@ -393,14 +393,14 @@
 
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <x-form-field label="States" name="state_ids" :required="true" help="Limited to the selected agreements." class="mb-0">
+                                <x-form-field label="States" name="state_ids" :required="true" class="mb-0">
                                     <x-token-picker
                                         picker-id="activity-states-picker"
                                         name="state_ids[]"
                                         :items="$states"
                                         :selected-ids="$selectedStateIds"
-                                        placeholder="Search states..."
-                                        disabled-placeholder="Select at least one agreement first..."
+                                        placeholder="Search states…"
+                                        disabled-placeholder="Select at least one agreement first…"
                                         :disabled="empty($selectedAgreementIds)"
                                         :open-on-focus="false"
                                         entity="state"
@@ -408,14 +408,14 @@
                                 </x-form-field>
                             </div>
                             <div class="col-md-6">
-                                <x-form-field label="Organizations" name="organization_ids" :required="true" help="Limited to the selected agreements, and optionally by states." class="mb-0">
+                                <x-form-field label="Organizations" name="organization_ids" :required="true" class="mb-0">
                                     <x-token-picker
                                         picker-id="activity-organizations-picker"
                                         name="organization_ids[]"
                                         :items="$organizations"
                                         :selected-ids="$selectedOrganizationIds"
-                                        placeholder="Search organizations..."
-                                        disabled-placeholder="Select at least one agreement first..."
+                                        placeholder="Search organizations…"
+                                        disabled-placeholder="Select at least one agreement first…"
                                         :disabled="empty($selectedAgreementIds)"
                                         :open-on-focus="false"
                                         entity="organization"
@@ -424,7 +424,7 @@
                             </div>
                         </div>
 
-                        <div class="mt-4">
+                        <div class="mt-2">
                             <x-project-program-scope-picker
                                 scope-id="activity-coverage-scope"
                                 :projects="$availableProjects"
@@ -433,9 +433,7 @@
                                 project-label="Projects *"
                                 program-label="Programs *"
                                 :project-disabled="empty($selectedAgreementIds)"
-                                project-disabled-placeholder="Select at least one agreement first..."
-                                project-help-text="Limited to the selected agreements."
-                                program-help-text="Limited to the selected agreements and projects."
+                                project-disabled-placeholder="Select at least one agreement first…"
                                 :expand-empty-programs="false"
                             />
                         </div>
@@ -466,7 +464,7 @@
                                             hx-trigger="change, load"
                                             {{ empty($selectedAgreementIds) ? 'disabled' : '' }}
                                             required>
-                                        <option value="">{{ empty($selectedAgreementIds) ? 'Select at least one agreement first...' : 'Select family...' }}</option>
+                                        <option value="">{{ empty($selectedAgreementIds) ? 'Select at least one agreement first…' : 'Select family…' }}</option>
                                         @foreach($contactFamilies as $family)
                                             <option value="{{ $family->id }}"
                                                     data-helper-text="{{ e($family->helper_text ?? '') }}"
@@ -486,7 +484,7 @@
                                             name="activity_type_id"
                                             {{ $currentContactFamilyId ? '' : 'disabled' }}
                                             required>
-                                        <option value="">{{ empty($selectedAgreementIds) ? 'Select at least one agreement first...' : 'Select family first...' }}</option>
+                                        <option value="">{{ empty($selectedAgreementIds) ? 'Select at least one agreement first…' : 'Select family first…' }}</option>
                                     </select>
                                     <div class="form-text d-none" id="activity_type_helper_text"></div>
                                 </x-form-field>
@@ -495,7 +493,7 @@
                                 <x-form-field label="Sub-activity" for="sub_activity_id" name="sub_activity_id" :required="true" class="mb-0">
                                     <select class="form-select @error('sub_activity_id') is-invalid @enderror" id="sub_activity_id" name="sub_activity_id"
                                             hx-get="{{ route('sub-activities.by-type') }}" hx-vals='js:{sub_activity_id: document.getElementById("sub_activity_selected").value}' hx-trigger="refresh-sub-activities" hx-target="this" hx-swap="innerHTML" hx-include="#{{ $formId }}">
-                                        <option value="">Select sub-activity...</option>
+                                        <option value="">Select sub-activity…</option>
                                     </select>
                                     <input type="hidden" id="sub_activity_selected" value="{{ $selectedSubActivityId }}">
                                     <div class="form-text d-none" id="sub_activity_helper_text"></div>
@@ -517,8 +515,8 @@
                                 label-key="label"
                                 value-key="value"
                                 search-key="search"
-                                placeholder="Search covered users..."
-                                disabled-placeholder="Select at least one program first..."
+                                placeholder="Search covered users…"
+                                disabled-placeholder="Select at least one program first…"
                                 :disabled="empty($selectedProgramIds) && empty($historicalParticipantIds)"
                                 :open-on-focus="false"
                                 entity="user"
@@ -563,7 +561,7 @@
                                                readonly
                                                disabled
                                                placeholder="Select an activity type">
-                                        <div class="form-text" id="allotted_duration_help">Set by the selected activity type.</div>
+                                        <div class="form-text" id="allotted_duration_help"></div>
                                     </div>
                                     <div class="col-md-6">
                                         <label for="completion_count" class="form-label required-label">Completions</label>
@@ -819,7 +817,7 @@
                                                 value-key="value"
                                                 search-key="search"
                                                 :selected-ids="$selectedPayorTokens"
-                                                placeholder="Search payor sources..."
+                                                placeholder="Search payor sources…"
                                 :height="'220px'"
                                             />
                                             <div class="text-muted small mt-2 d-none" data-funding-empty-notice="{{ $agreement->id }}-payor">
@@ -846,7 +844,7 @@
                                                 value-key="value"
                                                 search-key="search"
                                                 :selected-ids="$selectedPayeeTokens"
-                                                placeholder="Search payee sources..."
+                                                placeholder="Search payee sources…"
                                 :height="'220px'"
                                             />
                                             <div class="text-muted small mt-2 d-none" data-funding-empty-notice="{{ $agreement->id }}-payee">
@@ -1287,10 +1285,10 @@
             detail: {
                 disabled: agreements.length === 0 || allowedStateIds.length === 0,
                 placeholder: agreements.length === 0
-                    ? 'Select at least one agreement first...'
+                    ? 'Select at least one agreement first…'
                     : allowedStateIds.length === 0
-                    ? 'No states are available from the selected agreements...'
-                    : 'Search states...',
+                    ? 'No states are available from the selected agreements.'
+                    : 'Search states…',
             }
         }));
         statePicker.dispatchEvent(new CustomEvent('token-picker:restrict', { detail: restrictedStateIds }));
@@ -1319,8 +1317,8 @@
             detail: {
                 disabled: agreements.length === 0 || allowedOrganizationIds.length === 0,
                 placeholder: agreements.length === 0
-                    ? 'Select at least one agreement first...'
-                    : 'No organizations match the selected states...',
+                    ? 'Select at least one agreement first…'
+                    : 'No organizations match the selected states.',
             }
         }));
         orgPicker.dispatchEvent(new CustomEvent('token-picker:restrict', {
@@ -1341,14 +1339,14 @@
         });
         const restrictedIds = Array.from(new Set(allowedParticipantIds.concat(preservedHistoricalIds).map(String)));
         const disabled = restrictedIds.length === 0;
-        let placeholder = 'Search covered users...';
+        let placeholder = 'Search covered users…';
 
         if (programs.length === 0) {
             placeholder = preservedHistoricalIds.length === 0
-                ? 'Select at least one program first...'
-                : 'Search historical participants...';
+                ? 'Select at least one program first…'
+                : 'Search historical participants…';
         } else if (allowedParticipantIds.length === 0 && preservedHistoricalIds.length === 0) {
-            placeholder = 'No covered users for selected programs...';
+            placeholder = 'No covered users for selected programs.';
         }
 
         const historicalContexts = {};
@@ -1429,8 +1427,8 @@
                     detail: {
                         disabled: true,
                         placeholder: role === 'payor'
-                            ? 'No payor organizations linked to KFS accounts on this agreement...'
-                            : 'No payee sources with PO numbers on this agreement...',
+                            ? 'No payor organizations linked to KFS accounts on this agreement.'
+                            : 'No payee sources with PO numbers on this agreement.',
                     },
                 }));
                 emptyNotice?.classList.remove('d-none');
@@ -1438,7 +1436,7 @@
                 picker.dispatchEvent(new CustomEvent('token-picker:set-disabled', {
                     detail: {
                         disabled: false,
-                        placeholder: 'Search ' + roleLabel + ' sources...',
+                        placeholder: 'Search ' + roleLabel + ' sources…',
                     },
                 }));
                 emptyNotice?.classList.add('d-none');
@@ -1645,12 +1643,12 @@
         const allowedProgramIds = agreements.length ? uniqueMergedIds('program_ids') : [];
         const disableProjects = agreements.length === 0 || allowedProjectIds.length === 0;
         const projectPlaceholder = agreements.length === 0
-            ? 'Select at least one agreement first...'
-            : 'No projects are available from the selected agreements...';
+            ? 'Select at least one agreement first…'
+            : 'No projects are available from the selected agreements.';
         const forceProgramDisabled = agreements.length === 0 || allowedProgramIds.length === 0;
         const programDisabledPlaceholder = agreements.length === 0
-            ? 'Select at least one agreement first...'
-            : 'No programs are available from the selected agreements...';
+            ? 'Select at least one agreement first…'
+            : 'No programs are available from the selected agreements.';
 
         const restrictedProjectIds = mergePreservedCoverage(allowedProjectIds, initialProjectIds);
 
@@ -1686,7 +1684,7 @@
         agreementPicker.dispatchEvent(new CustomEvent('token-picker:set-disabled', {
             detail: {
                 disabled: false,
-                placeholder: 'Search agreements...',
+                placeholder: 'Search agreements…',
             }
         }));
         agreementPicker.dispatchEvent(new CustomEvent('token-picker:restrict', {
@@ -1713,9 +1711,9 @@
                 selectedType.value = '';
             }
             if (family.options.length > 0) {
-                family.options[0].textContent = 'Select at least one agreement first...';
+                family.options[0].textContent = 'Select at least one agreement first…';
             }
-            type.innerHTML = '<option value="">Select agreement first...</option>';
+            type.innerHTML = '<option value="">Select agreement first…</option>';
             type.disabled = true;
             updateContactFamilyLoggingGroups();
             updateActivityLoggingGroups();
@@ -1730,8 +1728,8 @@
                 option.disabled = false;
                 option.hidden = false;
                 option.textContent = hasAgreementSelection && allowedFamilyIds.size === 0
-                    ? 'No activity families available for selected agreements...'
-                    : 'Select family...';
+                    ? 'No activity families available for selected agreements.'
+                    : 'Select family…';
                 return;
             }
 
@@ -1754,7 +1752,7 @@
             if (selectedType) {
                 selectedType.value = '';
             }
-            type.innerHTML = '<option value="">No activity types available for selected agreements...</option>';
+            type.innerHTML = '<option value="">No activity types available for selected agreements.</option>';
             updateContactFamilyLoggingGroups();
             updateActivityLoggingGroups();
         }
@@ -1769,7 +1767,7 @@
         if (!family || !type) return;
 
         if (!family.value) {
-            type.innerHTML = '<option value="">Select family first...</option>';
+            type.innerHTML = '<option value="">Select family first…</option>';
             type.disabled = true;
             refreshSubActivities();
             return;
@@ -1965,7 +1963,7 @@
         if (!typeName) {
             displayInput.placeholder = 'Select an activity type';
             if (help) {
-                help.textContent = 'Set by the selected activity type.';
+                help.textContent = '';
             }
             return;
         }

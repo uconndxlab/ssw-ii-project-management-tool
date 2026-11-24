@@ -112,14 +112,12 @@
                     </td>
                 </tr>
                 @empty
-                <tr>
-                    <td colspan="7" class="text-center py-5">
-                        <p class="text-muted mb-2">No logging fields found.</p>
-                        @can('create', App\Models\LoggingField::class)
-                        <a href="{{ route('logging-fields.create') }}" class="btn btn-sm btn-primary">Create Logging Field</a>
-                        @endcan
-                    </td>
-                </tr>
+                <x-table-empty colspan="7" plural="logging fields" index-route="logging-fields.index">
+                    <p class="text-muted mb-2">No logging fields found.</p>
+                    @can('create', App\Models\LoggingField::class)
+                    <a href="{{ route('logging-fields.create') }}" class="btn btn-sm btn-primary">Create Logging Field</a>
+                    @endcan
+                </x-table-empty>
                 @endforelse
             </tbody>
         </table>

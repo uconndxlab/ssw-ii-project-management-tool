@@ -31,7 +31,7 @@
                 label-key="label"
                 value-key="value"
                 search-key="search"
-                placeholder="Search or enter a KFS number..."
+                placeholder="Search or enter a KFS number…"
                 :open-on-focus="true"
                 :show-selected="false"
                 :height="'220px'"
@@ -104,7 +104,6 @@
 
                 removeButton.type = 'button';
                 removeButton.className = 'btn-close';
-                removeButton.style.fontSize = '10px';
                 removeButton.setAttribute('aria-label', 'Remove KFS account');
                 removeButton.addEventListener('click', function () {
                     picker.dispatchEvent(new CustomEvent('token-picker:set', {

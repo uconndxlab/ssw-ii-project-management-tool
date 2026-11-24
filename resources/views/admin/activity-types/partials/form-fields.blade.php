@@ -34,7 +34,7 @@
                 id="contact_family_id"
                 name="contact_family_id"
                 required>
-            <option value="">Select activity family...</option>
+            <option value="">Select activity family…</option>
             @foreach($contactFamilies as $family)
                 <option value="{{ $family->id }}" {{ old('contact_family_id', $activityType->contact_family_id ?? null) == $family->id ? 'selected' : '' }}>
                     {{ $family->name }}

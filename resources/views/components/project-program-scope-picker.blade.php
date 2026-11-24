@@ -9,13 +9,13 @@
     'programErrorKey' => 'program_ids',
     'projectLabel' => 'Projects',
     'programLabel' => 'Programs',
-    'projectPlaceholder' => 'Search projects...',
-    'programPlaceholder' => 'Search programs...',
+    'projectPlaceholder' => 'Search projects…',
+    'programPlaceholder' => 'Search programs…',
     'projectDisabled' => false,
-    'projectDisabledPlaceholder' => 'Select the required upstream filters first...',
-    'disabledPlaceholder' => 'Select at least one project first...',
-    'projectHelpText' => 'Filters the program list. Not saved.',
-    'programHelpText' => 'Saved when Specific is selected.',
+    'projectDisabledPlaceholder' => 'Select the required upstream filters first…',
+    'disabledPlaceholder' => 'Select at least one project first…',
+    'projectHelpText' => null,
+    'programHelpText' => null,
     'projectHeight' => '220px',
     'programHeight' => '220px',
     'projectEmptySelectionLabel' => null,
@@ -28,7 +28,7 @@
     'scopeModeFieldName' => 'program_scope_mode',
     'scopeModeErrorKey' => 'program_scope_mode',
     'scopeModeLabel' => 'Program Scope',
-    'scopeModeHelpText' => 'All programs, only selected programs, or none.',
+    'scopeModeHelpText' => null,
     'lockAll' => false,
 ])
 
@@ -56,21 +56,6 @@
                     : (array_key_first($scopeModeOptions) ?? 'specific');
             }
         }
-    }
-
-    if ($scopeModeHelpText === 'All programs, only selected programs, or none.') {
-        $hasAll = array_key_exists('all', $scopeModeOptions);
-        $hasSpecific = array_key_exists('specific', $scopeModeOptions);
-        $hasNone = array_key_exists('none', $scopeModeOptions);
-        $scopeModeHelpText = match (true) {
-            $hasAll && $hasSpecific && $hasNone => 'All programs, only selected programs, or none.',
-            $hasAll && $hasSpecific => 'All programs, or only selected programs.',
-            $hasSpecific && $hasNone => 'Only selected programs, or none.',
-            $hasAll => 'All programs.',
-            $hasSpecific => 'Only selected programs.',
-            $hasNone => 'No programs.',
-            default => $scopeModeHelpText,
-        };
     }
 
     $allowedScopeModes = array_keys($scopeModeOptions);
@@ -229,10 +214,10 @@
         const projectProgramMap = parseJson(section.dataset.projectProgramMap, {});
         const programProjectIdsMap = parseJson(section.dataset.programProjectIdsMap, {});
         const projectNamesMap = parseJson(section.dataset.projectNamesMap, {});
-        const defaultProjectDisabledPlaceholder = section.dataset.projectDisabledPlaceholder || 'Select the required upstream filters first...';
+        const defaultProjectDisabledPlaceholder = section.dataset.projectDisabledPlaceholder || 'Select the required upstream filters first…';
         const defaultProjectEmptySelectionLabel = section.dataset.projectEmptySelectionLabel || '';
         const defaultProgramEmptySelectionLabel = section.dataset.programEmptySelectionLabel || '';
-        const defaultDisabledPlaceholder = programPicker.dataset.disabledPlaceholder || 'Select at least one project first...';
+        const defaultDisabledPlaceholder = programPicker.dataset.disabledPlaceholder || 'Select at least one project first…';
         const expandEmptyPrograms = section.dataset.expandEmptyPrograms === 'true';
         const scopeModeEnabled = section.dataset.scopeModeEnabled === 'true';
         const defaultScopeMode = section.dataset.defaultScopeMode || 'specific';

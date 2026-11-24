@@ -98,7 +98,7 @@
         <div class="{{ $classificationLocked ? 'd-none' : '' }}" data-deliverable-classification-editor>
             <x-form-field label="Activity Family" required>
                 <select class="form-select" name="{{ $fieldPrefix }}[contact_family_id]" data-deliverable-contact-family>
-                    <option value="">Select activity family...</option>
+                    <option value="">Select activity family…</option>
                     @foreach($contactFamilies as $family)
                         @php
                             $familyProgramIds = $family->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all();

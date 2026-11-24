@@ -95,14 +95,12 @@
                     </td>
                 </tr>
                 @empty
-                <tr>
-                    <td colspan="8" class="text-center py-5">
-                        <p class="text-muted mb-2">No sub-activities found.</p>
-                        @can('create', App\Models\SubActivity::class)
-                        <a href="{{ route('sub-activities.create') }}" class="btn btn-sm btn-primary">Add Sub-activity</a>
-                        @endcan
-                    </td>
-                </tr>
+                <x-table-empty colspan="8" plural="sub-activities" index-route="sub-activities.index">
+                    <p class="text-muted mb-2">No sub-activities found.</p>
+                    @can('create', App\Models\SubActivity::class)
+                    <a href="{{ route('sub-activities.create') }}" class="btn btn-sm btn-primary">Add Sub-activity</a>
+                    @endcan
+                </x-table-empty>
                 @endforelse
             </tbody>
         </table>

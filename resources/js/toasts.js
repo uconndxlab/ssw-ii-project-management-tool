@@ -62,7 +62,7 @@ function showToast(content, { tone = 'success', title = '', timeout } = {}) {
     }
     if (content instanceof Node) {
         body.append(content);
-    } else {
+    } else if (content != null && content !== '') {
         const message = document.createElement('div');
         message.textContent = String(content);
         body.append(message);

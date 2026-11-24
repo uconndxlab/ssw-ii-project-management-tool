@@ -235,7 +235,7 @@ class ActivityTypeController extends Controller
 
         return redirect()
             ->route('activity-types.index')
-            ->with('success', 'Activity type created successfully.');
+            ->with('success', 'Activity type created');
     }
 
     public function edit(ActivityType $activityType): View
@@ -298,7 +298,7 @@ class ActivityTypeController extends Controller
         }
         $activityType->activityTypeLoggingFields()->sync($syncData);
 
-        return $this->redirectAfterSave($activityType, 'Activity type updated successfully.');
+        return $this->redirectAfterSave($activityType, 'Activity type updated');
     }
 
     public function destroy(ActivityType $activityType): RedirectResponse
@@ -318,7 +318,7 @@ class ActivityTypeController extends Controller
 
         return redirect()
             ->route('activity-types.index')
-            ->with('success', 'Activity type deleted successfully.');
+            ->with('success', 'Activity type deleted');
     }
 
     public function getByFamily(Request $request): Response
@@ -335,7 +335,7 @@ class ActivityTypeController extends Controller
             ->values();
 
         if (! $contactFamilyId) {
-            return response('<option value="">Select activity type...</option>');
+            return response('<option value="">Select activity type…</option>');
         }
 
         $query = ActivityType::query()->where('contact_family_id', $contactFamilyId)
@@ -374,7 +374,7 @@ class ActivityTypeController extends Controller
 
         $activityTypes = $query->get();
 
-        $html = '<option value="">Select activity type...</option>';
+        $html = '<option value="">Select activity type…</option>';
         foreach ($activityTypes as $type) {
             $selected = $selectedActivityTypeId === (int) $type->id ? ' selected' : '';
             $durationHours = (float) $type->duration_hours > 0 ? $type->duration_hours : '';

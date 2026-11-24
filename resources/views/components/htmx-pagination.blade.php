@@ -40,7 +40,7 @@
         <ul class="pagination pagination-sm mb-0">
             {{-- Prev --}}
             @if($paginator->onFirstPage())
-                <li class="page-item disabled"><span class="page-link" aria-hidden="true">‹</span></li>
+                <li class="page-item disabled"><span class="page-link" aria-hidden="true"><i class="bi bi-chevron-left"></i></span></li>
             @else
                 <li class="page-item">
                     <a class="page-link"
@@ -49,7 +49,7 @@
                        hx-target="{{ $target }}"
                        hx-swap="innerHTML"
                        hx-push-url="{{ $pushUrl ? 'true' : 'false' }}"
-                       aria-label="Previous page">‹</a>
+                       aria-label="Previous page"><i class="bi bi-chevron-left" aria-hidden="true"></i></a>
                 </li>
             @endif
 
@@ -117,10 +117,10 @@
                        hx-target="{{ $target }}"
                        hx-swap="innerHTML"
                        hx-push-url="{{ $pushUrl ? 'true' : 'false' }}"
-                       aria-label="Next page">›</a>
+                       aria-label="Next page"><i class="bi bi-chevron-right" aria-hidden="true"></i></a>
                 </li>
             @else
-                <li class="page-item disabled"><span class="page-link" aria-hidden="true">›</span></li>
+                <li class="page-item disabled"><span class="page-link" aria-hidden="true"><i class="bi bi-chevron-right"></i></span></li>
             @endif
         </ul>
     </nav>

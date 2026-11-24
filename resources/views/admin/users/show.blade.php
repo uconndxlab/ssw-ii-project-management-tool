@@ -41,12 +41,7 @@
             $summaryProjects = $direct['projects']->merge($viaTeams['projects'])->unique('id')->sortBy('name');
             $summaryPrograms = $direct['programs']->merge($viaTeams['programs'])->unique('id')->sortBy('name');
         @endphp
-        <dl class="app-record-metrics">
-            <div><dt>Projects</dt><dd>{{ $summaryProjects->count() }}</dd></div>
-            <div><dt>Programs</dt><dd>{{ $summaryPrograms->count() }}</dd></div>
-            <div><dt>Teams</dt><dd>{{ $user->teams->count() }}</dd></div>
-        </dl>
-        <x-relationship-scroll-panel title="Projects" kind="project" :count="$summaryProjects->count()" collapsible collapsed class="mt-3">
+        <x-relationship-scroll-panel title="Projects" kind="project" :count="$summaryProjects->count()" collapsible collapsed>
             @foreach($summaryProjects as $record)
                 <x-relationship-ledger-row
                     :title="$record->name"

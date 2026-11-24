@@ -125,16 +125,14 @@
                     </td>
                 </tr>
                 @empty
-                <tr>
-                    <td colspan="9" class="text-center py-5">
-                        <p class="text-muted mb-2">No users found.</p>
-                        @can('create', App\Models\User::class)
-                            @unless($superviseesIndex)
-                        <a href="{{ route('admin.users.create') }}" class="btn btn-sm btn-primary">Create User</a>
-                            @endunless
-                        @endcan
-                    </td>
-                </tr>
+                <x-table-empty colspan="9" :plural="$superviseesIndex ? 'supervisees' : 'users'" :index-route="$usersIndexRoute">
+                    <p class="text-muted mb-2">No users found.</p>
+                    @can('create', App\Models\User::class)
+                        @unless($superviseesIndex)
+                            <a href="{{ route('admin.users.create') }}" class="btn btn-sm btn-primary">Create User</a>
+                        @endunless
+                    @endcan
+                </x-table-empty>
                 @endforelse
             </tbody>
         </table>

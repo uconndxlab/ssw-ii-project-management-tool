@@ -39,7 +39,7 @@ class CertificateLifecycleController extends Controller
         abort_unless($this->access->canRecordHistory($this->actor(), $certificateEnrollment), 403);
         $request->validate(['cycle' => ['required', 'integer']]);
 
-        return $this->run($request, $certificateEnrollment, 'Award history saved.',
+        return $this->run($request, $certificateEnrollment, 'Award history saved',
             fn () => $this->lifecycle->saveHistory($this->actor(), $certificateEnrollment, $request->all()));
     }
 
@@ -47,7 +47,7 @@ class CertificateLifecycleController extends Controller
     {
         $data = $request->validate(['cycle' => ['required', 'integer'], 'note' => ['nullable', 'string', 'max:10000']]);
 
-        return $this->run($request, $certificateEnrollment, 'Endorsed for award. A certification manager awards next.',
+        return $this->run($request, $certificateEnrollment, 'Endorsed for award',
             fn () => $this->lifecycle->endorse($this->actor(), $certificateEnrollment, (int) $data['cycle'], $data['note'] ?? null));
     }
 
@@ -55,7 +55,7 @@ class CertificateLifecycleController extends Controller
     {
         $data = $request->validate(['cycle' => ['required', 'integer'], 'award_id' => ['required', 'integer'], 'reason' => ['nullable', 'string', 'max:10000']]);
 
-        return $this->run($request, $certificateEnrollment, 'Endorsement withdrawn. Evidence and confirmations are unchanged.',
+        return $this->run($request, $certificateEnrollment, 'Endorsement withdrawn',
             fn () => $this->lifecycle->withdraw($this->actor(), $certificateEnrollment, (int) $data['cycle'], (int) $data['award_id'], $data['reason'] ?? null));
     }
 
@@ -63,7 +63,7 @@ class CertificateLifecycleController extends Controller
     {
         $data = $request->validate(['cycle' => ['required', 'integer'], 'award_id' => ['required', 'integer'], 'note' => ['nullable', 'string', 'max:10000']]);
 
-        return $this->run($request, $certificateEnrollment, 'Certificate awarded.',
+        return $this->run($request, $certificateEnrollment, 'Certificate awarded',
             fn () => $this->lifecycle->award($this->actor(), $certificateEnrollment, (int) $data['cycle'], (int) $data['award_id'], $data['note'] ?? null));
     }
 
@@ -71,7 +71,7 @@ class CertificateLifecycleController extends Controller
     {
         $data = $request->validate(['reason' => ['required', 'string', 'max:10000']], ['reason.required' => 'Explain why this award is being revoked. The reason is kept in the action history.']);
 
-        return $this->run($request, $certificateEnrollment, 'Award revoked.',
+        return $this->run($request, $certificateEnrollment, 'Award revoked',
             fn () => $this->lifecycle->revoke($this->actor(), $certificateEnrollment, $award, $data['reason']));
     }
 
@@ -79,7 +79,7 @@ class CertificateLifecycleController extends Controller
     {
         $data = $request->validate(['coach_id' => ['required', 'integer'], 'reason' => ['nullable', 'string', 'max:10000']], ['coach_id.required' => 'Choose a supervising coach.']);
 
-        return $this->run($request, $certificateEnrollment, 'Supervising coach updated.',
+        return $this->run($request, $certificateEnrollment, 'Supervising coach updated',
             fn () => $this->lifecycle->changeCoach($this->actor(), $certificateEnrollment, (int) $data['coach_id'], $data['reason'] ?? null));
     }
 

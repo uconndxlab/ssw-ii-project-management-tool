@@ -1,6 +1,6 @@
 <div class="card shadow-sm mb-4">
     <div class="card-header">
-        <h5 class="mb-0">Stats Snapshot</h5>
+        <h2 class="h5 mb-0">Stats Snapshot</h2>
     </div>
     <div class="card-body">
         <dl class="app-record-metrics">

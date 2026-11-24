@@ -28,7 +28,7 @@
         <section class="card shadow-sm entity-show-card" aria-labelledby="report-history-heading">
             <div class="card-header py-2 px-3 d-flex align-items-center gap-2 flex-wrap">
                 <h2 class="h5 mb-0" id="report-history-heading">Requested reports</h2>
-                <span class="app-count">{{ $reportRequests->count() }}</span>
+                @if($reportRequests->isNotEmpty())<span class="app-count">{{ $reportRequests->count() }}</span>@endif
             </div>
             <div class="card-body">
                 @if($reportRequests->isEmpty())

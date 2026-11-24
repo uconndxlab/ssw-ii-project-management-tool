@@ -95,7 +95,7 @@ test('candidate search offers only reachable people and preserves shared-edit au
     $hidden = AgreementCertificationCandidate::factory()->create(['agreement_id' => $otherAgreement->id]);
 
     $this->actingAs($admin)->get(route('agreements.edit', $agreement))->assertOk()
-        ->assertSee('Search name or email...')->assertSee($person->email)->assertSee('Visible candidate context')
+        ->assertSee('Search name or email…')->assertSee($person->email)->assertSee('Visible candidate context')
         ->assertDontSee($hidden->candidate->email)
         ->assertViewHas('certificationCandidateOptions', fn ($options) => $options->firstWhere('id', $person->id)?->getAttribute('can_edit_identity') === false);
 });

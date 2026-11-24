@@ -2,14 +2,30 @@
 
 use App\Models\User;
 
-test('flashed success and error messages render as toasts with their tones', function () {
+test('flashed success titles are escaped and errors keep their message body', function () {
     $this->actingAs(User::factory()->create())
-        ->withSession(['success' => 'Agreement <b>saved</b>.', 'error' => 'Could not delete the agreement.'])
+        ->withSession(['success' => 'Agreement "<b>Example</b>" saved', 'error' => 'Could not delete the agreement.'])
         ->get(route('dashboard'))
         ->assertOk()
-        ->assertSee('<template data-toast="success">Agreement &lt;b&gt;saved&lt;/b&gt;.</template>', false)
+        ->assertSee('data-toast-title="Agreement &quot;&lt;b&gt;Example&lt;/b&gt;&quot; saved"', false)
         ->assertSee('<template data-toast="danger">Could not delete the agreement.</template>', false)
         ->assertDontSee('alert-success', false);
+});
+
+test('a flashed success message renders as a title-only toast', function () {
+    $this->actingAs(User::factory()->create())
+        ->withSession(['success' => 'Team created'])
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertSee('<template data-toast="success" data-toast-title="Team created"></template>', false);
+});
+
+test('a success toast keeps a next step as its body', function () {
+    $this->actingAs(User::factory()->create())
+        ->withSession(['success' => 'Activity duplicated', 'success_detail' => 'Review the copy and save any changes.'])
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertSee('data-toast-title="Activity duplicated">Review the copy and save any changes.</template>', false);
 });
 
 test('flashed allocation warnings render as one titled warning toast', function () {

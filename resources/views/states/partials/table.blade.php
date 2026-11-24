@@ -70,14 +70,12 @@
                     </td>
                 </tr>
                 @empty
-                <tr>
-                    <td colspan="5" class="text-center py-5">
-                        <p class="text-muted mb-2">No states found.</p>
-                        @can('create', App\Models\State::class)
-                        <a href="{{ route('states.create') }}" class="btn btn-sm btn-primary">Create State</a>
-                        @endcan
-                    </td>
-                </tr>
+                <x-table-empty colspan="5" plural="states" index-route="states.index">
+                    <p class="text-muted mb-2">No states found.</p>
+                    @can('create', App\Models\State::class)
+                    <a href="{{ route('states.create') }}" class="btn btn-sm btn-primary">Create State</a>
+                    @endcan
+                </x-table-empty>
                 @endforelse
             </tbody>
         </table>

@@ -4,7 +4,7 @@
 
 @section('content')
 
-<x-page-header context="index" title="Sub-activities" description="{{ $subActivities->total() }} total" :action-url="auth()->user()->can('create', App\Models\SubActivity::class) ? route('sub-activities.create') : null" />
+<x-page-header context="index" title="Sub-activities" :action-url="auth()->user()->can('create', App\Models\SubActivity::class) ? route('sub-activities.create') : null" />
 
 <div class="card shadow-sm mb-3">
     <div class="card-body py-2">

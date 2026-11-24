@@ -2,7 +2,7 @@
     <div class="d-grid gap-3">
         @foreach(['projects' => 'Projects', 'programs' => 'Programs', 'states' => 'States'] as $relation => $label)
             <div>
-                <div class="d-flex align-items-center gap-2 mb-2"><h3 class="h6 small mb-0">{{ $label }}</h3><span class="app-count">{{ $agreement->$relation->count() }}</span></div>
+                <div class="d-flex align-items-center gap-2 mb-2"><h3 class="h6 small mb-0">{{ $label }}</h3>@if($agreement->$relation->isNotEmpty())<span class="app-count">{{ $agreement->$relation->count() }}</span>@endif</div>
                 <div class="d-flex flex-wrap gap-1">
                     @forelse($agreement->$relation->sortBy('name') as $record)
                         @can('view', $record)<a class="badge app-chip" href="{{ route($relation.'.show', $record) }}">{{ $record->name }}</a>@else<span class="app-chip app-plain">{{ $record->name }}</span>@endcan

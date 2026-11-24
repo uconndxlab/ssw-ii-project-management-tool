@@ -198,7 +198,7 @@ class ContactFamilyController extends Controller
 
         return redirect()
             ->route('contact-families.index')
-            ->with('success', 'Activity family created successfully.');
+            ->with('success', 'Activity family created');
     }
 
     public function edit(ContactFamily $contactFamily): View
@@ -283,7 +283,7 @@ class ContactFamilyController extends Controller
         }
         $contactFamily->contactFamilyLoggingFields()->sync($syncData);
 
-        return $this->redirectAfterSave($contactFamily, 'Activity family updated successfully.');
+        return $this->redirectAfterSave($contactFamily, 'Activity family updated');
     }
 
     public function destroy(ContactFamily $contactFamily): RedirectResponse
@@ -299,6 +299,6 @@ class ContactFamilyController extends Controller
 
         return redirect()
             ->route('contact-families.index')
-            ->with('success', 'Activity family deleted successfully.');
+            ->with('success', 'Activity family deleted');
     }
 }

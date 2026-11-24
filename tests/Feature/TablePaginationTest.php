@@ -64,7 +64,7 @@ test('activity families paginate instead of loading the entire list', function (
         ->get(route('contact-families.index'))
         ->assertOk()
         ->assertViewHas('contactFamilies', fn (LengthAwarePaginator $paginator) => $paginator->count() === 25 && $paginator->total() === 26)
-        ->assertSee('26 total');
+        ->assertSeeText('Showing 1–25 of 26');
 });
 
 test('an empty listing keeps its page-size control and shows a zero range', function () {

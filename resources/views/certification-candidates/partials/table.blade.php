@@ -58,9 +58,9 @@
                     </td>
                 </tr>
                 @empty
-                <tr>
-                    <td colspan="7" class="text-center text-muted py-5">No candidates match these filters.</td>
-                </tr>
+                <x-table-empty colspan="7" plural="candidates" index-route="certification-candidates.index" class="text-muted">
+                    No candidates.
+                </x-table-empty>
                 @endforelse
             </tbody>
         </table>

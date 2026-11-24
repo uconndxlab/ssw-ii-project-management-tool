@@ -251,7 +251,8 @@ class AgreementController extends Controller
 
         return redirect()
             ->route('agreements.edit', $agreement)
-            ->with('success', 'Agreement created. You can now add deliverables below.')
+            ->with('success', 'Agreement created')
+            ->with('success_detail', 'You can now add deliverables below.')
             ->with('allocation_warnings', $allocationWarnings);
     }
 
@@ -409,7 +410,8 @@ class AgreementController extends Controller
 
         return redirect()
             ->route('agreements.edit', $copy)
-            ->with('success', 'Agreement duplicated. Review the copy and save any changes.');
+            ->with('success', 'Agreement duplicated')
+            ->with('success_detail', 'Review the copy and save any changes.');
     }
 
     public function update(AgreementRequest $request, Agreement $agreement): RedirectResponse
@@ -444,7 +446,7 @@ class AgreementController extends Controller
         $this->deliverableContributionService->syncForAgreement($freshAgreement);
         $this->syncAgreementAttachments($agreement, $request);
 
-        $redirect = $this->redirectAfterSave($agreement, 'Agreement updated successfully.');
+        $redirect = $this->redirectAfterSave($agreement, 'Agreement updated');
 
         if (! empty($allocationWarnings)) {
             $redirect->with('allocation_warnings', $allocationWarnings);
@@ -1268,7 +1270,7 @@ class AgreementController extends Controller
 
         return redirect()
             ->route('agreements.index')
-            ->with('success', 'Agreement deleted successfully.');
+            ->with('success', 'Agreement deleted');
     }
 
     /**

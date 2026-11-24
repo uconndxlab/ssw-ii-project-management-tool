@@ -4,7 +4,7 @@
 
 @section('content')
 
-<x-page-header context="index" title="Activities" description="{{ $activities->total() }} total">
+<x-page-header context="index" title="Activities">
     <x-slot:controls>
         <a href="{{ route('activities.create') }}" class="btn btn-primary">+ Log Activity</a>
     </x-slot:controls>

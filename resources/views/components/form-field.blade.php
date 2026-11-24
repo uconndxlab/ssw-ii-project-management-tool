@@ -17,7 +17,8 @@
     $describedBy = trim((filled($help) ? $helpId : '').' '.($hasError ? $errorId : ''));
 @endphp
 
-<{{ $group ? 'fieldset' : 'div' }} {{ $attributes->class(['mb-3']) }}
+{{-- A caller's own bottom margin replaces the default; Bootstrap's mb-3 would otherwise win over mb-0. --}}
+<{{ $group ? 'fieldset' : 'div' }} {{ $attributes->class(['mb-3' => ! preg_match('/\bmb-/', (string) $attributes->get('class'))]) }}
     data-form-field
     @if(filled($name)) data-field-name="{{ $name }}" @endif
     @if(filled($for)) data-control-id="{{ $for }}" @endif

@@ -76,7 +76,7 @@
     @endunless
 
     <div class="alert alert-{{ $nextTone }} mb-3">
-        <div class="small fw-semibold text-uppercase text-muted">Next step</div>
+        <div class="fw-semibold">Next step</div>
         <div>{{ $nextText }}@if(! $closed && $lifecycle['previousAwardDate']) Work after {{ $lifecycle['previousAwardDate']->format('M j, Y') }} counts toward cycle {{ $enrollment->cycle }}.@endif</div>
     </div>
 

@@ -11,7 +11,7 @@
     $isChecked = filter_var($checked, FILTER_VALIDATE_BOOLEAN);
 @endphp
 
-<label class="form-radio-card form-check border rounded px-3 py-2 mb-0">
+<label class="form-radio-card form-check rounded pe-3 py-2 mb-0">
     <input {{ $attributes->class(['form-check-input', 'me-2']) }}
            type="radio"
            name="{{ $name }}"

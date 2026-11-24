@@ -89,14 +89,12 @@
                     </td>
                 </tr>
                 @empty
-                <tr>
-                    <td colspan="6" class="text-center py-5">
-                        <p class="text-muted mb-2">No teams found.</p>
-                        @can('create', App\Models\Team::class)
-                        <a href="{{ route('teams.create') }}" class="btn btn-sm btn-primary">Create Team</a>
-                        @endcan
-                    </td>
-                </tr>
+                <x-table-empty colspan="6" plural="teams" index-route="teams.index">
+                    <p class="text-muted mb-2">No teams found.</p>
+                    @can('create', App\Models\Team::class)
+                    <a href="{{ route('teams.create') }}" class="btn btn-sm btn-primary">Create Team</a>
+                    @endcan
+                </x-table-empty>
                 @endforelse
             </tbody>
         </table>

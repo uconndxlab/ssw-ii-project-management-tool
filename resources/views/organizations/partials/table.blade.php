@@ -107,14 +107,12 @@
                     </td>
                 </tr>
                 @empty
-                <tr>
-                    <td colspan="9" class="text-center py-5">
-                        <p class="text-muted mb-2">No organizations found.</p>
-                        @can('create', App\Models\Organization::class)
-                            <a href="{{ route('organizations.create') }}" class="btn btn-sm btn-primary">Create Organization</a>
-                        @endcan
-                    </td>
-                </tr>
+                <x-table-empty colspan="9" plural="organizations" index-route="organizations.index">
+                    <p class="text-muted mb-2">No organizations found.</p>
+                    @can('create', App\Models\Organization::class)
+                        <a href="{{ route('organizations.create') }}" class="btn btn-sm btn-primary">Create Organization</a>
+                    @endcan
+                </x-table-empty>
                 @endforelse
             </tbody>
         </table>

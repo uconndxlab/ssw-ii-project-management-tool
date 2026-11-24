@@ -1,6 +1,9 @@
 {{-- Flash messages become toasts. toasts.js moves each template into the stack after load and announces it. --}}
-@if(session('success') || session('status'))
-    <template data-toast="success">{{ session('success') ?? session('status') }}</template>
+@if(session('success'))
+    {{-- The outcome is the title; success_detail carries a next step when there is one. --}}
+    <template data-toast="success" data-toast-title="{{ session('success') }}">{{ session('success_detail') }}</template>
+@elseif(session('status'))
+    <template data-toast="success">{{ session('status') }}</template>
 @endif
 
 @if(session('warning'))

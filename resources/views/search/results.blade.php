@@ -3,21 +3,21 @@
 @section('title', $query ? "Search: {$query}" : 'Search')
 
 @section('content')
-<div class="container-fluid py-4">
     <x-page-header
         context="index"
         title="Search"
-        :description="$query ? 'Results for ' . $query : 'Search agreements, organizations, and people.'"
     />
 
     {{-- Search bar --}}
     <div class="row mb-4">
         <div class="col-md-6">
             <form action="{{ route('search') }}" method="get" class="d-flex gap-2">
+                <label for="search-query" class="visually-hidden">Search</label>
                 <input type="text"
+                       id="search-query"
                        name="q"
                        class="form-control"
-                       placeholder="Search agreements, organizations, people..."
+                       placeholder="Search agreements, organizations, people…"
                        value="{{ $query }}"
                        autofocus>
                 <button type="submit" class="btn btn-primary text-nowrap">Search</button>
@@ -39,23 +39,18 @@
         <div class="col-md-4">
             <div class="card shadow-sm h-100">
                 <div class="card-header">
-                    <h6 class="mb-0 fw-semibold text-success">
+                    <h2 class="h6 mb-0 fw-semibold">
                         Agreements
                         <span class="app-count ms-1">{{ $agreements->count() }}</span>
-                    </h6>
+                    </h2>
                 </div>
                 <div class="list-group list-group-flush">
                     @foreach($agreements as $agreement)
                         <a href="{{ route('agreements.show', $agreement) }}"
                            class="list-group-item list-group-item-action">
                             <div class="fw-semibold">{{ $agreement->name }}</div>
-                            <div class="small text-muted">
-                                @if($agreement->organizations->isNotEmpty())
-                                    {{ $agreement->organizations->pluck('name')->join(', ') }}
-                                @endif
-                                @if($agreement->states->isNotEmpty())
-                                    &middot; {{ $agreement->states->pluck('name')->join(', ') }}
-                                @endif
+                            <div class="small text-muted text-truncate">
+                                {{ collect([$agreement->organizations->pluck('name')->join(', '), $agreement->states->pluck('name')->join(', ')])->filter()->join(' · ') }}
                             </div>
                         </a>
                     @endforeach
@@ -69,10 +64,10 @@
         <div class="col-md-4">
             <div class="card shadow-sm h-100">
                 <div class="card-header">
-                    <h6 class="mb-0 fw-semibold text-primary">
+                    <h2 class="h6 mb-0 fw-semibold">
                         Organizations
                         <span class="app-count ms-1">{{ $organizations->count() }}</span>
-                    </h6>
+                    </h2>
                 </div>
                 <div class="list-group list-group-flush">
                     @foreach($organizations as $org)
@@ -80,7 +75,7 @@
                            class="list-group-item list-group-item-action">
                             <div class="fw-semibold">{{ $org->name }}</div>
                             @if($org->states->isNotEmpty())
-                                <div class="small text-muted">{{ $org->states->pluck('name')->join(', ') }}</div>
+                                <div class="small text-muted text-truncate">{{ $org->states->pluck('name')->join(', ') }}</div>
                             @endif
                         </a>
                     @endforeach
@@ -94,10 +89,10 @@
         <div class="col-md-4">
             <div class="card shadow-sm h-100">
                 <div class="card-header">
-                    <h6 class="mb-0 fw-semibold text-secondary">
+                    <h2 class="h6 mb-0 fw-semibold">
                         People
                         <span class="app-count">{{ $users->count() }}</span>
-                    </h6>
+                    </h2>
                 </div>
                 <div class="list-group list-group-flush">
                     @foreach($users as $person)
@@ -131,6 +126,4 @@
 
     </div>{{-- /row --}}
     @endif
-
-</div>
 @endsection

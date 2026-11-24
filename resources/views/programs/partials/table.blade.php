@@ -72,14 +72,12 @@
                     </td>
                 </tr>
                 @empty
-                <tr>
-                    <td colspan="5" class="text-center py-5">
-                        <p class="text-muted mb-2">No programs found.</p>
-                        @can('create', App\Models\Program::class)
-                        <a href="{{ route('programs.create') }}" class="btn btn-sm btn-primary">Create Program</a>
-                        @endcan
-                    </td>
-                </tr>
+                <x-table-empty colspan="5" plural="programs" index-route="programs.index">
+                    <p class="text-muted mb-2">No programs found.</p>
+                    @can('create', App\Models\Program::class)
+                    <a href="{{ route('programs.create') }}" class="btn btn-sm btn-primary">Create Program</a>
+                    @endcan
+                </x-table-empty>
                 @endforelse
             </tbody>
         </table>

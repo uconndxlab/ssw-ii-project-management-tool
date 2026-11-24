@@ -82,14 +82,12 @@
                     </td>
                 </tr>
                 @empty
-                <tr>
-                    <td colspan="7" class="text-center py-5">
-                        <p class="text-muted mb-2">No activity families found.</p>
-                        @can('create', App\Models\ContactFamily::class)
-                        <a href="{{ route('contact-families.create') }}" class="btn btn-sm btn-primary">Add Activity Family</a>
-                        @endcan
-                    </td>
-                </tr>
+                <x-table-empty colspan="7" plural="activity families" index-route="contact-families.index">
+                    <p class="text-muted mb-2">No activity families found.</p>
+                    @can('create', App\Models\ContactFamily::class)
+                    <a href="{{ route('contact-families.create') }}" class="btn btn-sm btn-primary">Add Activity Family</a>
+                    @endcan
+                </x-table-empty>
                 @endforelse
             </tbody>
         </table>

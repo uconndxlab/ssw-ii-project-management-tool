@@ -49,7 +49,7 @@
                 @endif
 
                 <a href="{{ route('activities.create') }}"
-                   @class(['app-rail-log d-none d-lg-flex', 'is-active' => request()->routeIs('activities.create')])
+                   class="app-rail-log d-none d-lg-flex"
                    @if(request()->routeIs('activities.create')) aria-current="page" @endif>
                     <i class="bi bi-plus-lg" aria-hidden="true"></i>
                     <span class="app-rail-label">Log Activity</span>

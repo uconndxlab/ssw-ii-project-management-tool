@@ -4,7 +4,7 @@
     'items' => collect(),
     'options' => null,
     'selectedIds' => [],
-    'placeholder' => 'Search...',
+    'placeholder' => 'Search…',
     'labelKey' => 'name',
     'valueKey' => 'id',
     'searchKey' => null,
@@ -98,7 +98,7 @@
                autocomplete="off">
     </div>
 
-    <div class="border rounded p-3 bg-white shadow-sm d-none position-absolute start-0 end-0 mt-1"
+    <div class="app-picker-menu p-3 d-none position-absolute start-0 end-0 mt-1"
         style="z-index: 1060; max-height: {{ $height }}; overflow-y: scroll;"
          id="{{ $pickerId }}-list"
          role="listbox"
@@ -140,7 +140,7 @@
 
         const name = picker.dataset.name;
         const emptyMessage = picker.dataset.emptyMessage || 'No matches found.';
-        const defaultPlaceholder = picker.dataset.placeholder || 'Search...';
+        const defaultPlaceholder = picker.dataset.placeholder || 'Search…';
         let disabledPlaceholder = picker.dataset.disabledPlaceholder || defaultPlaceholder;
         const showSelected = picker.dataset.showSelected === 'true';
         let emptySelectionLabel = (picker.dataset.emptySelectionLabel || '').trim();
@@ -344,7 +344,7 @@
 
                 const badge = document.createElement('span');
                 badge.className = 'badge ' + selectedBadgeClasses(option) + ' d-inline-flex align-items-center gap-1';
-                badge.innerHTML = '<span class="d-inline-flex flex-wrap align-items-baseline gap-0"></span><button type="button" class="btn-close" style="font-size: 10px;" aria-label="Remove"></button>';
+                badge.innerHTML = '<span class="d-inline-flex flex-wrap align-items-baseline gap-0"></span><button type="button" class="btn-close" aria-label="Remove"></button>';
                 appendOptionPrimaryLabel(badge.querySelector('span'), option);
                 badge.querySelector('button').setAttribute('aria-label', 'Remove ' + option.label);
                 badge.querySelector('button').addEventListener('click', function () {

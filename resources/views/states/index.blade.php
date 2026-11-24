@@ -4,7 +4,7 @@
 
 @section('content')
 
-<x-page-header context="index" title="States" description="{{ $states->total() }} total" :action-url="auth()->user()->can('create', App\Models\State::class) ? route('states.create') : null" />
+<x-page-header context="index" title="States" :action-url="auth()->user()->can('create', App\Models\State::class) ? route('states.create') : null" />
 
 <div class="card shadow-sm mb-3">
     <div class="card-body py-2">

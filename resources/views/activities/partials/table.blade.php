@@ -146,12 +146,10 @@
                     </td>
                 </tr>
                 @empty
-                <tr>
-                    <td colspan="{{ $agreementContext ? 9 : 8 }}" class="text-center py-5">
-                        <p class="text-muted mb-2">No activities found.</p>
-                        <a href="{{ route('activities.create') }}" class="btn btn-sm btn-primary">Log Activity</a>
-                    </td>
-                </tr>
+                <x-table-empty :colspan="$agreementContext ? 9 : 8" plural="activities" :index-route="$embedded ? null : 'activities.index'">
+                    <p class="text-muted mb-2">No activities found.</p>
+                    <a href="{{ route('activities.create') }}" class="btn btn-sm btn-primary">Log Activity</a>
+                </x-table-empty>
                 @endforelse
             </tbody>
         </table>

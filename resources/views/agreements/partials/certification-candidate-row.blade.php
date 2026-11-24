@@ -62,7 +62,7 @@
                     <x-token-picker :picker-id="$fieldId.'-picker'" :name="'candidate_lookup['.$candidateIndex.']'"
                         :options="$pickerOptions" search-key="search" :single="true"
                         :selected-ids="filled($candidateId) ? [$candidateId] : []"
-                        placeholder="Search name or email..." empty-message="No candidate found. Add a new person below."
+                        placeholder="Search name or email…" empty-message="No candidate found. Add a new person below."
                         height="220px" />
                 </x-form-field>
             </div>

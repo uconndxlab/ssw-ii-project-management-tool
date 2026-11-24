@@ -72,7 +72,7 @@ class StateController extends Controller
 
         return redirect()
             ->route('states.index')
-            ->with('success', 'State created successfully.');
+            ->with('success', 'State created');
     }
 
     public function show(State $state): View
@@ -127,7 +127,7 @@ class StateController extends Controller
 
         $state->update($validated);
 
-        return $this->redirectAfterSave($state, 'State updated successfully.');
+        return $this->redirectAfterSave($state, 'State updated');
     }
 
     public function destroy(State $state): RedirectResponse
@@ -137,6 +137,6 @@ class StateController extends Controller
 
         return redirect()
             ->route('states.index')
-            ->with('success', 'State deleted successfully.');
+            ->with('success', 'State deleted');
     }
 }

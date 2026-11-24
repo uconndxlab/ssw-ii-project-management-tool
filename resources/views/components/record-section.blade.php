@@ -3,7 +3,7 @@
 <section {{ $attributes->class(['app-record-section']) }}>
     <div class="app-record-section-heading">
         <h2 class="h6 mb-0">{{ $title }}</h2>
-        @if($count !== null)<span class="app-count">{{ $count }}</span>@endif
+        @if($count)<span class="app-count">{{ $count }}</span>@endif
         <x-restricted-count :count="$restricted" :kind="$restrictedKind" />
         @if($link)
             <a href="{{ $link }}" @if($linkSection) data-section-goto="{{ $linkSection }}" @endif class="app-link small ms-auto">{{ $linkLabel }} <i class="bi bi-arrow-right" aria-hidden="true"></i></a>

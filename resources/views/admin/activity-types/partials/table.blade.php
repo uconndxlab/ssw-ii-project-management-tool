@@ -90,14 +90,12 @@
                     </td>
                 </tr>
                 @empty
-                <tr>
-                    <td colspan="8" class="text-center py-5">
-                        <p class="text-muted mb-2">No activity types found.</p>
-                        @can('create', App\Models\ActivityType::class)
-                        <a href="{{ route('activity-types.create') }}" class="btn btn-sm btn-primary">Add Activity Type</a>
-                        @endcan
-                    </td>
-                </tr>
+                <x-table-empty colspan="8" plural="activity types" index-route="activity-types.index">
+                    <p class="text-muted mb-2">No activity types found.</p>
+                    @can('create', App\Models\ActivityType::class)
+                    <a href="{{ route('activity-types.create') }}" class="btn btn-sm btn-primary">Add Activity Type</a>
+                    @endcan
+                </x-table-empty>
                 @endforelse
             </tbody>
         </table>

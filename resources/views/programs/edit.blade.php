@@ -35,7 +35,7 @@
                     name="project_ids[]"
                     :items="$projects"
                     :selected-ids="old('project_ids', $program->projects->pluck('id')->toArray())"
-                    placeholder="Search projects..."
+                    placeholder="Search projects…"
                     height="220px"
                     entity="project"
                 />

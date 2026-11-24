@@ -77,7 +77,7 @@
             value-field="label"
             add-button-text="Add Option"
             empty-message="Add at least one option."
-            input-placeholder="Enter an option label..."
+            input-placeholder="Enter an option label…"
         />
     </div>
 

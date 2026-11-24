@@ -101,7 +101,7 @@ class ProgramController extends Controller
 
         return redirect()
             ->route('programs.index')
-            ->with('success', 'Program created successfully.');
+            ->with('success', 'Program created');
     }
 
     public function show(Program $program): View
@@ -186,7 +186,7 @@ class ProgramController extends Controller
 
         $program->projects()->sync($projectIds);
 
-        return $this->redirectAfterSave($program, 'Program updated successfully.');
+        return $this->redirectAfterSave($program, 'Program updated');
     }
 
     public function destroy(Program $program): RedirectResponse
@@ -205,7 +205,7 @@ class ProgramController extends Controller
 
         return redirect()
             ->route('programs.index')
-            ->with('success', 'Program deleted successfully.');
+            ->with('success', 'Program deleted');
     }
 
     /**

@@ -100,7 +100,7 @@
                 name="team_ids[]"
                 :options="($teams ?? collect())->map(fn ($team) => ['value' => $team->id, 'label' => $team->name, 'search' => $team->name])"
                 :selected-ids="old('team_ids', [])"
-                placeholder="Search teams..."
+                placeholder="Search teams…"
                 entity="team"
             />
         </x-form-field>

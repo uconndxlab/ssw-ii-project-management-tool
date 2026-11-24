@@ -99,7 +99,7 @@ class CertificationCandidateController extends Controller
     {
         $certificationCandidate->update($request->validated());
 
-        return redirect()->route('certification-candidates.show', $certificationCandidate)->with('success', 'Candidate updated successfully.');
+        return redirect()->route('certification-candidates.show', $certificationCandidate)->with('success', 'Candidate updated');
     }
 
     /** @return list<string> */

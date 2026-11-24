@@ -124,6 +124,16 @@ test('sort links carry the sort state used for aria-sort', function () {
         ->and($inactive)->toContain('data-sort-state="none"');
 });
 
+test('form fields use a caller bottom margin instead of the default one', function () {
+    view()->share('errors', new ViewErrorBag);
+
+    $default = Blade::render('<x-form-field label="Name" for="name"><input id="name"></x-form-field>');
+    $custom = Blade::render('<x-form-field label="Name" for="name" class="mb-0"><input id="name"></x-form-field>');
+
+    expect($default)->toContain('class="mb-3"')
+        ->and($custom)->toContain('class="mb-0"')->not->toContain('mb-3');
+});
+
 test('forms use the capped form column', function () {
     $html = $this->actingAs(createSystemAdmin())->get(route('programs.create'))->getContent();
 
