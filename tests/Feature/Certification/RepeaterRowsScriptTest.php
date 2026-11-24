@@ -6,18 +6,18 @@ use App\Models\CertificationInstrument;
 use App\Models\CertificationInstrumentDimension;
 use App\Models\CertificationInstrumentDimensionOption;
 
-test('certification tool create page loads repeater script outside row templates', function () {
+test('certification tool create page keeps scripts out of row templates', function () {
     $admin = createSystemAdmin();
     $html = $this->actingAs($admin)->get(route('certification-instruments.create'))->getContent();
 
     expect($html)->toContain('data-repeater-add');
-    expect($html)->toContain("addBtn = e.target.closest('[data-repeater-add]')");
 
     $templateStart = strpos($html, '<template data-repeater-template>');
     $templateEnd = strpos($html, '</template>', $templateStart);
     $firstTemplate = substr($html, $templateStart, $templateEnd - $templateStart);
 
-    expect($firstTemplate)->not->toContain("addBtn = e.target.closest('[data-repeater-add]')");
+    // The repeater behaviour ships in resources/js/repeater-rows.js; cloned rows must not carry a script.
+    expect($firstTemplate)->not->toContain('<script');
 
     // Repeater styles ship in app.css; neither the page nor its row templates may carry a <style> block.
     expect($html)->not->toContain('.repeater-row-card');

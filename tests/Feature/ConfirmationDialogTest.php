@@ -36,9 +36,7 @@ test('duplicate confirmations preserve the original POST form and explain omitte
 });
 
 test('agreement certification editor uses the shared confirmation instead of native prompts', function () {
-    $agreement = Agreement::factory()->create();
+    $script = file_get_contents(resource_path('js/agreement-certification.js'));
 
-    $this->actingAs(createSystemAdmin())->get(route('agreements.edit', $agreement))->assertOk()
-        ->assertSee('window.appConfirm(', false)
-        ->assertDontSee('window.confirm(', false);
+    expect($script)->toContain('window.appConfirm(')->not->toContain('window.confirm(');
 });

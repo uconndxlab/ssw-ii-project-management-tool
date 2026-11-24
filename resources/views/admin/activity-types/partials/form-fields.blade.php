@@ -127,26 +127,3 @@
         />
     @endif
 </x-section-card>
-
-@once
-<script>
-(function () {
-    function refreshDurationField() {
-        const select = document.getElementById('duration_unit');
-        const input = document.getElementById('duration_value');
-
-        if (!select || !input) {
-            return;
-        }
-
-        input.disabled = select.value === 'none';
-    }
-
-    const durationUnitSelect = document.querySelector('[data-duration-unit-select]');
-    if (durationUnitSelect) {
-        durationUnitSelect.addEventListener('change', refreshDurationField);
-        refreshDurationField();
-    }
-})();
-</script>
-@endonce

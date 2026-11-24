@@ -130,32 +130,3 @@
         />
     @endif
 </x-section-card>
-
-@once
-<script>
-(function () {
-    function refreshDurationField() {
-        const select = document.getElementById('duration_unit');
-        const input = document.getElementById('duration_value');
-
-        if (!select || !input) {
-            return;
-        }
-
-        input.disabled = select.value === 'none';
-        const type = document.getElementById('activity_type_id').selectedOptions[0];
-        const label = type?.dataset.durationLabel;
-        document.getElementById('duration-source').textContent = label
-            ? (select.value === 'none' ? 'No duration here: uses ' : 'Overrides ') + type.textContent.trim() + "'s " + label + '.'
-            : 'No duration inherits the activity type’s duration. A duration set here overrides the type’s.';
-    }
-
-    document.getElementById('activity_type_id').addEventListener('change', refreshDurationField);
-    const durationUnitSelect = document.querySelector('[data-duration-unit-select]');
-    if (durationUnitSelect) {
-        durationUnitSelect.addEventListener('change', refreshDurationField);
-        refreshDurationField();
-    }
-})();
-</script>
-@endonce

@@ -19,30 +19,3 @@
         </div>
     </div>
 </div>
-
-@once
-    <script>
-        window.showActivityActionLogModal = function () {
-            var body = document.getElementById('activity-action-log-modal-body');
-            if (body) {
-                body.innerHTML = '<p class="text-muted small mb-0">Loading…</p>';
-            }
-
-            var count = document.getElementById('activity-action-log-modal-count');
-            if (count) {
-                count.classList.add('d-none');
-                count.textContent = '';
-            }
-
-            var subtitle = document.getElementById('activity-action-log-modal-subtitle');
-            if (subtitle) {
-                subtitle.textContent = '';
-            }
-
-            var modal = document.getElementById('activity-action-log-modal');
-            if (modal && window.bootstrap) {
-                bootstrap.Modal.getOrCreateInstance(modal).show();
-            }
-        };
-    </script>
-@endonce

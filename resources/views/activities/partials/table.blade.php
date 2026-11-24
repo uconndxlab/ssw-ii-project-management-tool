@@ -15,7 +15,7 @@
     $url = fn ($col) => route('activities.index', array_merge(request()->query(), ['sort' => $col, 'direction' => $flip($col), 'page' => 1]));
 @endphp
 
-<div class="card shadow-sm app-index-table-card">
+<div class="card shadow-sm app-index-table-card" @unless($embedded) data-table-sort-sync @endunless>
     <x-table-scroll>
         <table class="table table-hover align-middle mb-0 app-data-table app-cards">
             <thead>
@@ -158,33 +158,3 @@
         <x-htmx-pagination :paginator="$activities" :target="$activityTarget" :push-url="!$embedded" />
     </div>
 </div>
-
-@unless($embedded)
-    @once
-        <script>
-        (function () {
-            document.body.addEventListener('htmx:afterSwap', function (event) {
-                if (event.target && event.target.id === 'activities-table') {
-                    var params = new URLSearchParams(window.location.search);
-                    var form = document.getElementById('activity-filters');
-                    if (form) {
-                        if (params.has('sort')) {
-                            var sortInput = form.querySelector('[name=sort]');
-                            if (sortInput) {
-                                sortInput.value = params.get('sort');
-                            }
-                        }
-                        if (params.has('direction')) {
-                            var directionInput = form.querySelector('[name=direction]');
-                            if (directionInput) {
-                                directionInput.value = params.get('direction');
-                            }
-                        }
-                    }
-                }
-            });
-        })();
-        </script>
-    @endonce
-
-@endunless

@@ -1,0 +1,354 @@
+function parseJson(value, fallback) {
+    try {
+        return JSON.parse(value || '');
+    } catch (error) {
+        return fallback;
+    }
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function scopeSectionFor(root) {
+    return root.closest('form')?.querySelector('[data-project-program-scope]') || null;
+}
+
+function selectedHiddenValues(scopeSection, name) {
+    return Array.from(scopeSection?.querySelectorAll('input[type="hidden"][name="' + name + '[]"]') || []).map(function (input) {
+        return String(input.value);
+    });
+}
+
+function initialScope(root) {
+    const scopeSection = scopeSectionFor(root);
+
+    if (!scopeSection) {
+        return { mode: 'all', programIds: [] };
+    }
+
+    const mode = scopeSection.querySelector('input[name="program_scope_mode"]:checked')?.value
+        || scopeSection.dataset.defaultScopeMode
+        || 'specific';
+
+    return {
+        mode: String(mode),
+        programIds: selectedHiddenValues(scopeSection, 'program_ids'),
+    };
+}
+
+function fieldIsVisible(field, effectiveProgramIds, scopeMode) {
+    const agreementMode = String(scopeMode || 'specific');
+    const fieldMode = String(field.scope_mode || 'all');
+    const selectedPrograms = Array.isArray(effectiveProgramIds) ? effectiveProgramIds.map(String) : [];
+    const fieldProgramIds = Array.isArray(field.program_ids) ? field.program_ids.map(String) : [];
+
+    if (agreementMode === 'all') {
+        return fieldMode !== 'none';
+    }
+
+    if (agreementMode === 'none' || selectedPrograms.length === 0) {
+        return false;
+    }
+
+    if (fieldMode === 'all') {
+        return true;
+    }
+
+    if (fieldMode === 'none' || fieldProgramIds.length === 0) {
+        return false;
+    }
+
+    return fieldProgramIds.some(function (programId) {
+        return selectedPrograms.includes(String(programId));
+    });
+}
+
+function syncHiddenInputs(root) {
+    const hiddenInputs = root.querySelector('[data-hidden-inputs]');
+    const fieldIdInputName = root.dataset.fieldIdInputName;
+    const requiredInputName = root.dataset.requiredInputName;
+
+    hiddenInputs.replaceChildren();
+
+    root._pickerState.selectedIds.forEach(function (fieldId) {
+        const selectedInput = document.createElement('input');
+        selectedInput.type = 'hidden';
+        selectedInput.name = fieldIdInputName + '[]';
+        selectedInput.value = fieldId;
+        hiddenInputs.appendChild(selectedInput);
+
+        if (root._pickerState.requiredIds.has(fieldId)) {
+            const requiredInput = document.createElement('input');
+            requiredInput.type = 'hidden';
+            requiredInput.name = requiredInputName + '[]';
+            requiredInput.value = fieldId;
+            hiddenInputs.appendChild(requiredInput);
+        }
+    });
+}
+
+function fieldBadges(field) {
+    const badges = [
+        '<span class="badge text-bg-light border">Type: ' + escapeHtml(field.type_label) + '</span>'
+    ];
+
+    if (field.full_width) {
+        badges.push('<span class="badge text-bg-secondary">Full width</span>');
+    }
+
+    return badges.join(' ');
+}
+
+function availableItemMarkup(field) {
+    return ''
+        + '<div class="list-group-item logging-field-assignment-item" data-available-item data-field-id="' + escapeHtml(field.id) + '">'
+        + '  <div class="d-flex justify-content-between align-items-start gap-3">'
+        + '    <div class="d-flex align-items-start gap-2 flex-grow-1 min-w-0">'
+        + '      <button type="button" class="btn btn-link p-0 mt-1 text-primary" data-action="select" aria-label="Add field">'
+        + '        <i class="bi bi-plus-circle"></i>'
+        + '      </button>'
+        + '      <div class="min-w-0">'
+        + '        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">'
+        + '          <div class="fw-semibold">' + escapeHtml(field.name) + '</div>'
+        + fieldBadges(field)
+        + '        </div>'
+        + '        <div class="small text-muted">' + escapeHtml(field.description || 'No description provided.') + '</div>'
+        + '      </div>'
+        + '    </div>'
+        + '    <div class="form-check form-switch m-0">'
+        + '      <input class="form-check-input" type="checkbox" role="switch" data-action="toggle-required-available" aria-label="Mark required and add field">'
+        + '      <label class="form-check-label small">Required</label>'
+        + '    </div>'
+        + '  </div>'
+        + '</div>';
+}
+
+// Mismatched fields stay listed (and submitted) so the user can see them and remove them; the server blocks the save.
+function selectedItemMarkup(field, required, mismatched) {
+    return ''
+        + '<div class="list-group-item" data-selected-item data-field-id="' + escapeHtml(field.id) + '">'
+        + '  <div class="d-flex justify-content-between align-items-start gap-3">'
+        + '    <div class="d-flex align-items-start gap-2 flex-grow-1 min-w-0">'
+        + '      <span class="text-muted logging-field-assignment-drag-handle mt-1" data-drag-handle aria-hidden="true">'
+        + '        <i class="bi bi-grip-vertical"></i>'
+        + '      </span>'
+        + '      <div class="min-w-0">'
+        + '        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">'
+        + '          <div class="fw-semibold">' + escapeHtml(field.name) + '</div>'
+        + fieldBadges(field)
+        + '        </div>'
+        + '        <div class="small text-muted">' + escapeHtml(field.description || 'No description provided.') + '</div>'
+        + (mismatched
+            ? '        <div class="small text-warning-emphasis mt-1"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Doesn\'t match the selected programs. Remove it to save.</div>'
+            : '')
+        + '      </div>'
+        + '    </div>'
+        + '    <div class="d-flex align-items-center gap-3">'
+        + '      <div class="form-check form-switch m-0">'
+        + '        <input class="form-check-input" type="checkbox" role="switch" data-action="toggle-required-selected" ' + (required ? 'checked' : '') + ' aria-label="Toggle required">'
+        + '        <label class="form-check-label small">Required</label>'
+        + '      </div>'
+        + '      <button type="button" class="btn btn-link p-0 text-danger" data-action="remove" aria-label="Remove field">'
+        + '        <i class="bi bi-x-circle"></i>'
+        + '      </button>'
+        + '    </div>'
+        + '  </div>'
+        + '</div>';
+}
+
+function visibleFields(root) {
+    return root._pickerState.fields.filter(function (field) {
+        return fieldIsVisible(field, root._pickerState.effectiveProgramIds, root._pickerState.scopeMode);
+    });
+}
+
+function render(root) {
+    const availableList = root.querySelector('[data-available-list]');
+    const selectedList = root.querySelector('[data-selected-list]');
+    const availableEmptyState = root.querySelector('[data-available-empty-state]');
+    const selectedEmptyState = root.querySelector('[data-selected-empty-state]');
+    const fieldsById = new Map(root._pickerState.fields.map(function (field) {
+        return [String(field.id), field];
+    }));
+    const selectedIdSet = new Set(root._pickerState.selectedIds);
+    const visible = visibleFields(root);
+    const available = visible.filter(function (field) {
+        return !selectedIdSet.has(String(field.id));
+    });
+    const selected = root._pickerState.selectedIds.map(function (fieldId) {
+        return fieldsById.get(String(fieldId)) || null;
+    }).filter(Boolean);
+
+    availableList.innerHTML = available.map(availableItemMarkup).join('');
+    selectedList.innerHTML = selected.map(function (field) {
+        return selectedItemMarkup(
+            field,
+            root._pickerState.requiredIds.has(String(field.id)),
+            !fieldIsVisible(field, root._pickerState.effectiveProgramIds, root._pickerState.scopeMode)
+        );
+    }).join('');
+
+    availableEmptyState.classList.toggle('d-none', available.length !== 0);
+    selectedEmptyState.classList.toggle('d-none', selected.length !== 0);
+
+    if (available.length === 0) {
+        const needsPrograms = root._pickerState.scopeMode === 'specific'
+            && root._pickerState.effectiveProgramIds.length === 0;
+        availableEmptyState.textContent = needsPrograms
+            ? 'Select at least one program to see logging fields.'
+            : 'No logging fields are available for the current program scope.';
+    }
+
+    if (root._sortable) {
+        root._sortable.destroy();
+        root._sortable = null;
+    }
+
+    if (selected.length > 0 && window.Sortable) {
+        root._sortable = window.Sortable.create(selectedList, {
+            animation: 150,
+            ghostClass: 'logging-field-assignment-ghost',
+            handle: '[data-drag-handle]',
+            onEnd: function () {
+                root._pickerState.selectedIds = Array.from(selectedList.querySelectorAll('[data-selected-item]')).map(function (item) {
+                    return String(item.dataset.fieldId);
+                });
+                syncHiddenInputs(root);
+            },
+        });
+    }
+
+    syncHiddenInputs(root);
+}
+
+function addField(root, fieldId, required) {
+    const normalizedId = String(fieldId);
+
+    if (!root._pickerState.selectedIds.includes(normalizedId)) {
+        root._pickerState.selectedIds.push(normalizedId);
+    }
+
+    if (required) {
+        root._pickerState.requiredIds.add(normalizedId);
+    }
+
+    render(root);
+}
+
+function removeField(root, fieldId) {
+    const normalizedId = String(fieldId);
+
+    root._pickerState.selectedIds = root._pickerState.selectedIds.filter(function (selectedId) {
+        return selectedId !== normalizedId;
+    });
+    root._pickerState.requiredIds.delete(normalizedId);
+
+    render(root);
+}
+
+function initializePicker(root) {
+    if (!root || root.dataset.loggingFieldAssignmentInitialized === 'true') {
+        return;
+    }
+
+    const initial = initialScope(root);
+
+    root._pickerState = {
+        fields: parseJson(root.dataset.fields, []).map(function (field) {
+            return Object.assign({}, field, {
+                id: String(field.id),
+                program_ids: Array.isArray(field.program_ids) ? field.program_ids.map(String) : [],
+                scope_mode: String(field.scope_mode || 'all'),
+            });
+        }),
+        selectedIds: parseJson(root.dataset.selectedFieldIds, []).map(String),
+        requiredIds: new Set(parseJson(root.dataset.requiredFieldIds, []).map(String)),
+        effectiveProgramIds: initial.programIds.map(String),
+        scopeMode: initial.mode,
+    };
+
+    root.addEventListener('click', function (event) {
+        const actionTarget = event.target.closest('[data-action]');
+        const availableItem = event.target.closest('[data-available-item]');
+        const selectedItem = event.target.closest('[data-selected-item]');
+
+        if (actionTarget) {
+            const item = actionTarget.closest('[data-field-id]');
+            const fieldId = item?.dataset.fieldId;
+
+            if (!fieldId) {
+                return;
+            }
+
+            if (actionTarget.dataset.action === 'select') {
+                addField(root, fieldId, false);
+            }
+
+            if (actionTarget.dataset.action === 'remove') {
+                removeField(root, fieldId);
+            }
+
+            return;
+        }
+
+        if (availableItem && !event.target.closest('.form-check')) {
+            addField(root, availableItem.dataset.fieldId, false);
+        }
+
+        if (selectedItem && event.target.closest('.form-check')) {
+            return;
+        }
+    });
+
+    root.addEventListener('change', function (event) {
+        const toggle = event.target.closest('[data-action]');
+        const item = event.target.closest('[data-field-id]');
+        const fieldId = item?.dataset.fieldId;
+
+        if (!toggle || !fieldId) {
+            return;
+        }
+
+        if (toggle.dataset.action === 'toggle-required-available' && event.target.checked) {
+            addField(root, fieldId, true);
+            return;
+        }
+
+        if (toggle.dataset.action === 'toggle-required-selected') {
+            if (event.target.checked) {
+                root._pickerState.requiredIds.add(String(fieldId));
+            } else {
+                root._pickerState.requiredIds.delete(String(fieldId));
+            }
+
+            syncHiddenInputs(root);
+        }
+    });
+
+    document.addEventListener('project-program-scope:change', function (event) {
+        if (!root.closest('form')?.contains(event.target)) {
+            return;
+        }
+
+        root._pickerState.scopeMode = event.detail?.scopeMode
+            ? String(event.detail.scopeMode)
+            : root._pickerState.scopeMode;
+        root._pickerState.effectiveProgramIds = Array.isArray(event.detail?.effectiveProgramIds)
+            ? event.detail.effectiveProgramIds.map(String)
+            : [];
+        render(root);
+    });
+
+    root.dataset.loggingFieldAssignmentInitialized = 'true';
+    render(root);
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('[data-logging-field-assignment-picker]').forEach(initializePicker);
+});

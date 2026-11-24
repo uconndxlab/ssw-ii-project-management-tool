@@ -6,7 +6,7 @@
     $scopeEmptyLabel = fn ($mode, string $allLabel, string $noneLabel) => ($mode?->value ?? $mode) === 'none' ? $noneLabel : $allLabel;
 @endphp
 
-<div class="card shadow-sm app-index-table-card">
+<div class="card shadow-sm app-index-table-card" data-table-sort-sync>
     <x-table-scroll>
         <table class="table table-hover align-middle mb-0 app-cards">
             <thead>
@@ -96,30 +96,3 @@
         <x-htmx-pagination :paginator="$contactFamilies" target="#cf-table" />
     </div>
 </div>
-
-@once
-    <script>
-    (function () {
-        document.body.addEventListener('htmx:afterSwap', function (event) {
-            if (event.target && event.target.id === 'cf-table') {
-                var params = new URLSearchParams(window.location.search);
-                var form = document.getElementById('cf-filters');
-                if (form) {
-                    if (params.has('sort')) {
-                        var sortInput = form.querySelector('[name=sort]');
-                        if (sortInput) {
-                            sortInput.value = params.get('sort');
-                        }
-                    }
-                    if (params.has('direction')) {
-                        var directionInput = form.querySelector('[name=direction]');
-                        if (directionInput) {
-                            directionInput.value = params.get('direction');
-                        }
-                    }
-                }
-            }
-        });
-    })();
-    </script>
-@endonce

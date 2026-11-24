@@ -73,28 +73,4 @@
         </x-section-card>
     </form>
 </x-form-shell>
-@once
-<script>
-(function () {
-    function syncTeamNoneScopeWarning(section) {
-        const warning = document.querySelector('[data-team-none-scope-warning]');
-
-        if (!section || !warning) {
-            return;
-        }
-
-        const checked = section.querySelector('input[name="program_scope_mode"]:checked');
-        warning.classList.toggle('d-none', !checked || checked.value !== 'none');
-    }
-
-    document.addEventListener('DOMContentLoaded', function () {
-        const section = document.querySelector('[data-scope-id="team-create-scope"]');
-        syncTeamNoneScopeWarning(section);
-        section?.addEventListener('project-program-scope:change', function () {
-            syncTeamNoneScopeWarning(section);
-        });
-    });
-})();
-</script>
-@endonce
 @endsection
