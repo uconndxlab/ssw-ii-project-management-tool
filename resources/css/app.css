@@ -873,6 +873,32 @@ html[data-rail="unpinned"] {
     min-width: 0;
 }
 
+/* Desktop app shell: only the main column scrolls, so it can bounce while the sidebar stays put. */
+@media screen and (min-width: 992px) {
+    html:has(> body > .app-body) {
+        scrollbar-gutter: auto;
+    }
+
+    body:has(> .app-body) {
+        height: 100dvh;
+        overflow: hidden;
+    }
+
+    .app-body {
+        flex: 1 1 0;
+        min-height: 0;
+    }
+
+    .app-main {
+        overflow-y: auto;
+        scrollbar-gutter: stable;
+    }
+
+    body.form-drawer-open .app-main {
+        overflow: hidden;
+    }
+}
+
 .app-main > .container {
     max-width: 1680px;
     padding-inline: 1.5rem;

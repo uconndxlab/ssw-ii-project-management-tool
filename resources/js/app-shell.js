@@ -238,3 +238,44 @@ if (panel) {
         window.bootstrap.Offcanvas.getInstance(panel)?.hide();
     });
 }
+
+// On desktop the main column scrolls instead of the page (app.css), so give it back what the browser does for the
+// page: keyboard scrolling when nothing is focused, and the scroll position when returning with Back/Forward.
+const main = document.querySelector('.app-main');
+
+if (main) {
+    const mainScrolls = () => getComputedStyle(main).overflowY === 'auto';
+    const scrollKey = `main-scroll:${location.pathname}${location.search}`;
+
+    document.addEventListener('keydown', (event) => {
+        if (!mainScrolls() || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey
+            || (document.activeElement && document.activeElement !== document.body)) {
+            return;
+        }
+
+        const page = main.clientHeight * 0.875;
+        const delta = { PageDown: page, PageUp: -page, ' ': event.shiftKey ? -page : page, ArrowDown: 40, ArrowUp: -40, End: main.scrollHeight, Home: -main.scrollHeight }[event.key];
+        if (delta === undefined) {
+            return;
+        }
+
+        event.preventDefault();
+        main.scrollBy({ top: delta, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+    });
+
+    window.addEventListener('pagehide', () => {
+        try {
+            sessionStorage.setItem(scrollKey, String(main.scrollTop));
+        } catch (error) {
+            // Storage can be unavailable (private mode); the page just opens at the top.
+        }
+    });
+
+    if (mainScrolls() && performance.getEntriesByType('navigation')[0]?.type === 'back_forward') {
+        try {
+            main.scrollTop = Number(sessionStorage.getItem(scrollKey)) || 0;
+        } catch (error) {
+            // See above.
+        }
+    }
+}
