@@ -1,10 +1,15 @@
-function escapeHtml(value) {
-    return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
+function element(tag, attributes = {}, children = []) {
+    const node = document.createElement(tag);
+
+    Object.entries(attributes).forEach(function ([key, value]) {
+        if (value !== null && value !== undefined && value !== false) {
+            node.setAttribute(key, value === true ? '' : String(value));
+        }
+    });
+
+    node.append(...children.filter(Boolean));
+
+    return node;
 }
 
 function parseJson(value, fallback) {
@@ -53,51 +58,44 @@ function initializeInlineRecordList(list) {
         }
     }
 
-    function fieldMarkup(rowKey, field) {
-        const label = field.label ? '<label class="form-label small text-muted mb-1">' + escapeHtml(field.label) + '</label>' : '';
-        const maxlength = field.maxlength ? ' maxlength="' + escapeHtml(field.maxlength) + '"' : '';
-
-        return ''
-            + '<div class="' + escapeHtml(field.col || 'col-md-3') + '">'
-            + label
-            + '<input type="' + escapeHtml(field.type || 'text') + '"'
-            + ' class="form-control form-control-sm"'
-            + ' name="' + escapeHtml(name) + '[' + escapeHtml(rowKey) + '][' + escapeHtml(field.key) + ']"'
-            + ' value=""'
-            + ' placeholder="' + escapeHtml(field.placeholder || '') + '"'
-            + maxlength
-            + ' data-inline-record-input="' + escapeHtml(field.key) + '">'
-            + '</div>';
+    function buildField(rowKey, field) {
+        return element('div', { class: field.col || 'col-md-3' }, [
+            field.label && element('label', { class: 'form-label small text-muted mb-1' }, [String(field.label)]),
+            element('input', {
+                type: field.type || 'text',
+                class: 'form-control form-control-sm',
+                name: name + '[' + rowKey + '][' + field.key + ']',
+                value: '',
+                placeholder: field.placeholder || '',
+                maxlength: field.maxlength || null,
+                'data-inline-record-input': field.key,
+            }),
+        ]);
     }
 
-    function rowMarkup(rowKey) {
-        const handle = sortable
-            ? '<span class="text-muted inline-record-drag-handle mt-2" data-drag-handle aria-hidden="true"><i class="bi bi-grip-vertical"></i></span>'
-            : '';
-        const primaryInput = primaryField
-            ? '<input type="hidden" name="' + escapeHtml(name) + '[' + escapeHtml(rowKey) + '][' + escapeHtml(primaryField) + ']" value="0" data-inline-record-primary-input>'
-            : '';
-        const primaryToggle = primaryField
-            ? '<button type="button" class="btn btn-link p-0 inline-record-primary-toggle text-muted" data-inline-record-primary-toggle aria-label="Mark as primary"><i class="bi bi-star"></i></button>'
-            : '';
+    function buildRow(rowKey) {
+        const fieldName = name + '[' + rowKey + ']';
 
-        return ''
-            + '<div class="inline-record-row card mb-2" data-inline-record-row="' + escapeHtml(rowKey) + '">'
-            + '  <div class="card-body py-2 px-3">'
-            + '    <div class="d-flex align-items-start gap-2">'
-            + handle
-            + '      <input type="hidden" name="' + escapeHtml(name) + '[' + escapeHtml(rowKey) + '][_delete]" value="0" data-inline-record-delete>'
-            + primaryInput
-            + '      <div class="row g-2 flex-grow-1">'
-            + fields.map(function (field) { return fieldMarkup(rowKey, field); }).join('')
-            + '      </div>'
-            + '      <div class="d-flex flex-column align-items-center gap-1 mt-1">'
-            + primaryToggle
-            + '        <button type="button" class="btn btn-link p-0 text-danger" data-inline-record-remove aria-label="Remove"><i class="bi bi-x-circle"></i></button>'
-            + '      </div>'
-            + '    </div>'
-            + '  </div>'
-            + '</div>';
+        return element('div', { class: 'inline-record-row card mb-2', 'data-inline-record-row': rowKey }, [
+            element('div', { class: 'card-body py-2 px-3' }, [
+                element('div', { class: 'd-flex align-items-start gap-2' }, [
+                    sortable && element('span', { class: 'text-muted inline-record-drag-handle mt-2', 'data-drag-handle': true, 'aria-hidden': 'true' }, [
+                        element('i', { class: 'bi bi-grip-vertical' }),
+                    ]),
+                    element('input', { type: 'hidden', name: fieldName + '[_delete]', value: '0', 'data-inline-record-delete': true }),
+                    primaryField && element('input', { type: 'hidden', name: fieldName + '[' + primaryField + ']', value: '0', 'data-inline-record-primary-input': true }),
+                    element('div', { class: 'row g-2 flex-grow-1' }, fields.map(function (field) { return buildField(rowKey, field); })),
+                    element('div', { class: 'd-flex flex-column align-items-center gap-1 mt-1' }, [
+                        primaryField && element('button', { type: 'button', class: 'btn btn-link p-0 inline-record-primary-toggle text-muted', 'data-inline-record-primary-toggle': true, 'aria-label': 'Mark as primary' }, [
+                            element('i', { class: 'bi bi-star' }),
+                        ]),
+                        element('button', { type: 'button', class: 'btn btn-link p-0 text-danger', 'data-inline-record-remove': true, 'aria-label': 'Remove' }, [
+                            element('i', { class: 'bi bi-x-circle' }),
+                        ]),
+                    ]),
+                ]),
+            ]),
+        ]);
     }
 
     function attachSortable() {
@@ -118,9 +116,9 @@ function initializeInlineRecordList(list) {
         }
 
         const rowKey = 'row-new-' + Date.now() + '-' + (nextIndex++);
-        rowsContainer.insertAdjacentHTML('beforeend', rowMarkup(rowKey));
-        const row = rowsContainer.querySelector('[data-inline-record-row="' + CSS.escape(rowKey) + '"]');
-        row?.querySelector('[data-inline-record-input]')?.focus();
+        const row = buildRow(rowKey);
+        rowsContainer.append(row);
+        row.querySelector('[data-inline-record-input]')?.focus();
         attachSortable();
         syncState();
     }
