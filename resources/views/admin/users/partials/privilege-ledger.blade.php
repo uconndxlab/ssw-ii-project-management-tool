@@ -154,7 +154,8 @@
             'programNames' => $programNames,
             'projectBadgeClass' => $projectBadgeClass,
             'programBadgeClass' => $programBadgeClass,
-            'nextIndex' => count($entries),
+            // Rows removed before a failed save leave gaps, so continue past the highest kept number.
+            'nextIndex' => max([-1, ...array_map('intval', array_keys($entries))]) + 1,
         ];
     @endphp
     <script type="application/json" data-privilege-ledger-config>@json($privilegeLedgerConfig)</script>

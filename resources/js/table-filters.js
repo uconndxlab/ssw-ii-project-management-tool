@@ -139,7 +139,8 @@ function formHasActiveFilters(form) {
 
 function syncTableFilterClearButtons(scope) {
     const root = scope || document;
-    root.querySelectorAll('[data-table-filter-form]').forEach(function (form) {
+    const forms = root.matches?.('[data-table-filter-form]') ? [root] : root.querySelectorAll('[data-table-filter-form]');
+    forms.forEach(function (form) {
         const wrap = form.querySelector('[data-table-filter-clear-wrap]');
         if (!wrap) {
             return;
