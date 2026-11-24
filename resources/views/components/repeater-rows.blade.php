@@ -11,7 +11,8 @@
 ])
 
 @php
-    $resolvedNextIndex = $nextIndex ?? (is_countable($rows) ? count($rows) : 0);
+    // Rows removed before a failed save leave gaps, so continue past the highest kept number.
+    $resolvedNextIndex = $nextIndex ?? collect($rows)->keys()->map(fn ($key) => (int) $key)->push(-1)->max() + 1;
     $isNested = in_array($variant, ['nested', 'flat'], true);
     $isFlat = $variant === 'flat';
     $rowCount = is_countable($rows) ? count($rows) : 0;

@@ -104,7 +104,6 @@
         'assignments' => $person->getAttribute('assignment_options') ?? [],
     ])->values()->all();
 
-    $nextCandidateIndex = $certificationCandidateRows === [] ? 0 : max(array_map('intval', array_keys($certificationCandidateRows))) + 1;
 
     $organizationProgramMap = $organizations->mapWithKeys(fn ($organization) => [
         (string) $organization->id => $organization->programs->pluck('id')->map(fn ($id) => (string) $id)->values()->all(),
@@ -274,7 +273,6 @@
     <x-repeater-rows
         name="certification_candidates"
         :rows="$certificationCandidateRows"
-        :next-index="$nextCandidateIndex"
         :sortable="false"
         :scroll="false"
         add-label="Add Candidate"

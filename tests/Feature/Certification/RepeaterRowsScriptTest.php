@@ -78,3 +78,13 @@ test('certificate edit page renders requirement rows with dimension options', fu
     expect($html)->toContain('data-cert-options="'.$dimension->id.'"');
     expect($html)->toContain('Partial');
 });
+
+test('repeater numbers new rows past the highest kept row', function (iterable $rows, string $expected) {
+    // Rows removed before a failed save leave gaps; counting them would reuse a kept row's number.
+    $this->blade('<x-repeater-rows name="rows" :rows="$rows" />', ['rows' => $rows])
+        ->assertSee('data-next-index="'.$expected.'"', false);
+})->with([
+    'no rows' => [[], '0'],
+    'gap after removals' => [[0 => [], 2 => []], '3'],
+    'collection' => [fn () => collect([1 => []]), '2'],
+]);
